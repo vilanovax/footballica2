@@ -1,12 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 /**
- * Floating "Goal! (گل!)" celebration text. Pops up, drifts, and fades.
+ * Floating "Goal!" celebration text. Pops up, drifts, and fades.
  * Rendered only during a correct reveal.
  */
 export function GoalBurst() {
+  const { t } = useTranslation();
   return (
     <motion.div
       className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center"
@@ -25,10 +27,7 @@ export function GoalBurst() {
           ⚽️
         </span>
         <span className="font-display text-4xl font-bold text-primary drop-shadow">
-          Goal!
-        </span>
-        <span className="font-display text-2xl font-bold text-primary">
-          گل!
+          {t("quiz.goal")}
         </span>
       </motion.div>
     </motion.div>

@@ -4,11 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { resolveMatch, type ResolveMatchResult } from "@/actions/resolveMatch";
 import type { KickSubmission, MatchRewards } from "@/lib/quiz/scoring";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type MatchResultProps = {
   rewards: MatchRewards;
   totalKicks: number;
   submissions: KickSubmission[];
+  /** FTUE tutorial match — fixed payout, no "Play Again" (loop back to Hub). */
+  tutorial?: boolean;
   onPlayAgain: () => void;
   onExit: () => void;
 };
@@ -22,9 +25,11 @@ export function MatchResult({
   rewards,
   totalKicks,
   submissions,
+  tutorial = false,
   onPlayAgain,
   onExit,
 }: MatchResultProps) {
+  const { t } = useTranslation();
   const won = rewards.goals > totalKicks / 2;
   const [save, setSave] = useState<SaveState>({ status: "saving" });
 
@@ -33,7 +38,7 @@ export function MatchResult({
 
   async function submit() {
     setSave({ status: "saving" });
-    const result = await resolveMatch(submissions);
+    const result = await resolveMatch(submissions, { tutorial });
     if (result.ok) {
       setSave({ status: "saved", data: result });
     } else {
@@ -61,11 +66,8 @@ export function MatchResult({
         </motion.div>
         <div>
           <h1 className="font-display text-2xl font-bold text-foreground">
-            Saving Results…
+            {t("result.saving")}
           </h1>
-          <p className="mt-1 font-display text-base font-semibold text-muted-foreground">
-            در حال ذخیره نتیجه…
-          </p>
         </div>
       </section>
     );
@@ -79,7 +81,7 @@ export function MatchResult({
         </div>
         <div>
           <h1 className="font-display text-2xl font-bold text-destructive">
-            Save Failed
+            {t("result.saveFailed")}
           </h1>
           <p className="mt-1 max-w-xs font-body text-sm font-semibold text-muted-foreground">
             {save.message}
@@ -91,14 +93,14 @@ export function MatchResult({
             onClick={() => void submit()}
             className="btn-fantasy btn-fantasy-primary w-full justify-center"
           >
-            Retry
+            {t("common.retry")}
           </button>
           <button
             type="button"
             onClick={onExit}
             className="btn-fantasy btn-fantasy-accent w-full justify-center"
           >
-            Back to Club
+            {t("common.backToClub")}
           </button>
         </div>
       </section>
@@ -107,6 +109,9 @@ export function MatchResult({
 
   // Saved — show server-confirmed rewards + new balances.
   const { rewards: confirmed, balances } = save.data;
+  const outOfEnergy = balances.stamina <= 0;
+  // In the tutorial, funnel straight back to the Hub for the forced upgrade.
+  const hidePlayAgain = tutorial || outOfEnergy;
 
   return (
     <motion.section
@@ -126,18 +131,18 @@ export function MatchResult({
 
       <div>
         <h1 className="font-display text-3xl font-bold text-foreground">
-          {won ? "Shootout Won!" : "Shootout Lost"}
+          {won ? t("result.won") : t("result.lost")}
         </h1>
         <p className="mt-1 font-display text-lg font-semibold text-muted-foreground">
-          {confirmed.goals} / {totalKicks} goals scored
+          {t("result.goalsScored", { goals: confirmed.goals, total: totalKicks })}
         </p>
       </div>
 
       <div className="grid w-full grid-cols-3 gap-3">
         {[
-          { label: "Coins", value: `+${confirmed.coins}`, tone: "text-accent-deep" },
-          { label: "XP", value: `+${confirmed.xp}`, tone: "text-primary" },
-          { label: "Fans", value: `+${confirmed.fans}`, tone: "text-secondary" },
+          { label: t("result.coins"), value: `+${confirmed.coins}`, tone: "text-accent-deep" },
+          { label: t("result.xp"), value: `+${confirmed.xp}`, tone: "text-primary" },
+          { label: t("result.fans"), value: `+${confirmed.fans}`, tone: "text-secondary" },
         ].map((r) => (
           <div
             key={r.label}
@@ -165,19 +170,32 @@ export function MatchResult({
       </div>
 
       <div className="flex w-full flex-col gap-3">
-        <button
-          type="button"
-          onClick={onPlayAgain}
-          className="btn-fantasy btn-fantasy-primary w-full justify-center"
-        >
-          Play Again
-        </button>
+        {tutorial ? (
+          <div className="w-full rounded-bubble border border-accent/40 bg-accent/10 px-4 py-3 text-center font-display text-sm font-bold text-accent-deep">
+            {t("result.spendCoins")}
+          </div>
+        ) : outOfEnergy ? (
+          <div className="w-full rounded-bubble border border-border bg-muted px-4 py-3 text-center font-display text-sm font-bold text-muted-foreground">
+            {t("result.outOfEnergy")}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onPlayAgain}
+            className="btn-fantasy btn-fantasy-primary w-full justify-center"
+          >
+            {t("result.playAgain")}
+          </button>
+        )}
         <button
           type="button"
           onClick={onExit}
-          className="btn-fantasy btn-fantasy-accent w-full justify-center"
+          className={[
+            "btn-fantasy w-full justify-center",
+            hidePlayAgain ? "btn-fantasy-primary" : "btn-fantasy-accent",
+          ].join(" ")}
         >
-          Back to Club
+          {t("common.backToClub")}
         </button>
       </div>
     </motion.section>

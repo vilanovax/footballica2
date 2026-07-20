@@ -52,6 +52,11 @@ export async function upgradeClub(key: UpgradeKey): Promise<UpgradeResult> {
         data.stamina = { increment: 1 };
       }
 
+      // FTUE: buying the guided first upgrade completes the tutorial (1 → 2).
+      if (club.tutorialStep === 1) {
+        data.tutorialStep = 2;
+      }
+
       const updated = await tx.club.update({
         where: { id: club.id },
         data,

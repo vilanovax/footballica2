@@ -46,3 +46,12 @@ export const PENALTY_QUESTIONS: QuizQuestion[] = [
     category: "Rules",
   },
 ];
+
+/**
+ * FTUE tutorial shootout — a short, forgiving set of the three easiest
+ * questions so first-time players get an early win. Kept as a subset of
+ * `PENALTY_QUESTIONS` so server-side `verifyKickLog` validates the same ids.
+ */
+export const TUTORIAL_QUESTIONS: QuizQuestion[] = PENALTY_QUESTIONS.filter(
+  (q) => q.difficulty === "easy",
+).slice(0, 3);

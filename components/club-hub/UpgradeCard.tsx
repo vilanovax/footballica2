@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { UpgradeDef } from "@/lib/club/upgrades";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type UpgradeCardProps = {
   def: UpgradeDef;
@@ -9,6 +10,10 @@ type UpgradeCardProps = {
   cost: number | null;
   canAfford: boolean;
   pending: boolean;
+  /** FTUE: dim + block interaction while another card is spotlighted. */
+  locked?: boolean;
+  /** FTUE: raise above the mask + glowing pulse to guide the forced upgrade. */
+  spotlight?: boolean;
   onUpgrade: () => void;
 };
 
@@ -18,13 +23,36 @@ export function UpgradeCard({
   cost,
   canAfford,
   pending,
+  locked = false,
+  spotlight = false,
   onUpgrade,
 }: UpgradeCardProps) {
+  const { t } = useTranslation();
   const isMax = cost === null;
-  const disabled = isMax || !canAfford || pending;
+  const disabled = isMax || !canAfford || pending || locked;
 
   return (
-    <div className="flex items-center gap-3 rounded-bubble border border-border bg-surface p-3 shadow-fantasy">
+    <motion.div
+      animate={
+        spotlight
+          ? {
+              boxShadow: [
+                "0 0 0px hsl(var(--accent) / 0)",
+                "0 0 22px 4px hsl(var(--accent) / 0.85)",
+                "0 0 0px hsl(var(--accent) / 0)",
+              ],
+            }
+          : undefined
+      }
+      transition={spotlight ? { repeat: Infinity, duration: 1.6 } : undefined}
+      className={[
+        "flex items-center gap-3 rounded-bubble border bg-surface p-3 shadow-fantasy transition-opacity",
+        spotlight
+          ? "relative z-50 border-accent"
+          : "border-border",
+        locked ? "pointer-events-none opacity-40" : "",
+      ].join(" ")}
+    >
       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-bubble bg-muted text-2xl">
         {def.icon}
       </div>
@@ -32,14 +60,14 @@ export function UpgradeCard({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className="font-display text-base font-bold text-surface-foreground">
-            {def.name}
+            {t(`upgrades.${def.key}.name`)}
           </p>
           <span className="rounded-full bg-muted px-2 py-0.5 font-display text-[10px] font-bold uppercase text-muted-foreground">
-            Lv. {level}
+            {t("stadium.lvl")} {level}
           </span>
         </div>
         <p className="truncate font-body text-xs font-semibold text-muted-foreground">
-          {def.faName}
+          {t(`upgrades.${def.key}.desc`)}
         </p>
       </div>
 
@@ -58,18 +86,18 @@ export function UpgradeCard({
         ].join(" ")}
       >
         {isMax ? (
-          <span>MAX</span>
+          <span>{t("upgrades.max")}</span>
         ) : pending ? (
           <span>…</span>
         ) : (
           <>
-            <span>Upgrade</span>
+            <span>{t("upgrades.upgrade")}</span>
             <span className="flex items-center gap-1 text-xs opacity-90">
               💰 {cost}
             </span>
           </>
         )}
       </motion.button>
-    </div>
+    </motion.div>
   );
 }

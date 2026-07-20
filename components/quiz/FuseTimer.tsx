@@ -18,20 +18,28 @@ export function FuseTimer({ timeLeftMs, paused = false }: FuseTimerProps) {
   const danger = ratio <= 0.3;
   const warning = ratio <= 0.6 && !danger;
 
-  const fillColor = danger
-    ? "hsl(var(--destructive))"
+  // Warning gradient shifts hotter as time drains: lime→yellow, then
+  // yellow→orange, then orange→red for a rising sense of urgency.
+  const fillGradient = danger
+    ? "linear-gradient(90deg, hsl(0 88% 46%), hsl(16 92% 52%))"
     : warning
-      ? "hsl(var(--accent))"
-      : "hsl(var(--primary))";
+      ? "linear-gradient(90deg, hsl(28 96% 52%), hsl(46 100% 52%))"
+      : "linear-gradient(90deg, hsl(96 78% 44%), hsl(52 96% 54%))";
 
   return (
     <div className="relative h-5 w-full">
       <div className="absolute inset-0 overflow-hidden rounded-full border border-border bg-muted shadow-fantasy-sm">
         <motion.div
           className="h-full rounded-full"
-          style={{ backgroundColor: fillColor }}
-          animate={{ width: `${ratio * 100}%` }}
-          transition={{ ease: "linear", duration: 0.1 }}
+          style={{ backgroundImage: fillGradient }}
+          animate={{
+            width: `${ratio * 100}%`,
+            opacity: danger && !paused ? [1, 0.6, 1] : 1,
+          }}
+          transition={{
+            width: { ease: "linear", duration: 0.1 },
+            opacity: { repeat: Infinity, duration: 0.5 },
+          }}
         />
       </div>
 
@@ -50,7 +58,13 @@ export function FuseTimer({ timeLeftMs, paused = false }: FuseTimerProps) {
         >
           <Flame
             className="h-6 w-6 drop-shadow"
-            style={{ color: danger ? "hsl(var(--destructive))" : "hsl(var(--accent))" }}
+            style={{
+              color: danger
+                ? "hsl(0 88% 48%)"
+                : warning
+                  ? "hsl(28 96% 52%)"
+                  : "hsl(var(--accent))",
+            }}
             fill="currentColor"
           />
         </motion.div>

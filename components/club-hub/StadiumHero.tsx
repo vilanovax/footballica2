@@ -2,6 +2,7 @@
 
 import { AnimatePresence } from "framer-motion";
 import { Confetti } from "./Confetti";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type StadiumHeroProps = {
   stadiumLevel: number;
@@ -55,7 +56,9 @@ export function StadiumHero({
   celebrateKey,
   celebrating,
 }: StadiumHeroProps) {
-  const tier = TIERS[Math.min(stadiumLevel, TIERS.length - 1)];
+  const { t } = useTranslation();
+  const tierIndex = Math.min(stadiumLevel, TIERS.length - 1);
+  const tier = TIERS[tierIndex];
 
   return (
     <div className="relative aspect-[16/11] w-full overflow-hidden rounded-bubble-xl border border-border shadow-fantasy-lg">
@@ -95,8 +98,9 @@ export function StadiumHero({
       </div>
 
       {/* Tier label */}
-      <div className="absolute left-3 top-3 rounded-full bg-background/70 px-3 py-1 font-display text-xs font-bold uppercase tracking-wider text-foreground backdrop-blur-sm">
-        {tier.props} Lv. {stadiumLevel} · {tier.label}
+      <div className="absolute start-3 top-3 rounded-full bg-background/70 px-3 py-1 font-display text-xs font-bold uppercase tracking-wider text-foreground backdrop-blur-sm">
+        {tier.props} {t("stadium.lvl")} {stadiumLevel} ·{" "}
+        {t(`stadium.tiers.${tierIndex}`)}
       </div>
 
       {/* Celebratory shine sweep (retriggered via key) */}

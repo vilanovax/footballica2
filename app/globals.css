@@ -21,6 +21,8 @@
   --primary: 142 85% 38%;
   --primary-foreground: 0 0% 100%;
   --primary-deep: 142 80% 28%;
+  /* Darker forest green for readable text on white panels */
+  --primary-readable: 148 82% 24%;
 
   --secondary: 12 95% 58%;
   --secondary-foreground: 0 0% 100%;
@@ -66,6 +68,8 @@
   --primary: 155 100% 48%;
   --primary-foreground: 215 55% 8%;
   --primary-deep: 155 90% 32%;
+  /* On dark navy panels a bright neon green stays readable */
+  --primary-readable: 152 95% 60%;
 
   --secondary: 190 100% 50%;
   --secondary-foreground: 215 55% 8%;
@@ -122,6 +126,15 @@ body {
   transition:
     background-color 200ms ease,
     color 200ms ease;
+}
+
+/* RTL locales (Persian, and future Arabic) render with a proper script font
+   for both body and display text. */
+[dir="rtl"] body,
+[dir="rtl"] .btn-fantasy,
+[dir="rtl"] .font-display,
+[dir="rtl"] .font-body {
+  font-family: var(--font-fa), var(--font-body), system-ui, sans-serif;
 }
 
 /* Theme-aware Fantasy 3D buttons */

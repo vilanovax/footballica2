@@ -4,7 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { usePenaltyStore } from "@/stores/penaltyStore";
-import { PENALTY_QUESTIONS } from "@/lib/quiz/mock-questions";
+import { PENALTY_QUESTIONS, TUTORIAL_QUESTIONS } from "@/lib/quiz/mock-questions";
+import { playSound } from "@/lib/audio/SoundManager";
+import { haptic, HAPTIC } from "@/lib/audio/haptics";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import { FuseTimer } from "./FuseTimer";
 import { QuestionCard } from "./QuestionCard";
 import { AnswerButton } from "./AnswerButton";
@@ -16,8 +19,15 @@ import { MissedPopup } from "./MissedPopup";
 /** Auto-advance delay after a scored goal (miss waits for Continue tap). */
 const GOAL_REVEAL_MS = 1500;
 
-export function PenaltyMatch() {
+type PenaltyMatchProps = {
+  /** FTUE tutorial run: short 3-question shootout with a guaranteed payout. */
+  tutorial?: boolean;
+};
+
+export function PenaltyMatch({ tutorial = false }: PenaltyMatchProps) {
   const router = useRouter();
+  const { t } = useTranslation();
+  const questionSet = tutorial ? TUTORIAL_QUESTIONS : PENALTY_QUESTIONS;
 
   const phase = usePenaltyStore((s) => s.phase);
   const questions = usePenaltyStore((s) => s.questions);
@@ -38,9 +48,11 @@ export function PenaltyMatch() {
 
   // Kick off a match on mount, clean up on unmount.
   useEffect(() => {
-    start(PENALTY_QUESTIONS);
+    start(questionSet);
+    // Kick-off whistle when the match/timer starts.
+    playSound("whistle");
     return () => reset();
-  }, [start, reset]);
+  }, [start, reset, questionSet]);
 
   // Timer loop via rAF — only runs while playing (paused on reveal).
   const rafRef = useRef<number | null>(null);
@@ -71,8 +83,12 @@ export function PenaltyMatch() {
   useEffect(() => {
     if (phase !== "reveal" || !feedback) return;
 
-    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-      navigator.vibrate(feedback.result === "goal" ? 30 : [90, 40, 140]);
+    if (feedback.result === "goal") {
+      playSound("goal");
+      haptic(HAPTIC.goal); // light 50ms
+    } else {
+      playSound("miss");
+      haptic(HAPTIC.miss); // heavy [100,50,100]
     }
 
     if (feedback.result === "goal") {
@@ -89,12 +105,13 @@ export function PenaltyMatch() {
       <MatchResult
         rewards={rewards}
         totalKicks={questions.length}
+        tutorial={tutorial}
         submissions={log.map((k) => ({
           questionId: k.questionId,
           selectedIndex: k.selectedIndex,
           msRemaining: k.msRemaining,
         }))}
-        onPlayAgain={() => start(PENALTY_QUESTIONS)}
+        onPlayAgain={() => start(questionSet)}
         onExit={() => router.push("/club")}
       />
     );
@@ -119,10 +136,13 @@ export function PenaltyMatch() {
         <header className="flex flex-col gap-3 pt-2">
           <div className="flex items-center justify-between">
             <p className="font-display text-sm font-bold uppercase tracking-widest text-secondary">
-              Penalty Mode
+              {t("quiz.penaltyMode")}
             </p>
             <p className="font-display text-sm font-semibold text-muted-foreground">
-              Kick {currentIndex + 1} / {questions.length}
+              {t("quiz.kickOf", {
+                n: currentIndex + 1,
+                total: questions.length,
+              })}
             </p>
           </div>
           <Scoreboard

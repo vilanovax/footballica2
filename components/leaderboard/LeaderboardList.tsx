@@ -1,0 +1,156 @@
+"use client";
+
+import { motion } from "framer-motion";
+import { getAvatar } from "@/lib/onboarding/avatars";
+import type { LeaderboardRow } from "@/actions/getLeaderboard";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+
+type LeaderboardListProps = {
+  rows: LeaderboardRow[];
+};
+
+// Podium styling for the top three — gold / silver / bronze.
+const MEDALS: Record<number, { emoji: string; ring: string; bg: string }> = {
+  1: {
+    emoji: "🥇",
+    ring: "border-[#e0a800]",
+    bg: "bg-gradient-to-r from-[#fff3c4] to-[#ffe07a]",
+  },
+  2: {
+    emoji: "🥈",
+    ring: "border-[#9aa4ad]",
+    bg: "bg-gradient-to-r from-[#f1f4f7] to-[#d3dae0]",
+  },
+  3: {
+    emoji: "🥉",
+    ring: "border-[#c08457]",
+    bg: "bg-gradient-to-r from-[#f7e2d0] to-[#e6b78f]",
+  },
+};
+
+const containerVariants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.05, delayChildren: 0.05 } },
+};
+
+const rowVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { type: "spring", stiffness: 280, damping: 22 },
+  },
+} as const;
+
+export function LeaderboardList({ rows }: LeaderboardListProps) {
+  const { t } = useTranslation();
+  return (
+    <section className="flex flex-1 flex-col">
+      {/* Sticky league header + mock countdown */}
+      <header className="sticky top-0 z-20 -mx-1 bg-background/90 pb-3 pt-2 backdrop-blur-md">
+        <p className="font-display text-sm font-semibold uppercase tracking-widest text-primary">
+          {t("leaderboard.weeklyLeague")}
+        </p>
+        <div className="flex items-end justify-between gap-2">
+          <h1 className="font-display text-2xl font-bold text-foreground">
+            {t("leaderboard.title")}
+          </h1>
+          <span className="rounded-full bg-surface px-3 py-1 font-display text-xs font-bold text-accent-deep shadow-fantasy-sm">
+            ⏳ {t("leaderboard.resetsIn")}
+          </span>
+        </div>
+      </header>
+
+      <motion.ol
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="flex flex-col gap-2 pb-28 pt-1"
+      >
+        {rows.map((row) => {
+          const avatar = getAvatar(row.avatarKey);
+          const medal = MEDALS[row.rank];
+          const isTop3 = Boolean(medal);
+
+          return (
+            <motion.li
+              key={row.userId}
+              variants={rowVariants}
+              className={[
+                "flex items-center gap-3 rounded-bubble p-3 shadow-fantasy transition-colors",
+                row.isCurrentUser
+                  ? "border-4 border-primary bg-primary/10 ring-2 ring-primary/60 shadow-glow"
+                  : medal
+                    ? `border-2 ${medal.ring} ${medal.bg}`
+                    : "border-2 border-border bg-surface",
+              ].join(" ")}
+            >
+              {/* Rank / medal */}
+              <div
+                className={[
+                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-base font-extrabold",
+                  isTop3
+                    ? "bg-black/10 text-black/80"
+                    : "bg-muted text-muted-foreground",
+                ].join(" ")}
+              >
+                {medal ? (
+                  <span aria-label={`#${row.rank}`}>{medal.emoji}</span>
+                ) : (
+                  row.rank
+                )}
+              </div>
+
+              {/* Avatar */}
+              <div
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent/15 text-2xl"
+                aria-hidden
+              >
+                {avatar.emoji}
+              </div>
+
+              {/* Club name */}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p
+                    className={[
+                      "truncate font-display text-base font-bold",
+                      isTop3 ? "text-black/90" : "text-surface-foreground",
+                    ].join(" ")}
+                  >
+                    {row.clubName}
+                  </p>
+                  {row.isCurrentUser && (
+                    <span className="flex shrink-0 items-center gap-1 rounded-full bg-primary px-2 py-0.5 font-display text-[10px] font-extrabold uppercase tracking-wide text-primary-foreground shadow-fantasy-sm">
+                      <span aria-hidden>⭐</span> {t("leaderboard.you")}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Weekly XP */}
+              <div className="shrink-0 text-end">
+                <p
+                  className={[
+                    "font-display text-lg font-extrabold leading-none",
+                    isTop3 ? "text-black/90" : "text-primary",
+                  ].join(" ")}
+                >
+                  {row.weeklyXp.toLocaleString()}
+                </p>
+                <p
+                  className={[
+                    "text-[10px] font-bold uppercase tracking-widest",
+                    isTop3 ? "text-black/50" : "text-muted-foreground",
+                  ].join(" ")}
+                >
+                  {t("result.xp")}
+                </p>
+              </div>
+            </motion.li>
+          );
+        })}
+      </motion.ol>
+    </section>
+  );
+}

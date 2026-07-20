@@ -1,0 +1,139 @@
+import type { Dictionary } from "./en";
+
+// Persian (Farsi) dictionary. RTL. Also the reference for future RTL locales
+// (e.g. Arabic) which can copy this shape.
+const fa: Dictionary = {
+  common: {
+    backToClub: "بازگشت به باشگاه",
+    ok: "باشه",
+    nice: "عالی!",
+    retry: "تلاش دوباره",
+    continue: "ادامه",
+    soon: "به‌زودی",
+  },
+  nav: {
+    club: "باشگاه",
+    play: "بازی",
+    ranks: "رتبه‌ها",
+    settings: "تنظیمات",
+  },
+  onboarding: {
+    chooseManager: "مدیرت را انتخاب کن",
+    whichManager: "چه مدیری هستی؟",
+    nameClub: "اسم باشگاه",
+    teamName: "اسم تیم",
+    placeholder: "اسم باشگاه",
+    start: "شروع مسیر",
+    changeManager: "← تغییر مدیر",
+    dialog:
+      "رئیس خوش اومدی! باشگاه نابوده ولی با هم می‌سازیمش. اسم تیممون رو چی بذاریم؟",
+  },
+  avatars: {
+    TACTICAL_COACH: { name: "مربی تاکتیکی", tagline: "بازی رو مثل کتاب می‌خونه." },
+    YOUNG_DIRECTOR: { name: "مدیر ورزشی جوان", tagline: "جاه‌طلب و نترس." },
+    VETERAN_FAN: { name: "لیدر متعصب", tagline: "با باشگاه نفس می‌کشه." },
+  },
+  play: {
+    matchDay: "روز مسابقه",
+    chooseMode: "یک حالت انتخاب کن",
+    penalty: "حالت پنالتی",
+    penaltyDesc: "۵ ضربه · پاسخ درست = گل",
+    quick: "مسابقه سریع",
+    quickDesc: "۵ تا ۱۰ سؤال سریع · به‌زودی",
+  },
+  quiz: {
+    penaltyMode: "حالت پنالتی",
+    kickOf: "ضربه {n} از {total}",
+    goal: "گل!",
+    missed: "موقعیت از دست رفت!",
+    useSuperpower: "استفاده از قدرت ویژه",
+  },
+  result: {
+    saving: "در حال ذخیره نتیجه…",
+    won: "پیروزی در ضربات!",
+    lost: "شکست در ضربات",
+    goalsScored: "{goals} از {total} گل زده شد",
+    coins: "سکه",
+    xp: "امتیاز",
+    fans: "هوادار",
+    playAgain: "بازی دوباره",
+    outOfEnergy: "انرژی تمام شد",
+    spendCoins: "حالا سکه‌ها را خرج کن!",
+    saveFailed: "ذخیره ناموفق",
+  },
+  exhausted: {
+    title: "تیم خسته است!",
+    desc: "برای ریکاوری صبر کن یا زمین تمرین را ارتقا بده تا حداکثر انرژی بیشتر شود.",
+  },
+  club: {
+    hubEyebrow: "مرکز باشگاه",
+    yourStadium: "استادیوم تو",
+    upgrades: "ارتقاها",
+    dailyNews: "اخبار روزانه",
+  },
+  status: {
+    plusOneIn: "+۱ در {time}",
+  },
+  upgrades: {
+    upgrade: "ارتقا",
+    max: "حداکثر",
+    STADIUM: { name: "استادیوم", desc: "جایگاه بزرگ‌تر، هواداران بیشتر، زمین بهتر." },
+    MEDICAL: { name: "بخش پزشکی", desc: "ریکاوری سریع‌تر انرژی بین مسابقه‌ها." },
+    TRAINING_GROUND: {
+      name: "زمین تمرین",
+      desc: "ظرفیت انرژی روزانه‌ات را بالا می‌برد.",
+    },
+  },
+  stadium: {
+    lvl: "سطح",
+    tiers: ["زمین مخروبه", "زمین خاکی", "زمین چمن", "ورزشگاه نورافکن‌دار"],
+  },
+  ftue: {
+    step0Line:
+      "رئیس، بریم مهارتت رو تو زمین بسنجیم! اولین بازی رو ببر تا سکه بگیری.",
+    step0Cta: "شروع اولین بازی",
+    step1Line: "آفرین! حالا با اون سکه‌ها استادیوم خراب‌مون رو بساز.",
+    gradLine: "آماده‌ای. ما رو به قهرمانی برسون!",
+  },
+  news: {
+    masthead: "روزنامه فوتبالیکا",
+    breaking: "خبر فوری",
+    todayEdition: "نسخه امروز · منتشر شده",
+    soldOut: "تمام شد",
+    thatsAll: "برای امروز همین بود!",
+    comeBack: "فردا برای خبر تازه برگرد.",
+    claim: "دریافت!",
+    effectCoin: "{mult} برابر سکه برای {hours} ساعت!",
+    effectFan: "{mult} برابر هوادار برای {hours} ساعت!",
+    events: {
+      LEGEND_VISIT: "یک اسطوره به باشگاه سر زد!",
+      MYSTERY_SPONSOR: "اسپانسر مرموز قرارداد بست!",
+      STREET_PARADE: "هواداران رژه خیابانی راه انداختند!",
+      TV_VIRAL: "باشگاه در تلویزیون وایرال شد!",
+    },
+  },
+  leaderboard: {
+    weeklyLeague: "لیگ هفتگی",
+    title: "لیگ هفتگی",
+    resetsIn: "ریست تا ۳ روز دیگر",
+    you: "شما",
+  },
+  settings: {
+    eyebrow: "تنظیمات",
+    title: "فضای مسابقه",
+    theme: "پوسته",
+    themeDesc: "بین حالت روز و شب جابه‌جا شو.",
+    day: "حالت روز",
+    night: "حالت شب",
+    sound: "صدا",
+    soundDesc: "سوت مسابقه، گل و افکت‌های رابط کاربری.",
+    on: "روشن",
+    off: "خاموش",
+    language: "زبان",
+    languageDesc: "زبان بازی را انتخاب کن. جهت راست‌چین خودکار تغییر می‌کند.",
+    english: "English",
+    persian: "فارسی",
+  },
+};
+
+export default fa;

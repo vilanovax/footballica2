@@ -1,0 +1,139 @@
+// English dictionary — source of truth for the translation key shape.
+// `fa.ts` (and future RTL locales like Arabic) must satisfy `Dictionary`.
+
+const en = {
+  common: {
+    backToClub: "Back to Club",
+    ok: "OK",
+    nice: "Nice!",
+    retry: "Retry",
+    continue: "Continue",
+    soon: "Soon",
+  },
+  nav: {
+    club: "Club",
+    play: "Play",
+    ranks: "Ranks",
+    settings: "Settings",
+  },
+  onboarding: {
+    chooseManager: "Choose Your Manager",
+    whichManager: "Which manager are you?",
+    nameClub: "Name Your Club",
+    teamName: "Team Name",
+    placeholder: "Club name",
+    start: "Start Journey",
+    changeManager: "← Change manager",
+    dialog:
+      "Welcome Boss! The club is in ruins, but we can fix it. What should we name our team?",
+  },
+  avatars: {
+    TACTICAL_COACH: { name: "Tactical Coach", tagline: "Reads the game like a book." },
+    YOUNG_DIRECTOR: { name: "Young Director", tagline: "Ambitious and fearless." },
+    VETERAN_FAN: { name: "Veteran Fan", tagline: "Lives and breathes the club." },
+  },
+  play: {
+    matchDay: "Match Day",
+    chooseMode: "Choose a Mode",
+    penalty: "Penalty Mode",
+    penaltyDesc: "5 kicks · Correct = Goal",
+    quick: "Quick Match",
+    quickDesc: "5–10 rapid-fire questions · soon",
+  },
+  quiz: {
+    penaltyMode: "Penalty Mode",
+    kickOf: "Kick {n} / {total}",
+    goal: "Goal!",
+    missed: "Missed!",
+    useSuperpower: "Use Superpower",
+  },
+  result: {
+    saving: "Saving Results…",
+    won: "Shootout Won!",
+    lost: "Shootout Lost",
+    goalsScored: "{goals} / {total} goals scored",
+    coins: "Coins",
+    xp: "XP",
+    fans: "Fans",
+    playAgain: "Play Again",
+    outOfEnergy: "Out of Energy",
+    spendCoins: "Now spend your coins!",
+    saveFailed: "Save Failed",
+  },
+  exhausted: {
+    title: "Team is Exhausted!",
+    desc: "Wait for recovery, or upgrade your Training Ground to increase max stamina.",
+  },
+  club: {
+    hubEyebrow: "Club Hub",
+    yourStadium: "Your Stadium",
+    upgrades: "Upgrades",
+    dailyNews: "Daily News",
+  },
+  status: {
+    plusOneIn: "+1 in {time}",
+  },
+  upgrades: {
+    upgrade: "Upgrade",
+    max: "MAX",
+    STADIUM: { name: "Stadium", desc: "Bigger stands, more fans, better pitch." },
+    MEDICAL: { name: "Medical Bay", desc: "Recover stamina faster between matches." },
+    TRAINING_GROUND: {
+      name: "Training Ground",
+      desc: "Raises your daily stamina capacity.",
+    },
+  },
+  stadium: {
+    lvl: "Lv.",
+    tiers: ["Ruined Ground", "Dirt Pitch", "Grass Pitch", "Floodlit Arena"],
+  },
+  ftue: {
+    step0Line:
+      "Let's test your skills on the pitch, Boss! Win your first match to earn some coins.",
+    step0Cta: "Play First Match",
+    step1Line: "Great job! Now use those coins to fix our ruined stadium.",
+    gradLine: "You're ready. Take us to the Championship!",
+  },
+  news: {
+    masthead: "The Footballica Times",
+    breaking: "Breaking News",
+    todayEdition: "Today's Edition · Already Out",
+    soldOut: "Sold Out",
+    thatsAll: "THAT'S ALL FOR TODAY!",
+    comeBack: "Come back tomorrow for a fresh headline.",
+    claim: "Claim!",
+    effectCoin: "{mult}x Coins for {hours}h!",
+    effectFan: "{mult}x Fans for {hours}h!",
+    events: {
+      LEGEND_VISIT: "LEGEND VISITS THE CLUB!",
+      MYSTERY_SPONSOR: "MYSTERY SPONSOR SIGNS ON!",
+      STREET_PARADE: "ULTRAS THROW A STREET PARADE!",
+      TV_VIRAL: "CLUB GOES VIRAL ON TV!",
+    },
+  },
+  leaderboard: {
+    weeklyLeague: "Weekly League",
+    title: "Weekly League",
+    resetsIn: "Resets in 3 days",
+    you: "You",
+  },
+  settings: {
+    eyebrow: "Settings",
+    title: "Match Atmosphere",
+    theme: "Theme",
+    themeDesc: "Switch between Day Match and Night Match.",
+    day: "Day Match",
+    night: "Night Match",
+    sound: "Sound",
+    soundDesc: "Match whistles, goals & UI effects.",
+    on: "On",
+    off: "Off",
+    language: "Language",
+    languageDesc: "Choose the game language. RTL flips automatically.",
+    english: "English",
+    persian: "فارسی",
+  },
+};
+
+export default en;
+export type Dictionary = typeof en;

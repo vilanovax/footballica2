@@ -9,6 +9,14 @@ export type ClubSnapshot = {
   stadiumLevel: number;
   medicalLevel: number;
   trainingGroundLevel: number;
+  /** Ms until the next +1 stamina (0 when full). Computed on read. */
+  msUntilNext: number;
+  /** Chosen manager avatar key (may be null on legacy rows). */
+  avatar: string | null;
+  /** FTUE progress: 0 tutorial match · 1 first upgrade · 2 done. */
+  tutorialStep: number;
+  /** True when today's Newspaper booster can still be claimed. */
+  newsClaimable: boolean;
 };
 
 export type UpgradeKey = "STADIUM" | "MEDICAL" | "TRAINING_GROUND";

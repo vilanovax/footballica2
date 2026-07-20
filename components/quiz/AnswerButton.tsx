@@ -31,18 +31,20 @@ export function AnswerButton({
     reveal.selectedIndex === index &&
     index !== reveal.correctIndex;
 
-  // Base (unrevealed) vs revealed states drive color tokens.
+  // Base (unrevealed) vs revealed states drive color tokens. The thick bottom
+  // border + hard shadow give a chunky, physically-pressable plastic feel.
   let stateClass =
-    "bg-surface text-surface-foreground shadow-fantasy border-border";
+    "bg-surface text-surface-foreground shadow-fantasy border-border border-b-black/25";
   if (reveal) {
     if (isCorrect) {
       stateClass =
-        "bg-primary text-primary-foreground border-primary-deep shadow-glow";
+        "bg-primary text-primary-foreground border-primary-deep border-b-primary-deep shadow-glow";
     } else if (isPickedWrong) {
       stateClass =
-        "bg-destructive text-destructive-foreground border-destructive shadow-fantasy";
+        "bg-destructive text-destructive-foreground border-destructive border-b-black/30 shadow-fantasy";
     } else {
-      stateClass = "bg-muted text-muted-foreground border-border opacity-60";
+      stateClass =
+        "bg-muted text-muted-foreground border-border border-b-black/15 opacity-60";
     }
   }
 
@@ -51,7 +53,15 @@ export function AnswerButton({
       type="button"
       disabled={disabled}
       onClick={() => onSelect(index)}
-      whileTap={disabled ? undefined : { y: 6, boxShadow: "2px 2px 0px hsl(var(--shadow-ink) / 0.2)" }}
+      whileTap={
+        disabled
+          ? undefined
+          : {
+              y: 6,
+              boxShadow:
+                "0 0 22px hsl(var(--primary) / 0.55), 2px 2px 0px hsl(var(--shadow-ink) / 0.2)",
+            }
+      }
       animate={
         isCorrect
           ? { scale: [1, 1.06, 1] }
@@ -61,19 +71,19 @@ export function AnswerButton({
       }
       transition={{ duration: isPickedWrong ? 0.4 : 0.35 }}
       className={[
-        "flex min-h-touch w-full items-center gap-3 rounded-bubble border px-4 py-4 text-left font-body text-base font-bold",
+        "flex min-h-touch w-full items-center gap-3 rounded-bubble border-2 border-b-4 px-4 py-4 text-start font-body text-base font-bold",
         "transition-colors duration-200",
         stateClass,
       ].join(" ")}
     >
       <span
         className={[
-          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-display text-sm font-bold",
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-display text-sm font-extrabold shadow-fantasy-sm",
           reveal && isCorrect
-            ? "bg-primary-foreground/20"
+            ? "bg-primary-foreground/20 text-primary-foreground"
             : reveal && isPickedWrong
-              ? "bg-destructive-foreground/20"
-              : "bg-muted text-muted-foreground",
+              ? "bg-destructive-foreground/20 text-destructive-foreground"
+              : "bg-primary text-primary-foreground",
         ].join(" ")}
       >
         {OPTION_LETTERS[index]}

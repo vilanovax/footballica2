@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { Fredoka, Nunito } from "next/font/google";
+import { Fredoka, Nunito, Vazirmatn } from "next/font/google";
 import { AppShell } from "@/components/shell/AppShell";
+import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistration";
+import { LanguageProvider } from "@/components/i18n/LanguageProvider";
 import "./globals.css";
 
 const fontDisplay = Fredoka({
@@ -15,15 +17,32 @@ const fontBody = Nunito({
   weight: ["400", "600", "700", "800"],
 });
 
+// Persian/Arabic script font — applied automatically for RTL (see globals.css).
+const fontFa = Vazirmatn({
+  variable: "--font-fa",
+  subsets: ["arabic", "latin"],
+  weight: ["400", "500", "600", "700", "800"],
+});
+
 export const metadata: Metadata = {
   title: "Footballica",
   description:
     "Take your ruined Division 3 club to the Championship using your football knowledge.",
   applicationName: "Footballica",
+  // Next auto-links the manifest from app/manifest.ts.
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    // Full-bleed status bar over our themed content (also emits
+    // mobile-web-app-capable="yes").
+    statusBarStyle: "black-translucent",
     title: "Footballica",
+  },
+  icons: {
+    icon: [
+      { url: "/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
   },
 };
 
@@ -46,11 +65,15 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${fontDisplay.variable} ${fontBody.variable} h-full antialiased`}
-      /* Default = Day Match. Set data-theme="dark" for Night Match. */
+      className={`${fontDisplay.variable} ${fontBody.variable} ${fontFa.variable} h-full antialiased`}
+      /* Default = Day Match. Set data-theme="dark" for Night Match.
+         LanguageProvider updates lang + dir on the client. */
     >
       <body className="min-h-full overflow-x-hidden font-body text-foreground">
-        <AppShell>{children}</AppShell>
+        <LanguageProvider>
+          <AppShell>{children}</AppShell>
+        </LanguageProvider>
+        <ServiceWorkerRegistration />
       </body>
     </html>
   );

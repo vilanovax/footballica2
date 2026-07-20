@@ -36,20 +36,25 @@ enum QuestionDifficulty {
   HARD
 }
 
+enum BoosterType {
+  COIN_BOOST
+  FAN_BOOST
+}
+
 // ─── User (Manager) ──────────────────────────────────────────────────────────
 // Owns auth identity + global progression. Economy currency lives on Club.
 
 model User {
-  id            String          @id @default(cuid())
-  email         String?         @unique
+  id            String         @id @default(cuid())
+  email         String?        @unique
   displayName   String?
   managerAvatar ManagerAvatar?
-  xp            Int             @default(0)
-  managerLevel  Int             @default(1)
+  xp            Int            @default(0)
+  managerLevel  Int            @default(1)
   /// XP earned in the current weekly window (leaderboard). Reset via cron/job.
-  weeklyXp      Int             @default(0)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  weeklyXp      Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   club    Club?
   matches Match[]
@@ -67,13 +72,22 @@ model Club {
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  name String
+  name         String
+  /// Chosen manager avatar key (mirrors ManagerAvatar), set during onboarding.
+  avatar       String?
+  /// FTUE progress: 0 = play tutorial match, 1 = buy first upgrade, 2 = done.
+  tutorialStep Int     @default(0)
 
   // Economy balances (server-authoritative)
-  coins      Int @default(0)
-  fans       Int @default(0)
-  stamina    Int @default(3)
-  maxStamina Int @default(3)
+  coins             Int       @default(0)
+  fans              Int       @default(0)
+  stamina           Int       @default(3)
+  maxStamina        Int       @default(3)
+  /// Anchor for passive stamina regeneration (recomputed on read).
+  lastStaminaUpdate DateTime  @default(now())
+  /// Last time the daily Newspaper booster was claimed (null = never). Gates
+  /// the "once per day" claim; a fresh calendar day re-enables the mailbox.
+  lastNewsClaim     DateTime?
 
   // Infrastructure upgrade levels (0 = ruined start state)
   stadiumLevel        Int @default(0)
@@ -85,10 +99,31 @@ model Club {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  matches Match[]
+  matches  Match[]
+  boosters ActiveBooster[]
 
   @@index([fans])
   @@index([coins])
+}
+
+// ─── ActiveBooster (Newspaper Events) ────────────────────────────────────────
+// Temporary reward multipliers granted by "newspaper" popups (PRD §4D).
+// A booster is valid while expiresAt > now(). Expired rows can be pruned lazily.
+
+model ActiveBooster {
+  id     String @id @default(cuid())
+  clubId String
+  club   Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  type       BoosterType
+  multiplier Float       @default(2.0)
+  /// Headline shown in the newspaper that granted it (for re-display).
+  headline   String
+
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([clubId, expiresAt])
 }
 
 // ─── Match (MatchHistory) ────────────────────────────────────────────────────
@@ -132,17 +167,17 @@ model Match {
 // Included because Match resolution depends on it; not client-editable.
 
 model Question {
-  id            String             @id @default(cuid())
-  questionText  String
-  options       String[]
-  correctIndex  Int
-  difficulty    QuestionDifficulty @default(EASY)
-  category      String
+  id           String             @id @default(cuid())
+  questionText String
+  options      String[]
+  correctIndex Int
+  difficulty   QuestionDifficulty @default(EASY)
+  category     String
   /// Optional flavor for match framing ("penalty", "derby", …)
-  matchContext  String?
-  isActive      Boolean            @default(true)
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  matchContext String?
+  isActive     Boolean            @default(true)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
 
   @@index([category, difficulty])
   @@index([isActive])

@@ -28,6 +28,8 @@ const config: Config = {
           DEFAULT: "hsl(var(--primary) / <alpha-value>)",
           foreground: "hsl(var(--primary-foreground) / <alpha-value>)",
           deep: "hsl(var(--primary-deep) / <alpha-value>)",
+          // High-contrast green for text on light surfaces (accessibility).
+          readable: "hsl(var(--primary-readable) / <alpha-value>)",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary) / <alpha-value>)",
