@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import type { UpgradeDef } from "@/lib/club/upgrades";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { toLocaleDigits } from "@/lib/i18n/format";
 
 type UpgradeCardProps = {
   def: UpgradeDef;
@@ -27,9 +28,11 @@ export function UpgradeCard({
   spotlight = false,
   onUpgrade,
 }: UpgradeCardProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const isMax = cost === null;
   const disabled = isMax || !canAfford || pending || locked;
+  // Highlight a buyable upgrade (unless the FTUE is spotlighting another card).
+  const affordable = !isMax && canAfford && !locked;
 
   return (
     <motion.div
@@ -49,7 +52,9 @@ export function UpgradeCard({
         "flex items-center gap-3 rounded-bubble border bg-surface p-3 shadow-fantasy transition-opacity",
         spotlight
           ? "relative z-50 border-accent"
-          : "border-border",
+          : affordable
+            ? "border-primary/40"
+            : "border-border",
         locked ? "pointer-events-none opacity-40" : "",
       ].join(" ")}
     >
@@ -63,7 +68,7 @@ export function UpgradeCard({
             {t(`upgrades.${def.key}.name`)}
           </p>
           <span className="rounded-full bg-muted px-2 py-0.5 font-display text-[10px] font-bold uppercase text-muted-foreground">
-            {t("stadium.lvl")} {level}
+            {t("stadium.lvl")} {toLocaleDigits(level, locale)}
           </span>
         </div>
         <p className="truncate font-body text-xs font-semibold text-muted-foreground">
@@ -92,8 +97,13 @@ export function UpgradeCard({
         ) : (
           <>
             <span>{t("upgrades.upgrade")}</span>
-            <span className="flex items-center gap-1 text-xs opacity-90">
-              💰 {cost}
+            <span
+              className={[
+                "flex items-center gap-1 text-xs",
+                canAfford ? "opacity-90" : "font-bold text-destructive",
+              ].join(" ")}
+            >
+              💰 {toLocaleDigits(cost, locale)}
             </span>
           </>
         )}

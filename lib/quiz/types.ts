@@ -2,15 +2,25 @@
 
 export type QuestionDifficulty = "easy" | "medium" | "hard";
 
+/** Locales that ship a full question bank. Mirrors the i18n locales. */
+export type QuizLocale = "en" | "fa";
+
+/** Language-specific presentation of a question. */
+export type QuizContent = {
+  text: string;
+  /** Always 4 options (see PRD §8). Order MUST match across locales so a
+   *  single top-level `correctIndex` stays valid in every language. */
+  options: [string, string, string, string];
+  category: string;
+};
+
 export type QuizQuestion = {
   id: string;
-  questionText: string;
-  /** Always 4 options (see PRD §8). */
-  options: [string, string, string, string];
-  /** Index 0-3 of the correct option. */
+  /** Localized text/options/category per language. */
+  content: Record<QuizLocale, QuizContent>;
+  /** Index 0-3 of the correct option — language-independent. */
   correctIndex: number;
   difficulty: QuestionDifficulty;
-  category: string;
 };
 
 /** Outcome of a single penalty kick (one question). */

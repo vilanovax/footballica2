@@ -116,9 +116,12 @@ export function ClubHub({ initialClub }: ClubHubProps) {
           <p className="font-display text-sm font-semibold uppercase tracking-widest text-primary">
             {t("club.hubEyebrow")}
           </p>
-          <h1 className="font-display text-2xl font-bold text-foreground">
-            {t("club.yourStadium")}
+          <h1 className="font-display text-2xl font-bold leading-tight text-foreground">
+            {club.name}
           </h1>
+          <p className="font-display text-xs font-semibold text-muted-foreground">
+            {t("club.yourStadium")}
+          </p>
         </div>
 
         {/* Daily News shows ONLY after FTUE completion (tutorialStep === 2).

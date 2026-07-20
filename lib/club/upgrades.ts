@@ -2,6 +2,8 @@
 // can share the exact same cost/level rules (single source of truth).
 
 export type ClubSnapshot = {
+  /** Club display name (personalizes the Hub header). */
+  name: string;
   coins: number;
   fans: number;
   stamina: number;

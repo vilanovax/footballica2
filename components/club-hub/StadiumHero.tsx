@@ -1,8 +1,9 @@
 "use client";
 
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Confetti } from "./Confetti";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { toLocaleDigits } from "@/lib/i18n/format";
 
 type StadiumHeroProps = {
   stadiumLevel: number;
@@ -56,7 +57,7 @@ export function StadiumHero({
   celebrateKey,
   celebrating,
 }: StadiumHeroProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const tierIndex = Math.min(stadiumLevel, TIERS.length - 1);
   const tier = TIERS[tierIndex];
 
@@ -90,16 +91,21 @@ export function StadiumHero({
             <div key={i} className={`h-1/2 ${i % 2 === 0 ? tier.stripe : ""}`} />
           ))}
         </div>
-        {/* Center circle + ball */}
+        {/* Center circle + gently bobbing ball */}
         <div className="absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/60" />
-        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl">
+        <motion.span
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl"
+          animate={{ y: [0, -6, 0], rotate: [0, 8, -8, 0] }}
+          transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+          aria-hidden
+        >
           ⚽️
-        </span>
+        </motion.span>
       </div>
 
       {/* Tier label */}
       <div className="absolute start-3 top-3 rounded-full bg-background/70 px-3 py-1 font-display text-xs font-bold uppercase tracking-wider text-foreground backdrop-blur-sm">
-        {tier.props} {t("stadium.lvl")} {stadiumLevel} ·{" "}
+        {tier.props} {t("stadium.lvl")} {toLocaleDigits(stadiumLevel, locale)} ·{" "}
         {t(`stadium.tiers.${tierIndex}`)}
       </div>
 

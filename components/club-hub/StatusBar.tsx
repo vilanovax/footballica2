@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { STAMINA_REGEN_INTERVAL_MS } from "@/lib/club/stamina";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { toLocaleDigits } from "@/lib/i18n/format";
 
 type StatusBarProps = {
   coins: number;
@@ -27,7 +28,7 @@ export function StatusBar({
   maxStamina,
   msUntilNext,
 }: StatusBarProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const prevCoins = useRef(coins);
   const [pulse, setPulse] = useState(false);
 
@@ -70,39 +71,55 @@ export function StatusBar({
 
   const regenerating = localStamina < maxStamina;
 
+  const staminaLow = localStamina <= 1;
+
   return (
     <div className="grid grid-cols-3 items-start gap-2">
       <motion.div
         animate={pulse ? { scale: [1, 1.12, 1] } : { scale: 1 }}
         transition={{ duration: 0.5 }}
         className={[
-          "flex items-center justify-center gap-1.5 rounded-full border border-border bg-surface px-3 py-2 shadow-fantasy-sm",
+          "flex items-center justify-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-3 py-2 shadow-fantasy-sm",
           pulse ? "ring-2 ring-accent" : "",
         ].join(" ")}
       >
         <span aria-hidden>💰</span>
         <span className="font-display text-sm font-bold text-accent-deep tabular-nums">
-          {coins}
+          {toLocaleDigits(coins, locale)}
         </span>
       </motion.div>
 
-      <div className="flex items-center justify-center gap-1.5 rounded-full border border-border bg-surface px-3 py-2 shadow-fantasy-sm">
+      <div className="flex items-center justify-center gap-1.5 rounded-full border border-secondary/30 bg-secondary/10 px-3 py-2 shadow-fantasy-sm">
         <span aria-hidden>👥</span>
         <span className="font-display text-sm font-bold text-secondary tabular-nums">
-          {fans}
+          {toLocaleDigits(fans, locale)}
         </span>
       </div>
 
       <div className="flex flex-col items-center gap-1">
-        <div className="flex w-full items-center justify-center gap-1.5 rounded-full border border-border bg-surface px-3 py-2 shadow-fantasy-sm">
+        <div
+          className={[
+            "flex w-full items-center justify-center gap-1.5 rounded-full border px-3 py-2 shadow-fantasy-sm transition-colors",
+            staminaLow
+              ? "border-destructive/40 bg-destructive/10"
+              : "border-primary/30 bg-primary/10",
+          ].join(" ")}
+        >
           <span aria-hidden>⚡</span>
-          <span className="font-display text-sm font-bold text-primary tabular-nums">
-            {localStamina}/{maxStamina}
+          <span
+            className={[
+              "font-display text-sm font-bold tabular-nums",
+              staminaLow ? "text-destructive" : "text-primary",
+            ].join(" ")}
+          >
+            {toLocaleDigits(localStamina, locale)}/{toLocaleDigits(maxStamina, locale)}
           </span>
         </div>
         {regenerating && (
           <span className="font-display text-[11px] font-bold text-muted-foreground tabular-nums">
-            {t("status.plusOneIn", { time: formatMMSS(remainingMs) })}
+            {t("status.plusOneIn", {
+              time: toLocaleDigits(formatMMSS(remainingMs), locale),
+            })}
           </span>
         )}
       </div>

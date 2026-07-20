@@ -1,6 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import type { Club, Prisma, PrismaClient } from "@prisma/client";
+import type { Club, Prisma, PrismaClient } from "@/generated/prisma/client";
 import type { ClubSnapshot } from "@/lib/club/upgrades";
 import { computeStaminaRegen } from "@/lib/club/stamina";
 import { canClaimNews } from "@/lib/boosters/boosters";
@@ -16,6 +16,7 @@ export const DEV_USER_EMAIL = "dev@footballica.local";
 export function toClubSnapshot(club: Club): ClubSnapshot {
   const regen = computeStaminaRegen(club);
   return {
+    name: club.name,
     coins: club.coins,
     fans: club.fans,
     stamina: club.stamina,

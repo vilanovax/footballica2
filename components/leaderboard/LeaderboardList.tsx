@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { getAvatar } from "@/lib/onboarding/avatars";
 import type { LeaderboardRow } from "@/actions/getLeaderboard";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { formatNumber, toLocaleDigits } from "@/lib/i18n/format";
 
 type LeaderboardListProps = {
   rows: LeaderboardRow[];
@@ -43,7 +44,7 @@ const rowVariants = {
 } as const;
 
 export function LeaderboardList({ rows }: LeaderboardListProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   return (
     <section className="flex flex-1 flex-col">
       {/* Sticky league header + mock countdown */}
@@ -97,7 +98,7 @@ export function LeaderboardList({ rows }: LeaderboardListProps) {
                 {medal ? (
                   <span aria-label={`#${row.rank}`}>{medal.emoji}</span>
                 ) : (
-                  row.rank
+                  toLocaleDigits(row.rank, locale)
                 )}
               </div>
 
@@ -136,7 +137,7 @@ export function LeaderboardList({ rows }: LeaderboardListProps) {
                     isTop3 ? "text-black/90" : "text-primary",
                   ].join(" ")}
                 >
-                  {row.weeklyXp.toLocaleString()}
+                  {formatNumber(row.weeklyXp, locale)}
                 </p>
                 <p
                   className={[

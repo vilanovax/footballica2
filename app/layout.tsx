@@ -25,9 +25,9 @@ const fontFa = Vazirmatn({
 });
 
 export const metadata: Metadata = {
-  title: "Footballica",
+  title: "Footballica | فوتبالیکا",
   description:
-    "Take your ruined Division 3 club to the Championship using your football knowledge.",
+    "The Ultimate Fantasy Football Trivia Game | بازی جذاب اطلاعات فوتبالی",
   applicationName: "Footballica",
   // Next auto-links the manifest from app/manifest.ts.
   appleWebApp: {

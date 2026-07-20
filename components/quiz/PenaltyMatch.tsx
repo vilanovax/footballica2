@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { usePenaltyStore } from "@/stores/penaltyStore";
+import { useLanguageStore } from "@/stores/languageStore";
 import { PENALTY_QUESTIONS, TUTORIAL_QUESTIONS } from "@/lib/quiz/mock-questions";
 import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
@@ -27,6 +28,8 @@ type PenaltyMatchProps = {
 export function PenaltyMatch({ tutorial = false }: PenaltyMatchProps) {
   const router = useRouter();
   const { t } = useTranslation();
+  // Active language drives which localized question content is rendered.
+  const lang = useLanguageStore((s) => s.locale);
   const questionSet = tutorial ? TUTORIAL_QUESTIONS : PENALTY_QUESTIONS;
 
   const phase = usePenaltyStore((s) => s.phase);
@@ -120,6 +123,7 @@ export function PenaltyMatch({ tutorial = false }: PenaltyMatchProps) {
   const question = questions[currentIndex];
   if (!question) return null;
 
+  const content = question.content[lang] ?? question.content.en;
   const locked = phase === "reveal";
   const showGoal = locked && feedback?.result === "goal";
   const showMiss = locked && feedback?.result === "miss";
@@ -154,11 +158,15 @@ export function PenaltyMatch({ tutorial = false }: PenaltyMatchProps) {
         </header>
 
         <AnimatePresence mode="wait">
-          <QuestionCard key={question.id} question={question} />
+          <QuestionCard
+            key={question.id}
+            text={content.text}
+            category={content.category}
+          />
         </AnimatePresence>
 
         <div className="flex flex-col gap-3">
-          {question.options.map((option, index) => (
+          {content.options.map((option, index) => (
             <AnswerButton
               key={`${question.id}-${index}`}
               label={option}

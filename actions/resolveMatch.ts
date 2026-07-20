@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getOrCreateDummyClub } from "@/lib/dev/dummyClub";
 import { PENALTY_QUESTIONS } from "@/lib/quiz/mock-questions";

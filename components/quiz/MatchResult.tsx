@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { resolveMatch, type ResolveMatchResult } from "@/actions/resolveMatch";
 import type { KickSubmission, MatchRewards } from "@/lib/quiz/scoring";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { toLocaleDigits } from "@/lib/i18n/format";
 
 type MatchResultProps = {
   rewards: MatchRewards;
@@ -29,7 +30,7 @@ export function MatchResult({
   onPlayAgain,
   onExit,
 }: MatchResultProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const won = rewards.goals > totalKicks / 2;
   const [save, setSave] = useState<SaveState>({ status: "saving" });
 
@@ -134,15 +135,18 @@ export function MatchResult({
           {won ? t("result.won") : t("result.lost")}
         </h1>
         <p className="mt-1 font-display text-lg font-semibold text-muted-foreground">
-          {t("result.goalsScored", { goals: confirmed.goals, total: totalKicks })}
+          {t("result.goalsScored", {
+            goals: toLocaleDigits(confirmed.goals, locale),
+            total: toLocaleDigits(totalKicks, locale),
+          })}
         </p>
       </div>
 
       <div className="grid w-full grid-cols-3 gap-3">
         {[
-          { label: t("result.coins"), value: `+${confirmed.coins}`, tone: "text-accent-deep" },
-          { label: t("result.xp"), value: `+${confirmed.xp}`, tone: "text-primary" },
-          { label: t("result.fans"), value: `+${confirmed.fans}`, tone: "text-secondary" },
+          { label: t("result.coins"), value: `+${toLocaleDigits(confirmed.coins, locale)}`, tone: "text-accent-deep" },
+          { label: t("result.xp"), value: `+${toLocaleDigits(confirmed.xp, locale)}`, tone: "text-primary" },
+          { label: t("result.fans"), value: `+${toLocaleDigits(confirmed.fans, locale)}`, tone: "text-secondary" },
         ].map((r) => (
           <div
             key={r.label}
@@ -160,12 +164,12 @@ export function MatchResult({
 
       {/* Server-confirmed club totals */}
       <div className="flex items-center gap-1.5 rounded-full bg-surface px-4 py-2 font-display text-sm font-bold shadow-fantasy-sm">
-        <span className="text-accent-deep">💰 {balances.coins}</span>
+        <span className="text-accent-deep">💰 {toLocaleDigits(balances.coins, locale)}</span>
         <span className="text-muted-foreground">·</span>
-        <span className="text-secondary">👥 {balances.fans}</span>
+        <span className="text-secondary">👥 {toLocaleDigits(balances.fans, locale)}</span>
         <span className="text-muted-foreground">·</span>
         <span className="text-primary">
-          ⚡ {balances.stamina}/{balances.maxStamina}
+          ⚡ {toLocaleDigits(balances.stamina, locale)}/{toLocaleDigits(balances.maxStamina, locale)}
         </span>
       </div>
 

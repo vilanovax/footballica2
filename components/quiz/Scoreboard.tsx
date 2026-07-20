@@ -1,5 +1,8 @@
 "use client";
 
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { toLocaleDigits } from "@/lib/i18n/format";
+
 type ScoreboardProps = {
   kickNumber: number;
   totalKicks: number;
@@ -8,6 +11,7 @@ type ScoreboardProps = {
 
 /** Row of penalty spots: filled = taken, gold = scored. */
 export function Scoreboard({ kickNumber, totalKicks, goals }: ScoreboardProps) {
+  const { locale } = useTranslation();
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">
@@ -33,8 +37,10 @@ export function Scoreboard({ kickNumber, totalKicks, goals }: ScoreboardProps) {
       <div className="flex items-center gap-1 font-display text-sm font-bold text-foreground">
         <span aria-hidden>⚽️</span>
         <span>
-          {goals}
-          <span className="text-muted-foreground">/{totalKicks}</span>
+          {toLocaleDigits(goals, locale)}
+          <span className="text-muted-foreground">
+            /{toLocaleDigits(totalKicks, locale)}
+          </span>
         </span>
       </div>
     </div>
