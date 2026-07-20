@@ -52,6 +52,8 @@ const fa: Dictionary = {
     saving: "در حال ذخیره نتیجه…",
     won: "پیروزی در ضربات!",
     lost: "شکست در ضربات",
+    wonHint: "عالی بود! همین‌طور ادامه بده.",
+    lostHint: "نزدیک بود؛ یک ضربهٔ دیگر بزن!",
     goalsScored: "{goals} از {total} گل زده شد",
     coins: "سکه",
     xp: "امتیاز",
@@ -114,9 +116,11 @@ const fa: Dictionary = {
   },
   leaderboard: {
     weeklyLeague: "لیگ هفتگی",
+    eyebrow: "رده‌بندی جهانی",
     title: "لیگ هفتگی",
     resetsIn: "ریست تا ۳ روز دیگر",
     you: "شما",
+    champion: "قهرمان هفته",
   },
   settings: {
     eyebrow: "تنظیمات",
@@ -133,6 +137,7 @@ const fa: Dictionary = {
     languageDesc: "زبان بازی را انتخاب کن. جهت راست‌چین خودکار تغییر می‌کند.",
     english: "English",
     persian: "فارسی",
+    tagline: "بازی جذاب اطلاعات فوتبالی",
   },
 };
 

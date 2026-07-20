@@ -140,26 +140,45 @@ export function MatchResult({
             total: toLocaleDigits(totalKicks, locale),
           })}
         </p>
+        <p
+          className={[
+            "mt-2 font-display text-sm font-bold",
+            won ? "text-primary" : "text-accent-deep",
+          ].join(" ")}
+        >
+          {won ? t("result.wonHint") : t("result.lostHint")}
+        </p>
       </div>
 
       <div className="grid w-full grid-cols-3 gap-3">
         {[
-          { label: t("result.coins"), value: `+${toLocaleDigits(confirmed.coins, locale)}`, tone: "text-accent-deep" },
-          { label: t("result.xp"), value: `+${toLocaleDigits(confirmed.xp, locale)}`, tone: "text-primary" },
-          { label: t("result.fans"), value: `+${toLocaleDigits(confirmed.fans, locale)}`, tone: "text-secondary" },
-        ].map((r) => (
-          <div
-            key={r.label}
-            className="rounded-bubble border border-border bg-surface px-3 py-4 shadow-fantasy"
-          >
-            <p className={`font-display text-xl font-bold ${r.tone}`}>
-              {r.value}
-            </p>
-            <p className="mt-1 text-xs font-semibold text-muted-foreground">
-              {r.label}
-            </p>
-          </div>
-        ))}
+          { label: t("result.coins"), amount: confirmed.coins, tone: "text-accent-deep" },
+          { label: t("result.xp"), amount: confirmed.xp, tone: "text-primary" },
+          { label: t("result.fans"), amount: confirmed.fans, tone: "text-secondary" },
+        ].map((r) => {
+          const earned = r.amount > 0;
+          return (
+            <div
+              key={r.label}
+              className={[
+                "rounded-bubble border px-3 py-4 shadow-fantasy transition-colors",
+                earned ? "border-border bg-surface" : "border-border bg-muted/50",
+              ].join(" ")}
+            >
+              <p
+                className={[
+                  "font-display text-xl font-bold",
+                  earned ? r.tone : "text-muted-foreground",
+                ].join(" ")}
+              >
+                +{toLocaleDigits(r.amount, locale)}
+              </p>
+              <p className="mt-1 text-xs font-semibold text-muted-foreground">
+                {r.label}
+              </p>
+            </div>
+          );
+        })}
       </div>
 
       {/* Server-confirmed club totals */}

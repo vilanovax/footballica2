@@ -20,6 +20,84 @@ const LOCALE_LABEL: Record<Locale, { native: string; flag: string }> = {
   fa: { native: "فارسی", flag: "🇮🇷" },
 };
 
+/** Section header: tinted icon badge + title + description. */
+function CardHeader({
+  icon,
+  tint,
+  title,
+  desc,
+  children,
+}: {
+  icon: string;
+  tint: string;
+  title: string;
+  desc: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div className="flex min-w-0 items-start gap-3">
+        <span
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-bubble text-xl ${tint}`}
+          aria-hidden
+        >
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <p className="font-display text-lg font-bold text-surface-foreground">
+            {title}
+          </p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{desc}</p>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+/** Chunky selectable pill with icon + label and a check badge when active. */
+function OptionButton({
+  selected,
+  onClick,
+  icon,
+  label,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  icon: string;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={[
+        "btn-fantasy min-h-touch relative flex-col gap-1 rounded-bubble border px-3 py-4 font-display text-sm font-bold",
+        selected
+          ? "border-primary bg-primary text-primary-foreground shadow-btn-3d"
+          : "border-border bg-muted text-muted-foreground shadow-fantasy-sm",
+      ].join(" ")}
+    >
+      {selected && (
+        <motion.span
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 500, damping: 22 }}
+          className="absolute top-1.5 inset-inline-end-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-background text-[11px] font-black text-primary shadow-fantasy-sm"
+          aria-hidden
+        >
+          ✓
+        </motion.span>
+      )}
+      <span className="text-2xl" aria-hidden>
+        {icon}
+      </span>
+      <span>{label}</span>
+    </button>
+  );
+}
+
 export default function SettingsPage() {
   const [theme, setTheme] = useState<Theme>("day");
   const { isMuted, toggleMute, play } = useSound();
@@ -67,116 +145,100 @@ export default function SettingsPage() {
       </header>
 
       <div className="rounded-bubble-xl border border-border bg-surface p-5 shadow-fantasy">
-        <p className="font-display text-lg font-bold text-surface-foreground">
-          {t("settings.language")}
-        </p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t("settings.languageDesc")}
-        </p>
-
+        <CardHeader
+          icon="🌐"
+          tint="bg-secondary/15"
+          title={t("settings.language")}
+          desc={t("settings.languageDesc")}
+        />
         <div className="mt-4 grid grid-cols-2 gap-3">
-          {LOCALES.map((code) => {
-            const selected = locale === code;
-            return (
-              <button
-                key={code}
-                type="button"
-                onClick={() => handleSetLocale(code)}
-                aria-pressed={selected}
-                className={[
-                  "btn-fantasy min-h-touch flex-col gap-1 rounded-bubble border px-3 py-4 font-display text-sm font-bold",
-                  selected
-                    ? "border-primary bg-primary text-primary-foreground shadow-btn-3d"
-                    : "border-border bg-muted text-muted-foreground shadow-fantasy-sm",
-                ].join(" ")}
-              >
-                <span className="text-2xl" aria-hidden>
-                  {LOCALE_LABEL[code].flag}
-                </span>
-                <span>{LOCALE_LABEL[code].native}</span>
-              </button>
-            );
-          })}
+          {LOCALES.map((code) => (
+            <OptionButton
+              key={code}
+              selected={locale === code}
+              onClick={() => handleSetLocale(code)}
+              icon={LOCALE_LABEL[code].flag}
+              label={LOCALE_LABEL[code].native}
+            />
+          ))}
         </div>
       </div>
 
       <div className="rounded-bubble-xl border border-border bg-surface p-5 shadow-fantasy">
-        <p className="font-display text-lg font-bold text-surface-foreground">
-          {t("settings.theme")}
-        </p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t("settings.themeDesc")}
-        </p>
-
+        <CardHeader
+          icon="🎨"
+          tint="bg-accent/15"
+          title={t("settings.theme")}
+          desc={t("settings.themeDesc")}
+        />
         <div className="mt-4 grid grid-cols-2 gap-3">
-          <button
-            type="button"
+          <OptionButton
+            selected={theme === "day"}
             onClick={() => applyTheme("day")}
-            className={[
-              "btn-fantasy min-h-touch rounded-bubble border px-3 py-4 font-display text-sm font-bold",
-              theme === "day"
-                ? "border-primary bg-primary text-primary-foreground shadow-btn-3d"
-                : "border-border bg-muted text-muted-foreground shadow-fantasy-sm",
-            ].join(" ")}
-          >
-            {t("settings.day")}
-          </button>
-          <button
-            type="button"
+            icon="☀️"
+            label={t("settings.day")}
+          />
+          <OptionButton
+            selected={theme === "dark"}
             onClick={() => applyTheme("dark")}
-            className={[
-              "btn-fantasy min-h-touch rounded-bubble border px-3 py-4 font-display text-sm font-bold",
-              theme === "dark"
-                ? "border-primary bg-primary text-primary-foreground shadow-btn-3d"
-                : "border-border bg-muted text-muted-foreground shadow-fantasy-sm",
-            ].join(" ")}
-          >
-            {t("settings.night")}
-          </button>
+            icon="🌙"
+            label={t("settings.night")}
+          />
         </div>
       </div>
 
       <div className="rounded-bubble-xl border border-border bg-surface p-5 shadow-fantasy">
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <p className="font-display text-lg font-bold text-surface-foreground">
-              {t("settings.sound")}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {t("settings.soundDesc")}
-            </p>
-          </div>
-
+        <CardHeader
+          icon={soundOn ? "🔊" : "🔇"}
+          tint="bg-primary/15"
+          title={t("settings.sound")}
+          desc={t("settings.soundDesc")}
+        >
           <button
             type="button"
             role="switch"
             aria-checked={soundOn}
             onClick={handleToggleMute}
             className={[
-              "relative flex h-11 w-20 shrink-0 items-center rounded-full border px-1 font-display text-xs font-bold transition-colors",
+              "relative flex h-11 w-20 shrink-0 items-center rounded-full border px-1 transition-colors",
               soundOn
-                ? "justify-end border-primary bg-primary text-primary-foreground shadow-btn-3d"
-                : "justify-start border-border bg-muted text-muted-foreground shadow-fantasy-sm",
+                ? "justify-end border-primary bg-primary shadow-btn-3d"
+                : "justify-start border-border bg-muted shadow-fantasy-sm",
             ].join(" ")}
           >
-            <span className="absolute left-3 text-sm" aria-hidden>
-              {soundOn ? "" : "🔇"}
-            </span>
-            <span className="absolute right-3 text-sm" aria-hidden>
-              {soundOn ? "🔊" : ""}
-            </span>
             <motion.span
               layout
               transition={{ type: "spring", stiffness: 500, damping: 34 }}
-              className="h-9 w-9 rounded-full bg-surface shadow-fantasy-sm"
-            />
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-surface text-sm shadow-fantasy-sm"
+            >
+              <span aria-hidden>{soundOn ? "🔊" : "🔇"}</span>
+            </motion.span>
           </button>
-        </div>
+        </CardHeader>
 
-        <p className="mt-3 font-display text-sm font-bold text-muted-foreground">
+        <span
+          className={[
+            "mt-4 inline-flex items-center rounded-full px-3 py-1 font-display text-xs font-bold",
+            soundOn
+              ? "bg-primary/15 text-primary"
+              : "bg-muted text-muted-foreground",
+          ].join(" ")}
+        >
           {soundOn ? t("settings.on") : t("settings.off")}
-        </p>
+        </span>
       </div>
+
+      <footer className="mt-auto pt-4 text-center">
+        <p className="font-display text-lg font-black tracking-wide text-primary/70">
+          Footballica
+        </p>
+        <p className="mt-0.5 text-xs font-semibold text-muted-foreground">
+          {t("settings.tagline")}
+        </p>
+        <p className="mt-1 text-[11px] font-semibold text-muted-foreground/70 tabular-nums">
+          v0.1.0
+        </p>
+      </footer>
     </section>
   );
 }

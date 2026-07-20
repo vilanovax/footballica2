@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { usePenaltyStore } from "@/stores/penaltyStore";
 import { useLanguageStore } from "@/stores/languageStore";
@@ -9,6 +9,7 @@ import { PENALTY_QUESTIONS, TUTORIAL_QUESTIONS } from "@/lib/quiz/mock-questions
 import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { toLocaleDigits } from "@/lib/i18n/format";
 import { FuseTimer } from "./FuseTimer";
 import { QuestionCard } from "./QuestionCard";
 import { AnswerButton } from "./AnswerButton";
@@ -144,8 +145,8 @@ export function PenaltyMatch({ tutorial = false }: PenaltyMatchProps) {
             </p>
             <p className="font-display text-sm font-semibold text-muted-foreground">
               {t("quiz.kickOf", {
-                n: currentIndex + 1,
-                total: questions.length,
+                n: toLocaleDigits(currentIndex + 1, lang),
+                total: toLocaleDigits(questions.length, lang),
               })}
             </p>
           </div>
@@ -165,18 +166,37 @@ export function PenaltyMatch({ tutorial = false }: PenaltyMatchProps) {
           />
         </AnimatePresence>
 
-        <div className="flex flex-col gap-3">
+        <motion.div
+          key={`opts-${question.id}`}
+          className="flex flex-col gap-3"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            visible: { transition: { staggerChildren: 0.07, delayChildren: 0.08 } },
+          }}
+        >
           {content.options.map((option, index) => (
-            <AnswerButton
+            <motion.div
               key={`${question.id}-${index}`}
-              label={option}
-              index={index}
-              disabled={locked}
-              reveal={locked ? feedback : null}
-              onSelect={(i) => answer(i)}
-            />
+              variants={{
+                hidden: { opacity: 0, y: 16 },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: { type: "spring", stiffness: 300, damping: 24 },
+                },
+              }}
+            >
+              <AnswerButton
+                label={option}
+                index={index}
+                disabled={locked}
+                reveal={locked ? feedback : null}
+                onSelect={(i) => answer(i)}
+              />
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
 
       <AnimatePresence>{showGoal && <GoalBurst key="goal" />}</AnimatePresence>

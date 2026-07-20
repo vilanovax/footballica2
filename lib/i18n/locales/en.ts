@@ -51,6 +51,8 @@ const en = {
     saving: "Saving Results…",
     won: "Shootout Won!",
     lost: "Shootout Lost",
+    wonHint: "Brilliant! Keep the streak alive.",
+    lostHint: "So close — take another shot!",
     goalsScored: "{goals} / {total} goals scored",
     coins: "Coins",
     xp: "XP",
@@ -113,9 +115,11 @@ const en = {
   },
   leaderboard: {
     weeklyLeague: "Weekly League",
+    eyebrow: "Global Ranking",
     title: "Weekly League",
     resetsIn: "Resets in 3 days",
     you: "You",
+    champion: "Champion of the Week",
   },
   settings: {
     eyebrow: "Settings",
@@ -132,6 +136,7 @@ const en = {
     languageDesc: "Choose the game language. RTL flips automatically.",
     english: "English",
     persian: "فارسی",
+    tagline: "The Ultimate Fantasy Football Trivia",
   },
 };
 

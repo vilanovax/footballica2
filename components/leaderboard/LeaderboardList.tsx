@@ -5,6 +5,7 @@ import { getAvatar } from "@/lib/onboarding/avatars";
 import type { LeaderboardRow } from "@/actions/getLeaderboard";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { formatNumber, toLocaleDigits } from "@/lib/i18n/format";
+import { LeaderboardPodium } from "./LeaderboardPodium";
 
 type LeaderboardListProps = {
   rows: LeaderboardRow[];
@@ -45,12 +46,15 @@ const rowVariants = {
 
 export function LeaderboardList({ rows }: LeaderboardListProps) {
   const { t, locale } = useTranslation();
+  const showPodium = rows.length >= 3;
+  const podiumRows = showPodium ? rows.slice(0, 3) : [];
+  const listRows = showPodium ? rows.slice(3) : rows;
   return (
     <section className="flex flex-1 flex-col">
       {/* Sticky league header + mock countdown */}
       <header className="sticky top-0 z-20 -mx-1 bg-background/90 pb-3 pt-2 backdrop-blur-md">
         <p className="font-display text-sm font-semibold uppercase tracking-widest text-primary">
-          {t("leaderboard.weeklyLeague")}
+          {t("leaderboard.eyebrow")}
         </p>
         <div className="flex items-end justify-between gap-2">
           <h1 className="font-display text-2xl font-bold text-foreground">
@@ -62,13 +66,15 @@ export function LeaderboardList({ rows }: LeaderboardListProps) {
         </div>
       </header>
 
+      {showPodium && <LeaderboardPodium rows={podiumRows} />}
+
       <motion.ol
         variants={containerVariants}
         initial="hidden"
         animate="visible"
         className="flex flex-col gap-2 pb-28 pt-1"
       >
-        {rows.map((row) => {
+        {listRows.map((row) => {
           const avatar = getAvatar(row.avatarKey);
           const medal = MEDALS[row.rank];
           const isTop3 = Boolean(medal);

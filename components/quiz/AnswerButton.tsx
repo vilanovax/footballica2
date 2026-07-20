@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { KickResult } from "@/lib/quiz/types";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type AnswerButtonProps = {
   label: string;
@@ -16,7 +17,11 @@ type AnswerButtonProps = {
   onSelect: (index: number) => void;
 };
 
-const OPTION_LETTERS = ["A", "B", "C", "D"];
+// Locale-aware option badges so the labels feel native (A–D vs الف–د).
+const OPTION_LETTERS: Record<string, string[]> = {
+  en: ["A", "B", "C", "D"],
+  fa: ["الف", "ب", "ج", "د"],
+};
 
 export function AnswerButton({
   label,
@@ -25,6 +30,8 @@ export function AnswerButton({
   reveal,
   onSelect,
 }: AnswerButtonProps) {
+  const { locale } = useTranslation();
+  const letters = OPTION_LETTERS[locale] ?? OPTION_LETTERS.en;
   const isCorrect = reveal ? index === reveal.correctIndex : false;
   const isPickedWrong =
     reveal !== null &&
@@ -86,7 +93,7 @@ export function AnswerButton({
               : "bg-primary text-primary-foreground",
         ].join(" ")}
       >
-        {OPTION_LETTERS[index]}
+        {letters[index]}
       </span>
       <span className="flex-1">{label}</span>
 
