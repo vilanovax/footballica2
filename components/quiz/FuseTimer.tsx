@@ -1,0 +1,60 @@
+"use client";
+
+import { motion } from "framer-motion";
+import { Flame } from "lucide-react";
+import { KICK_DURATION_MS } from "@/lib/quiz/scoring";
+
+type FuseTimerProps = {
+  timeLeftMs: number;
+  paused?: boolean;
+};
+
+/**
+ * A burning-fuse timer: the fuse shrinks as time runs out and the flame rides
+ * its tip. Turns from primary → accent → destructive as it burns down.
+ */
+export function FuseTimer({ timeLeftMs, paused = false }: FuseTimerProps) {
+  const ratio = Math.max(0, Math.min(1, timeLeftMs / KICK_DURATION_MS));
+  const danger = ratio <= 0.3;
+  const warning = ratio <= 0.6 && !danger;
+
+  const fillColor = danger
+    ? "hsl(var(--destructive))"
+    : warning
+      ? "hsl(var(--accent))"
+      : "hsl(var(--primary))";
+
+  return (
+    <div className="relative h-5 w-full">
+      <div className="absolute inset-0 overflow-hidden rounded-full border border-border bg-muted shadow-fantasy-sm">
+        <motion.div
+          className="h-full rounded-full"
+          style={{ backgroundColor: fillColor }}
+          animate={{ width: `${ratio * 100}%` }}
+          transition={{ ease: "linear", duration: 0.1 }}
+        />
+      </div>
+
+      <motion.div
+        className="absolute top-1/2 -translate-y-1/2"
+        animate={{ left: `calc(${ratio * 100}% - 12px)` }}
+        transition={{ ease: "linear", duration: 0.1 }}
+      >
+        <motion.div
+          animate={
+            paused
+              ? { scale: 1, rotate: 0 }
+              : { scale: [1, 1.25, 1], rotate: [-8, 8, -8] }
+          }
+          transition={{ repeat: Infinity, duration: 0.4 }}
+        >
+          <Flame
+            className="h-6 w-6 drop-shadow"
+            style={{ color: danger ? "hsl(var(--destructive))" : "hsl(var(--accent))" }}
+            fill="currentColor"
+          />
+        </motion.div>
+      </motion.div>
+    </div>
+  );
+}

@@ -1,0 +1,53 @@
+# Footballica — Cursor Rules
+
+You are a Senior Game Developer and Full-Stack Next.js Engineer working on **Footballica**, a mobile-first gamified trivia and club management web app.
+Authoritative product intent lives in `PRD.md`. 
+
+---
+
+## 1. Project Stack & Architecture
+The stack is DEFINED. Do not ask to choose a stack. Follow these strictly:
+- **Framework:** Next.js (App Router) - optimized as a Mobile-First Web App (PWA).
+- **Styling:** Tailwind CSS + Framer Motion (Crucial for the "Fantasy UI" bubbly look and smooth transitions).
+- **Database:** PostgreSQL accessed via Prisma ORM.
+- **Global State:** Zustand (for client-side game state like active timers, current score, and session stamina).
+- **Components:** Radix UI primitives (if needed for accessibility).
+
+---
+
+## 2. Working Principles
+1. **PRD First:** Read `@PRD.md` before implementing features. The game has a "Metagame" (Club Hub) and "Core Loop" (Quiz). 
+2. **Gamification over Forms:** Never build standard boring lists or forms. Everything must feel like a game. Use big, touch-friendly rounded buttons, high-contrast colors, and particle/haptic feedback.
+3. **Small Diffs & Iterative Steps:** Write modular, feature-scoped components. Do NOT generate massive files. 
+4. **Mobile-First strictness:** Optimize for one-handed phone use. Touch targets ≥ 44x44px. No horizontal scrolling. Bottom navigation where applicable.
+
+---
+
+## 3. Directory & Code Conventions
+- Use Next.js App Router conventions (`app/page.tsx`, `app/api/...`).
+- Group files by feature where possible (e.g., `components/quiz/`, `components/club-hub/`).
+- **Separation of Concerns:** Keep game logic (scoring rules, penalty evaluation) separate from React UI components (use pure utility functions or Zustand actions).
+- **Environment:** Do not commit `.env` files. Provide `.env.example`.
+
+---
+
+## 4. Feature Implementation Order (Current Roadmap)
+Follow this exact order unless instructed otherwise by the user:
+1. **Database Schema:** Prisma models for User, Club (with economy stats), and Match History.
+2. **App Shell & Hub:** Bottom navigation + visual representation of the Club Hub (mock data first).
+3. **Quiz Engine:** The "Penalty Mode" UI, logic, timers, and animations.
+4. **Economy Integration:** Connecting match results to the Prisma database to update Club coins/fans.
+
+---
+
+## 5. UI / UX & Game Feel Rules
+- **Instant Feedback:** Answers must trigger immediate visual/audio/haptic feedback (Correct = Goal effect, Wrong = Heavy vibration/Miss).
+- **Fantasy Aesthetics:** Default to rounded corners (`rounded-2xl`, `rounded-full`), drop shadows for depth, and vibrant gradients. 
+- **Loading States:** No boring spinners. Use skeleton loaders or bouncing football animations.
+
+---
+
+## 6. Communication with the User
+- The user will likely prompt you in **Persian (Farsi)**. You can reply in English or Persian, but keep all codebase identifiers, variable names, and technical documentation strictly in **English**.
+- Be concise. Do not explain basic React concepts unless asked. Focus on architecture and game logic.
+- Always propose Prisma schema changes before modifying the database.

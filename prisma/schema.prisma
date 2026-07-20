@@ -1,0 +1,149 @@
+// Footballica MVP — PostgreSQL schema (Prisma)
+// Source of truth for entities in PRD §7. Scalable for post-MVP (PvP, boosters, live events)
+// without overbuilding Phase 1 tables.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum ManagerAvatar {
+  TACTICAL_COACH
+  YOUNG_DIRECTOR
+  VETERAN_FAN
+}
+
+enum MatchMode {
+  TUTORIAL
+  QUICK_MATCH
+  PENALTY
+}
+
+enum MatchStatus {
+  COMPLETED
+  ABANDONED
+}
+
+enum QuestionDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+// ─── User (Manager) ──────────────────────────────────────────────────────────
+// Owns auth identity + global progression. Economy currency lives on Club.
+
+model User {
+  id            String          @id @default(cuid())
+  email         String?         @unique
+  displayName   String?
+  managerAvatar ManagerAvatar?
+  xp            Int             @default(0)
+  managerLevel  Int             @default(1)
+  /// XP earned in the current weekly window (leaderboard). Reset via cron/job.
+  weeklyXp      Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  club    Club?
+  matches Match[]
+
+  @@index([weeklyXp])
+  @@index([xp])
+}
+
+// ─── Club (Metagame hub) ─────────────────────────────────────────────────────
+// 1:1 with User in MVP. Drop @unique on userId later if multi-club is needed.
+// Upgrade levels drive visuals, stamina caps, and reward multipliers in app logic.
+
+model Club {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name String
+
+  // Economy balances (server-authoritative)
+  coins      Int @default(0)
+  fans       Int @default(0)
+  stamina    Int @default(3)
+  maxStamina Int @default(3)
+
+  // Infrastructure upgrade levels (0 = ruined start state)
+  stadiumLevel        Int @default(0)
+  pitchLevel          Int @default(0)
+  medicalLevel        Int @default(0)
+  /// Training Ground raises daily match capacity / maxStamina (PRD stamina system)
+  trainingGroundLevel Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  matches Match[]
+
+  @@index([fans])
+  @@index([coins])
+}
+
+// ─── Match (MatchHistory) ────────────────────────────────────────────────────
+// Append-only reward ledger. Client never mutates Club economy without a Match row.
+
+model Match {
+  id     String @id @default(cuid())
+  userId String
+  clubId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  club   Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  mode   MatchMode
+  status MatchStatus @default(COMPLETED)
+
+  // Football-framed scoreline (Correct = goal for, Wrong = conceded / miss)
+  goalsFor       Int @default(0)
+  goalsAgainst   Int @default(0)
+  questionsTotal Int
+  correctCount   Int @default(0)
+
+  // Reward snapshot applied to Club/User at finish (anti-cheat audit trail)
+  coinsEarned  Int @default(0)
+  xpEarned     Int @default(0)
+  fansEarned   Int @default(0)
+  staminaSpent Int @default(1)
+
+  /// Optional JSON audit: question ids answered, correctness, timings
+  answerLog Json?
+
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, finishedAt])
+  @@index([clubId, finishedAt])
+  @@index([mode, finishedAt])
+}
+
+// ─── Question (trivia dictionary) ────────────────────────────────────────────
+// Included because Match resolution depends on it; not client-editable.
+
+model Question {
+  id            String             @id @default(cuid())
+  questionText  String
+  options       String[]
+  correctIndex  Int
+  difficulty    QuestionDifficulty @default(EASY)
+  category      String
+  /// Optional flavor for match framing ("penalty", "derby", …)
+  matchContext  String?
+  isActive      Boolean            @default(true)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([category, difficulty])
+  @@index([isActive])
+}

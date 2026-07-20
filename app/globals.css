@@ -1,0 +1,247 @@
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Footballica Multi-Theme Tokens
+   Switch themes by setting data-theme on <html>:
+     default / omit     → Day Match
+     data-theme="dark"  → Night Match
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Day Match — vibrant grass green + gold on light panels */
+  --background: 110 40% 96%;
+  --foreground: 210 45% 12%;
+
+  --surface: 0 0% 100%;
+  --surface-foreground: 210 45% 12%;
+  --muted: 110 25% 90%;
+  --muted-foreground: 210 15% 40%;
+
+  --primary: 142 85% 38%;
+  --primary-foreground: 0 0% 100%;
+  --primary-deep: 142 80% 28%;
+
+  --secondary: 12 95% 58%;
+  --secondary-foreground: 0 0% 100%;
+  --secondary-deep: 12 85% 42%;
+
+  --accent: 46 100% 50%;
+  --accent-foreground: 210 45% 12%;
+  --accent-deep: 42 95% 40%;
+
+  --border: 110 20% 82%;
+  --ring: 142 85% 38%;
+  --destructive: 0 84% 55%;
+  --destructive-foreground: 0 0% 100%;
+
+  --nav: 0 0% 100%;
+  --nav-foreground: 210 15% 40%;
+  --nav-active: 142 85% 38%;
+
+  --hub-from: 120 45% 88%;
+  --hub-via: 110 40% 96%;
+  --hub-to: 100 35% 94%;
+
+  /* Fantasy UI geometry */
+  --radius-bubble: 1.25rem;
+  --radius-bubble-lg: 1.75rem;
+  --radius-bubble-xl: 2.25rem;
+
+  /* Hard-offset shadow ink (theme-aware) */
+  --shadow-ink: 210 45% 12%;
+  --glow: 142 85% 38%;
+}
+
+[data-theme="dark"] {
+  /* Night Match — midnight navy + neon floodlight accents */
+  --background: 215 55% 8%;
+  --foreground: 210 40% 96%;
+
+  --surface: 215 45% 14%;
+  --surface-foreground: 210 40% 96%;
+  --muted: 215 35% 18%;
+  --muted-foreground: 210 20% 70%;
+
+  --primary: 155 100% 48%;
+  --primary-foreground: 215 55% 8%;
+  --primary-deep: 155 90% 32%;
+
+  --secondary: 190 100% 50%;
+  --secondary-foreground: 215 55% 8%;
+  --secondary-deep: 190 90% 36%;
+
+  --accent: 46 100% 55%;
+  --accent-foreground: 215 55% 8%;
+  --accent-deep: 42 95% 42%;
+
+  --border: 215 30% 22%;
+  --ring: 155 100% 48%;
+  --destructive: 0 75% 55%;
+  --destructive-foreground: 0 0% 100%;
+
+  --nav: 215 45% 12%;
+  --nav-foreground: 210 20% 70%;
+  --nav-active: 155 100% 48%;
+
+  --hub-from: 155 60% 18%;
+  --hub-via: 215 55% 8%;
+  --hub-to: 220 60% 6%;
+
+  --shadow-ink: 0 0% 0%;
+  --glow: 155 100% 48%;
+}
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --font-sans: var(--font-body);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: hsl(var(--background));
+  background-image: radial-gradient(
+    ellipse 120% 80% at 50% -20%,
+    hsl(var(--hub-from)) 0%,
+    hsl(var(--hub-via)) 55%,
+    hsl(var(--hub-to)) 100%
+  );
+  background-attachment: fixed;
+  color: hsl(var(--foreground));
+  font-family: var(--font-body), system-ui, sans-serif;
+  overflow-x: hidden;
+  transition:
+    background-color 200ms ease,
+    color 200ms ease;
+}
+
+/* Theme-aware Fantasy 3D buttons */
+.btn-fantasy {
+  display: inline-flex;
+  min-height: 44px;
+  min-width: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-bubble);
+  padding: 0.75rem 1.25rem;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.025em;
+  user-select: none;
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease,
+    background-color 150ms ease;
+}
+
+.btn-fantasy:active {
+  transform: translateY(4px);
+}
+
+.btn-fantasy-primary {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  box-shadow:
+    0 6px 0 0 hsl(var(--primary-deep)),
+    4px 4px 0 0 hsl(var(--shadow-ink) / 0.2);
+}
+
+.btn-fantasy-primary:active {
+  box-shadow:
+    0 2px 0 0 hsl(var(--primary-deep)),
+    2px 2px 0 0 hsl(var(--shadow-ink) / 0.2);
+}
+
+.btn-fantasy-secondary {
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  box-shadow:
+    0 6px 0 0 hsl(var(--secondary-deep)),
+    4px 4px 0 0 hsl(var(--shadow-ink) / 0.2);
+}
+
+.btn-fantasy-secondary:active {
+  box-shadow:
+    0 2px 0 0 hsl(var(--secondary-deep)),
+    2px 2px 0 0 hsl(var(--shadow-ink) / 0.2);
+}
+
+.btn-fantasy-accent {
+  background-color: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+  box-shadow:
+    0 6px 0 0 hsl(var(--accent-deep)),
+    4px 4px 0 0 hsl(var(--shadow-ink) / 0.2);
+}
+
+.btn-fantasy-accent:active {
+  box-shadow:
+    0 2px 0 0 hsl(var(--accent-deep)),
+    2px 2px 0 0 hsl(var(--shadow-ink) / 0.2);
+}
+
+/* Miss reaction — CSS screen shake on the match container */
+@keyframes fb-screen-shake {
+  0% { transform: translate3d(0, 0, 0); }
+  15% { transform: translate3d(-10px, 2px, 0) rotate(-1deg); }
+  30% { transform: translate3d(9px, -2px, 0) rotate(1deg); }
+  45% { transform: translate3d(-7px, 1px, 0) rotate(-0.6deg); }
+  60% { transform: translate3d(6px, -1px, 0) rotate(0.6deg); }
+  75% { transform: translate3d(-4px, 1px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+.animate-screen-shake {
+  animation: fb-screen-shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-screen-shake {
+    animation: none;
+  }
+}
+
+/* Celebratory shine sweep across the stadium on a successful upgrade */
+@keyframes fb-stadium-sweep {
+  0% {
+    transform: translateX(-120%) skewX(-18deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(220%) skewX(-18deg);
+    opacity: 0;
+  }
+}
+
+.stadium-sweep {
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.15) 40%,
+    rgba(255, 255, 255, 0.65) 50%,
+    rgba(255, 255, 255, 0.15) 60%,
+    transparent 100%
+  );
+  width: 55%;
+  animation: fb-stadium-sweep 0.9s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stadium-sweep {
+    animation: none;
+    opacity: 0;
+  }
+}
