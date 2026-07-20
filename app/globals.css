@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Animation utilities used by shadcn/ui (animate-in, zoom-in, slide-in, …). */
+@import "tw-animate-css";
 @config "../tailwind.config.ts";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -256,5 +258,56 @@ body {
   .stadium-sweep {
     animation: none;
     opacity: 0;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Admin CMS scope (shadcn/ui "Slate")
+   The admin dashboard uses shadcn components, which reference the SAME token
+   names as the game (--background, --primary, --border, …). To keep the game's
+   Fantasy theme untouched, we redefine those tokens ONLY inside `.admin`, using
+   the same `H S% L%` channel format so the `hsl(var(--x))` utilities resolve.
+   Always light — independent of the game's data-theme.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.admin {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+
+  --primary: 222.2 47.4% 11.2%;
+  --primary-foreground: 210 40% 98%;
+
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 222.2 84% 4.9%;
+
+  --radius: 0.5rem;
+}
+
+/* Tailwind v4 defaults `border`/`ring` color to currentColor. shadcn normally
+   fixes this globally in its base layer; we scope that reset to the admin tree
+   so bare `border`/`ring` utilities pick up the token, while explicit color
+   utilities (e.g. border-slate-200) still win via source order. */
+@layer base {
+  .admin *,
+  .admin *::before,
+  .admin *::after {
+    border-color: hsl(var(--border));
   }
 }

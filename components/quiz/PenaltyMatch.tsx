@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { usePenaltyStore } from "@/stores/penaltyStore";
 import { useLanguageStore } from "@/stores/languageStore";
-import { PENALTY_QUESTIONS, TUTORIAL_QUESTIONS } from "@/lib/quiz/mock-questions";
+import { getMatchQuestions } from "@/actions/getMatchQuestions";
+import type { QuizQuestion } from "@/lib/quiz/types";
 import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -21,17 +22,23 @@ import { MissedPopup } from "./MissedPopup";
 /** Auto-advance delay after a scored goal (miss waits for Continue tap). */
 const GOAL_REVEAL_MS = 1500;
 
+const TUTORIAL_SIZE = 3;
+
 type PenaltyMatchProps = {
   /** FTUE tutorial run: short 3-question shootout with a guaranteed payout. */
   tutorial?: boolean;
+  /** Server-drawn question set (authoritative bank lives in the DB). */
+  initialQuestions: QuizQuestion[];
 };
 
-export function PenaltyMatch({ tutorial = false }: PenaltyMatchProps) {
+export function PenaltyMatch({
+  tutorial = false,
+  initialQuestions,
+}: PenaltyMatchProps) {
   const router = useRouter();
   const { t } = useTranslation();
   // Active language drives which localized question content is rendered.
   const lang = useLanguageStore((s) => s.locale);
-  const questionSet = tutorial ? TUTORIAL_QUESTIONS : PENALTY_QUESTIONS;
 
   const phase = usePenaltyStore((s) => s.phase);
   const questions = usePenaltyStore((s) => s.questions);
@@ -50,13 +57,23 @@ export function PenaltyMatch({ tutorial = false }: PenaltyMatchProps) {
 
   const [shake, setShake] = useState(false);
 
-  // Kick off a match on mount, clean up on unmount.
+  // Kick off a match on mount with the server-drawn set, clean up on unmount.
   useEffect(() => {
-    start(questionSet);
+    start(initialQuestions);
     // Kick-off whistle when the match/timer starts.
     playSound("whistle");
     return () => reset();
-  }, [start, reset, questionSet]);
+  }, [start, reset, initialQuestions]);
+
+  // Play Again draws a FRESH random set from the DB so replays aren't identical.
+  // Falls back to the initial set if the fetch returns nothing.
+  const handlePlayAgain = useCallback(async () => {
+    const next = await getMatchQuestions(
+      tutorial ? { count: TUTORIAL_SIZE, difficulties: ["easy"] } : {},
+    );
+    start(next.length > 0 ? next : initialQuestions);
+    playSound("whistle");
+  }, [tutorial, start, initialQuestions]);
 
   // Timer loop via rAF — only runs while playing (paused on reveal).
   const rafRef = useRef<number | null>(null);
@@ -115,7 +132,7 @@ export function PenaltyMatch({ tutorial = false }: PenaltyMatchProps) {
           selectedIndex: k.selectedIndex,
           msRemaining: k.msRemaining,
         }))}
-        onPlayAgain={() => start(questionSet)}
+        onPlayAgain={handlePlayAgain}
         onExit={() => router.push("/club")}
       />
     );

@@ -1,0 +1,39 @@
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import {
+  ADMIN_COOKIE,
+  ADMIN_COOKIE_MAX_AGE,
+  getAdminSecret,
+} from "@/lib/admin/auth";
+
+/**
+ * Next.js 16 "Proxy" (formerly Middleware). Its only job for the admin gate is
+ * the side effect layouts can't do: when a valid `?secret=` is presented on an
+ * `/admin` route, mint the session cookie and redirect to the clean URL. The
+ * actual access *check* lives in `app/admin/layout.tsx` (reads the cookie).
+ */
+export function proxy(request: NextRequest): NextResponse {
+  const { pathname, searchParams } = request.nextUrl;
+  const secret = searchParams.get("secret");
+
+  if (secret && secret === getAdminSecret()) {
+    // Strip the secret from the URL so it doesn't linger in history/logs.
+    const cleanUrl = request.nextUrl.clone();
+    cleanUrl.searchParams.delete("secret");
+
+    const response = NextResponse.redirect(cleanUrl);
+    response.cookies.set(ADMIN_COOKIE, secret, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/admin",
+      maxAge: ADMIN_COOKIE_MAX_AGE,
+    });
+    return response;
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ["/admin", "/admin/:path*"],
+};

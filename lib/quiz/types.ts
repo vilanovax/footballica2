@@ -14,6 +14,9 @@ export type QuizContent = {
   category: string;
 };
 
+/** Presentation medium — text-only prompt or an image-backed one. */
+export type QuizQuestionType = "TEXT" | "IMAGE";
+
 export type QuizQuestion = {
   id: string;
   /** Localized text/options/category per language. */
@@ -21,6 +24,10 @@ export type QuizQuestion = {
   /** Index 0-3 of the correct option — language-independent. */
   correctIndex: number;
   difficulty: QuestionDifficulty;
+  /** Prompt medium (defaults to TEXT). */
+  type?: QuizQuestionType;
+  /** Image URL for IMAGE-type questions (null/undefined for TEXT). */
+  mediaUrl?: string | null;
 };
 
 /** Outcome of a single penalty kick (one question). */

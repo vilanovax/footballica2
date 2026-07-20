@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getOrCreateDummyClub } from "@/lib/dev/dummyClub";
-import { PENALTY_QUESTIONS } from "@/lib/quiz/mock-questions";
+import { dbQuestionToQuiz } from "@/lib/quiz/questionMapper";
 import {
   computeRewards,
   verifyKickLog,
@@ -59,11 +59,15 @@ export async function resolveMatch(
     return { ok: false, error: "No kicks submitted." };
   }
 
-  // Server-authoritative source of truth for answers. Swap for a DB Question
-  // lookup once the trivia bank is persisted.
+  // Server-authoritative source of truth for answers: re-fetch the exact
+  // questions the client claims to have played from the DB, then recompute
+  // correctness. A tampered client cannot fabricate goals for ids it did not
+  // actually receive (unknown ids throw inside verifyKickLog).
   let verifiedLog;
   try {
-    verifiedLog = verifyKickLog(PENALTY_QUESTIONS, submissions);
+    const ids = [...new Set(submissions.map((s) => s.questionId))];
+    const rows = await prisma.question.findMany({ where: { id: { in: ids } } });
+    verifiedLog = verifyKickLog(rows.map(dbQuestionToQuiz), submissions);
   } catch (err) {
     return {
       ok: false,

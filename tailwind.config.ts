@@ -24,6 +24,17 @@ const config: Config = {
           foreground: "hsl(var(--muted-foreground) / <alpha-value>)",
         },
 
+        // Additional tokens consumed by shadcn/ui components (scoped to .admin).
+        card: {
+          DEFAULT: "hsl(var(--card) / <alpha-value>)",
+          foreground: "hsl(var(--card-foreground) / <alpha-value>)",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover) / <alpha-value>)",
+          foreground: "hsl(var(--popover-foreground) / <alpha-value>)",
+        },
+        input: "hsl(var(--input) / <alpha-value>)",
+
         primary: {
           DEFAULT: "hsl(var(--primary) / <alpha-value>)",
           foreground: "hsl(var(--primary-foreground) / <alpha-value>)",
