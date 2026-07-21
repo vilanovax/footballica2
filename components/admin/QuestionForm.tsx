@@ -40,9 +40,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 type Category = { id: string; nameEn: string; nameFa: string };
+type Tag = { id: string; nameEn: string; nameFa: string };
 
 type QuestionFormProps = {
   categories: Category[];
+  tags: Tag[];
   questionId?: string;
   initialValues: QuestionFormValues;
 };
@@ -55,6 +57,7 @@ const LOCALES = [
 
 export function QuestionForm({
   categories,
+  tags,
   questionId,
   initialValues,
 }: QuestionFormProps) {
@@ -227,6 +230,50 @@ export function QuestionForm({
                 )}
               />
             )}
+
+            <FormField
+              control={form.control}
+              name="tagIds"
+              render={({ field }) => (
+                <FormItem className="sm:col-span-2">
+                  <FormLabel>Tags</FormLabel>
+                  {tags.length === 0 ? (
+                    <FormDescription>
+                      No tags yet — create them in Categories &amp; Tags.
+                    </FormDescription>
+                  ) : (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {tags.map((tag) => {
+                        const selected = field.value.includes(tag.id);
+                        return (
+                          <button
+                            key={tag.id}
+                            type="button"
+                            aria-pressed={selected}
+                            onClick={() =>
+                              field.onChange(
+                                selected
+                                  ? field.value.filter((id) => id !== tag.id)
+                                  : [...field.value, tag.id],
+                              )
+                            }
+                          >
+                            <Badge
+                              variant={selected ? "default" : "outline"}
+                              className="cursor-pointer select-none transition-colors"
+                            >
+                              {tag.nameEn}
+                            </Badge>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <FormDescription>Click to toggle. Optional.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </CardContent>
         </Card>
 

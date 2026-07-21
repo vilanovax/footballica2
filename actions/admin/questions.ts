@@ -55,6 +55,9 @@ export async function createQuestion(
       correctIndex: values.correctIndex,
       content: buildContent(values, category),
       isActive: true,
+      tags: values.tagIds.length
+        ? { connect: values.tagIds.map((id) => ({ id })) }
+        : undefined,
     },
     select: { id: true },
   });
@@ -91,6 +94,7 @@ export async function updateQuestion(
         difficulty: values.difficulty,
         correctIndex: values.correctIndex,
         content: buildContent(values, category),
+        tags: { set: values.tagIds.map((id) => ({ id })) },
       },
     });
   } catch {

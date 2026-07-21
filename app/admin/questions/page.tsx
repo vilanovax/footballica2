@@ -16,14 +16,39 @@ import {
   StatusBadge,
 } from "@/components/admin/AdminBadge";
 import { ToggleStatusButton } from "@/components/admin/ToggleStatusButton";
+import { QuestionFilters } from "@/components/admin/QuestionFilters";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminQuestionsPage() {
-  const questions = await prisma.question.findMany({
-    include: { category: true, tags: { select: { slug: true } } },
-    orderBy: { createdAt: "asc" },
-  });
+export default async function AdminQuestionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string; tag?: string }>;
+}) {
+  const { category, tag } = await searchParams;
+
+  const where = {
+    ...(category ? { categoryId: category } : {}),
+    ...(tag ? { tags: { some: { id: tag } } } : {}),
+  };
+
+  const [questions, categories, tags] = await Promise.all([
+    prisma.question.findMany({
+      where,
+      include: { category: true, tags: { select: { slug: true } } },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.category.findMany({
+      orderBy: { nameEn: "asc" },
+      select: { id: true, nameEn: true, nameFa: true },
+    }),
+    prisma.tag.findMany({
+      orderBy: { nameEn: "asc" },
+      select: { id: true, nameEn: true, nameFa: true },
+    }),
+  ]);
+
+  const isFiltered = Boolean(category || tag);
 
   return (
     <div className="space-y-6">
@@ -32,7 +57,8 @@ export default async function AdminQuestionsPage() {
           <h1 className="text-xl font-semibold text-slate-900">Questions</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {questions.length.toLocaleString("en-US")} question
-            {questions.length === 1 ? "" : "s"} in the bank.
+            {questions.length === 1 ? "" : "s"}
+            {isFiltered ? " match the filters." : " in the bank."}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -50,6 +76,13 @@ export default async function AdminQuestionsPage() {
           </Button>
         </div>
       </div>
+
+      <QuestionFilters
+        categories={categories}
+        tags={tags}
+        category={category}
+        tag={tag}
+      />
 
       <div className="rounded-xl border bg-card shadow-sm">
         <Table>
@@ -71,7 +104,9 @@ export default async function AdminQuestionsPage() {
                   colSpan={7}
                   className="py-10 text-center text-muted-foreground"
                 >
-                  No questions yet. Create one to get started.
+                  {isFiltered
+                    ? "No questions match these filters."
+                    : "No questions yet. Create one to get started."}
                 </TableCell>
               </TableRow>
             ) : (

@@ -21,6 +21,9 @@ export const questionFormSchema = z
     categoryId: z.string().min(1, "Select a category"),
     difficulty: z.enum(["EASY", "MEDIUM", "HARD"]),
     correctIndex: z.number().int().min(0).max(3),
+    // Plain (non-defaulted) array so the resolver's input/output types match;
+    // the form always seeds `tagIds: []`.
+    tagIds: z.array(z.string()),
     content: z.object({
       en: localeContentSchema,
       fa: localeContentSchema,
@@ -62,6 +65,7 @@ export const emptyQuestionForm: QuestionFormValues = {
   categoryId: "",
   difficulty: "EASY",
   correctIndex: 0,
+  tagIds: [],
   content: {
     en: { text: "", options: ["", "", "", ""] },
     fa: { text: "", options: ["", "", "", ""] },

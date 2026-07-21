@@ -27,10 +27,17 @@ export default async function EditQuestionPage({
 }) {
   const { id } = await params;
 
-  const [question, categories] = await Promise.all([
-    prisma.question.findUnique({ where: { id } }),
+  const [question, categories, tags] = await Promise.all([
+    prisma.question.findUnique({
+      where: { id },
+      include: { tags: { select: { id: true } } },
+    }),
     prisma.category.findMany({
       where: { isActive: true },
+      orderBy: { nameEn: "asc" },
+      select: { id: true, nameEn: true, nameFa: true },
+    }),
+    prisma.tag.findMany({
       orderBy: { nameEn: "asc" },
       select: { id: true, nameEn: true, nameFa: true },
     }),
@@ -49,6 +56,7 @@ export default async function EditQuestionPage({
     categoryId: question.categoryId ?? "",
     difficulty: question.difficulty,
     correctIndex: question.correctIndex,
+    tagIds: question.tags.map((t) => t.id),
     content: {
       en: {
         text: content.en?.text ?? "",
@@ -79,6 +87,7 @@ export default async function EditQuestionPage({
 
       <QuestionForm
         categories={categories}
+        tags={tags}
         questionId={question.id}
         initialValues={initialValues}
       />

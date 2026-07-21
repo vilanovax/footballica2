@@ -7,11 +7,17 @@ import { emptyQuestionForm } from "@/lib/admin/questionSchema";
 export const dynamic = "force-dynamic";
 
 export default async function NewQuestionPage() {
-  const categories = await prisma.category.findMany({
-    where: { isActive: true },
-    orderBy: { nameEn: "asc" },
-    select: { id: true, nameEn: true, nameFa: true },
-  });
+  const [categories, tags] = await Promise.all([
+    prisma.category.findMany({
+      where: { isActive: true },
+      orderBy: { nameEn: "asc" },
+      select: { id: true, nameEn: true, nameFa: true },
+    }),
+    prisma.tag.findMany({
+      orderBy: { nameEn: "asc" },
+      select: { id: true, nameEn: true, nameFa: true },
+    }),
+  ]);
 
   const initialValues = {
     ...emptyQuestionForm,
@@ -34,7 +40,11 @@ export default async function NewQuestionPage() {
         </p>
       </div>
 
-      <QuestionForm categories={categories} initialValues={initialValues} />
+      <QuestionForm
+        categories={categories}
+        tags={tags}
+        initialValues={initialValues}
+      />
     </div>
   );
 }
