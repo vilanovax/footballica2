@@ -47,6 +47,22 @@ const en = {
     missed: "Missed!",
     useSuperpower: "Use Superpower",
   },
+  report: {
+    flag: "Report this question",
+    title: "What's wrong with this question?",
+    subtitle: "Your feedback keeps the quiz fair.",
+    notePlaceholder: "Add a detail (optional)",
+    submit: "Send report",
+    cancel: "Cancel",
+    success: "Thanks! Our scouts will review it.",
+    error: "Couldn't send the report. Try again.",
+    reasons: {
+      WRONG_ANSWER: "Wrong answer",
+      TYPO: "Typo or grammar",
+      BAD_IMAGE: "Broken image",
+      OTHER: "Something else",
+    },
+  },
   result: {
     saving: "Saving Results…",
     won: "Shootout Won!",

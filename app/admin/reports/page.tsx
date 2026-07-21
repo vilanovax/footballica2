@@ -8,6 +8,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ReportStatusBadge } from "@/components/admin/AdminBadge";
+import { ReportActions } from "@/components/admin/ReportActions";
+import { reasonLabelEn } from "@/lib/reports/reasons";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +24,10 @@ const dateFmt = new Intl.DateTimeFormat("en-US", {
 export default async function AdminReportsPage() {
   const reports = await prisma.questionReport.findMany({
     include: { question: true },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
   });
+
+  const pendingCount = reports.filter((r) => r.status === "PENDING").length;
 
   return (
     <div className="space-y-6">
@@ -31,7 +35,10 @@ export default async function AdminReportsPage() {
         <h1 className="text-xl font-semibold text-slate-900">Reports</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {reports.length.toLocaleString("en-US")} user report
-          {reports.length === 1 ? "" : "s"}.
+          {reports.length === 1 ? "" : "s"}
+          {pendingCount > 0
+            ? ` · ${pendingCount.toLocaleString("en-US")} pending triage.`
+            : " · queue clear."}
         </p>
       </div>
 
@@ -39,11 +46,11 @@ export default async function AdminReportsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Report ID</TableHead>
-              <TableHead>Question ID</TableHead>
-              <TableHead>Reason</TableHead>
+              <TableHead className="pl-6">Question</TableHead>
+              <TableHead>Details</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="pr-6 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -59,22 +66,34 @@ export default async function AdminReportsPage() {
             ) : (
               reports.map((r) => (
                 <TableRow key={r.id}>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {r.id}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
+                  <TableCell className="pl-6 font-mono text-xs text-muted-foreground">
                     {r.questionId}
                   </TableCell>
-                  <TableCell className="max-w-xs">
-                    <span className="block truncate text-slate-700" title={r.reason}>
-                      {r.reason}
+                  <TableCell className="max-w-sm">
+                    <span className="block font-medium text-slate-700">
+                      {reasonLabelEn(r.reason)}
                     </span>
+                    {r.note && (
+                      <span
+                        className="mt-0.5 block truncate text-xs text-muted-foreground"
+                        title={r.note}
+                      >
+                        {r.note}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-muted-foreground">
                     {dateFmt.format(r.createdAt)}
                   </TableCell>
                   <TableCell>
                     <ReportStatusBadge status={r.status} />
+                  </TableCell>
+                  <TableCell className="pr-6 text-right">
+                    <ReportActions
+                      reportId={r.id}
+                      questionId={r.questionId}
+                      status={r.status}
+                    />
                   </TableCell>
                 </TableRow>
               ))

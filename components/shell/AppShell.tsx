@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { BottomNav } from "@/components/shell/BottomNav";
+import { Toaster } from "@/components/ui/sonner";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -27,6 +28,7 @@ export function AppShell({ children }: AppShellProps) {
         {children}
       </main>
       <BottomNav />
+      <Toaster position="top-center" />
     </div>
   );
 }

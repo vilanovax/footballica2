@@ -18,6 +18,7 @@ import { Scoreboard } from "./Scoreboard";
 import { MatchResult } from "./MatchResult";
 import { GoalBurst } from "./GoalBurst";
 import { MissedPopup } from "./MissedPopup";
+import { ReportModal } from "./ReportModal";
 
 /** Auto-advance delay after a scored goal (miss waits for Continue tap). */
 const GOAL_REVEAL_MS = 1500;
@@ -56,6 +57,7 @@ export function PenaltyMatch({
   const reset = usePenaltyStore((s) => s.reset);
 
   const [shake, setShake] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   // Kick off a match on mount with the server-drawn set, clean up on unmount.
   useEffect(() => {
@@ -180,6 +182,7 @@ export function PenaltyMatch({
             key={question.id}
             text={content.text}
             category={content.category}
+            onReport={() => setReportOpen(true)}
           />
         </AnimatePresence>
 
@@ -220,6 +223,16 @@ export function PenaltyMatch({
 
       <AnimatePresence>
         {showMiss && <MissedPopup key="miss" onContinue={() => next()} />}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {reportOpen && (
+          <ReportModal
+            key="report"
+            questionId={question.id}
+            onClose={() => setReportOpen(false)}
+          />
+        )}
       </AnimatePresence>
     </section>
   );
