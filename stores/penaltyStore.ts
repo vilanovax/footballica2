@@ -1,11 +1,7 @@
 import { create } from "zustand";
 import type { KickLog, KickResult, QuizQuestion } from "@/lib/quiz/types";
-import {
-  KICK_DURATION_MS,
-  computeRewards,
-  evaluateKick,
-  type MatchRewards,
-} from "@/lib/quiz/scoring";
+import { KICK_DURATION_MS, evaluateKick } from "@/lib/quiz/scoring";
+import { computeMatchRewards, type RewardBreakdown } from "@/lib/game/economy";
 
 export type MatchPhase = "idle" | "playing" | "reveal" | "finished";
 
@@ -23,7 +19,7 @@ type PenaltyState = {
   goals: number;
   log: KickLog[];
   feedback: FeedbackState | null;
-  rewards: MatchRewards | null;
+  rewards: RewardBreakdown | null;
 
   // actions
   start: (questions: QuizQuestion[]) => void;
@@ -41,7 +37,7 @@ const initialState = {
   goals: 0,
   log: [] as KickLog[],
   feedback: null as FeedbackState | null,
-  rewards: null as MatchRewards | null,
+  rewards: null as RewardBreakdown | null,
 };
 
 export const usePenaltyStore = create<PenaltyState>((set, get) => ({
@@ -101,7 +97,11 @@ export const usePenaltyStore = create<PenaltyState>((set, get) => ({
     const isLast = currentIndex >= questions.length - 1;
 
     if (isLast) {
-      set({ phase: "finished", feedback: null, rewards: computeRewards(log) });
+      set({
+        phase: "finished",
+        feedback: null,
+        rewards: computeMatchRewards(log),
+      });
       return;
     }
 

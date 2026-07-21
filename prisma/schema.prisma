@@ -108,6 +108,12 @@ model Club {
   /// Training Ground raises daily match capacity / maxStamina (PRD stamina system)
   trainingGroundLevel Int @default(0)
 
+  // Consumable booster inventory (bought from the Shop, spent in a match)
+  /// 50/50 boosters: removes two wrong options for one kick.
+  boosterFiftyFifty  Int @default(0)
+  /// Freeze boosters: pauses the fuse timer once per match.
+  boosterFreezeTimer Int @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -173,6 +179,19 @@ model Match {
   @@index([userId, finishedAt])
   @@index([clubId, finishedAt])
   @@index([mode, finishedAt])
+}
+
+// ─── GameConfig (Live-Ops economy tuning) ────────────────────────────────────
+// Single-row (singleton, id = "global") key store for all balancing numbers —
+// rewards, combo multiplier, coin sinks, match size. Editable from the Admin CMS
+// so the economy can be retuned without a deploy. Shape mirrors `GameConfig` in
+// lib/game/economy.ts; unknown/missing keys fall back to DEFAULT_GAME_CONFIG.
+
+model GameConfig {
+  id        String   @id @default("global")
+  config    Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ─── Category (question grouping) ────────────────────────────────────────────

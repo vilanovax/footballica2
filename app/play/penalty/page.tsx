@@ -3,13 +3,10 @@ import { PenaltyMatch } from "@/components/quiz/PenaltyMatch";
 import { ExhaustedBlocker } from "@/components/quiz/ExhaustedBlocker";
 import { getDummyClubSnapshot } from "@/lib/dev/dummyClub";
 import { getMatchQuestions } from "@/actions/getMatchQuestions";
+import { getGameConfig } from "@/lib/game/gameConfig";
 
 // Reads live (regenerated) stamina before allowing a match — never prerender.
 export const dynamic = "force-dynamic";
-
-/** Full penalty shootout size; tutorial is a shorter, easy-only set. */
-const MATCH_SIZE = 5;
-const TUTORIAL_SIZE = 3;
 
 export default async function PenaltyPage({
   searchParams,
@@ -29,11 +26,17 @@ export default async function PenaltyPage({
     return <ExhaustedBlocker />;
   }
 
+  // Match size is Live-Ops tunable (full shootout vs. shorter easy-only tutorial).
+  const config = await getGameConfig();
+  const matchSize = isTutorial
+    ? config.match.tutorialQuestionCount
+    : config.match.questionCount;
+
   // Draw the authoritative question set server-side from the DB.
   const initialQuestions = await getMatchQuestions(
     isTutorial
-      ? { count: TUTORIAL_SIZE, difficulties: ["easy"] }
-      : { count: MATCH_SIZE },
+      ? { count: matchSize, difficulties: ["easy"] }
+      : { count: matchSize },
   );
 
   // Safety net: DB has no active questions (not seeded). Avoid a blank match.
@@ -51,6 +54,10 @@ export default async function PenaltyPage({
   }
 
   return (
-    <PenaltyMatch tutorial={isTutorial} initialQuestions={initialQuestions} />
+    <PenaltyMatch
+      tutorial={isTutorial}
+      initialQuestions={initialQuestions}
+      matchSize={matchSize}
+    />
   );
 }

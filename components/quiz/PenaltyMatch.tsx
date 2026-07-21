@@ -23,18 +23,19 @@ import { ReportModal } from "./ReportModal";
 /** Auto-advance delay after a scored goal (miss waits for Continue tap). */
 const GOAL_REVEAL_MS = 1500;
 
-const TUTORIAL_SIZE = 3;
-
 type PenaltyMatchProps = {
-  /** FTUE tutorial run: short 3-question shootout with a guaranteed payout. */
+  /** FTUE tutorial run: short shootout with a guaranteed payout. */
   tutorial?: boolean;
   /** Server-drawn question set (authoritative bank lives in the DB). */
   initialQuestions: QuizQuestion[];
+  /** Kicks per match, from the Live-Ops config; reused for Play Again. */
+  matchSize: number;
 };
 
 export function PenaltyMatch({
   tutorial = false,
   initialQuestions,
+  matchSize,
 }: PenaltyMatchProps) {
   const router = useRouter();
   const { t } = useTranslation();
@@ -71,11 +72,13 @@ export function PenaltyMatch({
   // Falls back to the initial set if the fetch returns nothing.
   const handlePlayAgain = useCallback(async () => {
     const next = await getMatchQuestions(
-      tutorial ? { count: TUTORIAL_SIZE, difficulties: ["easy"] } : {},
+      tutorial
+        ? { count: matchSize, difficulties: ["easy"] }
+        : { count: matchSize },
     );
     start(next.length > 0 ? next : initialQuestions);
     playSound("whistle");
-  }, [tutorial, start, initialQuestions]);
+  }, [tutorial, matchSize, start, initialQuestions]);
 
   // Timer loop via rAF — only runs while playing (paused on reveal).
   const rafRef = useRef<number | null>(null);
@@ -126,7 +129,6 @@ export function PenaltyMatch({
   if (phase === "finished" && rewards) {
     return (
       <MatchResult
-        rewards={rewards}
         totalKicks={questions.length}
         tutorial={tutorial}
         submissions={log.map((k) => ({

@@ -3,16 +3,6 @@ import type { KickLog, KickResult, QuizQuestion } from "./types";
 /** Milliseconds allowed per penalty kick (the fuse). */
 export const KICK_DURATION_MS = 10_000;
 
-/** Base coins/xp/fans reward per scored goal. */
-const REWARD_PER_GOAL = {
-  coins: 25,
-  xp: 15,
-  fans: 10,
-} as const;
-
-/** Bonus coins scaled by how fast the answer came in (0..1 of the fuse). */
-const SPEED_BONUS_MAX_COINS = 15;
-
 export type KickEvaluation = {
   result: KickResult;
   isCorrect: boolean;
@@ -83,36 +73,4 @@ export function verifyKickLog(
       msRemaining,
     };
   });
-}
-
-export type MatchRewards = {
-  coins: number;
-  xp: number;
-  fans: number;
-  goals: number;
-  misses: number;
-};
-
-/** Aggregate rewards from a full kick log. Server will re-run this to verify. */
-export function computeRewards(log: KickLog[]): MatchRewards {
-  return log.reduce<MatchRewards>(
-    (acc, kick) => {
-      if (kick.result === "goal") {
-        const speedRatio = Math.max(
-          0,
-          Math.min(1, kick.msRemaining / KICK_DURATION_MS),
-        );
-        acc.coins +=
-          REWARD_PER_GOAL.coins +
-          Math.round(SPEED_BONUS_MAX_COINS * speedRatio);
-        acc.xp += REWARD_PER_GOAL.xp;
-        acc.fans += REWARD_PER_GOAL.fans;
-        acc.goals += 1;
-      } else {
-        acc.misses += 1;
-      }
-      return acc;
-    },
-    { coins: 0, xp: 0, fans: 0, goals: 0, misses: 0 },
-  );
 }

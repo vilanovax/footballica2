@@ -1,7 +1,7 @@
 // Pure Newspaper-Event / booster logic. Shared by the server actions and UI so
 // multipliers and copy stay consistent (single source of truth).
 
-import type { MatchRewards } from "@/lib/quiz/scoring";
+import type { RewardBreakdown } from "@/lib/game/economy";
 
 /** Mirrors the Prisma `BoosterType` enum. */
 export type BoosterType = "COIN_BOOST" | "FAN_BOOST";
@@ -59,9 +59,9 @@ export function formatMultiplier(multiplier: number): string {
  * stack multiplicatively. Pure — the server calls this before persisting.
  */
 export function applyBoosters(
-  rewards: MatchRewards,
+  rewards: RewardBreakdown,
   boosters: BoosterLike[],
-): MatchRewards {
+): RewardBreakdown {
   let coinMultiplier = 1;
   let fanMultiplier = 1;
 

@@ -5,12 +5,14 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getOrCreateDummyClub } from "@/lib/dev/dummyClub";
 import { dbQuestionToQuiz } from "@/lib/quiz/questionMapper";
+import { verifyKickLog, type KickSubmission } from "@/lib/quiz/scoring";
 import {
-  computeRewards,
-  verifyKickLog,
-  type KickSubmission,
-  type MatchRewards,
-} from "@/lib/quiz/scoring";
+  computeMatchRewards,
+  calculateLevel,
+  type RewardBreakdown,
+  type LevelInfo,
+} from "@/lib/game/economy";
+import { getGameConfig } from "@/lib/game/gameConfig";
 import { applyBoosters, type BoosterType } from "@/lib/boosters/boosters";
 import { computeStaminaRegen } from "@/lib/club/stamina";
 
@@ -30,7 +32,7 @@ export type ResolveMatchOptions = {
 export type ResolveMatchResult =
   | {
       ok: true;
-      rewards: MatchRewards;
+      rewards: RewardBreakdown;
       balances: {
         coins: number;
         fans: number;
@@ -39,7 +41,17 @@ export type ResolveMatchResult =
         xp: number;
         managerLevel: number;
         tutorialStep: number;
+        // Upgrade levels — let the result screen compute the next milestone.
+        stadiumLevel: number;
+        medicalLevel: number;
+        trainingGroundLevel: number;
       };
+      /** Level + progress derived from the new lifetime XP total. */
+      level: LevelInfo;
+      /** Present only when this match pushed the player to a new level. */
+      levelUp: { from: number; to: number; coinReward: number } | null;
+      /** Config coins-per-win, so the UI can express milestones as "wins away". */
+      coinsPerWin: number;
     }
   | { ok: false; error: string };
 
@@ -75,10 +87,12 @@ export async function resolveMatch(
     };
   }
 
-  const baseRewards = computeRewards(verifiedLog);
+  // Effective (Live-Ops) economy config — DB singleton merged over defaults.
+  const config = await getGameConfig();
+  const baseRewards = computeMatchRewards(verifiedLog, config);
 
   try {
-    const { rewards, balances } = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const { user, club } = await getOrCreateDummyClub(tx);
 
       // Regenerate stamina first, then enforce the gate server-side. This
@@ -97,13 +111,22 @@ export async function resolveMatch(
 
       // Tutorial payout is fixed & booster-free (guaranteed first-upgrade coins).
       // Real matches recompute securely and apply any active Newspaper boosters.
-      let finalRewards: MatchRewards;
+      let finalRewards: RewardBreakdown;
       if (isTutorial) {
         finalRewards = {
           ...baseRewards,
           coins: TUTORIAL_REWARD.coins,
           xp: TUTORIAL_REWARD.xp,
           fans: TUTORIAL_REWARD.fans,
+          comboFactor: 1,
+          breakdown: {
+            xpFromGoals: TUTORIAL_REWARD.xp,
+            xpWinBonus: 0,
+            coinsWin: TUTORIAL_REWARD.coins,
+            coinsPerfectBonus: 0,
+            comboXpBonus: 0,
+            comboCoinBonus: 0,
+          },
         };
       } else {
         const activeBoosters = await tx.activeBooster.findMany({
@@ -118,6 +141,23 @@ export async function resolveMatch(
           })),
         );
       }
+
+      // Leveling: derive level from lifetime XP (authoritative), detect a
+      // level-up, and grant its perks — a coin bonus per level gained + a full
+      // stamina refill. `calculateLevel` is the single source of truth, so a
+      // stale stored managerLevel can never desync the reward.
+      const oldLevel = calculateLevel(user.xp).level;
+      const newXp = user.xp + finalRewards.xp;
+      const levelInfo = calculateLevel(newXp);
+      const leveledUp = levelInfo.level > oldLevel;
+      const levelUpCoins = leveledUp
+        ? (levelInfo.level - oldLevel) * config.rewards.levelUpCoins
+        : 0;
+
+      // A level-up refills stamina to full (and restarts the regen clock);
+      // otherwise carry the post-match spend + regen anchor.
+      const finalStamina = leveledUp ? club.maxStamina : spentStamina;
+      const finalStaminaAnchor = leveledUp ? new Date() : staminaAnchor;
 
       await tx.match.create({
         data: {
@@ -146,11 +186,12 @@ export async function resolveMatch(
       const updatedClub = await tx.club.update({
         where: { id: club.id },
         data: {
-          coins: { increment: finalRewards.coins },
+          // Match coins + any level-up bonus.
+          coins: { increment: finalRewards.coins + levelUpCoins },
           fans: { increment: finalRewards.fans },
-          // Absolute set: regen already accounted for above.
-          stamina: spentStamina,
-          lastStaminaUpdate: staminaAnchor,
+          // Absolute set: regen already accounted for above (or refilled on level-up).
+          stamina: finalStamina,
+          lastStaminaUpdate: finalStaminaAnchor,
           tutorialStep: nextTutorialStep,
         },
       });
@@ -160,6 +201,7 @@ export async function resolveMatch(
         data: {
           xp: { increment: finalRewards.xp },
           weeklyXp: { increment: finalRewards.xp },
+          managerLevel: levelInfo.level,
         },
       });
 
@@ -173,13 +215,21 @@ export async function resolveMatch(
           xp: updatedUser.xp,
           managerLevel: updatedUser.managerLevel,
           tutorialStep: updatedClub.tutorialStep,
+          stadiumLevel: updatedClub.stadiumLevel,
+          medicalLevel: updatedClub.medicalLevel,
+          trainingGroundLevel: updatedClub.trainingGroundLevel,
         },
+        level: levelInfo,
+        levelUp: leveledUp
+          ? { from: oldLevel, to: levelInfo.level, coinReward: levelUpCoins }
+          : null,
+        coinsPerWin: config.rewards.coinsPerWin,
       };
     });
 
     revalidatePath("/club");
 
-    return { ok: true, rewards, balances };
+    return { ok: true, ...result };
   } catch (err) {
     if (err instanceof MatchError) {
       return { ok: false, error: err.message };
