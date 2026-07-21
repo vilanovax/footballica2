@@ -56,6 +56,13 @@ export default async function EditQuestionPage({
     categoryId: question.categoryId ?? "",
     difficulty: question.difficulty,
     correctIndex: question.correctIndex,
+    status: question.status,
+    isTemporal: question.isTemporal,
+    // <input type="date"> wants YYYY-MM-DD; "" means "no date".
+    asOfDate: question.asOfDate
+      ? question.asOfDate.toISOString().slice(0, 10)
+      : "",
+    source: question.source ?? "",
     tagIds: question.tags.map((t) => t.id),
     content: {
       en: {

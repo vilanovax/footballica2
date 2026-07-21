@@ -12,6 +12,13 @@ export const localeContentSchema = z.object({
  * Shared create/edit validation for admin questions. Used by BOTH the client
  * form (RHF resolver) and the server actions (never trust the client).
  */
+export const QUESTION_STATUSES = [
+  "DRAFT",
+  "IN_REVIEW",
+  "PUBLISHED",
+  "RETIRED",
+] as const;
+
 export const questionFormSchema = z
   .object({
     type: z.enum(["TEXT", "IMAGE"]),
@@ -21,6 +28,15 @@ export const questionFormSchema = z
     categoryId: z.string().min(1, "Select a category"),
     difficulty: z.enum(["EASY", "MEDIUM", "HARD"]),
     correctIndex: z.number().int().min(0).max(3),
+    // Publishing lifecycle — only PUBLISHED questions are served to players.
+    status: z.enum(QUESTION_STATUSES),
+    // Content lifecycle metadata. All plain (non-defaulted) so the resolver's
+    // input/output types match; the form seeds sensible empties.
+    isTemporal: z.boolean(),
+    // Kept as a plain string ("" = none, else YYYY-MM-DD); the server coerces
+    // it to a Date | null on write.
+    asOfDate: z.string().trim(),
+    source: z.string().trim(),
     // Plain (non-defaulted) array so the resolver's input/output types match;
     // the form always seeds `tagIds: []`.
     tagIds: z.array(z.string()),
@@ -48,6 +64,11 @@ export const importQuestionSchema = z.object({
   content: z.object({ en: localeContentSchema, fa: localeContentSchema }),
   /** Optional per-question tag slugs (merged with the global import tags). */
   tags: z.array(z.string().trim().min(1)).optional().default([]),
+  // Optional production metadata — makes an exported bundle round-trippable.
+  status: z.enum(QUESTION_STATUSES).default("PUBLISHED"),
+  isTemporal: z.boolean().default(false),
+  asOfDate: z.string().nullish(),
+  source: z.string().nullish(),
 });
 
 /** Accepts either a wrapped backup ({ questions: [...] }) or a bare array. */
@@ -65,6 +86,10 @@ export const emptyQuestionForm: QuestionFormValues = {
   categoryId: "",
   difficulty: "EASY",
   correctIndex: 0,
+  status: "PUBLISHED",
+  isTemporal: false,
+  asOfDate: "",
+  source: "",
   tagIds: [],
   content: {
     en: { text: "", options: ["", "", "", ""] },

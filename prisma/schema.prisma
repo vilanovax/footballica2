@@ -18,6 +18,11 @@ enum ManagerAvatar {
   TACTICAL_COACH
   YOUNG_DIRECTOR
   VETERAN_FAN
+  // Unlockable cosmetics — granted by achievements (see lib/game/achievements.ts).
+  GOALKEEPER_LEGEND
+  SUPER_FAN
+  CLUB_LEGEND
+  OLD_GAFFER
 }
 
 enum MatchMode {
@@ -40,6 +45,13 @@ enum QuestionDifficulty {
 enum QuestionType {
   TEXT
   IMAGE
+}
+
+enum QuestionStatus {
+  DRAFT
+  IN_REVIEW
+  PUBLISHED
+  RETIRED
 }
 
 enum ReportStatus {
@@ -85,7 +97,9 @@ model Club {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   name         String
-  /// Chosen manager avatar key (mirrors ManagerAvatar), set during onboarding.
+  /// Player-chosen stadium name (identity/profile). Falls back to a default.
+  stadiumName  String?
+  /// Chosen manager avatar key (see lib/onboarding/avatars), set during onboarding.
   avatar       String?
   /// FTUE progress: 0 = play tutorial match, 1 = buy first upgrade, 2 = done.
   tutorialStep Int     @default(0)
@@ -114,14 +128,53 @@ model Club {
   /// Freeze boosters: pauses the fuse timer once per match.
   boosterFreezeTimer Int @default(0)
 
+  // ── Profile stats (denormalized for cheap reads + achievement checks) ──
+  /// Lifetime completed matches (excludes the FTUE tutorial).
+  matchesPlayed Int @default(0)
+  /// Lifetime wins (goal majority).
+  matchesWon    Int @default(0)
+  /// Lifetime correct answers ("goals" scored).
+  goalsTotal    Int @default(0)
+  /// Best consecutive-correct streak ever achieved in a single match.
+  highestCombo  Int @default(0)
+
+  // ── Daily play streak (Duolingo-style retention loop, Asia/Tehran days) ──
+  dailyStreak        Int       @default(0)
+  longestDailyStreak Int       @default(0)
+  /// Day-anchor (midnight Asia/Tehran) of the last match that advanced the streak.
+  lastPlayedDate     DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   matches  Match[]
   boosters ActiveBooster[]
+  badges   ClubBadge[]
 
   @@index([fans])
   @@index([coins])
+}
+
+// ─── ClubBadge (unlocked achievements) ───────────────────────────────────────
+// Join row: which club unlocked which badge (badge catalog lives in code at
+// lib/game/achievements.ts, keyed by `badgeSlug`). Reward granted at unlock is
+// snapshotted for an audit trail. One row per (club, badge).
+
+model ClubBadge {
+  id     String @id @default(cuid())
+  clubId String
+  club   Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  /// Stable slug into the code-defined achievement catalog.
+  badgeSlug    String
+  /// Small reward paid out when the badge was unlocked (audit snapshot).
+  coinsAwarded Int    @default(0)
+  xpAwarded    Int    @default(0)
+
+  unlockedAt DateTime @default(now())
+
+  @@unique([clubId, badgeSlug])
+  @@index([clubId])
 }
 
 // ─── ActiveBooster (Newspaper Events) ────────────────────────────────────────
@@ -168,6 +221,11 @@ model Match {
   xpEarned     Int @default(0)
   fansEarned   Int @default(0)
   staminaSpent Int @default(1)
+
+  /// Longest consecutive-correct streak in this match (drives combo badges).
+  bestCombo Int     @default(0)
+  /// Whether any help was used (50/50, freeze, or superpower) — gates "no help" badges.
+  usedHelp  Boolean @default(false)
 
   /// Optional JSON audit: question ids answered, correctness, timings
   answerLog Json?
@@ -246,14 +304,36 @@ model Question {
 
   /// Optional flavor for match framing ("penalty", "derby", …)
   matchContext String?
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+
+  // Publishing lifecycle (replaces the old isActive boolean). Only PUBLISHED
+  // questions are served to players; DRAFT/IN_REVIEW gate AI/crowd content.
+  status QuestionStatus @default(PUBLISHED)
+
+  // Adaptive difficulty (measured). `difficulty` stays as the authored bucket
+  // for admin filtering; `eloRating` is the live signal updated from real play.
+  eloRating    Float @default(1500)
+  timesServed  Int   @default(0)
+  timesCorrect Int   @default(0)
+
+  // Content lifecycle metadata
+  /// True when the fact expires over time ("current Real Madrid coach") and
+  /// needs periodic review. Pair with `asOfDate`.
+  isTemporal  Boolean   @default(false)
+  /// The date the answer is valid as-of (for temporal questions).
+  asOfDate    DateTime?
+  /// Provenance: author name or the AI model that generated it.
+  source      String?
+  /// Normalized fingerprint of the content for exact-duplicate detection.
+  contentHash String?   @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   reports QuestionReport[]
 
   @@index([categoryId, difficulty])
-  @@index([isActive])
+  @@index([status])
+  @@index([eloRating])
 }
 
 // ─── QuestionReport (user-submitted content flags) ───────────────────────────

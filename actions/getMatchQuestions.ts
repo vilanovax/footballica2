@@ -25,6 +25,29 @@ function shuffle<T>(items: T[]): T[] {
 }
 
 /**
+ * Normalize a correct-answer string so semantically identical answers collide
+ * (case, whitespace, ZWNJ, trailing punctuation). Used to keep two questions
+ * that share the SAME correct answer out of a single match — a lightweight
+ * "same fact" guard until a proper factId/embedding layer exists.
+ */
+function normalizeAnswer(raw: string): string {
+  return raw
+    .normalize("NFKC")
+    .trim()
+    .toLowerCase()
+    .replace(/\u200c/g, "") // zero-width non-joiner (Persian)
+    .replace(/\s+/g, " ")
+    .replace(/[.,!?؟،:;'"“”]/g, "");
+}
+
+/** The normalized correct answer for a quiz question (EN canonical, FA fallback). */
+function correctAnswerKey(q: QuizQuestion): string {
+  const en = q.content.en?.options?.[q.correctIndex];
+  const fa = q.content.fa?.options?.[q.correctIndex];
+  return normalizeAnswer(en || fa || "");
+}
+
+/**
  * Draw N random active questions from the DB for a match. The bank is small in
  * the MVP, so we fetch the eligible set and shuffle in memory; swap for a SQL
  * `ORDER BY RANDOM() LIMIT n` (or reservoir sampling) once it grows large.
@@ -44,12 +67,27 @@ export async function getMatchQuestions(options?: {
 
   const rows = await prisma.question.findMany({
     where: {
-      isActive: true,
+      status: "PUBLISHED",
       ...(difficulties?.length
         ? { difficulty: { in: difficulties.map((d) => DIFFICULTY_TO_DB[d]) } }
         : {}),
     },
   });
 
-  return shuffle(rows).slice(0, count).map(dbQuestionToQuiz);
+  // Greedy pick from the shuffled pool, skipping any question whose correct
+  // answer already appears in this match. Guarantees no two kicks resolve to
+  // the same fact (e.g. two "Messi" answers) worded differently.
+  const pool = shuffle(rows).map(dbQuestionToQuiz);
+  const picked: QuizQuestion[] = [];
+  const usedAnswers = new Set<string>();
+
+  for (const q of pool) {
+    if (picked.length >= count) break;
+    const key = correctAnswerKey(q);
+    if (key && usedAnswers.has(key)) continue;
+    if (key) usedAnswers.add(key);
+    picked.push(q);
+  }
+
+  return picked;
 }

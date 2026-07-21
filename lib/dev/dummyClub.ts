@@ -24,6 +24,8 @@ export function toClubSnapshot(club: Club): ClubSnapshot {
     stadiumLevel: club.stadiumLevel,
     medicalLevel: club.medicalLevel,
     trainingGroundLevel: club.trainingGroundLevel,
+    boosterFiftyFifty: club.boosterFiftyFifty,
+    boosterFreezeTimer: club.boosterFreezeTimer,
     msUntilNext: regen.msUntilNext,
     avatar: club.avatar,
     tutorialStep: club.tutorialStep,
@@ -58,6 +60,64 @@ export async function getDummyClubSnapshot(): Promise<ClubSnapshot | null> {
   }
 
   return toClubSnapshot(user.club);
+}
+
+/** Serializable player-profile shape (club + user + unlocked badges). */
+export type ProfileSnapshot = {
+  managerName: string;
+  clubName: string;
+  stadiumName: string | null;
+  avatar: string | null;
+  xp: number;
+  matchesPlayed: number;
+  matchesWon: number;
+  goalsTotal: number;
+  highestCombo: number;
+  dailyStreak: number;
+  longestDailyStreak: number;
+  badges: { slug: string; unlockedAt: string }[];
+};
+
+/**
+ * Everything the profile / trophy room needs in one read: user XP + name, the
+ * club's denormalized career stats, and the set of unlocked badge slugs (with
+ * dates). Returns null when the dev user hasn't finished onboarding yet.
+ */
+export async function getProfileSnapshot(): Promise<ProfileSnapshot | null> {
+  const user = await prisma.user.findUnique({
+    where: { email: DEV_USER_EMAIL },
+    include: {
+      club: {
+        include: {
+          badges: {
+            select: { badgeSlug: true, unlockedAt: true },
+            orderBy: { unlockedAt: "desc" },
+          },
+        },
+      },
+    },
+  });
+
+  if (!user?.club) return null;
+  const club = user.club;
+
+  return {
+    managerName: user.displayName ?? "Manager",
+    clubName: club.name,
+    stadiumName: club.stadiumName,
+    avatar: club.avatar,
+    xp: user.xp,
+    matchesPlayed: club.matchesPlayed,
+    matchesWon: club.matchesWon,
+    goalsTotal: club.goalsTotal,
+    highestCombo: club.highestCombo,
+    dailyStreak: club.dailyStreak,
+    longestDailyStreak: club.longestDailyStreak,
+    badges: club.badges.map((b) => ({
+      slug: b.badgeSlug,
+      unlockedAt: b.unlockedAt.toISOString(),
+    })),
+  };
 }
 
 /** True when the dev user already has a club (i.e. finished onboarding). */

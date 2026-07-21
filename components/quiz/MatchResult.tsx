@@ -9,12 +9,15 @@ import { nextMilestone, winsAway } from "@/lib/club/milestones";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { CountUp } from "./CountUp";
+import { BadgeUnlockPopup } from "./BadgeUnlockPopup";
 
 type MatchResultProps = {
   totalKicks: number;
   submissions: KickSubmission[];
   /** FTUE tutorial match — fixed payout, no "Play Again" (loop back to Hub). */
   tutorial?: boolean;
+  /** Whether any help (50/50, freeze, superpower) was used — gates "no help" badges. */
+  usedHelp?: boolean;
   onPlayAgain: () => void;
   onExit: () => void;
 };
@@ -28,18 +31,21 @@ export function MatchResult({
   totalKicks,
   submissions,
   tutorial = false,
+  usedHelp = false,
   onPlayAgain,
   onExit,
 }: MatchResultProps) {
   const { t, locale } = useTranslation();
   const [save, setSave] = useState<SaveState>({ status: "saving" });
+  // Whether the player has dismissed the badge-unlock celebration overlay.
+  const [badgesDismissed, setBadgesDismissed] = useState(false);
 
   // Guard against double-submit in React strict/dev double-invoke.
   const submittedRef = useRef(false);
 
   async function submit() {
     setSave({ status: "saving" });
-    const result = await resolveMatch(submissions, { tutorial });
+    const result = await resolveMatch(submissions, { tutorial, usedHelp });
     if (result.ok) {
       setSave({ status: "saved", data: result });
     } else {
@@ -109,8 +115,10 @@ export function MatchResult({
   }
 
   // Saved — show server-confirmed rewards + new balances.
-  const { rewards: confirmed, balances, level, levelUp, coinsPerWin } = save.data;
+  const { rewards: confirmed, balances, level, levelUp, coinsPerWin, unlockedBadges, streak } =
+    save.data;
   const won = confirmed.won;
+  const showBadges = unlockedBadges.length > 0 && !badgesDismissed;
   const outOfEnergy = balances.stamina <= 0;
   // In the tutorial, funnel straight back to the Hub for the forced upgrade.
   const hidePlayAgain = tutorial || outOfEnergy;
@@ -198,12 +206,19 @@ export function MatchResult({
   }
 
   return (
-    <motion.section
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ type: "spring", stiffness: 220, damping: 18 }}
-      className="flex flex-1 flex-col items-center justify-center gap-5 text-center"
-    >
+    <>
+      {showBadges && (
+        <BadgeUnlockPopup
+          badges={unlockedBadges}
+          onClose={() => setBadgesDismissed(true)}
+        />
+      )}
+      <motion.section
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ type: "spring", stiffness: 220, damping: 18 }}
+        className="flex flex-1 flex-col items-center justify-center gap-5 text-center"
+      >
       <motion.div
         animate={{ rotate: [0, -6, 6, 0], scale: [1, 1.1, 1] }}
         transition={{ duration: 0.6 }}
@@ -231,15 +246,41 @@ export function MatchResult({
         >
           {won ? t("result.wonHint") : t("result.lostHint")}
         </p>
-        {confirmed.combo >= 2 && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.7 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: "spring", stiffness: 300, damping: 14, delay: 0.25 }}
-            className="mx-auto mt-3 inline-flex items-center gap-1.5 rounded-full bg-accent/15 px-3 py-1 font-display text-sm font-bold text-accent-deep"
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+          {confirmed.combo >= 2 && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.7 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 14, delay: 0.25 }}
+              className="inline-flex items-center gap-1.5 rounded-full bg-accent/15 px-3 py-1 font-display text-sm font-bold text-accent-deep"
+            >
+              ⚡ {t("result.combo", { n: toLocaleDigits(confirmed.combo, locale) })}
+            </motion.div>
+          )}
+          {streak.dailyStreak >= 1 && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.7 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 14, delay: 0.32 }}
+              className="inline-flex items-center gap-1.5 rounded-full bg-secondary/15 px-3 py-1 font-display text-sm font-bold text-secondary"
+            >
+              🔥 {t("result.streakDays", { n: toLocaleDigits(streak.dailyStreak, locale) })}
+            </motion.div>
+          )}
+        </div>
+        {streak.extended && (
+          <motion.p
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45 }}
+            className="mt-2 font-display text-xs font-bold text-secondary"
           >
-            🔥 {t("result.combo", { n: toLocaleDigits(confirmed.combo, locale) })}
-          </motion.div>
+            {streak.dailyStreak > 1
+              ? t("result.streakExtended", {
+                  n: toLocaleDigits(streak.dailyStreak, locale),
+                })
+              : t("result.streakStarted")}
+          </motion.p>
         )}
       </div>
 
@@ -413,6 +454,7 @@ export function MatchResult({
           {t("common.backToClub")}
         </button>
       </div>
-    </motion.section>
+      </motion.section>
+    </>
   );
 }

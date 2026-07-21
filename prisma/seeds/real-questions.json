@@ -1,0 +1,512 @@
+[
+  {
+    "categorySlug": "world-cup",
+    "difficulty": "EASY",
+    "correctIndex": 2,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "Which country won the 2022 FIFA World Cup?",
+        "options": ["France", "Brazil", "Argentina", "Germany"]
+      },
+      "fa": {
+        "text": "کدام کشور قهرمان جام جهانی ۲۰۲۲ شد؟",
+        "options": ["فرانسه", "برزیل", "آرژانتین", "آلمان"]
+      }
+    }
+  },
+  {
+    "categorySlug": "world-cup",
+    "difficulty": "EASY",
+    "correctIndex": 1,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "How often is the FIFA World Cup held?",
+        "options": ["Every 2 years", "Every 4 years", "Every 3 years", "Every year"]
+      },
+      "fa": {
+        "text": "جام جهانی فوتبال هر چند سال یک‌بار برگزار می‌شود؟",
+        "options": ["هر ۲ سال", "هر ۴ سال", "هر ۳ سال", "هر سال"]
+      }
+    }
+  },
+  {
+    "categorySlug": "world-cup",
+    "difficulty": "MEDIUM",
+    "correctIndex": 0,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "Which country has won the most FIFA World Cup titles?",
+        "options": ["Brazil", "Germany", "Italy", "Argentina"]
+      },
+      "fa": {
+        "text": "کدام کشور بیشترین قهرمانی جام جهانی را دارد؟",
+        "options": ["برزیل", "آلمان", "ایتالیا", "آرژانتین"]
+      }
+    }
+  },
+  {
+    "categorySlug": "world-cup",
+    "difficulty": "MEDIUM",
+    "correctIndex": 3,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "Who won the Golden Boot at the 2018 FIFA World Cup?",
+        "options": ["Kylian Mbappé", "Antoine Griezmann", "Romelu Lukaku", "Harry Kane"]
+      },
+      "fa": {
+        "text": "آقای گل جام جهانی ۲۰۱۸ چه کسی بود؟",
+        "options": ["کیلیان امباپه", "آنتوان گریزمان", "روملو لوکاکو", "هری کین"]
+      }
+    }
+  },
+  {
+    "categorySlug": "world-cup",
+    "difficulty": "HARD",
+    "correctIndex": 1,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "Which country hosted the very first FIFA World Cup in 1930?",
+        "options": ["Brazil", "Uruguay", "Italy", "France"]
+      },
+      "fa": {
+        "text": "اولین دوره جام جهانی فوتبال در سال ۱۹۳۰ در کدام کشور برگزار شد؟",
+        "options": ["برزیل", "اروگوئه", "ایتالیا", "فرانسه"]
+      }
+    }
+  },
+  {
+    "categorySlug": "world-cup",
+    "difficulty": "MEDIUM",
+    "correctIndex": 2,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "Who has scored the most goals in FIFA World Cup history?",
+        "options": ["Ronaldo Nazário", "Pelé", "Miroslav Klose", "Lionel Messi"]
+      },
+      "fa": {
+        "text": "بیشترین گلزن تاریخ جام جهانی چه کسی است؟",
+        "options": ["رونالدو نازاریو", "پله", "میروسلاو کلوزه", "لیونل مسی"]
+      }
+    }
+  },
+  {
+    "categorySlug": "world-cup",
+    "difficulty": "MEDIUM",
+    "correctIndex": 0,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "Which country hosted the 2010 FIFA World Cup?",
+        "options": ["South Africa", "Brazil", "Germany", "Japan"]
+      },
+      "fa": {
+        "text": "میزبان جام جهانی ۲۰۱۰ کدام کشور بود؟",
+        "options": ["آفریقای جنوبی", "برزیل", "آلمان", "ژاپن"]
+      }
+    }
+  },
+  {
+    "categorySlug": "world-cup",
+    "difficulty": "HARD",
+    "correctIndex": 3,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "Who scored the famous 'Hand of God' goal at the 1986 World Cup?",
+        "options": ["Pelé", "Lothar Matthäus", "Gary Lineker", "Diego Maradona"]
+      },
+      "fa": {
+        "text": "گل معروف «دست خدا» در جام جهانی ۱۹۸۶ توسط چه کسی زده شد؟",
+        "options": ["پله", "لوتار ماتئوس", "گری لینه‌کر", "دیگو مارادونا"]
+      }
+    }
+  },
+  {
+    "categorySlug": "world-cup",
+    "difficulty": "HARD",
+    "correctIndex": 1,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "Who scored Germany's winning goal in the 2014 World Cup final?",
+        "options": ["Thomas Müller", "Mario Götze", "Miroslav Klose", "Toni Kroos"]
+      },
+      "fa": {
+        "text": "گل پیروزی‌بخش آلمان در فینال جام جهانی ۲۰۱۴ توسط چه کسی زده شد؟",
+        "options": ["توماس مولر", "ماریو گوتسه", "میروسلاو کلوزه", "تونی کروس"]
+      }
+    }
+  },
+  {
+    "categorySlug": "world-cup",
+    "difficulty": "MEDIUM",
+    "correctIndex": 2,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "Which nation won the 1998 World Cup as the host country?",
+        "options": ["Italy", "Brazil", "France", "Spain"]
+      },
+      "fa": {
+        "text": "کدام کشور در سال ۱۹۹۸ به‌عنوان میزبان قهرمان جام جهانی شد؟",
+        "options": ["ایتالیا", "برزیل", "فرانسه", "اسپانیا"]
+      }
+    }
+  },
+  {
+    "categorySlug": "champions-league",
+    "difficulty": "EASY",
+    "correctIndex": 0,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "Which club has won the most UEFA Champions League / European Cup titles?",
+        "options": ["Real Madrid", "AC Milan", "Bayern Munich", "Liverpool"]
+      },
+      "fa": {
+        "text": "کدام باشگاه بیشترین قهرمانی لیگ قهرمانان اروپا را دارد؟",
+        "options": ["رئال مادرید", "آ.ث. میلان", "بایرن مونیخ", "لیورپول"]
+      }
+    }
+  },
+  {
+    "categorySlug": "champions-league",
+    "difficulty": "MEDIUM",
+    "correctIndex": 2,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "Who is the all-time top scorer in UEFA Champions League history?",
+        "options": ["Lionel Messi", "Robert Lewandowski", "Cristiano Ronaldo", "Karim Benzema"]
+      },
+      "fa": {
+        "text": "برترین گلزن تاریخ لیگ قهرمانان اروپا کیست؟",
+        "options": ["لیونل مسی", "روبرت لواندوفسکی", "کریستیانو رونالدو", "کریم بنزما"]
+      }
+    }
+  },
+  {
+    "categorySlug": "champions-league",
+    "difficulty": "MEDIUM",
+    "correctIndex": 1,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "Which club won the UEFA Champions League in 2021?",
+        "options": ["Manchester City", "Chelsea", "Bayern Munich", "Real Madrid"]
+      },
+      "fa": {
+        "text": "کدام باشگاه قهرمان لیگ قهرمانان اروپا در سال ۲۰۲۱ شد؟",
+        "options": ["منچستر سیتی", "چلسی", "بایرن مونیخ", "رئال مادرید"]
+      }
+    }
+  },
+  {
+    "categorySlug": "champions-league",
+    "difficulty": "EASY",
+    "correctIndex": 3,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "The UEFA Champions League is a competition for clubs from which continent?",
+        "options": ["South America", "Asia", "Africa", "Europe"]
+      },
+      "fa": {
+        "text": "لیگ قهرمانان (چمپیونز لیگ) مربوط به باشگاه‌های کدام قاره است؟",
+        "options": ["آمریکای جنوبی", "آسیا", "آفریقا", "اروپا"]
+      }
+    }
+  },
+  {
+    "categorySlug": "champions-league",
+    "difficulty": "HARD",
+    "correctIndex": 0,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "Which club won the 2005 Champions League final after trailing 3-0 at halftime?",
+        "options": ["Liverpool", "AC Milan", "Chelsea", "Barcelona"]
+      },
+      "fa": {
+        "text": "کدام باشگاه در فینال ۲۰۰۵ لیگ قهرمانان با وجود عقب‌افتادن ۳-۰ در نیمه اول قهرمان شد؟",
+        "options": ["لیورپول", "آ.ث. میلان", "چلسی", "بارسلونا"]
+      }
+    }
+  },
+  {
+    "categorySlug": "champions-league",
+    "difficulty": "MEDIUM",
+    "correctIndex": 2,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "Which manager won the 2004 Champions League with Porto?",
+        "options": ["Pep Guardiola", "Carlo Ancelotti", "José Mourinho", "Rafael Benítez"]
+      },
+      "fa": {
+        "text": "کدام سرمربی در سال ۲۰۰۴ با پورتو قهرمان لیگ قهرمانان شد؟",
+        "options": ["پپ گواردیولا", "کارلو آنچلوتی", "ژوزه مورینیو", "رافائل بنیتس"]
+      }
+    }
+  },
+  {
+    "categorySlug": "champions-league",
+    "difficulty": "HARD",
+    "correctIndex": 3,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "Which club completed the treble in 2010 under José Mourinho?",
+        "options": ["Barcelona", "Bayern Munich", "Real Madrid", "Inter Milan"]
+      },
+      "fa": {
+        "text": "کدام باشگاه در سال ۲۰۱۰ زیر نظر ژوزه مورینیو موفق به کسب سه‌گانه شد؟",
+        "options": ["بارسلونا", "بایرن مونیخ", "رئال مادرید", "اینتر میلان"]
+      }
+    }
+  },
+  {
+    "categorySlug": "champions-league",
+    "difficulty": "EASY",
+    "correctIndex": 0,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "Lionel Messi won all his Champions League titles with which club?",
+        "options": ["Barcelona", "Real Madrid", "Paris Saint-Germain", "Manchester City"]
+      },
+      "fa": {
+        "text": "لیونل مسی تمام قهرمانی‌های لیگ قهرمانانش را با کدام باشگاه به دست آورد؟",
+        "options": ["بارسلونا", "رئال مادرید", "پاری سن‌ژرمن", "منچستر سیتی"]
+      }
+    }
+  },
+  {
+    "categorySlug": "champions-league",
+    "difficulty": "MEDIUM",
+    "correctIndex": 1,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "Which German club won the Champions League in 2020?",
+        "options": ["Borussia Dortmund", "Bayern Munich", "RB Leipzig", "Paris Saint-Germain"]
+      },
+      "fa": {
+        "text": "کدام باشگاه آلمانی در سال ۲۰۲۰ قهرمان لیگ قهرمانان شد؟",
+        "options": ["بوروسیا دورتموند", "بایرن مونیخ", "لایپزیش", "پاری سن‌ژرمن"]
+      }
+    }
+  },
+  {
+    "categorySlug": "champions-league",
+    "difficulty": "MEDIUM",
+    "correctIndex": 2,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "Under which manager did Real Madrid win three consecutive Champions League titles (2016-2018)?",
+        "options": ["Carlo Ancelotti", "José Mourinho", "Zinedine Zidane", "Vicente del Bosque"]
+      },
+      "fa": {
+        "text": "رئال مادرید سه قهرمانی متوالی لیگ قهرمانان (۲۰۱۶ تا ۲۰۱۸) را زیر نظر کدام مربی به دست آورد؟",
+        "options": ["کارلو آنچلوتی", "ژوزه مورینیو", "زین‌الدین زیدان", "ویسنته دل بوسکه"]
+      }
+    }
+  },
+  {
+    "categorySlug": "iranian-league",
+    "difficulty": "MEDIUM",
+    "correctIndex": 1,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "In which year did Iran first qualify for the FIFA World Cup?",
+        "options": ["1974", "1978", "1998", "2006"]
+      },
+      "fa": {
+        "text": "ایران اولین بار در چه سالی به جام جهانی صعود کرد؟",
+        "options": ["۱۹۷۴", "۱۹۷۸", "۱۹۹۸", "۲۰۰۶"]
+      }
+    }
+  },
+  {
+    "categorySlug": "iranian-league",
+    "difficulty": "EASY",
+    "correctIndex": 0,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "Who is the all-time top scorer for the Iran national football team?",
+        "options": ["Ali Daei", "Karim Bagheri", "Sardar Azmoun", "Mehdi Taremi"]
+      },
+      "fa": {
+        "text": "برترین گلزن تاریخ تیم ملی فوتبال ایران کیست؟",
+        "options": ["علی دایی", "کریم باقری", "سردار آزمون", "مهدی طارمی"]
+      }
+    }
+  },
+  {
+    "categorySlug": "iranian-league",
+    "difficulty": "EASY",
+    "correctIndex": 2,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "Which two clubs contest the famous Tehran derby?",
+        "options": ["Sepahan and Foolad", "Tractor and Machine Sazi", "Persepolis and Esteghlal", "Saipa and Pas"]
+      },
+      "fa": {
+        "text": "دربی معروف تهران بین کدام دو باشگاه برگزار می‌شود؟",
+        "options": ["سپاهان و فولاد", "تراکتور و ماشین‌سازی", "پرسپولیس و استقلال", "سایپا و پاس"]
+      }
+    }
+  },
+  {
+    "categorySlug": "iranian-league",
+    "difficulty": "HARD",
+    "correctIndex": 1,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "How many international goals did Ali Daei score for Iran?",
+        "options": ["95", "109", "84", "120"]
+      },
+      "fa": {
+        "text": "علی دایی در مجموع چند گل ملی برای ایران به ثمر رساند؟",
+        "options": ["۹۵", "۱۰۹", "۸۴", "۱۲۰"]
+      }
+    }
+  },
+  {
+    "categorySlug": "iranian-league",
+    "difficulty": "MEDIUM",
+    "correctIndex": 0,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "In which Iranian city is the club Sepahan based?",
+        "options": ["Isfahan", "Tehran", "Tabriz", "Ahvaz"]
+      },
+      "fa": {
+        "text": "باشگاه سپاهان در کدام شهر ایران مستقر است؟",
+        "options": ["اصفهان", "تهران", "تبریز", "اهواز"]
+      }
+    }
+  },
+  {
+    "categorySlug": "iranian-league",
+    "difficulty": "MEDIUM",
+    "correctIndex": 3,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "Iran beat which country 2-1 at the 1998 FIFA World Cup?",
+        "options": ["Germany", "Yugoslavia", "Scotland", "United States"]
+      },
+      "fa": {
+        "text": "ایران در جام جهانی ۱۹۹۸ کدام تیم را با نتیجه ۲-۱ شکست داد؟",
+        "options": ["آلمان", "یوگسلاوی", "اسکاتلند", "آمریکا"]
+      }
+    }
+  },
+  {
+    "categorySlug": "iranian-league",
+    "difficulty": "MEDIUM",
+    "correctIndex": 0,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "Which Iranian striker played for FC Porto and won league titles in Portugal?",
+        "options": ["Mehdi Taremi", "Sardar Azmoun", "Alireza Jahanbakhsh", "Karim Ansarifard"]
+      },
+      "fa": {
+        "text": "کدام مهاجم ایرانی در باشگاه پورتو بازی کرد و در پرتغال قهرمان لیگ شد؟",
+        "options": ["مهدی طارمی", "سردار آزمون", "علیرضا جهانبخش", "کریم انصاری‌فرد"]
+      }
+    }
+  },
+  {
+    "categorySlug": "iranian-league",
+    "difficulty": "MEDIUM",
+    "correctIndex": 1,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "In which country's league did Sardar Azmoun spend several years before moving to Western Europe?",
+        "options": ["Germany", "Russia", "Qatar", "Turkey"]
+      },
+      "fa": {
+        "text": "سردار آزمون پیش از انتقال به اروپای غربی، چند سال در لیگ کدام کشور بازی کرد؟",
+        "options": ["آلمان", "روسیه", "قطر", "ترکیه"]
+      }
+    }
+  },
+  {
+    "categorySlug": "iranian-league",
+    "difficulty": "EASY",
+    "correctIndex": 0,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "What is the traditional main color of Persepolis FC?",
+        "options": ["Red", "Blue", "Green", "Yellow"]
+      },
+      "fa": {
+        "text": "رنگ سنتی و اصلی باشگاه پرسپولیس چیست؟",
+        "options": ["قرمز", "آبی", "سبز", "زرد"]
+      }
+    }
+  },
+  {
+    "categorySlug": "iranian-league",
+    "difficulty": "EASY",
+    "correctIndex": 2,
+    "source": "SEED_V1",
+    "isTemporal": false,
+    "content": {
+      "en": {
+        "text": "What is the primary color associated with Esteghlal FC?",
+        "options": ["Red", "Black", "Blue", "White"]
+      },
+      "fa": {
+        "text": "رنگ اصلی باشگاه استقلال چیست؟",
+        "options": ["قرمز", "مشکی", "آبی", "سفید"]
+      }
+    }
+  }
+]

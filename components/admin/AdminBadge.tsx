@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Type as TypeIcon, Image as ImageIcon } from "lucide-react";
 
 type BadgeTone =
   | "slate"
@@ -36,7 +37,20 @@ export function AdminBadge({
 // ─── Domain-specific badge mappings ──────────────────────────────────────────
 
 export function TypeBadge({ type }: { type: "TEXT" | "IMAGE" }) {
-  return <AdminBadge tone={type === "IMAGE" ? "indigo" : "slate"}>{type}</AdminBadge>;
+  const Icon = type === "IMAGE" ? ImageIcon : TypeIcon;
+  return (
+    <span
+      title={type === "IMAGE" ? "Image question" : "Text question"}
+      className={`inline-flex h-7 w-7 items-center justify-center rounded-md ring-1 ring-inset ${
+        type === "IMAGE"
+          ? "bg-indigo-100 text-indigo-700 ring-indigo-200"
+          : "bg-slate-100 text-slate-600 ring-slate-200"
+      }`}
+    >
+      <Icon className="h-4 w-4" strokeWidth={2} />
+      <span className="sr-only">{type}</span>
+    </span>
+  );
 }
 
 const DIFFICULTY_TONE = {
@@ -61,6 +75,32 @@ export function StatusBadge({ active }: { active: boolean }) {
   return (
     <AdminBadge tone={active ? "emerald" : "slate"}>
       {active ? "Active" : "Inactive"}
+    </AdminBadge>
+  );
+}
+
+const QUESTION_STATUS_TONE = {
+  DRAFT: "slate",
+  IN_REVIEW: "amber",
+  PUBLISHED: "emerald",
+  RETIRED: "rose",
+} as const;
+
+const QUESTION_STATUS_LABEL = {
+  DRAFT: "Draft",
+  IN_REVIEW: "In review",
+  PUBLISHED: "Published",
+  RETIRED: "Retired",
+} as const;
+
+export function QuestionStatusBadge({
+  status,
+}: {
+  status: "DRAFT" | "IN_REVIEW" | "PUBLISHED" | "RETIRED";
+}) {
+  return (
+    <AdminBadge tone={QUESTION_STATUS_TONE[status]}>
+      {QUESTION_STATUS_LABEL[status]}
     </AdminBadge>
   );
 }

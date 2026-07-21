@@ -3,7 +3,7 @@
 import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Loader2 } from "lucide-react";
 import {
   createCategory,
   updateCategory,
@@ -17,7 +17,6 @@ import { slugify } from "@/lib/admin/taxonomySchema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { StatusBadge } from "@/components/admin/AdminBadge";
 import {
   Card,
   CardContent,
@@ -294,21 +293,54 @@ function TagFormDialog({
 
 // ─── Row action buttons ──────────────────────────────────────────────────────
 
-function CategoryActions({ category }: { category: CategoryRow }) {
+/** Inline icon toggle for a category's active state (replaces text button). */
+function CategoryStatusToggle({ category }: { category: CategoryRow }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const active = category.isActive;
+  const label = active
+    ? "Active — click to deactivate"
+    : "Inactive — click to activate";
 
-  function onToggle() {
+  function toggle() {
     start(async () => {
-      const res = await toggleCategoryStatus(category.id, !category.isActive);
+      const res = await toggleCategoryStatus(category.id, !active);
       if (res.ok) {
-        toast.success(category.isActive ? "Deactivated." : "Activated.");
+        toast.success(active ? "Deactivated." : "Activated.");
         router.refresh();
       } else {
         toast.error(res.error);
       }
     });
   }
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      disabled={pending}
+      title={label}
+      aria-label={label}
+      className={`inline-flex items-center justify-center rounded-md p-1 transition ${
+        active
+          ? "text-emerald-600 hover:bg-emerald-50"
+          : "text-slate-400 hover:bg-slate-100"
+      }`}
+    >
+      {pending ? (
+        <Loader2 className="h-5 w-5 animate-spin" />
+      ) : active ? (
+        <ToggleRight className="h-5 w-5" />
+      ) : (
+        <ToggleLeft className="h-5 w-5" />
+      )}
+    </button>
+  );
+}
+
+function CategoryActions({ category }: { category: CategoryRow }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
 
   function onDelete() {
     if (!confirm(`Delete category "${category.nameEn}"?`)) return;
@@ -334,9 +366,6 @@ function CategoryActions({ category }: { category: CategoryRow }) {
           </Button>
         }
       />
-      <Button variant="ghost" size="sm" onClick={onToggle} disabled={pending}>
-        {category.isActive ? "Deactivate" : "Activate"}
-      </Button>
       <Button
         variant="ghost"
         size="sm"
@@ -464,7 +493,7 @@ export function TaxonomyManager({
                       {c.count}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge active={c.isActive} />
+                      <CategoryStatusToggle category={c} />
                     </TableCell>
                     <TableCell className="pr-6 text-right">
                       <CategoryActions category={c} />

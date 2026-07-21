@@ -20,12 +20,15 @@ type PenaltyState = {
   log: KickLog[];
   feedback: FeedbackState | null;
   rewards: RewardBreakdown | null;
+  /** Freezes the fuse (e.g. while a "leave match?" dialog is open). */
+  paused: boolean;
 
   // actions
   start: (questions: QuizQuestion[]) => void;
   tick: (deltaMs: number) => void;
   answer: (selectedIndex: number | null) => void;
   next: () => void;
+  setPaused: (paused: boolean) => void;
   reset: () => void;
 };
 
@@ -38,6 +41,7 @@ const initialState = {
   log: [] as KickLog[],
   feedback: null as FeedbackState | null,
   rewards: null as RewardBreakdown | null,
+  paused: false,
 };
 
 export const usePenaltyStore = create<PenaltyState>((set, get) => ({
@@ -52,8 +56,8 @@ export const usePenaltyStore = create<PenaltyState>((set, get) => ({
     }),
 
   tick: (deltaMs) => {
-    const { phase, timeLeftMs } = get();
-    if (phase !== "playing") return;
+    const { phase, timeLeftMs, paused } = get();
+    if (phase !== "playing" || paused) return;
 
     const next = timeLeftMs - deltaMs;
     if (next <= 0) {
@@ -112,6 +116,8 @@ export const usePenaltyStore = create<PenaltyState>((set, get) => ({
       feedback: null,
     });
   },
+
+  setPaused: (paused) => set({ paused }),
 
   reset: () => set({ ...initialState }),
 }));

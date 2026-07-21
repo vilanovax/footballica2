@@ -73,6 +73,7 @@ export function QuestionForm({
 
   const type = form.watch("type");
   const correctIndex = form.watch("correctIndex");
+  const isTemporal = form.watch("isTemporal");
 
   function onSubmit(values: QuestionFormValues) {
     setServerError(null);
@@ -148,6 +149,33 @@ export function QuestionForm({
                       <SelectItem value="HARD">Hard</SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="DRAFT">Draft</SelectItem>
+                      <SelectItem value="IN_REVIEW">In review</SelectItem>
+                      <SelectItem value="PUBLISHED">Published</SelectItem>
+                      <SelectItem value="RETIRED">Retired</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Only Published questions are served in matches.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -274,6 +302,73 @@ export function QuestionForm({
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="source"
+              render={({ field }) => (
+                <FormItem className="sm:col-span-2">
+                  <FormLabel>Source</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Author name or AI model (e.g. GPT-4)"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Provenance — who or what created this question. Optional.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="isTemporal"
+              render={({ field }) => (
+                <FormItem className="sm:col-span-2">
+                  <div className="flex items-start gap-3 rounded-md border p-3">
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={(e) => field.onChange(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 rounded border-input accent-slate-900"
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Time-sensitive answer</FormLabel>
+                      <FormDescription>
+                        Enable for facts that expire (e.g. &ldquo;current Real
+                        Madrid coach&rdquo;). Flags the question for periodic
+                        review.
+                      </FormDescription>
+                    </div>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {isTemporal && (
+              <FormField
+                control={form.control}
+                name="asOfDate"
+                render={({ field }) => (
+                  <FormItem className="sm:col-span-2">
+                    <FormLabel>Valid as of</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      The date this answer is accurate as of.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
           </CardContent>
         </Card>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { upgradeClub } from "@/actions/upgradeClub";
 import {
@@ -112,53 +113,72 @@ export function ClubHub({ initialClub }: ClubHubProps) {
   return (
     <section className="flex flex-1 flex-col gap-4">
       <header className="flex items-center justify-between pt-2">
-        <div>
-          <p className="font-display text-sm font-semibold uppercase tracking-widest text-primary">
-            {t("club.hubEyebrow")}
-          </p>
-          <h1 className="font-display text-2xl font-bold leading-tight text-foreground">
-            {club.name}
-          </h1>
-          <p className="font-display text-xs font-semibold text-muted-foreground">
-            {t("club.yourStadium")}
-          </p>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/profile"
+            aria-label={t("profile.eyebrow")}
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-linear-to-b from-primary/25 to-primary/5 text-3xl shadow-fantasy transition-transform active:scale-95"
+          >
+            <span aria-hidden>{avatar.emoji}</span>
+          </Link>
+          <div>
+            <p className="font-display text-sm font-semibold uppercase tracking-widest text-primary">
+              {t("club.hubEyebrow")}
+            </p>
+            <h1 className="font-display text-2xl font-bold leading-tight text-foreground">
+              {club.name}
+            </h1>
+            <p className="font-display text-xs font-semibold text-muted-foreground">
+              {t("club.yourStadium")}
+            </p>
+          </div>
         </div>
 
-        {/* Daily News shows ONLY after FTUE completion (tutorialStep === 2).
-            Only nags (glow + bounce + unread dot) while today's headline is
-            still claimable. */}
+        {/* Shop + Daily News show ONLY after FTUE completion (tutorialStep === 2).
+            Daily News only nags (glow + bounce + unread dot) while today's
+            headline is still claimable. */}
         {ftueComplete && (
-          <motion.button
-            type="button"
-            onClick={handleDailyNews}
-            disabled={newsPending}
-            aria-label={t("club.dailyNews")}
-            className={[
-              "relative flex h-12 w-12 items-center justify-center rounded-bubble border bg-surface text-2xl shadow-fantasy",
-              canClaimNews ? "border-accent" : "border-border opacity-70",
-            ].join(" ")}
-            animate={
-              canClaimNews
-                ? {
-                    y: [0, -3, 0],
-                    boxShadow: [
-                      "0 0 0px hsl(var(--accent) / 0)",
-                      "0 0 18px hsl(var(--accent) / 0.7)",
-                      "0 0 0px hsl(var(--accent) / 0)",
-                    ],
-                  }
-                : undefined
-            }
-            transition={
-              canClaimNews ? { repeat: Infinity, duration: 1.6 } : undefined
-            }
-            whileTap={{ scale: 0.92 }}
-          >
-            <span aria-hidden>{canClaimNews ? "📬" : "📭"}</span>
-            {canClaimNews && (
-              <span className="absolute -end-1 -top-1 h-3 w-3 rounded-full bg-secondary ring-2 ring-surface" />
-            )}
-          </motion.button>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/shop"
+              aria-label={t("shop.title")}
+              className="flex h-12 w-12 items-center justify-center rounded-bubble border border-primary/40 bg-surface text-2xl shadow-fantasy"
+            >
+              <span aria-hidden>🛒</span>
+            </Link>
+
+            <motion.button
+              type="button"
+              onClick={handleDailyNews}
+              disabled={newsPending}
+              aria-label={t("club.dailyNews")}
+              className={[
+                "relative flex h-12 w-12 items-center justify-center rounded-bubble border bg-surface text-2xl shadow-fantasy",
+                canClaimNews ? "border-accent" : "border-border opacity-70",
+              ].join(" ")}
+              animate={
+                canClaimNews
+                  ? {
+                      y: [0, -3, 0],
+                      boxShadow: [
+                        "0 0 0px hsl(var(--accent) / 0)",
+                        "0 0 18px hsl(var(--accent) / 0.7)",
+                        "0 0 0px hsl(var(--accent) / 0)",
+                      ],
+                    }
+                  : undefined
+              }
+              transition={
+                canClaimNews ? { repeat: Infinity, duration: 1.6 } : undefined
+              }
+              whileTap={{ scale: 0.92 }}
+            >
+              <span aria-hidden>{canClaimNews ? "📬" : "📭"}</span>
+              {canClaimNews && (
+                <span className="absolute -end-1 -top-1 h-3 w-3 rounded-full bg-secondary ring-2 ring-surface" />
+              )}
+            </motion.button>
+          </div>
         )}
       </header>
 

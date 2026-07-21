@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { createClub } from "@/actions/createClub";
 import {
-  MANAGER_AVATARS,
+  STARTER_AVATARS,
   getAvatar,
   type AvatarKey,
 } from "@/lib/onboarding/avatars";
@@ -63,7 +63,7 @@ export function Onboarding() {
             transition={{ duration: 0.25 }}
             className="flex flex-col gap-3"
           >
-            {MANAGER_AVATARS.map((a) => {
+            {STARTER_AVATARS.map((a) => {
               const isSelected = selected === a.key;
               const dim = selected !== null && !isSelected;
               return (

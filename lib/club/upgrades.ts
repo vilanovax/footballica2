@@ -11,6 +11,9 @@ export type ClubSnapshot = {
   stadiumLevel: number;
   medicalLevel: number;
   trainingGroundLevel: number;
+  /** Consumable booster inventory (bought in the Shop). */
+  boosterFiftyFifty: number;
+  boosterFreezeTimer: number;
   /** Ms until the next +1 stamina (0 when full). Computed on read. */
   msUntilNext: number;
   /** Chosen manager avatar key (may be null on legacy rows). */

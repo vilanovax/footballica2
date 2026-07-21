@@ -35,6 +35,7 @@ export function QuestionFilters({
     const next = new URLSearchParams(params.toString());
     if (value === ALL) next.delete(key);
     else next.set(key, value);
+    next.delete("page");
     const qs = next.toString();
     router.push(qs ? `${pathname}?${qs}` : pathname);
   }

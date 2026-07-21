@@ -5,11 +5,14 @@ import { cookies } from "next/headers";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ADMIN_COOKIE, isValidAdminToken } from "@/lib/admin/auth";
-import { buildLocalizedContent } from "@/lib/admin/content";
+import { buildLocalizedContent, computeContentHash } from "@/lib/admin/content";
 import {
   questionFormSchema,
+  QUESTION_STATUSES,
   type QuestionFormValues,
 } from "@/lib/admin/questionSchema";
+
+type QuestionStatus = (typeof QUESTION_STATUSES)[number];
 
 export type ActionResult =
   | { ok: true; id: string }
@@ -29,6 +32,24 @@ function buildContent(
   return buildLocalizedContent(values.content, category);
 }
 
+/** "" → null, and drop unparseable dates rather than persisting Invalid Date. */
+function parseAsOfDate(raw: string): Date | null {
+  if (!raw) return null;
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** True when a write failed on the contentHash unique constraint. */
+function isDuplicateHashError(err: unknown): boolean {
+  return (
+    err instanceof Prisma.PrismaClientKnownRequestError &&
+    err.code === "P2002" &&
+    (err.meta?.target as string[] | undefined)?.some((t) =>
+      t.includes("contentHash"),
+    ) === true
+  );
+}
+
 export async function createQuestion(
   input: QuestionFormValues,
 ): Promise<ActionResult> {
@@ -46,24 +67,39 @@ export async function createQuestion(
   });
   if (!category) return { ok: false, error: "Selected category not found." };
 
-  const created = await prisma.question.create({
-    data: {
-      type: values.type,
-      mediaUrl: values.type === "IMAGE" ? values.mediaUrl : null,
-      categoryId: values.categoryId,
-      difficulty: values.difficulty,
-      correctIndex: values.correctIndex,
-      content: buildContent(values, category),
-      isActive: true,
-      tags: values.tagIds.length
-        ? { connect: values.tagIds.map((id) => ({ id })) }
-        : undefined,
-    },
-    select: { id: true },
-  });
+  try {
+    const created = await prisma.question.create({
+      data: {
+        type: values.type,
+        mediaUrl: values.type === "IMAGE" ? values.mediaUrl : null,
+        categoryId: values.categoryId,
+        difficulty: values.difficulty,
+        correctIndex: values.correctIndex,
+        content: buildContent(values, category),
+        status: values.status,
+        isTemporal: values.isTemporal,
+        asOfDate: parseAsOfDate(values.asOfDate),
+        source: values.source || null,
+        contentHash: computeContentHash(values.content),
+        tags: values.tagIds.length
+          ? { connect: values.tagIds.map((id) => ({ id })) }
+          : undefined,
+      },
+      select: { id: true },
+    });
 
-  revalidatePath("/admin/questions");
-  return { ok: true, id: created.id };
+    revalidatePath("/admin/questions");
+    return { ok: true, id: created.id };
+  } catch (err) {
+    if (isDuplicateHashError(err)) {
+      return {
+        ok: false,
+        error: "A question with identical content already exists.",
+      };
+    }
+    console.error("createQuestion failed", err);
+    return { ok: false, error: "Could not create question." };
+  }
 }
 
 export async function updateQuestion(
@@ -94,10 +130,21 @@ export async function updateQuestion(
         difficulty: values.difficulty,
         correctIndex: values.correctIndex,
         content: buildContent(values, category),
+        status: values.status,
+        isTemporal: values.isTemporal,
+        asOfDate: parseAsOfDate(values.asOfDate),
+        source: values.source || null,
+        contentHash: computeContentHash(values.content),
         tags: { set: values.tagIds.map((id) => ({ id })) },
       },
     });
-  } catch {
+  } catch (err) {
+    if (isDuplicateHashError(err)) {
+      return {
+        ok: false,
+        error: "A question with identical content already exists.",
+      };
+    }
     return { ok: false, error: "Question not found or update failed." };
   }
 
@@ -106,14 +153,19 @@ export async function updateQuestion(
   return { ok: true, id };
 }
 
-export async function toggleQuestionStatus(
+/** Set a question's publishing lifecycle status (DRAFT/IN_REVIEW/PUBLISHED/RETIRED). */
+export async function setQuestionStatus(
   id: string,
-  isActive: boolean,
+  status: QuestionStatus,
 ): Promise<ActionResult> {
   if (!(await assertAdmin())) return { ok: false, error: "Unauthorized." };
 
+  if (!QUESTION_STATUSES.includes(status)) {
+    return { ok: false, error: "Invalid status." };
+  }
+
   try {
-    await prisma.question.update({ where: { id }, data: { isActive } });
+    await prisma.question.update({ where: { id }, data: { status } });
   } catch {
     return { ok: false, error: "Question not found." };
   }

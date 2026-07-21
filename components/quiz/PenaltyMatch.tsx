@@ -50,6 +50,7 @@ export function PenaltyMatch({
   const feedback = usePenaltyStore((s) => s.feedback);
   const rewards = usePenaltyStore((s) => s.rewards);
   const log = usePenaltyStore((s) => s.log);
+  const paused = usePenaltyStore((s) => s.paused);
 
   const start = usePenaltyStore((s) => s.start);
   const tick = usePenaltyStore((s) => s.tick);
@@ -176,7 +177,7 @@ export function PenaltyMatch({
             totalKicks={questions.length}
             goals={goals}
           />
-          <FuseTimer timeLeftMs={timeLeftMs} paused={locked} />
+          <FuseTimer timeLeftMs={timeLeftMs} paused={locked || paused} />
         </header>
 
         <AnimatePresence mode="wait">

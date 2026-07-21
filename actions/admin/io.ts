@@ -21,6 +21,10 @@ type ExportedQuestion = {
   correctIndex: number;
   content: unknown;
   tags: string[];
+  status: "DRAFT" | "IN_REVIEW" | "PUBLISHED" | "RETIRED";
+  isTemporal: boolean;
+  asOfDate: string | null;
+  source: string | null;
 };
 
 export type ExportBundle = {
@@ -77,6 +81,10 @@ export async function exportQuestions(
         correctIndex: q.correctIndex,
         content: q.content,
         tags: q.tags.map((t) => t.slug),
+        status: q.status,
+        isTemporal: q.isTemporal,
+        asOfDate: q.asOfDate ? q.asOfDate.toISOString() : null,
+        source: q.source,
       })),
     },
   };
@@ -129,6 +137,7 @@ export async function importQuestions(input: {
           ]),
         );
 
+        const asOfDate = q.asOfDate ? new Date(q.asOfDate) : null;
         return prisma.question.create({
           data: {
             type: q.type,
@@ -136,7 +145,11 @@ export async function importQuestions(input: {
             difficulty: q.difficulty,
             correctIndex: q.correctIndex,
             categoryId: input.categoryId,
-            isActive: true,
+            status: q.status,
+            isTemporal: q.isTemporal,
+            asOfDate:
+              asOfDate && !Number.isNaN(asOfDate.getTime()) ? asOfDate : null,
+            source: q.source ?? null,
             content: buildLocalizedContent(
               q.content,
               category,
