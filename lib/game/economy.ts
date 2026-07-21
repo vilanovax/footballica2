@@ -37,11 +37,29 @@ export type GameConfig = {
     /** Coins for the Freeze booster (pauses the fuse once). */
     boosterFreezeTimer: number;
   };
+  /**
+   * In-match coin-spend helpers (paid live during a quiz, once per question).
+   * Costs are re-validated & deducted server-side in resolveMatch.
+   */
+  helpers: {
+    /** Pundit hint — removes ONE wrong option. */
+    hint: number;
+    /** Injury Time — adds seconds to the current question's fuse. */
+    extraTime: number;
+    /** VAR 50/50 — removes TWO wrong options. */
+    fifty: number;
+    /** Substitution — swaps the current question for a fresh one. */
+    reroll: number;
+    /** Milliseconds added to the fuse by one Injury Time. */
+    extraTimeMs: number;
+  };
   match: {
     /** Kicks in a full penalty shootout. */
     questionCount: number;
     /** Kicks in the shorter FTUE tutorial match. */
     tutorialQuestionCount: number;
+    /** Questions in a rapid-fire Quick Match (PRD §4C: 5–10). */
+    quickQuestionCount: number;
   };
 };
 
@@ -61,9 +79,17 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     boosterFiftyFifty: 50,
     boosterFreezeTimer: 75,
   },
+  helpers: {
+    hint: 20,
+    extraTime: 20,
+    fifty: 40,
+    reroll: 50,
+    extraTimeMs: 5000,
+  },
   match: {
     questionCount: 7,
     tutorialQuestionCount: 3,
+    quickQuestionCount: 10,
   },
 };
 
@@ -83,6 +109,7 @@ export function mergeGameConfig(raw: unknown): GameConfig {
   >;
   const r = src.rewards ?? {};
   const c = src.costs ?? {};
+  const h = src.helpers ?? {};
   const m = src.match ?? {};
   const D = DEFAULT_GAME_CONFIG;
 
@@ -102,11 +129,22 @@ export function mergeGameConfig(raw: unknown): GameConfig {
       boosterFiftyFifty: Math.max(0, num(c.boosterFiftyFifty, D.costs.boosterFiftyFifty)),
       boosterFreezeTimer: Math.max(0, num(c.boosterFreezeTimer, D.costs.boosterFreezeTimer)),
     },
+    helpers: {
+      hint: Math.max(0, Math.round(num(h.hint, D.helpers.hint))),
+      extraTime: Math.max(0, Math.round(num(h.extraTime, D.helpers.extraTime))),
+      fifty: Math.max(0, Math.round(num(h.fifty, D.helpers.fifty))),
+      reroll: Math.max(0, Math.round(num(h.reroll, D.helpers.reroll))),
+      extraTimeMs: Math.max(1000, Math.round(num(h.extraTimeMs, D.helpers.extraTimeMs))),
+    },
     match: {
       questionCount: Math.max(1, Math.round(num(m.questionCount, D.match.questionCount))),
       tutorialQuestionCount: Math.max(
         1,
         Math.round(num(m.tutorialQuestionCount, D.match.tutorialQuestionCount)),
+      ),
+      quickQuestionCount: Math.max(
+        1,
+        Math.round(num(m.quickQuestionCount, D.match.quickQuestionCount)),
       ),
     },
   };

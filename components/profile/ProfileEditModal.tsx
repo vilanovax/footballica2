@@ -13,6 +13,7 @@ import {
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
+import { AvatarImage } from "@/components/common/AvatarImage";
 
 type ProfileEditModalProps = {
   initial: {
@@ -161,15 +162,11 @@ export function ProfileEditModal({
                       .filter(Boolean)
                       .join(" ")}
                   >
-                    <span
-                      className={[
-                        "text-3xl",
-                        unlocked ? "" : "grayscale",
-                      ].join(" ")}
-                      aria-hidden
-                    >
-                      {unlocked ? a.emoji : "🔒"}
-                    </span>
+                    <AvatarImage
+                      avatarKey={a.key}
+                      muted={!unlocked}
+                      className="h-12 w-12 rounded-full"
+                    />
                     <span className="line-clamp-1 text-center font-display text-[11px] font-bold text-surface-foreground">
                       {t(`avatars.${a.key}.name`)}
                     </span>

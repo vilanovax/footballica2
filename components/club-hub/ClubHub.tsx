@@ -16,7 +16,8 @@ import {
   type ClubSnapshot,
   type UpgradeKey,
 } from "@/lib/club/upgrades";
-import { getAvatar, type AvatarKey } from "@/lib/onboarding/avatars";
+import { type AvatarKey } from "@/lib/onboarding/avatars";
+import { AvatarImage } from "@/components/common/AvatarImage";
 import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -43,7 +44,6 @@ export function ClubHub({ initialClub }: ClubHubProps) {
 
   const step = club.tutorialStep;
   const avatarKey = (club.avatar ?? "TACTICAL_COACH") as AvatarKey;
-  const avatar = getAvatar(avatarKey);
   const avatarName = t(`avatars.${avatarKey}.name`);
   // Daily News only unlocks once the FTUE is fully complete (tutorialStep 2).
   const ftueComplete = step === 2;
@@ -117,9 +117,12 @@ export function ClubHub({ initialClub }: ClubHubProps) {
           <Link
             href="/profile"
             aria-label={t("profile.eyebrow")}
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-linear-to-b from-primary/25 to-primary/5 text-3xl shadow-fantasy transition-transform active:scale-95"
+            className="shrink-0 rounded-full shadow-fantasy transition-transform active:scale-95"
           >
-            <span aria-hidden>{avatar.emoji}</span>
+            <AvatarImage
+              avatarKey={avatarKey}
+              className="h-14 w-14 rounded-full"
+            />
           </Link>
           <div>
             <p className="font-display text-sm font-semibold uppercase tracking-widest text-primary">
@@ -261,7 +264,7 @@ export function ClubHub({ initialClub }: ClubHubProps) {
             className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
           >
             <FtueCoach
-              emoji={avatar.emoji}
+              avatarKey={avatarKey}
               name={avatarName}
               line={t("ftue.step0Line")}
               cta={{
@@ -295,7 +298,7 @@ export function ClubHub({ initialClub }: ClubHubProps) {
             className="pointer-events-none fixed inset-x-0 top-3 z-50 flex justify-center px-4"
           >
             <FtueCoach
-              emoji={avatar.emoji}
+              avatarKey={avatarKey}
               name={avatarName}
               line={t("ftue.step1Line")}
             />
@@ -314,7 +317,7 @@ export function ClubHub({ initialClub }: ClubHubProps) {
             className="pointer-events-none fixed inset-x-0 top-3 z-50 flex justify-center px-4"
           >
             <FtueCoach
-              emoji={avatar.emoji}
+              avatarKey={avatarKey}
               name={avatarName}
               line={t("ftue.gradLine")}
             />

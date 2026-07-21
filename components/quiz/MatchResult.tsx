@@ -2,8 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { resolveMatch, type ResolveMatchResult } from "@/actions/resolveMatch";
+import {
+  resolveMatch,
+  type ResolveMatchResult,
+  type MatchModeOption,
+} from "@/actions/resolveMatch";
 import type { KickSubmission } from "@/lib/quiz/scoring";
+import type { HelperKey } from "@/lib/game/helpers";
 import { calculateLevel } from "@/lib/game/economy";
 import { nextMilestone, winsAway } from "@/lib/club/milestones";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -18,6 +23,10 @@ type MatchResultProps = {
   tutorial?: boolean;
   /** Whether any help (50/50, freeze, superpower) was used — gates "no help" badges. */
   usedHelp?: boolean;
+  /** In-match coin helpers used, in order — settled (coin cost) server-side. */
+  helpersUsed?: HelperKey[];
+  /** Core mode — logged server-side and drives the win/lose headline copy. */
+  mode?: MatchModeOption;
   onPlayAgain: () => void;
   onExit: () => void;
 };
@@ -32,6 +41,8 @@ export function MatchResult({
   submissions,
   tutorial = false,
   usedHelp = false,
+  helpersUsed = [],
+  mode = "penalty",
   onPlayAgain,
   onExit,
 }: MatchResultProps) {
@@ -45,7 +56,12 @@ export function MatchResult({
 
   async function submit() {
     setSave({ status: "saving" });
-    const result = await resolveMatch(submissions, { tutorial, usedHelp });
+    const result = await resolveMatch(submissions, {
+      tutorial,
+      usedHelp: usedHelp || helpersUsed.length > 0,
+      helpersUsed,
+      mode,
+    });
     if (result.ok) {
       setSave({ status: "saved", data: result });
     } else {
@@ -230,7 +246,13 @@ export function MatchResult({
 
       <div>
         <h1 className="font-display text-3xl font-bold text-foreground">
-          {won ? t("result.won") : t("result.lost")}
+          {mode === "quick"
+            ? won
+              ? t("result.wonQuick")
+              : t("result.lostQuick")
+            : won
+              ? t("result.won")
+              : t("result.lost")}
         </h1>
         <p className="mt-1 font-display text-lg font-semibold text-muted-foreground">
           {t("result.goalsScored", {

@@ -68,6 +68,7 @@ export type ProfileSnapshot = {
   clubName: string;
   stadiumName: string | null;
   avatar: string | null;
+  flag: string | null;
   xp: number;
   matchesPlayed: number;
   matchesWon: number;
@@ -106,6 +107,7 @@ export async function getProfileSnapshot(): Promise<ProfileSnapshot | null> {
     clubName: club.name,
     stadiumName: club.stadiumName,
     avatar: club.avatar,
+    flag: club.flag,
     xp: user.xp,
     matchesPlayed: club.matchesPlayed,
     matchesWon: club.matchesWon,

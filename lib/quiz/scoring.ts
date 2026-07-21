@@ -3,6 +3,9 @@ import type { KickLog, KickResult, QuizQuestion } from "./types";
 /** Milliseconds allowed per penalty kick (the fuse). */
 export const KICK_DURATION_MS = 10_000;
 
+/** Milliseconds allowed per Quick Match question — tighter, rapid-fire pace. */
+export const QUICK_DURATION_MS = 7_000;
+
 export type KickEvaluation = {
   result: KickResult;
   isCorrect: boolean;

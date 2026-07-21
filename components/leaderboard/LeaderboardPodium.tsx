@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { getAvatar } from "@/lib/onboarding/avatars";
+import { AvatarImage } from "@/components/common/AvatarImage";
 import type { LeaderboardRow } from "@/actions/getLeaderboard";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { formatNumber, toLocaleDigits } from "@/lib/i18n/format";
@@ -61,7 +61,6 @@ export function LeaderboardPodium({ rows }: LeaderboardPodiumProps) {
         const row = byRank.get(rank);
         if (!row) return null;
         const place = PLACES[rank];
-        const avatar = getAvatar(row.avatarKey);
         const isChampion = rank === 1;
 
         return (
@@ -105,7 +104,10 @@ export function LeaderboardPodium({ rows }: LeaderboardPodiumProps) {
                     : undefined
                 }
               >
-                <span aria-hidden>{avatar.emoji}</span>
+                <AvatarImage
+                  avatarKey={row.avatarKey}
+                  className="h-full w-full rounded-full"
+                />
               </motion.div>
               <span
                 className="absolute -bottom-1 flex h-6 w-6 items-center justify-center rounded-full bg-background text-sm shadow-fantasy-sm inset-inline-end-0"

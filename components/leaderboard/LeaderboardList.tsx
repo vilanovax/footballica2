@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { getAvatar } from "@/lib/onboarding/avatars";
+import { AvatarImage } from "@/components/common/AvatarImage";
 import type { LeaderboardRow } from "@/actions/getLeaderboard";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { formatNumber, toLocaleDigits } from "@/lib/i18n/format";
@@ -75,7 +75,6 @@ export function LeaderboardList({ rows }: LeaderboardListProps) {
         className="flex flex-col gap-2 pb-28 pt-1"
       >
         {listRows.map((row) => {
-          const avatar = getAvatar(row.avatarKey);
           const medal = MEDALS[row.rank];
           const isTop3 = Boolean(medal);
 
@@ -109,12 +108,10 @@ export function LeaderboardList({ rows }: LeaderboardListProps) {
               </div>
 
               {/* Avatar */}
-              <div
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent/15 text-2xl"
-                aria-hidden
-              >
-                {avatar.emoji}
-              </div>
+              <AvatarImage
+                avatarKey={row.avatarKey}
+                className="h-11 w-11 shrink-0 rounded-full"
+              />
 
               {/* Club name */}
               <div className="min-w-0 flex-1">

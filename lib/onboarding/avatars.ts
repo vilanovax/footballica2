@@ -8,12 +8,17 @@ export type AvatarKey =
   | "GOALKEEPER_LEGEND"
   | "SUPER_FAN"
   | "CLUB_LEGEND"
-  | "OLD_GAFFER";
+  | "OLD_GAFFER"
+  | "STAR_MANAGER"
+  | "COSMIC_COACH";
 
 export type ManagerAvatar = {
   key: AvatarKey;
   name: string;
   faName: string;
+  /** Illustrated avatar served from /public/avatars. */
+  image: string;
+  /** Legacy emoji fallback (used if the image ever fails to load). */
   emoji: string;
   /** Short personality tag shown on the card. */
   tagline: string;
@@ -33,6 +38,7 @@ export const MANAGER_AVATARS: ManagerAvatar[] = [
     key: "TACTICAL_COACH",
     name: "Tactical Coach",
     faName: "مربی تاکتیکی",
+    image: "/avatars/tactical-coach.png",
     emoji: "🧠",
     tagline: "Reads the game like a book.",
     faTagline: "بازی رو مثل کتاب می‌خونه.",
@@ -45,6 +51,7 @@ export const MANAGER_AVATARS: ManagerAvatar[] = [
     key: "YOUNG_DIRECTOR",
     name: "Young Director",
     faName: "مدیر ورزشی جوان",
+    image: "/avatars/young-director.png",
     emoji: "💼",
     tagline: "Ambitious and fearless.",
     faTagline: "جاه‌طلب و نترس.",
@@ -57,6 +64,7 @@ export const MANAGER_AVATARS: ManagerAvatar[] = [
     key: "VETERAN_FAN",
     name: "Veteran Fan",
     faName: "لیدر متعصب",
+    image: "/avatars/veteran-fan.png",
     emoji: "📣",
     tagline: "Lives and breathes the club.",
     faTagline: "با باشگاه نفس می‌کشه.",
@@ -71,6 +79,7 @@ export const MANAGER_AVATARS: ManagerAvatar[] = [
     key: "GOALKEEPER_LEGEND",
     name: "Goalkeeper Legend",
     faName: "اسطورهٔ دروازه",
+    image: "/avatars/goalkeeper-legend.png",
     emoji: "🧤",
     tagline: "Never lets one slip past.",
     faTagline: "هیچ توپی از دستش در نمی‌ره.",
@@ -82,6 +91,7 @@ export const MANAGER_AVATARS: ManagerAvatar[] = [
     key: "SUPER_FAN",
     name: "Super Fan",
     faName: "هوادار ویژه",
+    image: "/avatars/super-fan.png",
     emoji: "🦸",
     tagline: "Shows up every single day.",
     faTagline: "هر روز پای کاره.",
@@ -93,6 +103,7 @@ export const MANAGER_AVATARS: ManagerAvatar[] = [
     key: "CLUB_LEGEND",
     name: "Club Legend",
     faName: "اسطورهٔ باشگاه",
+    image: "/avatars/club-legend.png",
     emoji: "👑",
     tagline: "A name carved into history.",
     faTagline: "اسمش تو تاریخ حک شده.",
@@ -104,12 +115,37 @@ export const MANAGER_AVATARS: ManagerAvatar[] = [
     key: "OLD_GAFFER",
     name: "Old Gaffer",
     faName: "سرمربی پیشکسوت",
+    image: "/avatars/old-gaffer.png",
     emoji: "🧓",
     tagline: "Seen it all, won it all.",
     faTagline: "همه‌چیزو دیده، همه‌چیزو برده.",
     dialog: "",
     faDialog: "",
     lockedBy: "veteran",
+  },
+  {
+    key: "STAR_MANAGER",
+    name: "Star Manager",
+    faName: "مدیر ستاره",
+    image: "/avatars/star-manager.png",
+    emoji: "🌟",
+    tagline: "Born to lift trophies.",
+    faTagline: "برای بالا بردن جام‌ها ساخته شده.",
+    dialog: "",
+    faDialog: "",
+    lockedBy: "first_win",
+  },
+  {
+    key: "COSMIC_COACH",
+    name: "Cosmic Coach",
+    faName: "مربی فضایی",
+    image: "/avatars/cosmic-coach.png",
+    emoji: "👽",
+    tagline: "Tactics from another galaxy.",
+    faTagline: "تاکتیک‌هایی از کهکشانی دیگر.",
+    dialog: "",
+    faDialog: "",
+    lockedBy: "on_fire",
   },
 ];
 

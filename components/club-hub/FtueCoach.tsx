@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { AvatarImage } from "@/components/common/AvatarImage";
 
 type FtueCoachProps = {
-  /** Manager avatar emoji. */
-  emoji: string;
+  /** Manager avatar key. */
+  avatarKey: string;
   /** Localized manager name (eyebrow). */
   name: string;
   /** Localized coach line. */
@@ -21,7 +22,7 @@ const bubbleSpring = { type: "spring", stiffness: 260, damping: 20 } as const;
  * manager avatar with an animated dialogue card and (optionally) a glowing
  * call-to-action button. Text is already localized by the caller.
  */
-export function FtueCoach({ emoji, name, line, cta }: FtueCoachProps) {
+export function FtueCoach({ avatarKey, name, line, cta }: FtueCoachProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 24, scale: 0.94 }}
@@ -34,10 +35,13 @@ export function FtueCoach({ emoji, name, line, cta }: FtueCoachProps) {
         <motion.div
           animate={{ rotate: [0, -6, 6, 0] }}
           transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
-          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent/15 text-3xl shadow-fantasy-sm"
+          className="shrink-0"
           aria-hidden
         >
-          {emoji}
+          <AvatarImage
+            avatarKey={avatarKey}
+            className="h-14 w-14 rounded-full shadow-fantasy-sm"
+          />
         </motion.div>
 
         <div className="min-w-0 flex-1">

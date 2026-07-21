@@ -1,7 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { DEV_USER_EMAIL } from "@/lib/dev/dummyClub";
-import type { AvatarKey } from "@/lib/onboarding/avatars";
+import { isAvatarKey, type AvatarKey } from "@/lib/onboarding/avatars";
 
 const TOP_N = 50;
 const MIN_USERS_FOR_UI = 10;
@@ -16,10 +16,18 @@ export type LeaderboardRow = {
   isCurrentUser: boolean;
 };
 
+// Mock managers show off the full avatar roster (cosmetic only — mocks aren't
+// gated by achievements). Real users' avatars are validated via isAvatarKey.
 const AVATAR_KEYS: AvatarKey[] = [
   "TACTICAL_COACH",
   "YOUNG_DIRECTOR",
   "VETERAN_FAN",
+  "GOALKEEPER_LEGEND",
+  "SUPER_FAN",
+  "CLUB_LEGEND",
+  "OLD_GAFFER",
+  "STAR_MANAGER",
+  "COSMIC_COACH",
 ];
 
 // Flavorful mock club names so the dev leaderboard reads like a real league.
@@ -85,9 +93,7 @@ async function seedMockUsers(count: number): Promise<void> {
 }
 
 function toAvatarKey(value: string | null): AvatarKey {
-  return value && (AVATAR_KEYS as string[]).includes(value)
-    ? (value as AvatarKey)
-    : "TACTICAL_COACH";
+  return value && isAvatarKey(value) ? value : "TACTICAL_COACH";
 }
 
 /**

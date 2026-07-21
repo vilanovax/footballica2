@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { usePenaltyStore } from "@/stores/penaltyStore";
 import { useLanguageStore } from "@/stores/languageStore";
@@ -9,31 +9,32 @@ import { getMatchDraw } from "@/actions/getMatchDraw";
 import type { QuizQuestion } from "@/lib/quiz/types";
 import type { GameConfig } from "@/lib/game/economy";
 import type { HelperKey } from "@/lib/game/helpers";
+import { QUICK_DURATION_MS } from "@/lib/quiz/scoring";
 import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
-import { FuseTimer } from "./FuseTimer";
+import { QuickTimer } from "./QuickTimer";
 import { QuestionCard } from "./QuestionCard";
 import { AnswerButton } from "./AnswerButton";
 import { HelperDock } from "./HelperDock";
-import { Scoreboard } from "./Scoreboard";
 import { MatchResult } from "./MatchResult";
 import { GoalBurst } from "./GoalBurst";
-import { MissedPopup } from "./MissedPopup";
 import { ReportModal } from "./ReportModal";
 
-/** Auto-advance delay after a scored goal (miss waits for Continue tap). */
-const GOAL_REVEAL_MS = 1500;
+/**
+ * Rapid-fire pause after each answer BEFORE auto-advancing. Unlike Penalty
+ * Mode (which waits for a "Continue" tap on a miss), Quick Match keeps the
+ * momentum by auto-advancing on BOTH a goal and a miss.
+ */
+const QUICK_REVEAL_MS = 850;
 
-type PenaltyMatchProps = {
-  /** FTUE tutorial run: short shootout with a guaranteed payout. */
-  tutorial?: boolean;
+type QuickMatchProps = {
   /** Server-drawn question set (authoritative bank lives in the DB). */
   initialQuestions: QuizQuestion[];
   /** Spare questions backing the Substitution helper. */
   bench: QuizQuestion[];
-  /** Kicks per match, from the Live-Ops config; reused for Play Again. */
+  /** Questions per match, from Live-Ops config; reused for Play Again. */
   matchSize: number;
   /** Coin balance at kickoff — the affordability ceiling for helpers. */
   startingCoins: number;
@@ -41,23 +42,22 @@ type PenaltyMatchProps = {
   helpers: GameConfig["helpers"];
 };
 
-export function PenaltyMatch({
-  tutorial = false,
+export function QuickMatch({
   initialQuestions,
   bench,
   matchSize,
   startingCoins,
   helpers,
-}: PenaltyMatchProps) {
+}: QuickMatchProps) {
   const router = useRouter();
   const { t } = useTranslation();
-  // Active language drives which localized question content is rendered.
   const lang = useLanguageStore((s) => s.locale);
 
   const phase = usePenaltyStore((s) => s.phase);
   const questions = usePenaltyStore((s) => s.questions);
   const currentIndex = usePenaltyStore((s) => s.currentIndex);
   const timeLeftMs = usePenaltyStore((s) => s.timeLeftMs);
+  const durationMs = usePenaltyStore((s) => s.durationMs);
   const goals = usePenaltyStore((s) => s.goals);
   const feedback = usePenaltyStore((s) => s.feedback);
   const rewards = usePenaltyStore((s) => s.rewards);
@@ -83,38 +83,34 @@ export function PenaltyMatch({
   // Seed the match EXACTLY ONCE on mount. A server-action refresh (Next.js
   // auto-refreshes the route after resolveMatch runs) re-renders this page and
   // hands us a fresh `initialQuestions` array — depending on it here would
-  // silently restart a just-finished match back at kick 1. Play Again re-seeds
-  // explicitly via handlePlayAgain instead.
+  // silently restart a just-finished match back at question 1. Play Again
+  // re-seeds explicitly via handlePlayAgain instead.
   useEffect(() => {
     start(initialQuestions, {
+      durationMs: QUICK_DURATION_MS,
       bench,
       startingCoins,
-      helpers: tutorial ? null : helpers,
+      helpers,
     });
     playSound("whistle");
     return () => reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Play Again draws a FRESH set + an up-to-date coin budget so replays aren't
-  // identical and helpers price against the new balance. Falls back to the
-  // initial set if the fetch returns nothing.
+  // Play Again draws a FRESH set + up-to-date coin budget so replays differ and
+  // helpers price against the new balance.
   const handlePlayAgain = useCallback(async () => {
-    const draw = await getMatchDraw(
-      tutorial
-        ? { count: matchSize, bench: 0, difficulties: ["easy"] }
-        : { count: matchSize, bench: 3 },
-    );
+    const draw = await getMatchDraw({ count: matchSize, bench: 3 });
     start(draw.questions.length > 0 ? draw.questions : initialQuestions, {
+      durationMs: QUICK_DURATION_MS,
       bench: draw.bench,
       startingCoins: draw.startingCoins,
-      helpers: tutorial ? null : helpers,
+      helpers,
     });
     playSound("whistle");
-  }, [tutorial, matchSize, start, initialQuestions, helpers]);
+  }, [matchSize, start, initialQuestions, helpers]);
 
-  // Optimistic helper spend: apply the effect instantly (settled server-side in
-  // resolveMatch). The dock only fires onUse when the helper is actually usable.
+  // Optimistic helper spend — applied instantly, settled in resolveMatch.
   const handleUseHelper = useCallback(
     (key: HelperKey) => {
       useHelper(key);
@@ -124,11 +120,8 @@ export function PenaltyMatch({
     [useHelper],
   );
 
-  // Timer loop via rAF — only runs while playing (paused on reveal).
-  // State is kept in locals (not refs) so every effect run owns an isolated
-  // loop; a `cancelled` flag hard-stops any frame that fires after teardown.
-  // This prevents loop accumulation under Strict Mode / Fast Refresh, which
-  // would otherwise run several rAF loops at once and burn the fuse N× too fast.
+  // Timer loop via rAF — isolated per-effect locals + a `cancelled` flag so
+  // loops can never accumulate (which would burn the timer several × too fast).
   useEffect(() => {
     if (phase !== "playing") return;
 
@@ -150,32 +143,29 @@ export function PenaltyMatch({
     };
   }, [phase, tick]);
 
-  // Reveal reactions: haptics, screen shake on miss, auto-advance on goal.
+  // Reveal reactions: feedback SFX/haptics + shake on miss, then auto-advance
+  // for BOTH outcomes — that constant forward motion is the rapid-fire feel.
   useEffect(() => {
     if (phase !== "reveal" || !feedback) return;
 
     if (feedback.result === "goal") {
       playSound("goal");
-      haptic(HAPTIC.goal); // light 50ms
+      haptic(HAPTIC.goal);
     } else {
       playSound("miss");
-      haptic(HAPTIC.miss); // heavy [100,50,100]
+      haptic(HAPTIC.miss);
+      setShake(true);
     }
 
-    if (feedback.result === "goal") {
-      const t = setTimeout(() => next(), GOAL_REVEAL_MS);
-      return () => clearTimeout(t);
-    }
-
-    // Miss → shake the container; advance waits for the popup's Continue.
-    setShake(true);
+    const timer = setTimeout(() => next(), QUICK_REVEAL_MS);
+    return () => clearTimeout(timer);
   }, [phase, feedback, next]);
 
   if (phase === "finished" && rewards) {
     return (
       <MatchResult
         totalKicks={questions.length}
-        tutorial={tutorial}
+        mode="quick"
         helpersUsed={helpersLog}
         submissions={log.map((k) => ({
           questionId: k.questionId,
@@ -196,43 +186,64 @@ export function PenaltyMatch({
   const showGoal = locked && feedback?.result === "goal";
   const showMiss = locked && feedback?.result === "miss";
 
+  // Trailing run of correct answers (the live streak). The current kick is
+  // already logged by the time we reveal, so this reflects it immediately.
+  let streak = 0;
+  for (let i = log.length - 1; i >= 0; i--) {
+    if (log[i].result === "goal") streak += 1;
+    else break;
+  }
+
   return (
     <section className="relative flex flex-1 flex-col">
       <div
-        className={[
-          "flex flex-1 flex-col gap-5",
-          shake ? "animate-screen-shake" : "",
-        ].join(" ")}
+        className={["flex flex-1 flex-col gap-5", shake ? "animate-screen-shake" : ""].join(" ")}
         onAnimationEnd={() => setShake(false)}
       >
         <header className="flex flex-col gap-3 pt-2">
           <div className="flex items-center justify-between">
             <p className="font-display text-sm font-bold uppercase tracking-widest text-secondary">
-              {t("quiz.penaltyMode")}
+              {t("quiz.quickMode")}
             </p>
             <p className="font-display text-sm font-semibold text-muted-foreground">
-              {t("quiz.kickOf", {
+              {t("quiz.questionOf", {
                 n: toLocaleDigits(currentIndex + 1, lang),
                 total: toLocaleDigits(questions.length, lang),
               })}
             </p>
           </div>
-          <Scoreboard
-            kickNumber={currentIndex + 1}
-            totalKicks={questions.length}
-            goals={goals}
-          />
-          <FuseTimer timeLeftMs={timeLeftMs} paused={locked || paused} />
+
+          {/* Live score + streak chips — the rapid-fire "keep the run alive" hook */}
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1 font-display text-sm font-bold text-primary">
+              ⚽️ {toLocaleDigits(goals, lang)}
+            </span>
+            <motion.span
+              key={streak}
+              initial={streak >= 2 ? { scale: 0.6 } : false}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 320, damping: 16 }}
+              className={[
+                "inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-display text-sm font-bold transition-colors",
+                streak >= 2
+                  ? "bg-accent/20 text-accent-deep"
+                  : "bg-muted text-muted-foreground",
+              ].join(" ")}
+            >
+              🔥 {toLocaleDigits(streak, lang)}
+            </motion.span>
+            <div className="flex-1" />
+          </div>
+
+          <QuickTimer timeLeftMs={timeLeftMs} totalMs={durationMs} paused={locked || paused} />
         </header>
 
-        <AnimatePresence mode="wait">
-          <QuestionCard
-            key={question.id}
-            text={content.text}
-            category={content.category}
-            onReport={() => setReportOpen(true)}
-          />
-        </AnimatePresence>
+        <QuestionCard
+          key={question.id}
+          text={content.text}
+          category={content.category}
+          onReport={() => setReportOpen(true)}
+        />
 
         <motion.div
           key={`opts-${question.id}`}
@@ -240,18 +251,18 @@ export function PenaltyMatch({
           initial="hidden"
           animate="visible"
           variants={{
-            visible: { transition: { staggerChildren: 0.07, delayChildren: 0.08 } },
+            visible: { transition: { staggerChildren: 0.05, delayChildren: 0.05 } },
           }}
         >
           {content.options.map((option, index) => (
             <motion.div
               key={`${question.id}-${index}`}
               variants={{
-                hidden: { opacity: 0, y: 16 },
+                hidden: { opacity: 0, y: 14 },
                 visible: {
                   opacity: 1,
                   y: 0,
-                  transition: { type: "spring", stiffness: 300, damping: 24 },
+                  transition: { type: "spring", stiffness: 320, damping: 24 },
                 },
               }}
             >
@@ -267,7 +278,7 @@ export function PenaltyMatch({
           ))}
         </motion.div>
 
-        {!tutorial && helpers && (
+        {helpers && (
           <HelperDock
             helpers={helpers}
             coinsLeft={startCoins - coinsSpent}
@@ -281,21 +292,37 @@ export function PenaltyMatch({
         )}
       </div>
 
-      <AnimatePresence>{showGoal && <GoalBurst key="goal" />}</AnimatePresence>
+      {showGoal && <GoalBurst />}
 
-      <AnimatePresence>
-        {showMiss && <MissedPopup key="miss" onContinue={() => next()} />}
-      </AnimatePresence>
+      {/* Non-blocking miss flash — pointer-events-none so it never eats a tap
+          (auto-advance handles progression; there is no Continue button). */}
+      {showMiss && (
+        <motion.div
+          className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <motion.span
+            initial={{ scale: 0.4, y: 20, rotate: -8 }}
+            animate={{ scale: [0.4, 1.2, 1], y: [20, -6, -30], rotate: [-8, 4, 0] }}
+            transition={{ duration: 0.8, times: [0, 0.45, 1], ease: "easeOut" }}
+            className="flex flex-col items-center gap-1"
+            aria-hidden
+          >
+            <span className="text-5xl drop-shadow">🧤</span>
+            <span className="font-display text-3xl font-bold text-destructive drop-shadow">
+              {t("quiz.missed")}
+            </span>
+          </motion.span>
+        </motion.div>
+      )}
 
-      <AnimatePresence>
-        {reportOpen && (
-          <ReportModal
-            key="report"
-            questionId={question.id}
-            onClose={() => setReportOpen(false)}
-          />
-        )}
-      </AnimatePresence>
+      {reportOpen && (
+        <ReportModal
+          questionId={question.id}
+          onClose={() => setReportOpen(false)}
+        />
+      )}
     </section>
   );
 }

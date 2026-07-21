@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { PenaltyMatch } from "@/components/quiz/PenaltyMatch";
+import { QuickMatch } from "@/components/quiz/QuickMatch";
 import { ExhaustedBlocker } from "@/components/quiz/ExhaustedBlocker";
 import { getDummyClubSnapshot } from "@/lib/dev/dummyClub";
 import { getMatchQuestions } from "@/actions/getMatchQuestions";
@@ -8,39 +8,24 @@ import { getGameConfig } from "@/lib/game/gameConfig";
 // Reads live (regenerated) stamina before allowing a match — never prerender.
 export const dynamic = "force-dynamic";
 
-export default async function PenaltyPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ tutorial?: string }>;
-}) {
-  const { tutorial } = await searchParams;
-  const isTutorial = tutorial === "true";
-
+export default async function QuickPage() {
   const club = await getDummyClubSnapshot();
 
   // No club yet → onboarding first.
   if (!club) redirect("/onboarding");
 
-  // Gate: block entry when exhausted — but the FTUE tutorial is stamina-free.
-  if (!isTutorial && club.stamina <= 0) {
+  // Gate: block entry when exhausted (Quick Match spends stamina like Penalty).
+  if (club.stamina <= 0) {
     return <ExhaustedBlocker />;
   }
 
-  // Match size is Live-Ops tunable (full shootout vs. shorter easy-only tutorial).
+  // Rapid-fire length is Live-Ops tunable (PRD §4C: 5–10 questions).
   const config = await getGameConfig();
-  const matchSize = isTutorial
-    ? config.match.tutorialQuestionCount
-    : config.match.questionCount;
+  const matchSize = config.match.quickQuestionCount;
+  const benchSize = 3;
 
-  // A few spare questions back the "Substitution" helper (tutorial has none).
-  const benchSize = isTutorial ? 0 : 3;
-
-  // Draw the authoritative question set server-side from the DB (+ bench).
-  const drawn = await getMatchQuestions(
-    isTutorial
-      ? { count: matchSize, difficulties: ["easy"] }
-      : { count: matchSize + benchSize },
-  );
+  // Draw the authoritative question set server-side from the DB (+ bench for Substitution).
+  const drawn = await getMatchQuestions({ count: matchSize + benchSize });
   const initialQuestions = drawn.slice(0, matchSize);
   const bench = drawn.slice(matchSize);
 
@@ -59,8 +44,7 @@ export default async function PenaltyPage({
   }
 
   return (
-    <PenaltyMatch
-      tutorial={isTutorial}
+    <QuickMatch
       initialQuestions={initialQuestions}
       bench={bench}
       matchSize={matchSize}

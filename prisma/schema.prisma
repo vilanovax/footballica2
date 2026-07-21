@@ -23,6 +23,8 @@ enum ManagerAvatar {
   SUPER_FAN
   CLUB_LEGEND
   OLD_GAFFER
+  STAR_MANAGER
+  COSMIC_COACH
 }
 
 enum MatchMode {
@@ -101,6 +103,9 @@ model Club {
   stadiumName  String?
   /// Chosen manager avatar key (see lib/onboarding/avatars), set during onboarding.
   avatar       String?
+  /// Chosen club flag key (see lib/onboarding/flags). Cosmetic identity; premium
+  /// flags are level-gated (re-checked server-side in setClubFlag).
+  flag         String?
   /// FTUE progress: 0 = play tutorial match, 1 = buy first upgrade, 2 = done.
   tutorialStep Int     @default(0)
 

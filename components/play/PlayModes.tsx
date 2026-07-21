@@ -31,10 +31,9 @@ export function PlayModes() {
           </span>
         </Link>
 
-        <button
-          type="button"
-          disabled
-          className="btn-fantasy btn-fantasy-primary w-full text-start opacity-50"
+        <Link
+          href="/play/quick"
+          className="btn-fantasy btn-fantasy-primary w-full text-start"
         >
           <span className="flex w-full flex-col items-start gap-1">
             <span className="text-lg">{t("play.quick")}</span>
@@ -42,7 +41,7 @@ export function PlayModes() {
               {t("play.quickDesc")}
             </span>
           </span>
-        </button>
+        </Link>
       </div>
     </section>
   );

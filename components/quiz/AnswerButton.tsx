@@ -8,6 +8,8 @@ type AnswerButtonProps = {
   label: string;
   index: number;
   disabled: boolean;
+  /** Removed by a 50/50 / Hint helper — faded, struck-through, unclickable. */
+  eliminated?: boolean;
   /** Set once the kick is revealed. */
   reveal: {
     selectedIndex: number | null;
@@ -27,6 +29,7 @@ export function AnswerButton({
   label,
   index,
   disabled,
+  eliminated = false,
   reveal,
   onSelect,
 }: AnswerButtonProps) {
@@ -37,12 +40,17 @@ export function AnswerButton({
     reveal !== null &&
     reveal.selectedIndex === index &&
     index !== reveal.correctIndex;
+  // Eliminated only matters BEFORE reveal (reveal styling wins afterwards).
+  const showEliminated = eliminated && !reveal;
 
   // Base (unrevealed) vs revealed states drive color tokens. The thick bottom
   // border + hard shadow give a chunky, physically-pressable plastic feel.
   let stateClass =
     "bg-surface text-surface-foreground shadow-fantasy border-border border-b-black/25";
-  if (reveal) {
+  if (showEliminated) {
+    stateClass =
+      "bg-muted text-muted-foreground border-border border-b-black/10 opacity-40 line-through";
+  } else if (reveal) {
     if (isCorrect) {
       stateClass =
         "bg-primary text-primary-foreground border-primary-deep border-b-primary-deep shadow-glow";
@@ -55,13 +63,15 @@ export function AnswerButton({
     }
   }
 
+  const inactive = disabled || showEliminated;
+
   return (
     <motion.button
       type="button"
-      disabled={disabled}
+      disabled={inactive}
       onClick={() => onSelect(index)}
       whileTap={
-        disabled
+        inactive
           ? undefined
           : {
               y: 6,

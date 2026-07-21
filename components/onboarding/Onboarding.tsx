@@ -9,6 +9,7 @@ import {
   type AvatarKey,
 } from "@/lib/onboarding/avatars";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { AvatarImage } from "@/components/common/AvatarImage";
 
 type Step = "select" | "name";
 
@@ -84,9 +85,10 @@ export function Onboarding() {
                       : "border-border",
                   ].join(" ")}
                 >
-                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-bubble bg-muted text-3xl">
-                    {a.emoji}
-                  </span>
+                  <AvatarImage
+                    avatarKey={a.key}
+                    className="h-14 w-14 shrink-0 rounded-bubble"
+                  />
                   <span className="min-w-0 flex-1">
                     <span className="block font-display text-lg font-bold text-surface-foreground">
                       {t(`avatars.${a.key}.name`)}
@@ -114,9 +116,14 @@ export function Onboarding() {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 260, damping: 15 }}
-                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-bubble bg-muted text-4xl shadow-fantasy"
+                className="shrink-0"
               >
-                {avatar?.emoji}
+                {avatar && (
+                  <AvatarImage
+                    avatarKey={avatar.key}
+                    className="h-16 w-16 rounded-bubble shadow-fantasy"
+                  />
+                )}
               </motion.span>
               <motion.div
                 initial={{ opacity: 0, y: 10 }}

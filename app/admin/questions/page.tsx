@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Plus, Pencil, ArrowDownUp } from "lucide-react";
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import {

@@ -13,6 +13,7 @@ import {
   type LevelInfo,
 } from "@/lib/game/economy";
 import { getGameConfig } from "@/lib/game/gameConfig";
+import { totalHelperCost, isHelperKey, type HelperKey } from "@/lib/game/helpers";
 import { applyBoosters, type BoosterType } from "@/lib/boosters/boosters";
 import { computeStaminaRegen } from "@/lib/club/stamina";
 import {
@@ -29,11 +30,18 @@ const TUTORIAL_REWARD = { coins: 100, xp: 20, fans: 10 } as const;
 /** User-facing validation failure that aborts the transaction. */
 class MatchError extends Error {}
 
+/** Which core mode produced this match (drives the logged MatchMode). */
+export type MatchModeOption = "penalty" | "quick";
+
 export type ResolveMatchOptions = {
   /** FTUE tutorial match: fixed payout, no stamina cost, advances tutorialStep. */
   tutorial?: boolean;
   /** True if any help (50/50, freeze, superpower) was used — gates "no help" badges. */
   usedHelp?: boolean;
+  /** In-match coin helpers used; cost is re-derived from config & deducted here. */
+  helpersUsed?: HelperKey[];
+  /** Core game mode (ignored for tutorial). Defaults to "penalty". */
+  mode?: MatchModeOption;
 };
 
 /** A badge earned by this match, in a serializable shape for the result popup. */
@@ -98,7 +106,19 @@ export async function resolveMatch(
   options: ResolveMatchOptions = {},
 ): Promise<ResolveMatchResult> {
   const isTutorial = options.tutorial === true;
-  const usedHelp = options.usedHelp === true;
+  // Sanitize the helper list to known keys. The tutorial never charges helpers.
+  const helperKeys: HelperKey[] = isTutorial
+    ? []
+    : (Array.isArray(options.helpersUsed) ? options.helpersUsed : []).filter(
+        isHelperKey,
+      );
+  const usedHelp = options.usedHelp === true || helperKeys.length > 0;
+  // Logged mode: tutorial always wins; otherwise the caller's core mode.
+  const matchMode = isTutorial
+    ? "TUTORIAL"
+    : options.mode === "quick"
+      ? "QUICK_MATCH"
+      : "PENALTY";
 
   if (!Array.isArray(submissions) || submissions.length === 0) {
     return { ok: false, error: "No kicks submitted." };
@@ -124,6 +144,10 @@ export async function resolveMatch(
   const config = await getGameConfig();
   const baseRewards = computeMatchRewards(verifiedLog, config);
 
+  // Coin cost of any in-match helpers, re-derived from the authoritative config
+  // (client-reported costs are never trusted). Deducted inside the transaction.
+  const helperSpend = totalHelperCost(config.helpers, helperKeys);
+
   try {
     const result = await prisma.$transaction(async (tx) => {
       const { user, club } = await getOrCreateDummyClub(tx);
@@ -136,6 +160,12 @@ export async function resolveMatch(
 
       if (!isTutorial && regen.stamina < STAMINA_COST) {
         throw new MatchError("Not enough stamina.");
+      }
+
+      // Helpers are paid from the pre-match balance (coins only ever decrease
+      // mid-match, so club.coins here is the true kickoff ceiling).
+      if (helperSpend > club.coins) {
+        throw new MatchError("Not enough coins for the help used.");
       }
       const spentStamina = regen.stamina - staminaSpent;
       // If they were full, the regen clock starts now; otherwise carry anchor.
@@ -251,7 +281,7 @@ export async function resolveMatch(
         data: {
           userId: user.id,
           clubId: club.id,
-          mode: isTutorial ? "TUTORIAL" : "PENALTY",
+          mode: matchMode,
           status: "COMPLETED",
           goalsFor: finalRewards.goals,
           goalsAgainst: finalRewards.misses,
@@ -276,8 +306,11 @@ export async function resolveMatch(
       const updatedClub = await tx.club.update({
         where: { id: club.id },
         data: {
-          // Match coins + any level-up bonus + one-off badge rewards.
-          coins: { increment: finalRewards.coins + levelUpCoins + badgeCoins },
+          // Match coins + level-up bonus + one-off badge rewards − helper spend.
+          coins: {
+            increment:
+              finalRewards.coins + levelUpCoins + badgeCoins - helperSpend,
+          },
           fans: { increment: finalRewards.fans },
           // Absolute set: regen already accounted for above (or refilled on level-up).
           stamina: finalStamina,
