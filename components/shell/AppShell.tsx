@@ -22,12 +22,21 @@ export function AppShell({ children }: AppShellProps) {
     return <>{children}</>;
   }
 
+  // Auth + FTUE screens: no bottom nav chrome.
+  const bareChrome =
+    pathname === "/login" || pathname?.startsWith("/onboarding");
+
   return (
     <div className="relative mx-auto flex min-h-dvh w-full max-w-mobile flex-col overflow-x-hidden">
-      <main className="flex flex-1 flex-col px-4 pb-nav pt-[max(1rem,env(safe-area-inset-top))]">
+      <main
+        className={[
+          "flex flex-1 flex-col px-4 pt-[max(1rem,env(safe-area-inset-top))]",
+          bareChrome ? "pb-8" : "pb-nav",
+        ].join(" ")}
+      >
         {children}
       </main>
-      <BottomNav />
+      {!bareChrome && <BottomNav />}
       <Toaster position="top-center" />
     </div>
   );

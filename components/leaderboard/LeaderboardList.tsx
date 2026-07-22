@@ -9,6 +9,7 @@ import { LeaderboardPodium } from "./LeaderboardPodium";
 
 type LeaderboardListProps = {
   rows: LeaderboardRow[];
+  resetsInDays?: number;
 };
 
 // Podium styling for the top three — gold / silver / bronze.
@@ -44,14 +45,17 @@ const rowVariants = {
   },
 } as const;
 
-export function LeaderboardList({ rows }: LeaderboardListProps) {
+export function LeaderboardList({
+  rows,
+  resetsInDays = 7,
+}: LeaderboardListProps) {
   const { t, locale } = useTranslation();
   const showPodium = rows.length >= 3;
   const podiumRows = showPodium ? rows.slice(0, 3) : [];
   const listRows = showPodium ? rows.slice(3) : rows;
   return (
     <section className="flex flex-1 flex-col">
-      {/* Sticky league header + mock countdown */}
+      {/* Sticky league header + Tehran week countdown */}
       <header className="sticky top-0 z-20 -mx-1 bg-background/90 pb-3 pt-2 backdrop-blur-md">
         <p className="font-display text-sm font-semibold uppercase tracking-widest text-primary">
           {t("leaderboard.eyebrow")}
@@ -61,7 +65,10 @@ export function LeaderboardList({ rows }: LeaderboardListProps) {
             {t("leaderboard.title")}
           </h1>
           <span className="rounded-full bg-surface px-3 py-1 font-display text-xs font-bold text-accent-deep shadow-fantasy-sm">
-            ⏳ {t("leaderboard.resetsIn")}
+            ⏳{" "}
+            {t("leaderboard.resetsIn", {
+              n: toLocaleDigits(resetsInDays, locale),
+            })}
           </span>
         </div>
       </header>

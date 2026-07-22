@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { PenaltyMatch } from "@/components/quiz/PenaltyMatch";
 import { ExhaustedBlocker } from "@/components/quiz/ExhaustedBlocker";
-import { getDummyClubSnapshot } from "@/lib/dev/dummyClub";
+import { getClubSnapshot, getCurrentUser } from "@/lib/player/current";
 import { getMatchQuestions } from "@/actions/getMatchQuestions";
 import { getGameConfig } from "@/lib/game/gameConfig";
 
@@ -16,9 +16,10 @@ export default async function PenaltyPage({
   const { tutorial } = await searchParams;
   const isTutorial = tutorial === "true";
 
-  const club = await getDummyClubSnapshot();
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
 
-  // No club yet → onboarding first.
+  const club = await getClubSnapshot();
   if (!club) redirect("/onboarding");
 
   // Gate: block entry when exhausted — but the FTUE tutorial is stamina-free.

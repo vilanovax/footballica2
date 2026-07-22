@@ -2,9 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getOrCreateDummyClub } from "@/lib/dev/dummyClub";
+import { requireUserClub } from "@/lib/player/current";
 import { isAvatarKey, MANAGER_AVATARS } from "@/lib/onboarding/avatars";
+import {
+  CLUB_NAME_MAX_LEN,
+  validateClubName,
+} from "@/lib/auth/blacklist";
 
 export type UpdateProfileInput = {
   managerName: string;
@@ -15,12 +20,15 @@ export type UpdateProfileInput = {
 
 export type UpdateProfileResult = { ok: true } | { ok: false; error: string };
 
-const NAME = z.string().trim().min(2, "too_short").max(24, "too_long");
+const PERSON_NAME = z.string().trim().min(2, "too_short").max(24, "too_long");
 
 const schema = z.object({
-  managerName: NAME,
-  clubName: NAME,
-  // Stadium is optional — allow empty to clear it.
+  managerName: PERSON_NAME,
+  clubName: z
+    .string()
+    .trim()
+    .min(2, "too_short")
+    .max(CLUB_NAME_MAX_LEN, "too_long"),
   stadiumName: z.string().trim().max(24, "too_long"),
   avatar: z.string(),
 });
@@ -43,10 +51,16 @@ export async function updateProfile(
     return { ok: false, error: "invalid_avatar" };
   }
 
-  try {
-    const { user, club } = await getOrCreateDummyClub();
+  const validated = validateClubName(clubName);
+  if (!validated.ok) {
+    return { ok: false, error: validated.error };
+  }
 
-    // Server-side lock check: locked avatars require the unlocking badge.
+  try {
+    const pair = await requireUserClub();
+    if (!pair) return { ok: false, error: "not_authenticated" };
+    const { user, club } = pair;
+
     const def = MANAGER_AVATARS.find((a) => a.key === avatar);
     if (def?.lockedBy) {
       const owned = await prisma.clubBadge.findFirst({
@@ -60,7 +74,8 @@ export async function updateProfile(
       prisma.club.update({
         where: { id: club.id },
         data: {
-          name: clubName,
+          name: validated.name,
+          nameNormalized: validated.normalized,
           stadiumName: stadiumName.length > 0 ? stadiumName : null,
           avatar,
         },
@@ -71,6 +86,12 @@ export async function updateProfile(
       }),
     ]);
   } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      return { ok: false, error: "name_taken" };
+    }
     console.error("updateProfile failed", err);
     return { ok: false, error: "server_error" };
   }

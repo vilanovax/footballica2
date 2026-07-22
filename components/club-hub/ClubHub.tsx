@@ -21,18 +21,37 @@ import { AvatarImage } from "@/components/common/AvatarImage";
 import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { toLocaleDigits } from "@/lib/i18n/format";
 import { StatusBar } from "./StatusBar";
 import { StadiumHero } from "./StadiumHero";
 import { UpgradeCard } from "./UpgradeCard";
 import { NewspaperModal } from "./NewspaperModal";
 import { FtueCoach } from "./FtueCoach";
+import {
+  hasMissionRewardReady,
+  MissionDrawer,
+} from "@/components/profile/MissionDrawer";
+import { DuelInboxBanner } from "@/components/duel/DuelInboxBanner";
+import type { DuelInboxItem } from "@/actions/duel/getInboxCount";
+import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
 
 type ClubHubProps = {
   initialClub: ClubSnapshot;
+  /** Active Draft Duel turns waiting for the manager. */
+  duelInboxCount?: number;
+  duelInboxItems?: DuelInboxItem[];
+  missionBoard?: EvaluateMissionsResult | null;
+  dailyBoard?: EvaluateMissionsResult | null;
 };
 
-export function ClubHub({ initialClub }: ClubHubProps) {
-  const { t } = useTranslation();
+export function ClubHub({
+  initialClub,
+  duelInboxCount = 0,
+  duelInboxItems = [],
+  missionBoard = null,
+  dailyBoard = null,
+}: ClubHubProps) {
+  const { t, locale } = useTranslation();
   const [club, setClub] = useState(initialClub);
   const [pendingKey, setPendingKey] = useState<UpgradeKey | null>(null);
   const [celebrateKey, setCelebrateKey] = useState(0);
@@ -54,8 +73,10 @@ export function ClubHub({ initialClub }: ClubHubProps) {
     state: NewsState;
   } | null>(null);
   const [newsPending, setNewsPending] = useState(false);
+  const [missionsOpen, setMissionsOpen] = useState(false);
 
   const canClaimNews = club.newsClaimable;
+  const missionRewardReady = hasMissionRewardReady(dailyBoard, missionBoard);
 
   function handleDailyNews() {
     if (newsPending) return;
@@ -142,6 +163,44 @@ export function ClubHub({ initialClub }: ClubHubProps) {
             headline is still claimable. */}
         {ftueComplete && (
           <div className="flex items-center gap-2">
+            <motion.button
+              type="button"
+              onClick={() => {
+                haptic(HAPTIC.light);
+                setMissionsOpen(true);
+              }}
+              aria-label={t("missions.openDrawer")}
+              className={[
+                "relative flex h-12 w-12 items-center justify-center rounded-bubble border bg-surface text-2xl shadow-fantasy",
+                missionRewardReady
+                  ? "border-secondary"
+                  : "border-primary/40",
+              ].join(" ")}
+              animate={
+                missionRewardReady
+                  ? {
+                      y: [0, -3, 0],
+                      boxShadow: [
+                        "0 0 0px hsl(var(--secondary) / 0)",
+                        "0 0 16px hsl(var(--secondary) / 0.55)",
+                        "0 0 0px hsl(var(--secondary) / 0)",
+                      ],
+                    }
+                  : undefined
+              }
+              transition={
+                missionRewardReady
+                  ? { repeat: Infinity, duration: 1.5 }
+                  : undefined
+              }
+              whileTap={{ scale: 0.92 }}
+            >
+              <span aria-hidden>🎯</span>
+              {missionRewardReady && (
+                <span className="absolute -end-1 -top-1 h-3 w-3 rounded-full bg-secondary ring-2 ring-surface" />
+              )}
+            </motion.button>
+
             <Link
               href="/shop"
               aria-label={t("shop.title")}
@@ -192,6 +251,14 @@ export function ClubHub({ initialClub }: ClubHubProps) {
         maxStamina={club.maxStamina}
         msUntilNext={club.msUntilNext}
       />
+
+      {ftueComplete && (
+        <DuelInboxBanner
+          count={duelInboxCount}
+          items={duelInboxItems}
+          variant="club"
+        />
+      )}
 
       <StadiumHero
         stadiumLevel={club.stadiumLevel}
@@ -252,6 +319,15 @@ export function ClubHub({ initialClub }: ClubHubProps) {
           />
         )}
       </AnimatePresence>
+
+      {ftueComplete && (
+        <MissionDrawer
+          open={missionsOpen}
+          onOpenChange={setMissionsOpen}
+          dailyBoard={dailyBoard}
+          missionBoard={missionBoard}
+        />
+      )}
 
       {/* FTUE Step 1 — full mask + coach dialog gating everything but the CTA. */}
       <AnimatePresence>

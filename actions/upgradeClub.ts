@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getOrCreateDummyClub, toClubSnapshot } from "@/lib/dev/dummyClub";
+import { toClubSnapshot } from "@/lib/dev/dummyClub";
+import { requireUserClub } from "@/lib/player/current";
 import type { Prisma } from "@/generated/prisma/client";
 import {
   UPGRADES,
@@ -29,7 +30,9 @@ export async function upgradeClub(key: UpgradeKey): Promise<UpgradeResult> {
 
   try {
     const snapshot = await prisma.$transaction(async (tx) => {
-      const { club } = await getOrCreateDummyClub(tx);
+      const pair = await requireUserClub(tx);
+      if (!pair) throw new UpgradeError("Not authenticated.");
+      const { club } = pair;
 
       const currentLevel = club[def.field];
       const cost = getUpgradeCost(key, currentLevel);

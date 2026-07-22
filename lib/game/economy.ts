@@ -61,6 +61,29 @@ export type GameConfig = {
     /** Questions in a rapid-fire Quick Match (PRD §4C: 5–10). */
     quickQuestionCount: number;
   };
+  /** Async Draft Duel (2 light rounds). Tunable from Admin Live-Ops. */
+  duel: {
+    /** Questions the attacker answers after picking a category. */
+    questionsPerAttack: number;
+    /** Full rounds (each player attacks once). Locked to 2 for v1. */
+    rounds: number;
+    /** Categories offered in the draft picker. */
+    draftChoices: number;
+    /** Hours the opponent has to take their turn before EXPIRED. */
+    turnHours: number;
+    /** Simulated bot delay window (ms). */
+    botDelayMinMs: number;
+    botDelayMaxMs: number;
+    /**
+     * How long a challenger waits for a human before a bot is assigned (ms).
+     * Keep short so Match Day never feels stuck on an empty queue.
+     */
+    matchmakingMs: number;
+    /** Weekly leaderboard XP granted to the duel winner. */
+    winWeeklyXp: number;
+    /** Stamina spent when opening a duel. */
+    staminaCost: number;
+  };
 };
 
 export const DEFAULT_GAME_CONFIG: GameConfig = {
@@ -91,6 +114,18 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     tutorialQuestionCount: 3,
     quickQuestionCount: 10,
   },
+  duel: {
+    questionsPerAttack: 5,
+    rounds: 2,
+    draftChoices: 3,
+    turnHours: 24,
+    botDelayMinMs: 2 * 60 * 1000,
+    botDelayMaxMs: 10 * 60 * 1000,
+    /** Visual search window before bot fallback (min 5s enforced in merge). */
+    matchmakingMs: 15_000,
+    winWeeklyXp: 3,
+    staminaCost: 1,
+  },
 };
 
 /** Finite-number guard with fallback (rejects NaN/Infinity/non-numbers). */
@@ -111,6 +146,7 @@ export function mergeGameConfig(raw: unknown): GameConfig {
   const c = src.costs ?? {};
   const h = src.helpers ?? {};
   const m = src.match ?? {};
+  const d = src.duel ?? {};
   const D = DEFAULT_GAME_CONFIG;
 
   return {
@@ -146,6 +182,33 @@ export function mergeGameConfig(raw: unknown): GameConfig {
         1,
         Math.round(num(m.quickQuestionCount, D.match.quickQuestionCount)),
       ),
+    },
+    duel: {
+      questionsPerAttack: Math.max(
+        1,
+        Math.round(num(d.questionsPerAttack, D.duel.questionsPerAttack)),
+      ),
+      // v1 product lock: always 2 light rounds (ignore Live-Ops drift above 2).
+      rounds: 2,
+      draftChoices: Math.max(
+        2,
+        Math.round(num(d.draftChoices, D.duel.draftChoices)),
+      ),
+      turnHours: Math.max(1, Math.round(num(d.turnHours, D.duel.turnHours))),
+      botDelayMinMs: Math.max(
+        0,
+        Math.round(num(d.botDelayMinMs, D.duel.botDelayMinMs)),
+      ),
+      botDelayMaxMs: Math.max(
+        0,
+        Math.round(num(d.botDelayMaxMs, D.duel.botDelayMaxMs)),
+      ),
+      matchmakingMs: Math.max(
+        5_000,
+        Math.round(num(d.matchmakingMs, D.duel.matchmakingMs)),
+      ),
+      winWeeklyXp: Math.max(0, Math.round(num(d.winWeeklyXp, D.duel.winWeeklyXp))),
+      staminaCost: Math.max(0, Math.round(num(d.staminaCost, D.duel.staminaCost))),
     },
   };
 }

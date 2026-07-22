@@ -1,15 +1,16 @@
 import { redirect } from "next/navigation";
 import { Shop } from "@/components/shop/Shop";
-import { getDummyClubSnapshot } from "@/lib/dev/dummyClub";
+import { getClubSnapshot, getCurrentUser } from "@/lib/player/current";
 import { getGameConfig } from "@/lib/game/gameConfig";
 
 // Reads live coins/inventory + Live-Ops booster costs — never prerender.
 export const dynamic = "force-dynamic";
 
 export default async function ShopPage() {
-  const club = await getDummyClubSnapshot();
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
 
-  // No club yet → send the player through the FTUE first.
+  const club = await getClubSnapshot();
   if (!club) redirect("/onboarding");
 
   const config = await getGameConfig();

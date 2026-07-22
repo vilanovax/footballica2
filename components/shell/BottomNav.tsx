@@ -9,6 +9,9 @@ import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { usePenaltyStore } from "@/stores/penaltyStore";
+import { getDuelInboxCount } from "@/actions/duel/getInboxCount";
+import { toLocaleDigits } from "@/lib/i18n/format";
+import { toast } from "sonner";
 
 const tabs = [
   {
@@ -37,7 +40,7 @@ const tabs = [
 export function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
 
   // A match is "in flight" while a kick is live or its result is showing.
   const matchActive = usePenaltyStore(
@@ -47,6 +50,40 @@ export function BottomNav() {
   const setPaused = usePenaltyStore((s) => s.setPaused);
 
   const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const [duelInbox, setDuelInbox] = useState(0);
+
+  // Refresh badge on route change + poll so bot/human turns surface quickly.
+  useEffect(() => {
+    let cancelled = false;
+    let prev =
+      typeof window !== "undefined"
+        ? Number(sessionStorage.getItem("fb_duel_inbox") ?? "0")
+        : 0;
+
+    async function refresh() {
+      const res = await getDuelInboxCount();
+      if (cancelled || !res.ok) return;
+      if (res.count > prev && prev >= 0) {
+        toast.message(t("duel.inboxToast", { n: String(res.count) }), {
+          action: {
+            label: t("duel.inboxCta"),
+            onClick: () => router.push("/play/duel"),
+          },
+        });
+        haptic(HAPTIC.tap);
+      }
+      prev = res.count;
+      sessionStorage.setItem("fb_duel_inbox", String(res.count));
+      setDuelInbox(res.count);
+    }
+
+    void refresh();
+    const id = window.setInterval(() => void refresh(), 25_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [pathname, router, t]);
 
   // Warn before a full reload / tab close while a match is running.
   useEffect(() => {
@@ -110,17 +147,28 @@ export function BottomNav() {
                   href={href}
                   onClick={(e) => handleNav(e, href)}
                   aria-current={active ? "page" : undefined}
+                  aria-label={
+                    duelInbox > 0
+                      ? `${label} (${duelInbox})`
+                      : label
+                  }
                   className="relative -mt-8 flex min-h-touch min-w-18 flex-col items-center gap-1"
                 >
                   <span
                     className={[
-                      "flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-secondary-foreground transition-transform",
+                      "relative flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-secondary-foreground transition-transform",
                       "shadow-[0_6px_0_0_hsl(var(--secondary-deep)),0_12px_22px_hsl(var(--secondary)/0.6)]",
                       "active:translate-y-1 active:shadow-[0_2px_0_0_hsl(var(--secondary-deep)),0_6px_14px_hsl(var(--secondary)/0.5)]",
                       active ? "ring-4 ring-accent/70" : "",
                     ].join(" ")}
                   >
                     <Icon className="h-8 w-8 fill-white/20" strokeWidth={2.5} />
+                    {duelInbox > 0 && (
+                      <span className="absolute -end-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 font-display text-[11px] font-bold text-accent-foreground ring-2 ring-nav">
+                        {toLocaleDigits(Math.min(duelInbox, 9), locale)}
+                        {duelInbox > 9 ? "+" : ""}
+                      </span>
+                    )}
                   </span>
                   <span className="font-display text-xs font-semibold text-accent-deep">
                     {label}

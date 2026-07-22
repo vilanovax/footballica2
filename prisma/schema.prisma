@@ -67,11 +67,64 @@ enum BoosterType {
   FAN_BOOST
 }
 
+/// Async Draft Duel lifecycle (2 light rounds: each player attacks once + defends once).
+enum DuelStatus {
+  /// Looking for a human opponent (or about to assign a bot).
+  MATCHING
+  /// Challenger (A) is drafting a category and/or answering their attack.
+  A_ATTACKING
+  /// A finished attack; waiting for opponent B.
+  WAITING_B
+  /// B is answering A's questions (defense).
+  B_DEFENDING
+  /// B is drafting + answering their own attack.
+  B_ATTACKING
+  /// B finished attack; waiting for A to defend.
+  WAITING_A
+  /// A is answering B's questions (defense).
+  A_DEFENDING
+  COMPLETED
+  EXPIRED
+  FORFEIT
+}
+
+/// Skill band for PvP cold-start bots (drives answer accuracy).
+enum BotDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+/// Campaign = long-running LiveOps ladder. Daily = Tehran calendar day reset.
+enum MissionBatchKind {
+  CAMPAIGN
+  DAILY
+}
+
+/// LiveOps mission objective — evaluated from match stats in missionEngine.
+enum MissionObjective {
+  /// Correct answers ("goals") accumulated across matches.
+  SCORE_GOALS
+  /// Completed non-tutorial matches.
+  PLAY_MATCHES
+  /// Wins (goal majority) on non-tutorial matches.
+  WIN_MATCHES
+  /// Best combo in a match must reach `targetValue` (progress = max combo seen).
+  PERFECT_COMBO
+  /// Finished a Draft Duel (win or lose).
+  PLAY_DUEL
+  /// Won a Draft Duel (includes walkover / expire wins).
+  WIN_DUEL
+}
+
 // ─── User (Manager) ──────────────────────────────────────────────────────────
 // Owns auth identity + global progression. Economy currency lives on Club.
 
 model User {
   id            String         @id @default(cuid())
+  /// Iranian mobile (`09xxxxxxxxx`). Null for bots (they never OTP-login).
+  phone         String?        @unique
+  /// Optional legacy/dev email (system bot + mock leaderboard rows).
   email         String?        @unique
   displayName   String?
   managerAvatar ManagerAvatar?
@@ -79,14 +132,25 @@ model User {
   managerLevel  Int            @default(1)
   /// XP earned in the current weekly window (leaderboard). Reset via cron/job.
   weeklyXp      Int            @default(0)
+
+  /// Cold-start PvP opponent pool (Admin-generated). Shares User + Club models.
+  isBot         Boolean        @default(false)
+  botDifficulty BotDifficulty?
+  /// Admin kill-switch — disabled bots stay in CMS but are skipped by matchmaking.
+  botEnabled    Boolean        @default(true)
+
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
   club    Club?
   matches Match[]
 
+  duelsAsChallenger DuelMatch[] @relation("DuelChallenger")
+  duelsAsOpponent   DuelMatch[] @relation("DuelOpponent")
+
   @@index([weeklyXp])
   @@index([xp])
+  @@index([isBot, botEnabled, botDifficulty])
 }
 
 // ─── Club (Metagame hub) ─────────────────────────────────────────────────────
@@ -98,7 +162,9 @@ model Club {
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  name         String
+  name String
+  /// Lowercased / collapsed form of `name` for unique case-insensitive checks.
+  nameNormalized String @unique
   /// Player-chosen stadium name (identity/profile). Falls back to a default.
   stadiumName  String?
   /// Chosen manager avatar key (see lib/onboarding/avatars), set during onboarding.
@@ -155,6 +221,8 @@ model Club {
   matches  Match[]
   boosters ActiveBooster[]
   badges   ClubBadge[]
+  missionBatches ClubMissionBatch[]
+  missions       ClubMission[]
 
   @@index([fans])
   @@index([coins])
@@ -272,6 +340,7 @@ model Category {
   updatedAt DateTime @updatedAt
 
   questions Question[]
+  duelRounds DuelRound[]
 }
 
 // ─── Tag (free-form labels) ──────────────────────────────────────────────────
@@ -357,4 +426,169 @@ model QuestionReport {
 
   @@index([status])
   @@index([questionId])
+}
+
+// ─── DuelMatch (async Draft Duel) ────────────────────────────────────────────
+// Turn-based 1v1. Challenger = player A. Opponent may be a human or a bot
+// (isBotOpponent). Scoring is correct-answer totals across attack + defense.
+
+model DuelMatch {
+  id String @id @default(cuid())
+
+  challengerId String
+  challenger   User    @relation("DuelChallenger", fields: [challengerId], references: [id], onDelete: Cascade)
+  /// Null while MATCHING; set when a human/bot is assigned.
+  opponentId   String?
+  opponent     User?   @relation("DuelOpponent", fields: [opponentId], references: [id], onDelete: SetNull)
+  isBotOpponent Boolean @default(false)
+
+  status DuelStatus @default(MATCHING)
+
+  /// Whose turn it is right now (null when terminal).
+  turnUserId     String?
+  /// Soft deadline for the current turn (cron → EXPIRED / walkover).
+  turnDeadlineAt DateTime?
+  /// When a bot is scheduled to auto-play its next action (simulated delay).
+  botPlayAt      DateTime?
+
+  challengerCorrect Int @default(0)
+  opponentCorrect   Int @default(0)
+  winnerId          String?
+
+  /// Stamina already spent when the duel was opened (anti double-charge).
+  staminaSpent Int @default(0)
+  /// Weekly leaderboard points already granted on COMPLETED.
+  weeklyXpAwarded Boolean @default(false)
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  finishedAt DateTime?
+
+  rounds DuelRound[]
+
+  @@index([challengerId, status])
+  @@index([opponentId, status])
+  @@index([status, turnDeadlineAt])
+  @@index([status, botPlayAt])
+}
+
+// ─── DuelRound (one attack half + its defense) ───────────────────────────────
+// Round 1: challenger attacks. Round 2: opponent attacks.
+// `questionIds` are locked server-side after the attacker submits.
+
+model DuelRound {
+  id     String    @id @default(cuid())
+  duelId String
+  duel   DuelMatch @relation(fields: [duelId], references: [id], onDelete: Cascade)
+
+  /// 1 = challenger attack, 2 = opponent attack (v1: exactly two rounds).
+  roundNumber Int
+  attackerId  String
+
+  /// The 3 category ids offered in the draft UI.
+  draftOptionIds Json
+  categoryId     String?
+  category       Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  /// Locked question ids for this attack (length = GameConfig.duel.questionsPerAttack).
+  questionIds Json?
+
+  /// Answer logs: [{ questionId, selectedIndex, correct, ms }]
+  attackAnswers  Json?
+  defenseAnswers Json?
+  attackCorrect  Int @default(0)
+  defenseCorrect Int @default(0)
+
+  attackSubmittedAt  DateTime?
+  defenseSubmittedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([duelId, roundNumber])
+  @@index([duelId])
+  @@index([attackerId])
+}
+
+// ─── LiveOps Missions (admin-managed batches of 3) ────────────────────────────
+// MissionBatch = chest + schedule. Mission = one objective inside a batch.
+// ClubMissionBatch / ClubMission track per-club progress & chest claims.
+
+model MissionBatch {
+  id         String           @id @default(cuid())
+  /// Display / unlock order (1, 2, 3…). Unique so LiveOps never doubles a slot.
+  batchIndex Int              @unique
+  kind       MissionBatchKind @default(CAMPAIGN)
+  /// Tehran calendar day key for DAILY batches (`YYYY-MM-DD`). Null for campaign.
+  dayKey     String?          @unique
+  chestCoins Int              @default(0)
+  chestXp    Int              @default(0)
+  isActive   Boolean          @default(true)
+  startsAt   DateTime?
+  endsAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  missions     Mission[]
+  clubProgress ClubMissionBatch[]
+
+  @@index([isActive, batchIndex])
+  @@index([kind, dayKey])
+}
+
+model Mission {
+  id            String           @id @default(cuid())
+  batchId       String
+  batch         MissionBatch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  titleFa       String
+  titleEn       String
+  objectiveType MissionObjective
+  targetValue   Int
+  /// Small drip when this single mission completes.
+  rewardCoins   Int              @default(0)
+  rewardXp      Int              @default(0)
+  sortOrder     Int              @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clubProgress ClubMission[]
+
+  @@index([batchId, sortOrder])
+}
+
+model ClubMissionBatch {
+  id      String @id @default(cuid())
+  clubId  String
+  batchId String
+  club    Club         @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  batch   MissionBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  /// Null until the player claims the batch chest (all 3 missions done).
+  chestClaimedAt DateTime?
+  /// Idempotency: skip re-applying the same resolved match.
+  lastProcessedMatchId String?
+  unlockedAt     DateTime  @default(now())
+
+  @@unique([clubId, batchId])
+  @@index([clubId])
+}
+
+model ClubMission {
+  id        String  @id @default(cuid())
+  clubId    String
+  missionId String
+  club      Club    @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  mission   Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+
+  progress    Int     @default(0)
+  isCompleted Boolean @default(false)
+  completedAt DateTime?
+  /// When the individual mission reward was paid (null = not yet / zero reward).
+  rewardClaimedAt DateTime?
+
+  @@unique([clubId, missionId])
+  @@index([clubId])
 }

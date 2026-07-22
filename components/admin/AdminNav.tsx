@@ -8,12 +8,16 @@ import {
   Layers,
   Flag,
   Settings,
+  Users,
+  Target,
 } from "lucide-react";
 
 const LINKS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/questions", label: "Questions", icon: ListChecks, exact: false },
   { href: "/admin/categories", label: "Categories", icon: Layers, exact: false },
+  { href: "/admin/missions", label: "Missions", icon: Target, exact: false },
+  { href: "/admin/users", label: "Users & Bots", icon: Users, exact: false },
   { href: "/admin/reports", label: "Reports", icon: Flag, exact: false },
   { href: "/admin/settings", label: "Settings", icon: Settings, exact: false },
 ] as const;

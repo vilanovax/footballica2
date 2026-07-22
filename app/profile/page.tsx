@@ -1,15 +1,27 @@
 import { redirect } from "next/navigation";
 import { PlayerProfile } from "@/components/profile/PlayerProfile";
-import { getProfileSnapshot } from "@/lib/dev/dummyClub";
+import { getCurrentUser, getProfileSnapshot } from "@/lib/player/current";
+import { getMyMissions } from "@/actions/missions";
 
 // Reads live user XP + club stats + unlocked badges — never prerender.
 export const dynamic = "force-dynamic";
 
 export default async function ProfilePage() {
-  const profile = await getProfileSnapshot();
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
 
-  // No club yet → send the player through the FTUE first.
+  const profile = await getProfileSnapshot();
   if (!profile) redirect("/onboarding");
 
-  return <PlayerProfile profile={profile} />;
+  const missions = await getMyMissions();
+  const missionBoard = missions.ok ? missions.board : null;
+  const dailyBoard = missions.ok ? missions.daily : null;
+
+  return (
+    <PlayerProfile
+      profile={profile}
+      missionBoard={missionBoard}
+      dailyBoard={dailyBoard}
+    />
+  );
 }

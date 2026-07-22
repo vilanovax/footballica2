@@ -10,6 +10,7 @@ import {
 } from "@/lib/onboarding/avatars";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { AvatarImage } from "@/components/common/AvatarImage";
+import { CLUB_NAME_MAX_LEN } from "@/lib/auth/blacklist";
 
 type Step = "select" | "name";
 
@@ -27,13 +28,29 @@ export function Onboarding() {
     window.setTimeout(() => setStep("name"), 450);
   }
 
+  function mapError(code: string): string {
+    switch (code) {
+      case "blacklisted":
+        return t("onboarding.errBlacklisted");
+      case "name_taken":
+        return t("onboarding.errTaken");
+      case "too_short":
+      case "empty":
+        return t("onboarding.errTooShort");
+      case "too_long":
+        return t("onboarding.errTooLong");
+      default:
+        return t("onboarding.errGeneric");
+    }
+  }
+
   function handleStart() {
     if (!selected || pending) return;
     setError(null);
     startTransition(async () => {
       const result = await createClub(selected, name);
       // Success redirects server-side; only errors return here.
-      if (result && !result.ok) setError(result.error);
+      if (result && !result.ok) setError(mapError(result.error));
     });
   }
 
@@ -144,7 +161,7 @@ export function Onboarding() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={t("onboarding.placeholder")}
-                maxLength={24}
+                maxLength={CLUB_NAME_MAX_LEN}
                 autoFocus
                 className="min-h-touch w-full rounded-bubble border-2 border-primary bg-surface px-4 py-3 text-center font-display text-lg font-bold text-surface-foreground shadow-glow outline-none placeholder:text-muted-foreground focus:border-accent"
               />

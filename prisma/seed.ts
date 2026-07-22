@@ -167,11 +167,165 @@ async function main() {
     prisma.question.count(),
     prisma.question.count({ where: { status: "PUBLISHED" } }),
   ]);
+
+  // 4. LiveOps mission batches (idempotent by unique batchIndex).
+  await seedMissionBatches();
+
   console.log(
     `Seed complete: ${CATEGORY_DEFS.length} categories, ` +
       `${PENALTY_QUESTIONS.length} mocks + ${inserted} real questions upserted ` +
       `(bank total: ${total}, published: ${published}).`,
   );
+}
+
+/** Two starter batches × 3 missions — safe to re-run. */
+async function seedMissionBatches() {
+  type MissionSeed = {
+    titleEn: string;
+    titleFa: string;
+    objectiveType:
+      | "SCORE_GOALS"
+      | "PLAY_MATCHES"
+      | "WIN_MATCHES"
+      | "PERFECT_COMBO"
+      | "PLAY_DUEL"
+      | "WIN_DUEL";
+    targetValue: number;
+    rewardCoins: number;
+    rewardXp: number;
+    sortOrder: number;
+  };
+
+  const batches: {
+    batchIndex: number;
+    chestCoins: number;
+    chestXp: number;
+    missions: MissionSeed[];
+  }[] = [
+    {
+      batchIndex: 1,
+      chestCoins: 150,
+      chestXp: 40,
+      missions: [
+        {
+          titleEn: "Score 5 goals",
+          titleFa: "۵ گل بزن",
+          objectiveType: "SCORE_GOALS",
+          targetValue: 5,
+          rewardCoins: 20,
+          rewardXp: 5,
+          sortOrder: 0,
+        },
+        {
+          titleEn: "Play 2 matches",
+          titleFa: "۲ مسابقه بازی کن",
+          objectiveType: "PLAY_MATCHES",
+          targetValue: 2,
+          rewardCoins: 15,
+          rewardXp: 5,
+          sortOrder: 1,
+        },
+        {
+          titleEn: "Win 1 match",
+          titleFa: "۱ برد بگیر",
+          objectiveType: "WIN_MATCHES",
+          targetValue: 1,
+          rewardCoins: 25,
+          rewardXp: 10,
+          sortOrder: 2,
+        },
+      ],
+    },
+    {
+      batchIndex: 2,
+      chestCoins: 300,
+      chestXp: 80,
+      missions: [
+        {
+          titleEn: "Score 15 goals",
+          titleFa: "۱۵ گل بزن",
+          objectiveType: "SCORE_GOALS",
+          targetValue: 15,
+          rewardCoins: 40,
+          rewardXp: 15,
+          sortOrder: 0,
+        },
+        {
+          titleEn: "Win 3 matches",
+          titleFa: "۳ برد بگیر",
+          objectiveType: "WIN_MATCHES",
+          targetValue: 3,
+          rewardCoins: 50,
+          rewardXp: 20,
+          sortOrder: 1,
+        },
+        {
+          titleEn: "Play 1 Draft Duel",
+          titleFa: "۱ نبرد نوبتی بازی کن",
+          objectiveType: "PLAY_DUEL",
+          targetValue: 1,
+          rewardCoins: 40,
+          rewardXp: 15,
+          sortOrder: 2,
+        },
+      ],
+    },
+  ];
+
+  for (const def of batches) {
+    const batch = await prisma.missionBatch.upsert({
+      where: { batchIndex: def.batchIndex },
+      update: {
+        chestCoins: def.chestCoins,
+        chestXp: def.chestXp,
+        isActive: true,
+      },
+      create: {
+        batchIndex: def.batchIndex,
+        chestCoins: def.chestCoins,
+        chestXp: def.chestXp,
+        isActive: true,
+      },
+    });
+
+    const existing = await prisma.mission.findMany({
+      where: { batchId: batch.id },
+      select: { id: true, sortOrder: true },
+    });
+    const byOrder = new Map(existing.map((m) => [m.sortOrder, m.id]));
+
+    for (const m of def.missions) {
+      const id = byOrder.get(m.sortOrder);
+      if (id) {
+        await prisma.mission.update({
+          where: { id },
+          data: {
+            titleEn: m.titleEn,
+            titleFa: m.titleFa,
+            objectiveType: m.objectiveType,
+            targetValue: m.targetValue,
+            rewardCoins: m.rewardCoins,
+            rewardXp: m.rewardXp,
+          },
+        });
+      } else {
+        await prisma.mission.create({
+          data: {
+            batchId: batch.id,
+            titleEn: m.titleEn,
+            titleFa: m.titleFa,
+            objectiveType: m.objectiveType,
+            targetValue: m.targetValue,
+            rewardCoins: m.rewardCoins,
+            rewardXp: m.rewardXp,
+            sortOrder: m.sortOrder,
+          },
+        });
+      }
+    }
+  }
+
+  console.log(`Mission batches seeded: ${batches.length} batches.`);
 }
 
 main()

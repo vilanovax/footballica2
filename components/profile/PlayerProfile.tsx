@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Pencil } from "lucide-react";
-import type { ProfileSnapshot } from "@/lib/dev/dummyClub";
+import type { ProfileSnapshot } from "@/lib/player/current";
 import type { Locale } from "@/lib/i18n/config";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
@@ -21,6 +21,8 @@ import {
   type BadgeTier,
   type PlayerStats,
 } from "@/lib/game/achievements";
+import { MissionBoard } from "@/components/profile/MissionBoard";
+import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
 
 /** Tier → medal ring styling (matches the unlock popup). */
 const TIER_RING: Record<BadgeTier, string> = {
@@ -36,7 +38,15 @@ const CATEGORY_ORDER: BadgeCategory[] = [
   "volume",
 ];
 
-export function PlayerProfile({ profile }: { profile: ProfileSnapshot }) {
+export function PlayerProfile({
+  profile,
+  missionBoard = null,
+  dailyBoard = null,
+}: {
+  profile: ProfileSnapshot;
+  missionBoard?: EvaluateMissionsResult | null;
+  dailyBoard?: EvaluateMissionsResult | null;
+}) {
   const { t, locale } = useTranslation();
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -149,6 +159,20 @@ export function PlayerProfile({ profile }: { profile: ProfileSnapshot }) {
         </div>
       </motion.header>
 
+      {(dailyBoard?.batchId || missionBoard?.batchId) && (
+        <div className="space-y-3">
+          <h2 className="font-display text-sm font-bold uppercase tracking-widest text-secondary">
+            {t("missions.sectionLive")}
+          </h2>
+          {dailyBoard?.batchId && (
+            <MissionBoard initialBoard={dailyBoard} variant="daily" />
+          )}
+          {missionBoard?.batchId && (
+            <MissionBoard initialBoard={missionBoard} variant="campaign" />
+          )}
+        </div>
+      )}
+
       {/* ── Career stats ──────────────────────────────────────────────────── */}
       <div>
         <h2 className="mb-2 font-display text-sm font-bold uppercase tracking-widest text-muted-foreground">
@@ -179,11 +203,11 @@ export function PlayerProfile({ profile }: { profile: ProfileSnapshot }) {
         </div>
       </div>
 
-      {/* ── Trophy cabinet ────────────────────────────────────────────────── */}
+      {/* ── Trophy cabinet (permanent badges — separate from LiveOps) ───── */}
       <div>
         <div className="mb-2 flex items-baseline justify-between">
           <h2 className="font-display text-sm font-bold uppercase tracking-widest text-muted-foreground">
-            {t("profile.trophies")}
+            {t("missions.sectionTrophies")}
           </h2>
           <span className="font-display text-xs font-bold text-accent-deep">
             {t("profile.trophiesCount", {

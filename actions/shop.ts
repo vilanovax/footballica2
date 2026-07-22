@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
-import { getOrCreateDummyClub, toClubSnapshot } from "@/lib/dev/dummyClub";
+import { toClubSnapshot } from "@/lib/dev/dummyClub";
+import { requireUserClub } from "@/lib/player/current";
 import {
   UPGRADES,
   getUpgradeCost,
@@ -59,7 +60,9 @@ export async function buyUpgrade(key: UpgradeKey): Promise<ShopResult> {
 
   try {
     const snapshot = await prisma.$transaction(async (tx) => {
-      const { club } = await getOrCreateDummyClub(tx);
+      const pair = await requireUserClub(tx);
+      if (!pair) throw new ShopError("generic");
+      const { club } = pair;
 
       const currentLevel = club[def.field];
       const cost = getUpgradeCost(key, currentLevel);
@@ -109,7 +112,9 @@ export async function buyBooster(type: BoosterShopType): Promise<ShopResult> {
 
   try {
     const snapshot = await prisma.$transaction(async (tx) => {
-      const { club } = await getOrCreateDummyClub(tx);
+      const pair = await requireUserClub(tx);
+      if (!pair) throw new ShopError("generic");
+      const { club } = pair;
 
       if (club.coins < cost) throw new ShopError("insufficient");
 

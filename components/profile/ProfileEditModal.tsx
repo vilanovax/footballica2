@@ -14,6 +14,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
 import { AvatarImage } from "@/components/common/AvatarImage";
+import { CLUB_NAME_MAX_LEN } from "@/lib/auth/blacklist";
 
 type ProfileEditModalProps = {
   initial: {
@@ -31,9 +32,14 @@ type ProfileEditModalProps = {
 function errorKey(code: string): string {
   switch (code) {
     case "too_short":
+    case "empty":
       return "profile.edit.errShort";
     case "too_long":
       return "profile.edit.errLong";
+    case "blacklisted":
+      return "onboarding.errBlacklisted";
+    case "name_taken":
+      return "onboarding.errTaken";
     case "locked_avatar":
     case "invalid_avatar":
       return "profile.edit.errLocked";
@@ -126,6 +132,7 @@ export function ProfileEditModal({
             label={t("profile.edit.clubName")}
             value={clubName}
             onChange={setClubName}
+            maxLength={CLUB_NAME_MAX_LEN}
           />
           <Field
             label={t("profile.edit.stadiumName")}
@@ -217,11 +224,13 @@ function Field({
   value,
   onChange,
   placeholder,
+  maxLength = 24,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  maxLength?: number;
 }) {
   return (
     <label className="block">
@@ -232,7 +241,7 @@ function Field({
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        maxLength={24}
+        maxLength={maxLength}
         placeholder={placeholder}
         className="w-full rounded-bubble border-2 border-border bg-background p-3 font-body text-base text-foreground outline-none focus:border-primary"
       />

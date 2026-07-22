@@ -15,6 +15,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { CountUp } from "./CountUp";
 import { BadgeUnlockPopup } from "./BadgeUnlockPopup";
+import { MissionProgressBanner } from "@/components/missions/MissionProgressBanner";
 
 type MatchResultProps = {
   totalKicks: number;
@@ -131,8 +132,16 @@ export function MatchResult({
   }
 
   // Saved — show server-confirmed rewards + new balances.
-  const { rewards: confirmed, balances, level, levelUp, coinsPerWin, unlockedBadges, streak } =
-    save.data;
+  const {
+    rewards: confirmed,
+    balances,
+    level,
+    levelUp,
+    coinsPerWin,
+    unlockedBadges,
+    streak,
+    missions,
+  } = save.data;
   const won = confirmed.won;
   const showBadges = unlockedBadges.length > 0 && !badgesDismissed;
   const outOfEnergy = balances.stamina <= 0;
@@ -356,6 +365,10 @@ export function MatchResult({
             </div>
           ))}
         </div>
+      )}
+
+      {missions && (missions.updates.length > 0 || missions.chestReady) && (
+        <MissionProgressBanner missions={missions} />
       )}
 
       {/* Level + XP progress */}

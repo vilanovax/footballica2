@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getOrCreateDummyClub } from "@/lib/dev/dummyClub";
+import { requireUserClub } from "@/lib/player/current";
 import { calculateLevel } from "@/lib/game/economy";
 import { isFlagKey, isFlagUnlocked } from "@/lib/onboarding/flags";
 
@@ -19,7 +19,9 @@ export async function setClubFlag(flag: string): Promise<SetClubFlagResult> {
   }
 
   try {
-    const { user, club } = await getOrCreateDummyClub();
+    const pair = await requireUserClub();
+    if (!pair) return { ok: false, error: "not_authenticated" };
+    const { user, club } = pair;
 
     const level = calculateLevel(user.xp).level;
     if (!isFlagUnlocked(flag, level)) {

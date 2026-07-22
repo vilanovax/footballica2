@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { QuickMatch } from "@/components/quiz/QuickMatch";
 import { ExhaustedBlocker } from "@/components/quiz/ExhaustedBlocker";
-import { getDummyClubSnapshot } from "@/lib/dev/dummyClub";
+import { getClubSnapshot, getCurrentUser } from "@/lib/player/current";
 import { getMatchQuestions } from "@/actions/getMatchQuestions";
 import { getGameConfig } from "@/lib/game/gameConfig";
 
@@ -9,9 +9,10 @@ import { getGameConfig } from "@/lib/game/gameConfig";
 export const dynamic = "force-dynamic";
 
 export default async function QuickPage() {
-  const club = await getDummyClubSnapshot();
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
 
-  // No club yet → onboarding first.
+  const club = await getClubSnapshot();
   if (!club) redirect("/onboarding");
 
   // Gate: block entry when exhausted (Quick Match spends stamina like Penalty).

@@ -1,7 +1,7 @@
 "use server";
 
 import { getMatchQuestions } from "@/actions/getMatchQuestions";
-import { getDummyClubSnapshot } from "@/lib/dev/dummyClub";
+import { getClubSnapshot } from "@/lib/player/current";
 import type { QuizQuestion, QuestionDifficulty } from "@/lib/quiz/types";
 
 export type MatchDraw = {
@@ -31,7 +31,7 @@ export async function getMatchDraw(options: {
     difficulties: options.difficulties,
   });
 
-  const club = await getDummyClubSnapshot();
+  const club = await getClubSnapshot();
 
   return {
     questions: drawn.slice(0, count),

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getOrCreateDummyClub } from "@/lib/dev/dummyClub";
+import { requireUserClub } from "@/lib/player/current";
 import { dbQuestionToQuiz } from "@/lib/quiz/questionMapper";
 import { verifyKickLog, type KickSubmission } from "@/lib/quiz/scoring";
 import {
@@ -21,6 +21,8 @@ import {
   type BadgeTier,
 } from "@/lib/game/achievements";
 import { computeStreakUpdate } from "@/lib/game/streak";
+import { evaluateAllMissionTracks } from "@/lib/game/missionEngine";
+import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
 
 const STAMINA_COST = 1;
 
@@ -92,6 +94,8 @@ export type ResolveMatchResult =
       unlockedBadges: UnlockedBadge[];
       /** Updated daily play-streak. */
       streak: StreakResult;
+      /** LiveOps mission board after this match (progress + chest-ready). */
+      missions: EvaluateMissionsResult;
     }
   | { ok: false; error: string };
 
@@ -150,7 +154,9 @@ export async function resolveMatch(
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const { user, club } = await getOrCreateDummyClub(tx);
+      const pair = await requireUserClub(tx);
+      if (!pair) throw new MatchError("Not authenticated.");
+      const { user, club } = pair;
 
       // Regenerate stamina first, then enforce the gate server-side. This
       // blocks anyone bypassing the UI blocker to grind with no stamina.
@@ -259,25 +265,12 @@ export async function resolveMatch(
       const badgeCoins = newlyUnlocked.reduce((n, a) => n + a.reward.coins, 0);
       const badgeXp = newlyUnlocked.reduce((n, a) => n + a.reward.xp, 0);
 
-      // Leveling: derive level from lifetime XP (authoritative) — the match XP
-      // plus any badge XP earned this match — detect a level-up, and grant its
-      // perks (a coin bonus per level gained + a full stamina refill).
-      // `calculateLevel` is the single source of truth, so a stale stored
-      // managerLevel can never desync the reward.
-      const oldLevel = calculateLevel(user.xp).level;
-      const newXp = user.xp + finalRewards.xp + badgeXp;
-      const levelInfo = calculateLevel(newXp);
-      const leveledUp = levelInfo.level > oldLevel;
-      const levelUpCoins = leveledUp
-        ? (levelInfo.level - oldLevel) * config.rewards.levelUpCoins
-        : 0;
+      // Advance FTUE: after the tutorial match the player must buy the first
+      // upgrade next (step 0 → 1). Never regress an already-progressed club.
+      const nextTutorialStep =
+        isTutorial && club.tutorialStep === 0 ? 1 : club.tutorialStep;
 
-      // A level-up refills stamina to full (and restarts the regen clock);
-      // otherwise carry the post-match spend + regen anchor.
-      const finalStamina = leveledUp ? club.maxStamina : spentStamina;
-      const finalStaminaAnchor = leveledUp ? new Date() : staminaAnchor;
-
-      await tx.match.create({
+      const matchRow = await tx.match.create({
         data: {
           userId: user.id,
           clubId: club.id,
@@ -298,18 +291,48 @@ export async function resolveMatch(
         },
       });
 
-      // Advance FTUE: after the tutorial match the player must buy the first
-      // upgrade next (step 0 → 1). Never regress an already-progressed club.
-      const nextTutorialStep =
-        isTutorial && club.tutorialStep === 0 ? 1 : club.tutorialStep;
+      // LiveOps + daily missions — progress after match row exists (idempotent).
+      const missionResult = await evaluateAllMissionTracks(
+        club.id,
+        {
+          matchId: matchRow.id,
+          goals: finalRewards.goals,
+          won: finalRewards.won,
+          perfect: finalRewards.perfect,
+          combo: finalRewards.combo,
+          isTutorial,
+        },
+        tx,
+      );
+      const missionCoins = missionResult.missionRewards.coins;
+      const missionXp = missionResult.missionRewards.xp;
+
+      // Leveling: derive level from lifetime XP (authoritative) — the match XP
+      // plus any badge / mission XP earned this match — detect a level-up.
+      const oldLevel = calculateLevel(user.xp).level;
+      const newXp = user.xp + finalRewards.xp + badgeXp + missionXp;
+      const levelInfo = calculateLevel(newXp);
+      const leveledUp = levelInfo.level > oldLevel;
+      const levelUpCoins = leveledUp
+        ? (levelInfo.level - oldLevel) * config.rewards.levelUpCoins
+        : 0;
+
+      // A level-up refills stamina to full (and restarts the regen clock);
+      // otherwise carry the post-match spend + regen anchor.
+      const finalStamina = leveledUp ? club.maxStamina : spentStamina;
+      const finalStaminaAnchor = leveledUp ? new Date() : staminaAnchor;
 
       const updatedClub = await tx.club.update({
         where: { id: club.id },
         data: {
-          // Match coins + level-up bonus + one-off badge rewards − helper spend.
+          // Match coins + level-up + badge + mission drips − helper spend.
           coins: {
             increment:
-              finalRewards.coins + levelUpCoins + badgeCoins - helperSpend,
+              finalRewards.coins +
+              levelUpCoins +
+              badgeCoins +
+              missionCoins -
+              helperSpend,
           },
           fans: { increment: finalRewards.fans },
           // Absolute set: regen already accounted for above (or refilled on level-up).
@@ -330,8 +353,8 @@ export async function resolveMatch(
       const updatedUser = await tx.user.update({
         where: { id: user.id },
         data: {
-          xp: { increment: finalRewards.xp + badgeXp },
-          weeklyXp: { increment: finalRewards.xp + badgeXp },
+          xp: { increment: finalRewards.xp + badgeXp + missionXp },
+          weeklyXp: { increment: finalRewards.xp + badgeXp + missionXp },
           managerLevel: levelInfo.level,
         },
       });
@@ -401,6 +424,7 @@ export async function resolveMatch(
           extended: streak.extended,
           isNewDay: streak.isNewDay,
         },
+        missions: missionResult,
       };
     });
 

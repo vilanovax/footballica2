@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getOrCreateDummyClub } from "@/lib/dev/dummyClub";
+import { requireUserClub } from "@/lib/player/current";
 import {
   BOOSTER_DURATION_HOURS,
   canClaimNews,
@@ -39,7 +39,9 @@ export async function claimDailyNews(): Promise<ClaimNewsResult> {
   try {
     const result = await prisma.$transaction(
       async (tx): Promise<{ state: NewsState; news: NewsPayload | null }> => {
-        const { club } = await getOrCreateDummyClub(tx);
+        const pair = await requireUserClub(tx);
+        if (!pair) throw new Error("Not authenticated.");
+        const { club } = pair;
         const now = new Date();
 
         // Re-display a still-running booster without consuming a claim.

@@ -2,48 +2,47 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getOrCreateDummyUser } from "@/lib/dev/dummyClub";
+import { getCurrentUser } from "@/lib/player/current";
 import { isAvatarKey } from "@/lib/onboarding/avatars";
+import { validateClubName } from "@/lib/auth/blacklist";
 
 export type CreateClubResult = { ok: false; error: string };
 
-const MAX_NAME_LENGTH = 24;
-
 /**
- * Onboarding: create the player's club for the dummy user with starting stats.
- * On success it redirects to /club (so it only returns on validation failure).
+ * Onboarding: create the player's club for the authenticated session user.
+ * On success redirects to /club (only returns on validation failure).
  */
 export async function createClub(
   avatar: string,
   rawName: string,
 ): Promise<CreateClubResult> {
-  const name = rawName.trim();
-
   if (!isAvatarKey(avatar)) {
-    return { ok: false, error: "Please pick a manager." };
+    return { ok: false, error: "invalid_avatar" };
   }
-  if (name.length < 2) {
-    return { ok: false, error: "Team name is too short." };
+
+  const validated = validateClubName(rawName);
+  if (!validated.ok) {
+    return { ok: false, error: validated.error };
   }
-  if (name.length > MAX_NAME_LENGTH) {
-    return { ok: false, error: `Keep it under ${MAX_NAME_LENGTH} characters.` };
+
+  const user = await getCurrentUser();
+  if (!user) {
+    return { ok: false, error: "not_authenticated" };
   }
 
   try {
     await prisma.$transaction(async (tx) => {
-      const user = await getOrCreateDummyUser(tx);
-
-      // Idempotent: don't overwrite an existing club.
       const existing = await tx.club.findUnique({ where: { userId: user.id } });
       if (existing) return;
 
       await tx.club.create({
         data: {
           userId: user.id,
-          name,
+          name: validated.name,
+          nameNormalized: validated.normalized,
           avatar,
-          // Starting stats — ruined Division 3 club.
           coins: 0,
           fans: 0,
           stamina: 3,
@@ -57,12 +56,21 @@ export async function createClub(
 
       await tx.user.update({
         where: { id: user.id },
-        data: { managerAvatar: avatar },
+        data: {
+          managerAvatar: avatar,
+          displayName: user.displayName ?? "Manager",
+        },
       });
     });
   } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      return { ok: false, error: "name_taken" };
+    }
     console.error("createClub failed", err);
-    return { ok: false, error: "Could not create your club. Try again." };
+    return { ok: false, error: "server_error" };
   }
 
   revalidatePath("/club");

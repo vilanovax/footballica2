@@ -1,7 +1,12 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import { DEV_USER_EMAIL } from "@/lib/dev/dummyClub";
+import { getSessionUserId } from "@/lib/auth/session";
+import { normalizeClubName } from "@/lib/auth/blacklist";
 import { isAvatarKey, type AvatarKey } from "@/lib/onboarding/avatars";
+import {
+  ensureWeeklyLeagueReset,
+  tehranWeekDaysRemaining,
+} from "@/lib/game/weeklyLeague";
 
 const TOP_N = 50;
 const MIN_USERS_FOR_UI = 10;
@@ -14,6 +19,12 @@ export type LeaderboardRow = {
   avatarKey: AvatarKey;
   weeklyXp: number;
   isCurrentUser: boolean;
+};
+
+export type LeaderboardPayload = {
+  rows: LeaderboardRow[];
+  /** Tehran week days until Monday reset (1–7). */
+  resetsInDays: number;
 };
 
 // Mock managers show off the full avatar roster (cosmetic only — mocks aren't
@@ -65,14 +76,17 @@ function randomInt(min: number, max: number): number {
  * testable before real traffic exists. Runs only when the roster is thin.
  */
 async function seedMockUsers(count: number): Promise<void> {
+  const stamp = Date.now();
   const rows = Array.from({ length: count }).map((_, i) => {
     const avatar = pick(AVATAR_KEYS);
-    const clubName = `${pick(MOCK_PREFIX)} ${pick(MOCK_SUFFIX)}`;
+    // Suffix keeps nameNormalized unique even if the flavor name collides.
+    const clubName = `${pick(MOCK_PREFIX)} ${pick(MOCK_SUFFIX)} ${stamp}-${i}`;
     return {
-      email: `mock_${Date.now()}_${i}@footballica.local`,
+      email: `mock_${stamp}_${i}@footballica.local`,
       displayName: clubName,
       avatar,
       weeklyXp: randomInt(50, 2000),
+      nameNormalized: normalizeClubName(clubName),
     };
   });
 
@@ -85,7 +99,13 @@ async function seedMockUsers(count: number): Promise<void> {
           managerAvatar: r.avatar,
           weeklyXp: r.weeklyXp,
           xp: r.weeklyXp,
-          club: { create: { name: r.displayName, avatar: r.avatar } },
+          club: {
+            create: {
+              name: r.displayName,
+              nameNormalized: r.nameNormalized,
+              avatar: r.avatar,
+            },
+          },
         },
       }),
     ),
@@ -97,39 +117,47 @@ function toAvatarKey(value: string | null): AvatarKey {
 }
 
 /**
- * Weekly league standings: Top 50 managers by `weeklyXp` (desc). Auto-seeds
- * mock managers in dev when the roster is too small to exercise the UI.
+ * Weekly league standings: Top 50 managers by `weeklyXp` (desc).
+ * Duel wins already grant `config.duel.winWeeklyXp` (+3 default).
+ * Auto-seeds mock managers in dev when the roster is too small.
  */
-export async function getLeaderboard(): Promise<LeaderboardRow[]> {
-  const total = await prisma.user.count();
+export async function getLeaderboard(): Promise<LeaderboardPayload> {
+  try {
+    await ensureWeeklyLeagueReset();
+  } catch (err) {
+    console.error("ensureWeeklyLeagueReset in getLeaderboard", err);
+  }
+
+  const total = await prisma.user.count({ where: { isBot: false } });
   if (total < MIN_USERS_FOR_UI) {
     await seedMockUsers(SEED_COUNT);
   }
 
-  const [currentUser, users] = await Promise.all([
-    prisma.user.findUnique({
-      where: { email: DEV_USER_EMAIL },
-      select: { id: true },
-    }),
-    prisma.user.findMany({
-      orderBy: [{ weeklyXp: "desc" }, { createdAt: "asc" }],
-      take: TOP_N,
-      select: {
-        id: true,
-        displayName: true,
-        managerAvatar: true,
-        weeklyXp: true,
-        club: { select: { name: true, avatar: true } },
-      },
-    }),
-  ]);
+  const currentUserId = await getSessionUserId();
 
-  return users.map((u, index) => ({
-    rank: index + 1,
-    userId: u.id,
-    clubName: u.club?.name ?? u.displayName ?? "Unknown Club",
-    avatarKey: toAvatarKey(u.club?.avatar ?? u.managerAvatar),
-    weeklyXp: u.weeklyXp,
-    isCurrentUser: currentUser?.id === u.id,
-  }));
+  // Humans only — bots / practice pool stay out of the weekly league table.
+  const users = await prisma.user.findMany({
+    where: { isBot: false },
+    orderBy: [{ weeklyXp: "desc" }, { createdAt: "asc" }],
+    take: TOP_N,
+    select: {
+      id: true,
+      displayName: true,
+      managerAvatar: true,
+      weeklyXp: true,
+      club: { select: { name: true, avatar: true } },
+    },
+  });
+
+  return {
+    resetsInDays: tehranWeekDaysRemaining(),
+    rows: users.map((u, index) => ({
+      rank: index + 1,
+      userId: u.id,
+      clubName: u.club?.name ?? u.displayName ?? "Unknown Club",
+      avatarKey: toAvatarKey(u.club?.avatar ?? u.managerAvatar),
+      weeklyXp: u.weeklyXp,
+      isCurrentUser: currentUserId !== null && currentUserId === u.id,
+    })),
+  };
 }
