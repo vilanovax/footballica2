@@ -72,6 +72,8 @@ export function Shop({
         return t("shop.errMax");
       case "already_full":
         return t("status.staminaAlreadyFull");
+      case "rate_limited":
+        return t("shop.errRateLimited");
       default:
         return t("shop.errGeneric");
     }

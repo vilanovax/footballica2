@@ -304,7 +304,9 @@ function GrantCoinsDialog({
               ? "Enter 1–1,000,000 coins."
               : res.error === "no_club"
                 ? "Player has no club yet."
-                : "Could not grant coins.";
+                : res.error === "rate_limited"
+                  ? "Daily grant limit reached for this club."
+                  : "Could not grant coins.";
         toast.error(msg);
         return;
       }

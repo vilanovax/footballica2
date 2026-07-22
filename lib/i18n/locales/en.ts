@@ -38,10 +38,18 @@ const en = {
   onboarding: {
     chooseManager: "Choose Your Manager",
     whichManager: "Which manager are you?",
+    chooseColor: "Club Colors",
+    pickColor: "Pick your kit color",
+    colorHint: "This accent paints your hub, profile, and scoreboard.",
+    chooseFlag: "Club Flag",
+    pickFlag: "Raise your colours",
+    flagHint: "Free national flags — prestige crests unlock later.",
     nameClub: "Name Your Club",
     teamName: "Team Name",
     placeholder: "Club name",
     start: "Start Journey",
+    next: "Continue",
+    back: "← Back",
     changeManager: "← Change manager",
     dialog:
       "Welcome Boss! The club is in ruins, but we can fix it. What should we name our team?",
@@ -49,6 +57,7 @@ const en = {
     errTaken: "That club name is already flying. Try another.",
     errTooShort: "Name is too short.",
     errTooLong: "Keep it under 10 characters.",
+    errFlag: "That flag isn't available yet.",
     errGeneric: "Couldn't create your club. Try again.",
   },
   avatars: {
@@ -258,6 +267,7 @@ const en = {
     boughtPack: "{name} unlocked! Coins added. 💰",
     errInsufficient: "Not enough budget.",
     errMax: "Already at max level.",
+    errRateLimited: "Too many purchases — try again later.",
     errGeneric: "Purchase failed. Try again.",
     boosters: {
       FIFTY_FIFTY: {

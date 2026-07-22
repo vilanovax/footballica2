@@ -106,6 +106,8 @@ export function StatusBar({
         return t("shop.errInsufficient");
       case "already_full":
         return t("status.staminaAlreadyFull");
+      case "rate_limited":
+        return t("shop.errRateLimited");
       default:
         return t("shop.errGeneric");
     }

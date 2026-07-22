@@ -5,6 +5,7 @@ import {
   ADMIN_COOKIE_MAX_AGE,
   getAdminSecret,
 } from "@/lib/admin/auth";
+import { isProduction, secretsEqual } from "@/lib/env";
 
 /**
  * Next.js 16 "Proxy" (formerly Middleware). Its only job for the admin gate is
@@ -13,17 +14,19 @@ import {
  * actual access *check* lives in `app/admin/layout.tsx` (reads the cookie).
  */
 export function proxy(request: NextRequest): NextResponse {
-  const { pathname, searchParams } = request.nextUrl;
+  const { searchParams } = request.nextUrl;
   const secret = searchParams.get("secret");
+  const expected = getAdminSecret();
 
-  if (secret && secret === getAdminSecret()) {
+  if (secretsEqual(secret, expected)) {
     // Strip the secret from the URL so it doesn't linger in history/logs.
     const cleanUrl = request.nextUrl.clone();
     cleanUrl.searchParams.delete("secret");
 
     const response = NextResponse.redirect(cleanUrl);
-    response.cookies.set(ADMIN_COOKIE, secret, {
+    response.cookies.set(ADMIN_COOKIE, expected!, {
       httpOnly: true,
+      secure: isProduction(),
       sameSite: "lax",
       path: "/admin",
       maxAge: ADMIN_COOKIE_MAX_AGE,

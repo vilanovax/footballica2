@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { upgradeClub } from "@/actions/upgradeClub";
@@ -32,6 +32,7 @@ import { StadiumHero } from "./StadiumHero";
 import { UpgradeCard } from "./UpgradeCard";
 import { NewspaperModal } from "./NewspaperModal";
 import { FtueCoach } from "./FtueCoach";
+import { Confetti } from "./Confetti";
 import {
   hasMissionRewardReady,
   MissionDrawer,
@@ -87,6 +88,19 @@ export function ClubHub({
   const canClaimNews = club.newsClaimable;
   const missionRewardReady = hasMissionRewardReady(dailyBoard, missionBoard);
 
+  // Replay onboarding whistle once after createClub redirect (tutorialStep 0).
+  useEffect(() => {
+    if (step !== 0) return;
+    try {
+      if (sessionStorage.getItem("fb_onboard_chime") === "1") {
+        sessionStorage.removeItem("fb_onboard_chime");
+        playSound("whistle");
+      }
+    } catch {
+      /* private mode */
+    }
+  }, [step]);
+
   function handleDailyNews() {
     if (newsPending) return;
     setError(null);
@@ -127,6 +141,8 @@ export function ClubHub({
       // FTUE graduation: the forced first upgrade just flipped step 1 → 2.
       if (step === 1 && result.club.tutorialStep === 2) {
         setJustGraduated(true);
+        playSound("upgrade");
+        haptic([30, 40, 60]);
         window.setTimeout(() => setJustGraduated(false), 3200);
       }
 
@@ -361,7 +377,7 @@ export function ClubHub({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-40 flex items-end justify-center bg-black/70 p-4 pb-8 backdrop-blur-sm sm:items-center sm:pb-4"
           >
             <FtueCoach
               avatarKey={avatarKey}
@@ -395,7 +411,7 @@ export function ClubHub({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="pointer-events-none fixed inset-x-0 top-3 z-50 flex justify-center px-4"
+            className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-4 sm:bottom-auto sm:top-3"
           >
             <FtueCoach
               avatarKey={avatarKey}
@@ -406,7 +422,7 @@ export function ClubHub({
         )}
       </AnimatePresence>
 
-      {/* FTUE Step 3 — freedom greeting, auto-fades after 3s. */}
+      {/* FTUE graduation — coach toast + confetti celebration. */}
       <AnimatePresence>
         {justGraduated && (
           <motion.div
@@ -414,13 +430,22 @@ export function ClubHub({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="pointer-events-none fixed inset-x-0 top-3 z-50 flex justify-center px-4"
+            className="pointer-events-none fixed inset-0 z-50 flex items-end justify-center px-4 pb-28 sm:items-start sm:pt-3 sm:pb-0"
           >
-            <FtueCoach
-              avatarKey={avatarKey}
-              name={avatarName}
-              line={t("ftue.gradLine")}
-            />
+            <div className="relative w-full max-w-mobile">
+              <Confetti />
+              <motion.div
+                initial={{ scale: 0.9 }}
+                animate={{ scale: [0.9, 1.04, 1] }}
+                transition={{ duration: 0.45 }}
+              >
+                <FtueCoach
+                  avatarKey={avatarKey}
+                  name={avatarName}
+                  line={t("ftue.gradLine")}
+                />
+              </motion.div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

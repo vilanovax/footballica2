@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
+import { isProduction, requireSecret } from "@/lib/env";
 
 const COOKIE_NAME = "fb_session";
 const MAX_AGE_SEC = 60 * 60 * 24 * 30; // 30 days
@@ -12,11 +13,9 @@ type SessionPayload = {
 };
 
 function authSecret(): string {
-  return (
-    process.env.AUTH_SECRET ??
-    process.env.DATABASE_URL ??
-    "footballica-dev-secret-change-me"
-  );
+  return requireSecret("AUTH_SECRET", {
+    devFallback: "footballica-dev-secret-change-me",
+  });
 }
 
 function b64url(input: string | Buffer): string {
@@ -72,8 +71,14 @@ export async function getSessionUserId(): Promise<string | null> {
   const jar = await cookies();
   const raw = jar.get(COOKIE_NAME)?.value;
   if (!raw) return null;
-  const payload = decodeSession(raw);
-  return payload?.uid ?? null;
+  try {
+    const payload = decodeSession(raw);
+    return payload?.uid ?? null;
+  } catch (err) {
+    // Misconfigured AUTH_SECRET in production should not crash every page.
+    console.error("getSessionUserId", err);
+    return null;
+  }
 }
 
 /** Issue / refresh the session cookie for a user. */
@@ -85,7 +90,7 @@ export async function setSessionCookie(userId: string): Promise<void> {
   });
   jar.set(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isProduction(),
     sameSite: "lax",
     path: "/",
     maxAge: MAX_AGE_SEC,
@@ -98,4 +103,4 @@ export async function clearSessionCookie(): Promise<void> {
   jar.delete(COOKIE_NAME);
 }
 
-export const SESSION_COOKIE_NAME = COOKIE_NAME;
+export { COOKIE_NAME as SESSION_COOKIE_NAME };

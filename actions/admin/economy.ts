@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { ADMIN_COOKIE, isValidAdminToken } from "@/lib/admin/auth";
+import {
+  countRecentAdminGrants,
+  MAX_ADMIN_GRANTS_PER_DAY,
+} from "@/lib/economy/rateLimit";
 
 async function assertAdmin(): Promise<boolean> {
   const cookieStore = await cookies();
@@ -23,6 +27,7 @@ export type GrantCoinsResult =
         | "invalid_amount"
         | "no_club"
         | "not_found"
+        | "rate_limited"
         | "server_error";
     };
 
@@ -66,6 +71,11 @@ export async function grantCoinsToUser(
       }
       if (!user.club) {
         return { ok: false as const, error: "no_club" as const };
+      }
+
+      const recentGrants = await countRecentAdminGrants(user.club.id, tx);
+      if (recentGrants >= MAX_ADMIN_GRANTS_PER_DAY) {
+        return { ok: false as const, error: "rate_limited" as const };
       }
 
       await tx.adminCoinGrant.create({

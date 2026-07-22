@@ -39,10 +39,18 @@ const fa: Dictionary = {
   onboarding: {
     chooseManager: "مدیرت را انتخاب کن",
     whichManager: "چه مدیری هستی؟",
+    chooseColor: "رنگ باشگاه",
+    pickColor: "رنگ کیتت را انتخاب کن",
+    colorHint: "این رنگ روی هاب، پروفایل و جدول امتیاز دیده می‌شود.",
+    chooseFlag: "پرچم باشگاه",
+    pickFlag: "پرچمت را بالا ببر",
+    flagHint: "پرچم‌های ملی رایگان — نشان‌های ویژه بعداً باز می‌شوند.",
     nameClub: "اسم باشگاه",
     teamName: "اسم تیم",
     placeholder: "اسم باشگاه",
     start: "شروع مسیر",
+    next: "ادامه",
+    back: "← برگشت",
     changeManager: "← تغییر مدیر",
     dialog:
       "رئیس خوش اومدی! باشگاه نابوده ولی با هم می‌سازیمش. اسم تیممون رو چی بذاریم؟",
@@ -50,6 +58,7 @@ const fa: Dictionary = {
     errTaken: "این اسم قبلاً گرفته شده. یکی دیگه بزن.",
     errTooShort: "اسم خیلی کوتاهه.",
     errTooLong: "حداکثر ۱۰ کاراکتر.",
+    errFlag: "این پرچم هنوز در دسترس نیست.",
     errGeneric: "باشگاه ساخته نشد. دوباره تلاش کن.",
   },
   avatars: {
@@ -259,6 +268,7 @@ const fa: Dictionary = {
     boughtPack: "{name} باز شد! سکه‌ها اضافه شدند. 💰",
     errInsufficient: "بودجه کافی نیست.",
     errMax: "به بالاترین سطح رسیده‌ای.",
+    errRateLimited: "خرید زیاد شده — کمی بعد دوباره تلاش کن.",
     errGeneric: "خرید ناموفق بود. دوباره تلاش کن.",
     boosters: {
       FIFTY_FIFTY: {

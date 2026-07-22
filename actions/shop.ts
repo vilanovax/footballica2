@@ -19,12 +19,19 @@ import {
   isCoinPackTier,
   type CoinPackTier,
 } from "@/lib/game/coinPacks";
+import {
+  assertStaminaRefillCooldown,
+  clearStaminaRefillCooldown,
+  countRecentCoinPacks,
+  MAX_COIN_PACKS_PER_DAY,
+} from "@/lib/economy/rateLimit";
 
 /** Machine-readable failure codes so the client can localize the toast. */
 export type ShopErrorCode =
   | "insufficient"
   | "maxed"
   | "already_full"
+  | "rate_limited"
   | "unknown"
   | "generic";
 
@@ -152,12 +159,18 @@ export async function buyBooster(type: BoosterShopType): Promise<ShopResult> {
 export async function buyStaminaRefill(): Promise<ShopResult> {
   const config = await getGameConfig();
   const cost = config.costs.staminaRefill;
+  let cooldownClubId: string | null = null;
 
   try {
     const snapshot = await prisma.$transaction(async (tx) => {
       const pair = await requireUserClub(tx);
       if (!pair) throw new ShopError("generic");
       const { club } = pair;
+
+      if (!assertStaminaRefillCooldown(club.id)) {
+        throw new ShopError("rate_limited");
+      }
+      cooldownClubId = club.id;
 
       const now = new Date();
       const regen = computeStaminaRegen(club, now);
@@ -182,6 +195,7 @@ export async function buyStaminaRefill(): Promise<ShopResult> {
     revalidatePath("/play");
     return { ok: true, club: snapshot };
   } catch (err) {
+    if (cooldownClubId) clearStaminaRefillCooldown(cooldownClubId);
     if (err instanceof ShopError) return { ok: false, code: err.code };
     console.error("buyStaminaRefill failed", err);
     return { ok: false, code: "generic" };
@@ -203,6 +217,11 @@ export async function purchaseCoinPack(
       const pair = await requireUserClub(tx);
       if (!pair) throw new ShopError("generic");
       const { club } = pair;
+
+      const recent = await countRecentCoinPacks(club.id, tx);
+      if (recent >= MAX_COIN_PACKS_PER_DAY) {
+        throw new ShopError("rate_limited");
+      }
 
       await tx.purchaseLog.create({
         data: {

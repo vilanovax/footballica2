@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { AvatarImage } from "@/components/common/AvatarImage";
+import { playSound } from "@/lib/audio/SoundManager";
 
 type FtueCoachProps = {
   /** Manager avatar key. */
@@ -15,20 +16,24 @@ type FtueCoachProps = {
   cta?: { href: string; label: string };
 };
 
-const bubbleSpring = { type: "spring", stiffness: 260, damping: 20 } as const;
+const slideUp = {
+  initial: { opacity: 0, y: 50, scale: 0.96 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, y: 28, scale: 0.96 },
+  transition: { type: "spring" as const, stiffness: 320, damping: 26 },
+};
 
 /**
- * In-character coach speech bubble used across the FTUE. Renders the chosen
- * manager avatar with an animated dialogue card and (optionally) a glowing
- * call-to-action button. Text is already localized by the caller.
+ * In-character coach speech bubble used across the FTUE. Slides up from the
+ * bottom so interruptions feel premium rather than like a static modal.
  */
 export function FtueCoach({ avatarKey, name, line, cta }: FtueCoachProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 24, scale: 0.94 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 16, scale: 0.94 }}
-      transition={bubbleSpring}
+      initial={slideUp.initial}
+      animate={slideUp.animate}
+      exit={slideUp.exit}
+      transition={slideUp.transition}
       className="pointer-events-auto w-full max-w-mobile rounded-bubble border border-accent/40 bg-surface p-4 shadow-fantasy"
     >
       <div className="flex items-start gap-3">
@@ -68,6 +73,7 @@ export function FtueCoach({ avatarKey, name, line, cta }: FtueCoachProps) {
         >
           <Link
             href={cta.href}
+            onClick={() => playSound("click")}
             className="btn-fantasy btn-fantasy-primary flex w-full items-center justify-center gap-2"
           >
             <span aria-hidden>⚽️</span>
