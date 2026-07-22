@@ -245,7 +245,8 @@ model Club {
   badges   ClubBadge[]
   missionBatches ClubMissionBatch[]
   missions       ClubMission[]
-  purchases PurchaseLog[]
+  purchases    PurchaseLog[]
+  adminGrants  AdminCoinGrant[]
 
   @@index([fans])
   @@index([coins])
@@ -269,6 +270,20 @@ model PurchaseLog {
 
   @@index([clubId, createdAt])
   @@index([status])
+}
+
+/// Admin CMS coin top-ups (manual grants). Separate from IAP PurchaseLog.
+model AdminCoinGrant {
+  id        String   @id @default(cuid())
+  clubId    String
+  club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  /// Positive coin delta applied to the club.
+  amount    Int
+  /// Optional operator note (support ticket, promo, etc.).
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@index([clubId, createdAt])
 }
 
 // ─── ClubBadge (unlocked achievements) ───────────────────────────────────────

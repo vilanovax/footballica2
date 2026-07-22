@@ -12,6 +12,7 @@ import {
   Check,
   Pencil,
   X,
+  Coins,
 } from "lucide-react";
 import {
   generateBots,
@@ -22,6 +23,7 @@ import {
   type AdminBotRow,
   type AdminUserRow,
 } from "@/actions/admin/bots";
+import { grantCoinsToUser } from "@/actions/admin/economy";
 import { BOT_DIFFICULTIES, type BotDifficulty } from "@/lib/bots/difficulty";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -108,7 +110,8 @@ export function UsersBotsPanel({ bots, users }: UsersBotsPanelProps) {
       <TabsContent value="users" className="space-y-3">
         <p className="text-sm text-slate-500">
           Phone-authenticated managers (OTP). Bots are excluded. Answers =
-          correct / total questions (matches + duels).
+          correct / total questions (matches + duels). Use Grant to top up
+          club coins manually (logged separately from IAP).
         </p>
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
           <Table>
@@ -116,16 +119,18 @@ export function UsersBotsPanel({ bots, users }: UsersBotsPanelProps) {
               <TableRow>
                 <TableHead>Phone</TableHead>
                 <TableHead>Club</TableHead>
+                <TableHead className="text-right">Coins</TableHead>
                 <TableHead className="text-right">Answers</TableHead>
                 <TableHead className="text-right">Matches</TableHead>
                 <TableHead className="text-right">Weekly XP</TableHead>
                 <TableHead>Joined</TableHead>
+                <TableHead className="w-28" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {users.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-slate-400">
+                  <TableCell colSpan={8} className="py-10 text-center text-slate-400">
                     No real users yet.
                   </TableCell>
                 </TableRow>
@@ -134,6 +139,9 @@ export function UsersBotsPanel({ bots, users }: UsersBotsPanelProps) {
                 <TableRow key={u.id}>
                   <TableCell className="font-mono text-xs">{u.phone ?? "—"}</TableCell>
                   <TableCell className="font-medium">{u.clubName ?? "—"}</TableCell>
+                  <TableCell className="text-right font-medium tabular-nums text-amber-700">
+                    {u.clubId ? u.coins.toLocaleString() : "—"}
+                  </TableCell>
                   <TableCell className="text-end">
                     <AnswersCell label={u.answersLabel} />
                   </TableCell>
@@ -145,6 +153,15 @@ export function UsersBotsPanel({ bots, users }: UsersBotsPanelProps) {
                   </TableCell>
                   <TableCell className="text-xs text-slate-500">
                     {formatDate(u.createdAt)}
+                  </TableCell>
+                  <TableCell className="text-end">
+                    <GrantCoinsDialog
+                      user={u}
+                      pending={pending}
+                      onDone={() => {
+                        startTransition(() => router.refresh());
+                      }}
+                    />
                   </TableCell>
                 </TableRow>
               ))}
@@ -251,6 +268,150 @@ function AnswersCell({ label }: { label: string }) {
     >
       {label}
     </span>
+  );
+}
+
+const GRANT_PRESETS = [100, 500, 1_000, 5_000] as const;
+
+function GrantCoinsDialog({
+  user,
+  pending,
+  onDone,
+}: {
+  user: AdminUserRow;
+  pending?: boolean;
+  onDone: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [amount, setAmount] = useState("500");
+  const [reason, setReason] = useState("");
+  const [busy, startTransition] = useTransition();
+
+  const canGrant = Boolean(user.clubId);
+  const amountNum = Math.floor(Number(amount));
+  const amountOk =
+    Number.isFinite(amountNum) && amountNum >= 1 && amountNum <= 1_000_000;
+
+  function submit() {
+    if (!canGrant || !amountOk || busy) return;
+    startTransition(async () => {
+      const res = await grantCoinsToUser(user.id, amountNum, reason);
+      if (!res.ok) {
+        const msg =
+          res.error === "unauthorized"
+            ? "Admin session expired."
+            : res.error === "invalid_amount"
+              ? "Enter 1–1,000,000 coins."
+              : res.error === "no_club"
+                ? "Player has no club yet."
+                : "Could not grant coins.";
+        toast.error(msg);
+        return;
+      }
+      toast.success(
+        `Granted ${res.granted.toLocaleString()} coins → balance ${res.coins.toLocaleString()}`,
+      );
+      setOpen(false);
+      setReason("");
+      setAmount("500");
+      onDone();
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={!canGrant || pending}
+          className="h-8 gap-1 border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 hover:text-amber-900"
+          title={canGrant ? "Grant coins" : "No club yet"}
+        >
+          <Coins className="h-3.5 w-3.5" />
+          Grant
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Grant coins</DialogTitle>
+          <DialogDescription>
+            Credit soft currency to{" "}
+            <span className="font-medium text-slate-800">
+              {user.clubName ?? user.phone ?? "player"}
+            </span>
+            . Current balance:{" "}
+            <span className="font-semibold tabular-nums text-amber-700">
+              {user.coins.toLocaleString()}
+            </span>
+            . Logged in AdminCoinGrant (not IAP).
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-1">
+          <div className="space-y-2">
+            <Label htmlFor={`grant-amount-${user.id}`}>Amount</Label>
+            <Input
+              id={`grant-amount-${user.id}`}
+              type="number"
+              min={1}
+              max={1_000_000}
+              step={1}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="tabular-nums"
+            />
+            <div className="flex flex-wrap gap-1.5">
+              {GRANT_PRESETS.map((n) => (
+                <Button
+                  key={n}
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setAmount(String(n))}
+                >
+                  +{n.toLocaleString()}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor={`grant-reason-${user.id}`}>
+              Reason <span className="text-slate-400">(optional)</span>
+            </Label>
+            <Input
+              id={`grant-reason-${user.id}`}
+              maxLength={200}
+              placeholder="e.g. support ticket #42, promo"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={busy}
+            onClick={() => setOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            disabled={busy || !amountOk}
+            onClick={submit}
+            className="bg-amber-600 text-white hover:bg-amber-700"
+          >
+            {busy ? "Granting…" : `Grant ${amountOk ? amountNum.toLocaleString() : "…"}`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

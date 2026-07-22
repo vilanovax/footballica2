@@ -39,6 +39,9 @@ export type AdminUserRow = {
   phone: string | null;
   displayName: string | null;
   clubName: string | null;
+  /** Null when the manager has not finished onboarding. */
+  clubId: string | null;
+  coins: number;
   answersLabel: string;
   correctAnswers: number;
   questionsAnswered: number;
@@ -116,7 +119,7 @@ export async function listAdminUsers(): Promise<AdminUserRow[]> {
   const users = await prisma.user.findMany({
     where: { isBot: false, phone: { not: null } },
     include: {
-      club: { select: { name: true, matchesPlayed: true } },
+      club: { select: { id: true, name: true, matchesPlayed: true, coins: true } },
     },
     orderBy: { createdAt: "desc" },
     take: 500,
@@ -131,6 +134,8 @@ export async function listAdminUsers(): Promise<AdminUserRow[]> {
       phone: u.phone,
       displayName: u.displayName,
       clubName: u.club?.name ?? null,
+      clubId: u.club?.id ?? null,
+      coins: u.club?.coins ?? 0,
       correctAnswers: s.correct,
       questionsAnswered: s.total,
       answersLabel: `${s.correct}/${s.total}`,
