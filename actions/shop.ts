@@ -13,11 +13,18 @@ import {
 } from "@/lib/club/upgrades";
 import { getGameConfig } from "@/lib/game/gameConfig";
 import type { GameConfig } from "@/lib/game/economy";
+import { computeStaminaRegen } from "@/lib/club/stamina";
+import {
+  COIN_PACKS,
+  isCoinPackTier,
+  type CoinPackTier,
+} from "@/lib/game/coinPacks";
 
 /** Machine-readable failure codes so the client can localize the toast. */
 export type ShopErrorCode =
   | "insufficient"
   | "maxed"
+  | "already_full"
   | "unknown"
   | "generic";
 
@@ -134,6 +141,93 @@ export async function buyBooster(type: BoosterShopType): Promise<ShopResult> {
   } catch (err) {
     if (err instanceof ShopError) return { ok: false, code: err.code };
     console.error("buyBooster failed", err);
+    return { ok: false, code: "generic" };
+  }
+}
+
+/**
+ * Soft-currency stamina top-up. Not written to PurchaseLog (IAP ledger only).
+ * Session club only — never accepts clubId from the client.
+ */
+export async function buyStaminaRefill(): Promise<ShopResult> {
+  const config = await getGameConfig();
+  const cost = config.costs.staminaRefill;
+
+  try {
+    const snapshot = await prisma.$transaction(async (tx) => {
+      const pair = await requireUserClub(tx);
+      if (!pair) throw new ShopError("generic");
+      const { club } = pair;
+
+      const now = new Date();
+      const regen = computeStaminaRegen(club, now);
+      if (regen.stamina >= club.maxStamina) {
+        throw new ShopError("already_full");
+      }
+      if (club.coins < cost) throw new ShopError("insufficient");
+
+      const updated = await tx.club.update({
+        where: { id: club.id },
+        data: {
+          coins: { decrement: cost },
+          stamina: club.maxStamina,
+          lastStaminaUpdate: now,
+        },
+      });
+      return toClubSnapshot(updated);
+    });
+
+    revalidatePath("/shop");
+    revalidatePath("/club");
+    revalidatePath("/play");
+    return { ok: true, club: snapshot };
+  } catch (err) {
+    if (err instanceof ShopError) return { ok: false, code: err.code };
+    console.error("buyStaminaRefill failed", err);
+    return { ok: false, code: "generic" };
+  }
+}
+
+/**
+ * Mock IAP coin pack. Catalog is server-only; client sends `packTier` only.
+ * Writes an immutable PurchaseLog row (SUCCESS) then credits coins.
+ */
+export async function purchaseCoinPack(
+  packTier: string,
+): Promise<ShopResult> {
+  if (!isCoinPackTier(packTier)) return { ok: false, code: "unknown" };
+  const pack = COIN_PACKS[packTier as CoinPackTier];
+
+  try {
+    const snapshot = await prisma.$transaction(async (tx) => {
+      const pair = await requireUserClub(tx);
+      if (!pair) throw new ShopError("generic");
+      const { club } = pair;
+
+      await tx.purchaseLog.create({
+        data: {
+          clubId: club.id,
+          packTier: pack.tier,
+          price: pack.price,
+          currency: pack.currency,
+          coinsGranted: pack.coinsGranted,
+          status: "SUCCESS",
+        },
+      });
+
+      const updated = await tx.club.update({
+        where: { id: club.id },
+        data: { coins: { increment: pack.coinsGranted } },
+      });
+      return toClubSnapshot(updated);
+    });
+
+    revalidatePath("/shop");
+    revalidatePath("/club");
+    return { ok: true, club: snapshot };
+  } catch (err) {
+    if (err instanceof ShopError) return { ok: false, code: err.code };
+    console.error("purchaseCoinPack failed", err);
     return { ok: false, code: "generic" };
   }
 }

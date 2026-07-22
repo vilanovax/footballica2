@@ -10,6 +10,11 @@ import {
   isAvatarUnlocked,
   type AvatarKey,
 } from "@/lib/onboarding/avatars";
+import {
+  CLUB_COLORS,
+  DEFAULT_CLUB_COLOR_KEY,
+  type ClubColorKey,
+} from "@/lib/onboarding/clubColors";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
@@ -22,6 +27,7 @@ type ProfileEditModalProps = {
     clubName: string;
     stadiumName: string;
     avatar: AvatarKey;
+    colorKey: ClubColorKey;
   };
   ownedBadgeSlugs: string[];
   onClose: () => void;
@@ -43,6 +49,8 @@ function errorKey(code: string): string {
     case "locked_avatar":
     case "invalid_avatar":
       return "profile.edit.errLocked";
+    case "invalid_color":
+      return "profile.edit.errColor";
     default:
       return "profile.edit.errGeneric";
   }
@@ -54,13 +62,16 @@ export function ProfileEditModal({
   onClose,
   onSaved,
 }: ProfileEditModalProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const owned = new Set(ownedBadgeSlugs);
 
   const [managerName, setManagerName] = useState(initial.managerName);
   const [clubName, setClubName] = useState(initial.clubName);
   const [stadiumName, setStadiumName] = useState(initial.stadiumName);
   const [avatar, setAvatar] = useState<AvatarKey>(initial.avatar);
+  const [colorKey, setColorKey] = useState<ClubColorKey>(
+    initial.colorKey ?? DEFAULT_CLUB_COLOR_KEY,
+  );
   const [pending, start] = useTransition();
 
   function handleSave() {
@@ -70,6 +81,7 @@ export function ProfileEditModal({
         clubName: clubName.trim(),
         stadiumName: stadiumName.trim(),
         avatar,
+        colorKey,
       });
       if (res.ok) {
         haptic(HAPTIC.goal);
@@ -143,6 +155,49 @@ export function ProfileEditModal({
 
           <div>
             <p className="mb-2 font-display text-sm font-bold text-surface-foreground">
+              {t("profile.edit.chooseColor")}
+            </p>
+            <div className="grid grid-cols-4 gap-2">
+              {CLUB_COLORS.map((c) => {
+                const selected = colorKey === c.key;
+                return (
+                  <button
+                    key={c.key}
+                    type="button"
+                    onClick={() => {
+                      haptic(HAPTIC.tap);
+                      setColorKey(c.key);
+                    }}
+                    aria-pressed={selected}
+                    aria-label={locale === "fa" ? c.faName : c.name}
+                    className={[
+                      "relative flex flex-col items-center gap-1 rounded-bubble border-2 p-2 transition-colors",
+                      selected
+                        ? "border-foreground bg-muted"
+                        : "border-border bg-background",
+                    ].join(" ")}
+                  >
+                    <span
+                      aria-hidden
+                      className="h-9 w-9 rounded-full shadow-fantasy-sm ring-2 ring-surface"
+                      style={{ backgroundColor: c.hex }}
+                    />
+                    <span className="line-clamp-1 text-center font-display text-[10px] font-bold text-surface-foreground">
+                      {locale === "fa" ? c.faName : c.name}
+                    </span>
+                    {selected && (
+                      <span className="absolute -end-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-fantasy">
+                        <Check className="h-3 w-3" strokeWidth={3} />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-2 font-display text-sm font-bold text-surface-foreground">
               {t("profile.edit.chooseAvatar")}
             </p>
             <div className="grid grid-cols-3 gap-2">
@@ -171,6 +226,7 @@ export function ProfileEditModal({
                   >
                     <AvatarImage
                       avatarKey={a.key}
+                      colorKey={colorKey}
                       muted={!unlocked}
                       className="h-12 w-12 rounded-full"
                     />

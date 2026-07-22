@@ -6,6 +6,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUserClub } from "@/lib/player/current";
 import { isAvatarKey, MANAGER_AVATARS } from "@/lib/onboarding/avatars";
+import { isClubColorKey } from "@/lib/onboarding/clubColors";
 import {
   CLUB_NAME_MAX_LEN,
   validateClubName,
@@ -16,6 +17,7 @@ export type UpdateProfileInput = {
   clubName: string;
   stadiumName: string;
   avatar: string;
+  colorKey: string;
 };
 
 export type UpdateProfileResult = { ok: true } | { ok: false; error: string };
@@ -31,12 +33,12 @@ const schema = z.object({
     .max(CLUB_NAME_MAX_LEN, "too_long"),
   stadiumName: z.string().trim().max(24, "too_long"),
   avatar: z.string(),
+  colorKey: z.string(),
 });
 
 /**
- * Update the player's identity (manager + club name, stadium, avatar).
- * Avatar selection is re-validated server-side: cosmetic avatars can only be
- * set if the club actually owns the badge that unlocks them (anti-tamper).
+ * Update the player's identity (manager + club name, stadium, avatar, color).
+ * Avatar / color keys are re-validated against catalogs (anti-tamper).
  */
 export async function updateProfile(
   input: UpdateProfileInput,
@@ -45,10 +47,13 @@ export async function updateProfile(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "invalid" };
   }
-  const { managerName, clubName, stadiumName, avatar } = parsed.data;
+  const { managerName, clubName, stadiumName, avatar, colorKey } = parsed.data;
 
   if (!isAvatarKey(avatar)) {
     return { ok: false, error: "invalid_avatar" };
+  }
+  if (!isClubColorKey(colorKey)) {
+    return { ok: false, error: "invalid_color" };
   }
 
   const validated = validateClubName(clubName);
@@ -78,6 +83,7 @@ export async function updateProfile(
           nameNormalized: validated.normalized,
           stadiumName: stadiumName.length > 0 ? stadiumName : null,
           avatar,
+          colorKey,
         },
       }),
       prisma.user.update({
@@ -98,5 +104,6 @@ export async function updateProfile(
 
   revalidatePath("/profile");
   revalidatePath("/club");
+  revalidatePath("/play/duel");
   return { ok: true };
 }

@@ -83,6 +83,7 @@ export async function getProfileSnapshot(): Promise<ProfileSnapshot | null> {
     stadiumName: club.stadiumName,
     avatar: club.avatar,
     flag: club.flag,
+    colorKey: club.colorKey,
     xp: user.xp,
     matchesPlayed: club.matchesPlayed,
     matchesWon: club.matchesWon,

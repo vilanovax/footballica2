@@ -18,6 +18,8 @@ export type ClubSnapshot = {
   msUntilNext: number;
   /** Chosen manager avatar key (may be null on legacy rows). */
   avatar: string | null;
+  /** Club brand palette key (see lib/onboarding/clubColors). */
+  colorKey: string;
   /** FTUE progress: 0 tutorial match · 1 first upgrade · 2 done. */
   tutorialStep: number;
   /** True when today's Newspaper booster can still be claimed. */

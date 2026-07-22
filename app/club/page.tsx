@@ -3,6 +3,7 @@ import { ClubHub } from "@/components/club-hub/ClubHub";
 import { getClubSnapshot, getCurrentUser } from "@/lib/player/current";
 import { getDuelInbox } from "@/actions/duel/getInboxCount";
 import { getMyMissions } from "@/actions/missions";
+import { getGameConfig } from "@/lib/game/gameConfig";
 
 // Reads live club balances from the DB — never prerender.
 export const dynamic = "force-dynamic";
@@ -14,9 +15,10 @@ export default async function ClubPage() {
   const club = await getClubSnapshot();
   if (!club) redirect("/onboarding");
 
-  const [inbox, missions] = await Promise.all([
+  const [inbox, missions, config] = await Promise.all([
     getDuelInbox(),
     getMyMissions(),
+    getGameConfig(),
   ]);
   const duelInboxCount = inbox.ok ? inbox.count : 0;
   const duelInboxItems = inbox.ok ? inbox.items : [];
@@ -26,6 +28,7 @@ export default async function ClubPage() {
   return (
     <ClubHub
       initialClub={club}
+      staminaRefillCost={config.costs.staminaRefill}
       duelInboxCount={duelInboxCount}
       duelInboxItems={duelInboxItems}
       missionBoard={missionBoard}

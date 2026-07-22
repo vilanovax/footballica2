@@ -135,11 +135,13 @@ export function toScorecard(
     you: {
       name: youParty?.name ?? fallbacks?.yourName ?? "—",
       avatarKey: youParty?.avatar ?? fallbacks?.yourAvatar ?? "TACTICAL_COACH",
+      colorKey: youParty?.colorKey ?? null,
       level: youParty?.level ?? 1,
     },
     them: {
       name: themParty?.name ?? (duel.isBotOpponent ? "Bot" : "—"),
       avatarKey: themParty?.avatar ?? "YOUNG_DIRECTOR",
+      colorKey: themParty?.colorKey ?? null,
       level: themParty?.level ?? 1,
       isBot: themParty?.isBot ?? duel.isBotOpponent,
     },

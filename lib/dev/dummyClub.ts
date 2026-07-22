@@ -4,6 +4,7 @@ import type { Club } from "@/generated/prisma/client";
 import type { ClubSnapshot } from "@/lib/club/upgrades";
 import { computeStaminaRegen } from "@/lib/club/stamina";
 import { canClaimNews } from "@/lib/boosters/boosters";
+import { DEFAULT_CLUB_COLOR_KEY } from "@/lib/onboarding/clubColors";
 
 /**
  * Shared serializers kept here so older imports (`toClubSnapshot`,
@@ -27,6 +28,7 @@ export function toClubSnapshot(club: Club): ClubSnapshot {
     boosterFreezeTimer: club.boosterFreezeTimer,
     msUntilNext: regen.msUntilNext,
     avatar: club.avatar,
+    colorKey: club.colorKey ?? DEFAULT_CLUB_COLOR_KEY,
     tutorialStep: club.tutorialStep,
     newsClaimable: canClaimNews(club.lastNewsClaim, new Date()),
   };
@@ -39,6 +41,7 @@ export type ProfileSnapshot = {
   stadiumName: string | null;
   avatar: string | null;
   flag: string | null;
+  colorKey: string;
   xp: number;
   matchesPlayed: number;
   matchesWon: number;

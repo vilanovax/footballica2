@@ -10,6 +10,13 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { isAvatarKey, type AvatarKey } from "@/lib/onboarding/avatars";
 import { getFlag, type FlagKey } from "@/lib/onboarding/flags";
+import {
+  clubAccentRingStyle,
+  clubAccentWashStyle,
+  DEFAULT_CLUB_COLOR_KEY,
+  isClubColorKey,
+  type ClubColorKey,
+} from "@/lib/onboarding/clubColors";
 import { AvatarImage } from "@/components/common/AvatarImage";
 import { ProfileEditModal } from "./ProfileEditModal";
 import { FlagPickerModal } from "./FlagPickerModal";
@@ -63,6 +70,9 @@ export function PlayerProfile({
     profile.avatar && isAvatarKey(profile.avatar)
       ? profile.avatar
       : "TACTICAL_COACH";
+  const colorKey: ClubColorKey = isClubColorKey(profile.colorKey)
+    ? profile.colorKey
+    : DEFAULT_CLUB_COLOR_KEY;
   const ownedSlugs = profile.badges.map((b) => b.slug);
 
   const owned = new Map(profile.badges.map((b) => [b.slug, b.unlockedAt]));
@@ -90,17 +100,24 @@ export function PlayerProfile({
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: "spring", stiffness: 240, damping: 22 }}
-        className="rounded-bubble-xl border border-border bg-surface p-5 shadow-fantasy"
+        className="relative overflow-hidden rounded-bubble-xl border border-border bg-surface p-5 shadow-fantasy"
       >
-        <div className="flex items-center gap-4">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={clubAccentWashStyle(colorKey)}
+        />
+        <div className="relative flex items-center gap-4">
           <motion.div
             initial={{ scale: 0, rotate: -20 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ type: "spring", stiffness: 260, damping: 16, delay: 0.1 }}
-            className="relative shrink-0"
+            className="relative shrink-0 rounded-full"
+            style={clubAccentRingStyle(colorKey)}
           >
             <AvatarImage
               avatarKey={avatarKey}
+              colorKey={colorKey}
               className="h-20 w-20 rounded-full shadow-fantasy"
             />
             {/* Tappable club flag pin → opens the flag picker */}
@@ -136,7 +153,7 @@ export function PlayerProfile({
         </div>
 
         {/* Level + XP */}
-        <div className="mt-4">
+        <div className="relative mt-4">
           <div className="flex items-center justify-between">
             <span className="rounded-full bg-primary/15 px-3 py-1 font-display text-sm font-bold text-primary">
               {t("profile.level", { n: toLocaleDigits(level.level, locale) })}
@@ -252,6 +269,7 @@ export function PlayerProfile({
               clubName: profile.clubName,
               stadiumName: profile.stadiumName ?? "",
               avatar: avatarKey,
+              colorKey,
             }}
             ownedBadgeSlugs={ownedSlugs}
             onClose={() => setEditing(false)}

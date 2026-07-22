@@ -52,8 +52,9 @@ export function tehranWeekKey(date: Date = new Date()): string {
 type ConfigBag = Record<string, unknown> & { leagueWeekKey?: string };
 
 /**
- * If the Tehran week rolled over, zero human `weeklyXp` (bots keep scores for
- * practice pools) and stamp the new week on GameConfig.
+ * If the Tehran week rolled over, archive the human podium to Hall of Fame,
+ * zero human `weeklyXp` (bots + mock emails keep scores), and stamp the new
+ * week on GameConfig.
  */
 export async function ensureWeeklyLeagueReset(
   now = new Date(),
@@ -67,7 +68,38 @@ export async function ensureWeeklyLeagueReset(
     return { reset: false, weekKey };
   }
 
+  const previousWeekKey =
+    typeof prev.leagueWeekKey === "string" && prev.leagueWeekKey.length > 0
+      ? prev.leagueWeekKey
+      : null;
+
   await prisma.$transaction(async (tx) => {
+    // Hall of Fame: freeze last week's top 3 humans before wiping scores.
+    if (previousWeekKey) {
+      const podium = await tx.user.findMany({
+        where: {
+          isBot: false,
+          weeklyXp: { gt: 0 },
+          NOT: { email: { endsWith: "@footballica.local" } },
+        },
+        orderBy: [{ weeklyXp: "desc" }, { createdAt: "asc" }],
+        take: 3,
+        select: { id: true, weeklyXp: true },
+      });
+
+      if (podium.length > 0) {
+        await tx.hallOfFame.createMany({
+          data: podium.map((u, i) => ({
+            userId: u.id,
+            tehranWeekKey: previousWeekKey,
+            rank: i + 1,
+            xp: u.weeklyXp,
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
     // Humans only — keep seed/mock leaderboard flavor (`*@footballica.local`).
     await tx.user.updateMany({
       where: {

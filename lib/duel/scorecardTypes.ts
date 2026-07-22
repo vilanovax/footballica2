@@ -13,6 +13,8 @@ export type ScorecardAnswer = boolean | null;
 export type ScorecardPlayer = {
   name: string;
   avatarKey: string;
+  /** Club brand palette key for scoped ring accents. */
+  colorKey?: string | null;
   /** Manager / club level shown on the badge. */
   level: number;
   isBot?: boolean;

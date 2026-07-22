@@ -6,6 +6,8 @@ export type DuelPartySnapshot = {
   id: string;
   name: string;
   avatar: string | null;
+  /** Club brand palette key for scoped accents. */
+  colorKey: string | null;
   isBot: boolean;
   /** Manager level for scorecard badges. */
   level: number;
@@ -59,7 +61,7 @@ export type DuelSnapshot = {
 type RoundWithCat = DuelRound & { category: Category | null };
 
 type UserWithClub = User & {
-  club: { name: string; avatar: string | null } | null;
+  club: { name: string; avatar: string | null; colorKey: string } | null;
 };
 
 function parseAnswerResults(raw: unknown): boolean[] | null {
@@ -76,6 +78,7 @@ function partyFromUser(user: UserWithClub | null | undefined): DuelPartySnapshot
     id: user.id,
     name: user.club?.name ?? user.displayName ?? "—",
     avatar: user.club?.avatar ?? user.managerAvatar ?? null,
+    colorKey: user.club?.colorKey ?? null,
     isBot: user.isBot,
     level: user.managerLevel ?? 1,
   };

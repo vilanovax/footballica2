@@ -17,6 +17,11 @@ import {
   type UpgradeKey,
 } from "@/lib/club/upgrades";
 import { type AvatarKey } from "@/lib/onboarding/avatars";
+import {
+  clubAccentRingStyle,
+  clubAccentWashStyle,
+  DEFAULT_CLUB_COLOR_KEY,
+} from "@/lib/onboarding/clubColors";
 import { AvatarImage } from "@/components/common/AvatarImage";
 import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
@@ -37,6 +42,8 @@ import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
 
 type ClubHubProps = {
   initialClub: ClubSnapshot;
+  /** Soft-currency stamina top-up cost from GameConfig. */
+  staminaRefillCost: number;
   /** Active Draft Duel turns waiting for the manager. */
   duelInboxCount?: number;
   duelInboxItems?: DuelInboxItem[];
@@ -46,6 +53,7 @@ type ClubHubProps = {
 
 export function ClubHub({
   initialClub,
+  staminaRefillCost,
   duelInboxCount = 0,
   duelInboxItems = [],
   missionBoard = null,
@@ -64,6 +72,7 @@ export function ClubHub({
   const step = club.tutorialStep;
   const avatarKey = (club.avatar ?? "TACTICAL_COACH") as AvatarKey;
   const avatarName = t(`avatars.${avatarKey}.name`);
+  const colorKey = club.colorKey ?? DEFAULT_CLUB_COLOR_KEY;
   // Daily News only unlocks once the FTUE is fully complete (tutorialStep 2).
   const ftueComplete = step === 2;
 
@@ -132,17 +141,24 @@ export function ClubHub({
   }
 
   return (
-    <section className="flex flex-1 flex-col gap-4">
-      <header className="flex items-center justify-between pt-2">
+    <section className="relative flex flex-1 flex-col gap-4">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-36"
+        style={clubAccentWashStyle(colorKey)}
+      />
+      <header className="relative flex items-center justify-between pt-2">
         <div className="flex items-center gap-3">
           <Link
             href="/profile"
             aria-label={t("profile.eyebrow")}
-            className="shrink-0 rounded-full shadow-fantasy transition-transform active:scale-95"
+            className="shrink-0 rounded-full transition-transform active:scale-95"
+            style={clubAccentRingStyle(colorKey)}
           >
             <AvatarImage
               avatarKey={avatarKey}
-              className="h-14 w-14 rounded-full"
+              colorKey={colorKey}
+              className="h-14 w-14 rounded-full shadow-fantasy"
             />
           </Link>
           <div>
@@ -250,6 +266,8 @@ export function ClubHub({
         stamina={club.stamina}
         maxStamina={club.maxStamina}
         msUntilNext={club.msUntilNext}
+        staminaRefillCost={staminaRefillCost}
+        onClubUpdate={setClub}
       />
 
       {ftueComplete && (

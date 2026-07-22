@@ -6,7 +6,11 @@ import { getGameConfig } from "@/lib/game/gameConfig";
 // Reads live coins/inventory + Live-Ops booster costs — never prerender.
 export const dynamic = "force-dynamic";
 
-export default async function ShopPage() {
+type ShopPageProps = {
+  searchParams: Promise<{ tab?: string }>;
+};
+
+export default async function ShopPage({ searchParams }: ShopPageProps) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
@@ -14,10 +18,16 @@ export default async function ShopPage() {
   if (!club) redirect("/onboarding");
 
   const config = await getGameConfig();
+  const { tab } = await searchParams;
+  const initialTab =
+    tab === "coins" || tab === "boosters" || tab === "upgrades"
+      ? tab
+      : "upgrades";
 
   return (
     <Shop
       initialClub={club}
+      initialTab={initialTab}
       boosterCosts={{
         FIFTY_FIFTY: config.costs.boosterFiftyFifty,
         FREEZE_TIMER: config.costs.boosterFreezeTimer,

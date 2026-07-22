@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getLeaderboard } from "@/actions/getLeaderboard";
+import { getHallOfFame } from "@/actions/getHallOfFame";
 import { LeaderboardList } from "@/components/leaderboard/LeaderboardList";
 import { getCurrentUser, hasClub } from "@/lib/player/current";
 
@@ -11,8 +12,16 @@ export default async function LeaderboardPage() {
   if (!user) redirect("/login");
   if (!(await hasClub())) redirect("/onboarding");
 
-  const board = await getLeaderboard();
+  const [board, hallOfFame] = await Promise.all([
+    getLeaderboard(),
+    getHallOfFame(),
+  ]);
+
   return (
-    <LeaderboardList rows={board.rows} resetsInDays={board.resetsInDays} />
+    <LeaderboardList
+      rows={board.rows}
+      resetsInDays={board.resetsInDays}
+      hallOfFame={hallOfFame}
+    />
   );
 }

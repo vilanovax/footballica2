@@ -144,6 +144,7 @@ model User {
 
   club    Club?
   matches Match[]
+  hallOfFame HallOfFame[]
 
   duelsAsChallenger DuelMatch[] @relation("DuelChallenger")
   duelsAsOpponent   DuelMatch[] @relation("DuelOpponent")
@@ -151,6 +152,25 @@ model User {
   @@index([weeklyXp])
   @@index([xp])
   @@index([isBot, botEnabled, botDifficulty])
+}
+
+/// Archived weekly league podium (top 3 humans) snapshot before `weeklyXp` reset.
+model HallOfFame {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Tehran ISO-like week that just ended (`YYYY-Www`).
+  tehranWeekKey String
+  /// Podium place: 1, 2, or 3.
+  rank          Int
+  /// `weeklyXp` at archive time (before reset to 0).
+  xp            Int
+  createdAt     DateTime @default(now())
+
+  @@unique([tehranWeekKey, rank])
+  @@unique([tehranWeekKey, userId])
+  @@index([tehranWeekKey, rank])
+  @@index([userId])
 }
 
 // ─── Club (Metagame hub) ─────────────────────────────────────────────────────
@@ -172,6 +192,8 @@ model Club {
   /// Chosen club flag key (see lib/onboarding/flags). Cosmetic identity; premium
   /// flags are level-gated (re-checked server-side in setClubFlag).
   flag         String?
+  /// Club kit / brand palette key (see lib/onboarding/clubColors). Scoped accents only.
+  colorKey     String  @default("CLUB_GREEN")
   /// FTUE progress: 0 = play tutorial match, 1 = buy first upgrade, 2 = done.
   tutorialStep Int     @default(0)
 
@@ -223,9 +245,30 @@ model Club {
   badges   ClubBadge[]
   missionBatches ClubMissionBatch[]
   missions       ClubMission[]
+  purchases PurchaseLog[]
 
   @@index([fans])
   @@index([coins])
+}
+
+/// Immutable IAP ledger for mock (and future real) coin-pack purchases.
+/// Soft-currency sinks (stamina refill, boosters, upgrades) are NOT logged here.
+model PurchaseLog {
+  id           String   @id @default(cuid())
+  clubId       String
+  club         Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  /// Server catalog tier key (`SMALL` | `MEDIUM` | `LARGE`).
+  packTier    String
+  /// Fiat amount charged (mock gateway display units).
+  price        Int
+  currency     String
+  coinsGranted Int
+  /// PENDING | SUCCESS | FAILED
+  status       String
+  createdAt    DateTime @default(now())
+
+  @@index([clubId, createdAt])
+  @@index([status])
 }
 
 // ─── ClubBadge (unlocked achievements) ───────────────────────────────────────

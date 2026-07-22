@@ -4,6 +4,11 @@ import { motion } from "framer-motion";
 import { AvatarImage } from "@/components/common/AvatarImage";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
+import {
+  clubAccentRingStyle,
+  clubAccentWashStyle,
+  getClubColor,
+} from "@/lib/onboarding/clubColors";
 import type {
   ScorecardAnswer,
   ScorecardData,
@@ -54,7 +59,8 @@ export function DuelScorecard({
     <section className="relative flex flex-1 flex-col gap-4 pb-4">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-linear-to-b from-primary/20 via-transparent to-transparent"
+        className="pointer-events-none absolute inset-x-0 top-0 h-48"
+        style={clubAccentWashStyle(you.colorKey)}
       />
 
       <motion.header
@@ -65,11 +71,8 @@ export function DuelScorecard({
       >
         <div
           aria-hidden
-          className="absolute inset-0 opacity-50"
-          style={{
-            background:
-              "radial-gradient(ellipse at 50% 0%, hsl(var(--primary) / 0.2), transparent 70%)",
-          }}
+          className="absolute inset-0 opacity-60"
+          style={clubAccentWashStyle(you.colorKey)}
         />
 
         <OutcomeBanner status={status} outcome={outcome} />
@@ -194,19 +197,32 @@ function PlayerBlock({
   /** Grayscale loser avatar on completed matches. */
   muted?: boolean;
 }) {
+  const ringStyle =
+    muted || !you
+      ? undefined
+      : clubAccentRingStyle(player.colorKey);
+  const themAccent = !you && player.colorKey ? getClubColor(player.colorKey) : null;
+
   return (
     <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
-      <div className="relative">
+      <div
+        className="relative rounded-full"
+        style={
+          ringStyle ??
+          (themAccent && !muted
+            ? { boxShadow: `0 0 0 3px ${themAccent.hex}66` }
+            : undefined)
+        }
+      >
         <AvatarImage
           avatarKey={player.avatarKey}
+          colorKey={player.colorKey}
           muted={muted}
           className={[
-            "h-18 w-18 rounded-full shadow-fantasy ring-4",
-            muted
-              ? "ring-border opacity-80"
-              : you
-                ? "ring-primary/50"
-                : "ring-border",
+            "h-18 w-18 rounded-full shadow-fantasy",
+            muted ? "opacity-80" : "",
+            !you && !player.colorKey && !muted ? "ring-4 ring-border" : "",
+            muted ? "ring-4 ring-border" : "",
           ].join(" ")}
         />
         <span className="absolute -bottom-1 left-1/2 flex h-6 min-w-6 -translate-x-1/2 items-center justify-center rounded-full bg-accent px-1.5 font-display text-[11px] font-black text-accent-foreground shadow-sm ring-2 ring-surface">

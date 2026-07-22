@@ -2,12 +2,12 @@
 export const duelSnapshotInclude = {
   challenger: {
     include: {
-      club: { select: { name: true, avatar: true } },
+      club: { select: { name: true, avatar: true, colorKey: true } },
     },
   },
   opponent: {
     include: {
-      club: { select: { name: true, avatar: true } },
+      club: { select: { name: true, avatar: true, colorKey: true } },
     },
   },
   rounds: {

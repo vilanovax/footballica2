@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Club" ADD COLUMN     "colorKey" TEXT NOT NULL DEFAULT 'CLUB_GREEN';
