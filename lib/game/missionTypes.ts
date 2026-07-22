@@ -12,6 +12,11 @@ export type MissionMatchLog = {
   playedDuel?: boolean;
   /** Draft Duel win (including expire walkover). */
   wonDuel?: boolean;
+  /**
+   * Mid-duel attack/defend submit. Counts toward PLAY_MATCHES + SCORE_GOALS
+   * immediately; PLAY_DUEL / WIN_* wait for the terminal duel event.
+   */
+  duelTurn?: boolean;
 };
 
 export type MissionProgressView = {
@@ -22,6 +27,8 @@ export type MissionProgressView = {
   targetValue: number;
   progress: number;
   isCompleted: boolean;
+  /** True after the player manually claimed the drip (or zero-reward auto). */
+  isClaimed: boolean;
   rewardCoins: number;
   rewardXp: number;
   sortOrder: number;

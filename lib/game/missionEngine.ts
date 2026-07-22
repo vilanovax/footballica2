@@ -51,14 +51,20 @@ function deltaForObjective(
     case "SCORE_GOALS":
       return log.goals;
     case "PLAY_MATCHES":
-      return log.playedDuel ? 0 : 1;
+      // Core match, or a duel turn submit. Terminal duel credit skips this
+      // (already counted when the manager attacked/defended).
+      if (log.playedDuel && !log.duelTurn) return 0;
+      return 1;
     case "WIN_MATCHES":
-      return log.playedDuel ? 0 : log.won ? 1 : 0;
+      if (log.duelTurn) return 0;
+      return log.playedDuel ? (log.wonDuel ? 1 : 0) : log.won ? 1 : 0;
     case "PERFECT_COMBO":
       return log.combo;
     case "PLAY_DUEL":
+      if (log.duelTurn) return 0;
       return log.playedDuel ? 1 : 0;
     case "WIN_DUEL":
+      if (log.duelTurn) return 0;
       return log.wonDuel ? 1 : 0;
     default:
       return 0;
@@ -115,7 +121,8 @@ export async function findActiveMissionBatch(
   if (kind === "DAILY") {
     const daily = await ensureTodayDailyBatch(db, now);
     if (!daily.isActive || daily.missions.length === 0) return null;
-    if (!nowInWindow(daily.startsAt, daily.endsAt, now)) return null;
+    // `dayKey` is the Tehran calendar authority — do not gate on startsAt/endsAt
+    // (those UTC midnight bounds skew vs Asia/Tehran early morning).
     const progress = await db.clubMissionBatch.findUnique({
       where: { clubId_batchId: { clubId, batchId: daily.id } },
     });
@@ -205,9 +212,6 @@ export async function evaluateMissions(
   });
   const byMissionId = new Map(clubMissions.map((cm) => [cm.missionId, cm]));
 
-  let rewardCoins = 0;
-  let rewardXp = 0;
-  const rewardedIds: string[] = [];
   const views: MissionProgressView[] = [];
   const updates: EvaluateMissionsResult["updates"] = [];
 
@@ -251,17 +255,14 @@ export async function evaluateMissions(
       });
     }
 
-    // Pay individual drip once on completion.
+    // Zero-reward missions auto-claim (nothing to tap). Paid drips wait for
+    // `claimMissionReward` so the player gets the dopamine hit.
     if (
       isCompleted &&
       !rewardClaimedAt &&
-      (mission.rewardCoins > 0 || mission.rewardXp > 0)
+      mission.rewardCoins <= 0 &&
+      mission.rewardXp <= 0
     ) {
-      rewardCoins += mission.rewardCoins;
-      rewardXp += mission.rewardXp;
-      rewardedIds.push(mission.id);
-      rewardClaimedAt = new Date();
-    } else if (isCompleted && !rewardClaimedAt) {
       rewardClaimedAt = new Date();
     }
 
@@ -283,6 +284,7 @@ export async function evaluateMissions(
       targetValue: mission.targetValue,
       progress,
       isCompleted,
+      isClaimed: Boolean(rewardClaimedAt),
       rewardCoins: mission.rewardCoins,
       rewardXp: mission.rewardXp,
       sortOrder: mission.sortOrder,
@@ -302,11 +304,8 @@ export async function evaluateMissions(
     batchIndex: batch.batchIndex,
     missions: views.sort((a, b) => a.sortOrder - b.sortOrder),
     updates,
-    missionRewards: {
-      coins: rewardCoins,
-      xp: rewardXp,
-      missionIds: rewardedIds,
-    },
+    // Drip payouts are manual via claimMissionReward — never auto here.
+    missionRewards: { coins: 0, xp: 0, missionIds: [] },
     chestReady: allDone && !clubBatch.chestClaimedAt,
     chestCoins: batch.chestCoins,
     chestXp: batch.chestXp,
@@ -357,6 +356,7 @@ export async function getMissionBoardState(
       targetValue: m.targetValue,
       progress: row?.progress ?? 0,
       isCompleted: row?.isCompleted ?? false,
+      isClaimed: Boolean(row?.rewardClaimedAt),
       rewardCoins: m.rewardCoins,
       rewardXp: m.rewardXp,
       sortOrder: m.sortOrder,
@@ -408,8 +408,120 @@ export async function applyMissionEconomy(
 }
 
 /**
- * After a duel reaches a terminal status, credit PLAY_DUEL / WIN_DUEL for every
- * human participant (bots skipped). Idempotent per club via `duel:{id}`.
+ * Credit PLAY_MATCHES + SCORE_GOALS as soon as a human submits attack/defend
+ * answers (one duel round turn). Idempotent via `duel:{id}:r{n}:{role}`.
+ */
+export async function creditDuelTurnMissions(params: {
+  userId: string;
+  duelId: string;
+  roundNumber: number;
+  role: "attack" | "defend";
+  goals: number;
+  db?: Db;
+}): Promise<EvaluateMissionsResult | null> {
+  const db = params.db ?? prisma;
+  const user = await db.user.findUnique({
+    where: { id: params.userId },
+    select: {
+      isBot: true,
+      club: { select: { id: true } },
+    },
+  });
+  if (!user || user.isBot || !user.club) return null;
+
+  const result = await evaluateAllMissionTracks(
+    user.club.id,
+    {
+      matchId: `duel:${params.duelId}:r${params.roundNumber}:${params.role}`,
+      goals: Math.max(0, params.goals),
+      won: false,
+      perfect: false,
+      combo: 0,
+      isTutorial: false,
+      playedDuel: true,
+      wonDuel: false,
+      duelTurn: true,
+    },
+    db,
+  );
+  await applyMissionEconomy(
+    user.club.id,
+    result.missionRewards.coins,
+    result.missionRewards.xp,
+    db,
+  );
+  return result;
+}
+
+/**
+ * Backfill turn credits for in-progress duels (e.g. player already attacked
+ * before turn-credit shipped). Safe / idempotent — open Missions to sync.
+ */
+export async function syncOpenDuelMissionCredits(
+  userId: string,
+  db: Db = prisma,
+): Promise<void> {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { isBot: true },
+  });
+  if (!user || user.isBot) return;
+
+  // Include recent finished duels so a round played before turn-credit shipped
+  // still syncs when the Missions drawer opens.
+  const since = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  const duels = await db.duelMatch.findMany({
+    where: {
+      OR: [{ challengerId: userId }, { opponentId: userId }],
+      status: { not: "MATCHING" },
+      updatedAt: { gte: since },
+    },
+    select: {
+      id: true,
+      rounds: {
+        select: {
+          roundNumber: true,
+          attackerId: true,
+          attackCorrect: true,
+          defenseCorrect: true,
+          attackSubmittedAt: true,
+          defenseSubmittedAt: true,
+        },
+      },
+    },
+    take: 16,
+    orderBy: { updatedAt: "desc" },
+  });
+
+  for (const duel of duels) {
+    for (const round of duel.rounds) {
+      if (round.attackerId === userId && round.attackSubmittedAt) {
+        await creditDuelTurnMissions({
+          userId,
+          duelId: duel.id,
+          roundNumber: round.roundNumber,
+          role: "attack",
+          goals: round.attackCorrect,
+          db,
+        });
+      } else if (round.attackerId !== userId && round.defenseSubmittedAt) {
+        await creditDuelTurnMissions({
+          userId,
+          duelId: duel.id,
+          roundNumber: round.roundNumber,
+          role: "defend",
+          goals: round.defenseCorrect,
+          db,
+        });
+      }
+    }
+  }
+}
+
+/**
+ * After a duel reaches a terminal status, credit PLAY_DUEL / WIN_* for every
+ * human participant (bots skipped). Goals + PLAY_MATCHES are credited per turn.
+ * Idempotent per club via `duel:{id}`.
  */
 export async function creditDuelMissions(params: {
   duelId: string;
@@ -434,17 +546,22 @@ export async function creditDuelMissions(params: {
     });
     if (!user || user.isBot || !user.club) continue;
 
+    // Ensure any submitted turns are counted before the finish event.
+    await syncOpenDuelMissionCredits(userId, db);
+
+    const wonDuel = params.winnerId === userId;
     const result = await evaluateAllMissionTracks(
       user.club.id,
       {
         matchId: `duel:${params.duelId}`,
+        // Goals already applied on each attack/defend submit.
         goals: 0,
-        won: false,
+        won: wonDuel,
         perfect: false,
         combo: 0,
         isTutorial: false,
         playedDuel: true,
-        wonDuel: params.winnerId === userId,
+        wonDuel,
       },
       db,
     );
@@ -468,6 +585,127 @@ export type ClaimChestResult =
       balances: { coins: number; xp: number };
     }
   | { ok: false; error: string };
+
+export type ClaimMissionRewardResult =
+  | {
+      ok: true;
+      coins: number;
+      xp: number;
+      balances: { coins: number; xp: number };
+      missionId: string;
+    }
+  | { ok: false; error: string };
+
+/**
+ * Legacy auto-claim stamped `rewardClaimedAt` in the same tick as complete.
+ * Reopen those rows once so players see the new «Claim» button. Anything
+ * claimed after manual-claim shipped is left alone (no double-pay loop).
+ */
+const LEGACY_AUTO_CLAIM_BEFORE = new Date("2026-07-22T07:15:00.000Z");
+
+export async function reopenLegacyAutoClaims(
+  clubId: string,
+  db: Db = prisma,
+): Promise<number> {
+  const rows = await db.clubMission.findMany({
+    where: {
+      clubId,
+      isCompleted: true,
+      rewardClaimedAt: { not: null, lt: LEGACY_AUTO_CLAIM_BEFORE },
+      completedAt: { not: null },
+    },
+    select: { id: true, completedAt: true, rewardClaimedAt: true },
+  });
+
+  let n = 0;
+  for (const row of rows) {
+    if (!row.completedAt || !row.rewardClaimedAt) continue;
+    const delta = Math.abs(
+      row.rewardClaimedAt.getTime() - row.completedAt.getTime(),
+    );
+    // Same-transaction auto-claim only (not a deliberate later tap).
+    if (delta > 8_000) continue;
+    await db.clubMission.update({
+      where: { id: row.id },
+      data: { rewardClaimedAt: null },
+    });
+    n += 1;
+  }
+  return n;
+}
+
+/**
+ * Manual drip claim for a completed mission. Idempotent — second tap is
+ * `already_claimed`. Does not touch the batch chest.
+ */
+export async function claimMissionReward(
+  clubId: string,
+  missionId: string,
+): Promise<ClaimMissionRewardResult> {
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const row = await tx.clubMission.findUnique({
+        where: { clubId_missionId: { clubId, missionId } },
+        include: {
+          mission: {
+            select: { rewardCoins: true, rewardXp: true },
+          },
+        },
+      });
+      if (!row) return { ok: false as const, error: "not_found" };
+      if (!row.isCompleted) {
+        return { ok: false as const, error: "not_complete" };
+      }
+      if (row.rewardClaimedAt) {
+        return { ok: false as const, error: "already_claimed" };
+      }
+
+      const coins = Math.max(0, row.mission.rewardCoins);
+      const xpGain = Math.max(0, row.mission.rewardXp);
+
+      await tx.clubMission.update({
+        where: { id: row.id },
+        data: { rewardClaimedAt: new Date() },
+      });
+
+      const club = await tx.club.update({
+        where: { id: clubId },
+        data: coins > 0 ? { coins: { increment: coins } } : {},
+        select: { coins: true, userId: true },
+      });
+
+      let xp = 0;
+      if (xpGain > 0) {
+        const user = await tx.user.update({
+          where: { id: club.userId },
+          data: {
+            xp: { increment: xpGain },
+            weeklyXp: { increment: xpGain },
+          },
+          select: { xp: true },
+        });
+        xp = user.xp;
+      } else {
+        const user = await tx.user.findUnique({
+          where: { id: club.userId },
+          select: { xp: true },
+        });
+        xp = user?.xp ?? 0;
+      }
+
+      return {
+        ok: true as const,
+        coins,
+        xp: xpGain,
+        balances: { coins: club.coins, xp },
+        missionId,
+      };
+    });
+  } catch (err) {
+    console.error("claimMissionReward", err);
+    return { ok: false, error: "server_error" };
+  }
+}
 
 /**
  * Claim a batch chest when all missions are complete.
@@ -601,6 +839,7 @@ async function getMissionBoardStateForBatch(
       targetValue: m.targetValue,
       progress: row?.progress ?? 0,
       isCompleted: row?.isCompleted ?? false,
+      isClaimed: Boolean(row?.rewardClaimedAt),
       rewardCoins: m.rewardCoins,
       rewardXp: m.rewardXp,
       sortOrder: m.sortOrder,

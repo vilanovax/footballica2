@@ -586,7 +586,8 @@ model ClubMission {
   progress    Int     @default(0)
   isCompleted Boolean @default(false)
   completedAt DateTime?
-  /// When the individual mission reward was paid (null = not yet / zero reward).
+  /// Manual drip claim: set when the player taps «Claim» (or auto for 0-reward).
+  /// Completion alone does NOT pay coins/XP — that waits on this timestamp.
   rewardClaimedAt DateTime?
 
   @@unique([clubId, missionId])

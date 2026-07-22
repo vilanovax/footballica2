@@ -24,7 +24,10 @@ import { toDuelSnapshot, type DuelSnapshot } from "@/lib/duel/snapshot";
 import { duelSnapshotInclude } from "@/lib/duel/include";
 import { dbQuestionToQuiz } from "@/lib/quiz/questionMapper";
 import type { QuizQuestion } from "@/lib/quiz/types";
-import { creditDuelMissions } from "@/lib/game/missionEngine";
+import {
+  creditDuelMissions,
+  creditDuelTurnMissions,
+} from "@/lib/game/missionEngine";
 import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
 
 export type BeginDefendResult =
@@ -291,6 +294,19 @@ export async function submitDuelDefend(
 
     const snapshot = toDuelSnapshot(updated, user.id);
     let missions: EvaluateMissionsResult | undefined;
+    try {
+      const turnResult = await creditDuelTurnMissions({
+        userId: user.id,
+        duelId: duel.id,
+        roundNumber: turn.roundNumber,
+        role: "defend",
+        goals: defenseCorrect,
+      });
+      if (turnResult) missions = turnResult;
+    } catch (err) {
+      console.error("creditDuelTurnMissions after defend", err);
+    }
+
     if (updated.status === "COMPLETED") {
       try {
         const map = await creditDuelMissions({
@@ -299,7 +315,7 @@ export async function submitDuelDefend(
           opponentId: updated.opponentId,
           winnerId: updated.winnerId,
         });
-        missions = map.get(user.id);
+        missions = map.get(user.id) ?? missions;
       } catch (err) {
         console.error("creditDuelMissions after defend", err);
       }

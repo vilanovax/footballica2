@@ -326,6 +326,12 @@ export function ClubHub({
           onOpenChange={setMissionsOpen}
           dailyBoard={dailyBoard}
           missionBoard={missionBoard}
+          onEconomyUpdate={(balances) => {
+            // Tick Hub coins when flying coins land on the status pill.
+            window.setTimeout(() => {
+              setClub((c) => ({ ...c, coins: balances.coins }));
+            }, 820);
+          }}
         />
       )}
 

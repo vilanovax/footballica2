@@ -38,16 +38,17 @@ export function DraftPicker({ options, pending, onPick }: DraftPickerProps) {
               key={c.id}
               type="button"
               disabled={pending}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.06, type: "spring", stiffness: 280, damping: 20 }}
+              // Never animate opacity — stuck `opacity: 0` blocks taps (automation + slow devices).
+              initial={{ y: 14 }}
+              animate={{ y: 0 }}
+              transition={{ delay: i * 0.05, type: "spring", stiffness: 300, damping: 22 }}
               whileTap={{ scale: 0.97 }}
               onClick={() => {
                 haptic(HAPTIC.tap);
                 playSound("click");
                 onPick(c.id);
               }}
-              className="flex min-h-touch items-center gap-4 rounded-bubble-lg border-2 border-border bg-surface p-4 text-start shadow-fantasy transition-colors active:border-primary disabled:opacity-50"
+              className="flex min-h-touch items-center gap-4 rounded-bubble-lg border-2 border-border bg-surface p-4 text-start opacity-100 shadow-fantasy transition-colors active:border-primary disabled:opacity-50"
             >
               <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-bubble bg-primary/15 text-3xl">
                 {c.icon || "📚"}

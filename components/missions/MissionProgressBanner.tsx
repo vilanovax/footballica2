@@ -59,7 +59,7 @@ export function MissionProgressBanner({
                 ].join(" ")}
               >
                 {u.justCompleted
-                  ? t("missions.justDone")
+                  ? t("missions.readyToClaim")
                   : `${toLocaleDigits(u.progress, locale)}/${toLocaleDigits(u.targetValue, locale)}`}
               </span>
             </li>
@@ -67,12 +67,9 @@ export function MissionProgressBanner({
         })}
       </ul>
 
-      {missions.missionRewards.coins + missions.missionRewards.xp > 0 && (
-        <p className="mt-2 font-body text-xs font-semibold text-primary">
-          {t("missions.missionReward", {
-            coins: toLocaleDigits(missions.missionRewards.coins, locale),
-            xp: toLocaleDigits(missions.missionRewards.xp, locale),
-          })}
+      {updates.some((u) => u.justCompleted) && (
+        <p className="mt-2 rounded-full bg-accent/20 px-2.5 py-1 text-center font-display text-xs font-bold text-accent-deep">
+          {t("missions.chestReadyNudge")}
         </p>
       )}
 

@@ -180,7 +180,8 @@ export function DuelArena({
       setMatchFoundHold(false);
       pendingAfterMatch.current = null;
       playSound("whistle");
-    }, remaining + 700);
+      // Short hold only — long delays left draft buttons under a stuck matching layer.
+    }, remaining + 280);
     return () => window.clearTimeout(id);
   }, [matchFoundHold]);
 

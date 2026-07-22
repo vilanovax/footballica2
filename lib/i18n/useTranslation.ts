@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLanguageStore } from "@/stores/languageStore";
 import {
   DICTIONARIES,
@@ -32,10 +32,20 @@ function interpolate(template: string, params?: Params): string {
  * Client translation hook. Returns `t()` plus the active locale/direction.
  * Falls back to English, then to the raw key, so a missing string is never
  * fatal to render.
+ *
+ * Locale from persist is applied only after mount so SSR + first paint match
+ * (avoids hydration mismatches when the user saved `fa`).
  */
 export function useTranslation() {
-  const locale = useLanguageStore((s) => s.locale);
+  const storeLocale = useLanguageStore((s) => s.locale);
   const setLocale = useLanguageStore((s) => s.setLocale);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  const locale = (hydrated ? storeLocale : DEFAULT_LOCALE) as Locale;
 
   const t = useCallback(
     (key: string, params?: Params): string => {
@@ -50,5 +60,5 @@ export function useTranslation() {
     [locale],
   );
 
-  return { t, locale: locale as Locale, dir: getDirection(locale), setLocale };
+  return { t, locale, dir: getDirection(locale), setLocale };
 }

@@ -1,16 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import {
+  useEffect,
+  useState,
+  useTransition,
+  type MouseEvent,
+} from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { claimMyMissionChest, getMyMissions } from "@/actions/missions";
+import {
+  claimMyMissionChest,
+  claimMyMissionReward,
+  getMyMissions,
+} from "@/actions/missions";
 import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
 import type { MissionObjective } from "@/generated/prisma/client";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
+import {
+  FlyingCoins,
+  FLYING_COINS_HIT_MS,
+  spawnFlyingCoinsToHeader,
+  type FlyingBurst,
+} from "@/components/ui/FlyingCoins";
 
 export type MissionBoardData = EvaluateMissionsResult;
 
@@ -22,6 +37,11 @@ type MissionBoardProps = {
   density?: "comfortable" | "compact";
   /** Called after a successful chest claim (e.g. refresh parent badge). */
   onClaimed?: () => void;
+  /**
+   * After a drip claim, parent can tick Hub coins when flying coins land.
+   * Called immediately with balances; delay display yourself (~800ms).
+   */
+  onDripClaimed?: (balances: { coins: number; xp: number }) => void;
 };
 
 function playHrefForObjective(type: MissionObjective): string {
@@ -36,21 +56,29 @@ function playHrefForObjective(type: MissionObjective): string {
 
 /**
  * LiveOps / daily mission board — 3 active objectives + batch chest.
+ * Mission row states: Go → Claim → Claimed.
  */
 export function MissionBoard({
   initialBoard,
   variant = "campaign",
   density = "comfortable",
   onClaimed,
+  onDripClaimed,
 }: MissionBoardProps) {
   const { t, locale } = useTranslation();
   const [board, setBoard] = useState(initialBoard);
   const [pending, startTransition] = useTransition();
+  const [claimingId, setClaimingId] = useState<string | null>(null);
+  const [bursts, setBursts] = useState<FlyingBurst[]>([]);
   const [celebrate, setCelebrate] = useState<{
     coins: number;
     xp: number;
     next: number | null;
   } | null>(null);
+
+  useEffect(() => {
+    setBoard(initialBoard);
+  }, [initialBoard]);
 
   if (!board.batchId || board.missions.length === 0) {
     return null;
@@ -64,7 +92,7 @@ export function MissionBoard({
       ? Math.round((doneCount / board.missions.length) * 100)
       : 0;
 
-  function handleClaim() {
+  function handleChestClaim() {
     if (!board.chestReady || pending || !board.batchId) return;
     startTransition(async () => {
       const res = await claimMyMissionChest(board.batchId ?? undefined);
@@ -79,10 +107,52 @@ export function MissionBoard({
         xp: res.xp,
         next: res.nextBatchIndex,
       });
+      onDripClaimed?.(res.balances);
       const next = await getMyMissions();
       if (next.ok) setBoard(isDaily ? next.daily : next.board);
       onClaimed?.();
       window.setTimeout(() => setCelebrate(null), 2200);
+    });
+  }
+
+  function handleDripClaim(
+    missionId: string,
+    event: MouseEvent<HTMLButtonElement>,
+  ) {
+    if (pending || claimingId) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const burst = spawnFlyingCoinsToHeader(rect);
+    if (burst) setBursts((b) => [...b, burst]);
+
+    playSound("click");
+    haptic(HAPTIC.tap);
+    setClaimingId(missionId);
+
+    startTransition(async () => {
+      const res = await claimMyMissionReward(missionId);
+      if (!res.ok) {
+        setClaimingId(null);
+        toast.error(t("missions.errClaimDrip"));
+        return;
+      }
+      playSound("upgrade");
+      haptic(HAPTIC.goal);
+
+      // Optimistic: flip to claimed; Hub coins tick when particles land.
+      setBoard((prev) => ({
+        ...prev,
+        missions: prev.missions.map((m) =>
+          m.missionId === missionId ? { ...m, isClaimed: true } : m,
+        ),
+      }));
+
+      window.setTimeout(() => {
+        onDripClaimed?.(res.balances);
+        playSound("goal");
+        setClaimingId(null);
+      }, FLYING_COINS_HIT_MS);
+
+      onClaimed?.();
     });
   }
 
@@ -93,12 +163,17 @@ export function MissionBoard({
       className={[
         "relative overflow-hidden border bg-surface shadow-fantasy",
         compact
-          ? "rounded-bubble-lg border-border/80 p-3"
+          ? "rounded-bubble-lg border-foreground/10 p-3 shadow-fantasy-sm"
           : "rounded-bubble-xl border-2 p-4",
-        isDaily ? "border-secondary/45" : "border-border",
+        isDaily ? "border-secondary/55" : "border-border",
         board.chestReady ? "ring-2 ring-accent/50" : "",
       ].join(" ")}
     >
+      <FlyingCoins
+        bursts={bursts}
+        onBurstDone={(id) => setBursts((b) => b.filter((x) => x.id !== id))}
+      />
+
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-35"
@@ -171,11 +246,16 @@ export function MissionBoard({
           pending={pending}
           celebrating={Boolean(celebrate)}
           compact={compact}
-          onClaim={handleClaim}
+          onClaim={handleChestClaim}
         />
       </header>
 
-      <ul className={["relative flex flex-col", compact ? "gap-1.5" : "gap-2.5"].join(" ")}>
+      <ul
+        className={[
+          "relative flex flex-col",
+          compact ? "gap-1.5" : "gap-2.5",
+        ].join(" ")}
+      >
         {board.missions.map((m, i) => {
           const pct =
             m.targetValue > 0
@@ -183,6 +263,10 @@ export function MissionBoard({
               : 0;
           const title = locale === "fa" ? m.titleFa : m.titleEn;
           const href = playHrefForObjective(m.objectiveType);
+          const claimable = m.isCompleted && !m.isClaimed;
+          const claimed = m.isCompleted && m.isClaimed;
+          const busy = claimingId === m.missionId;
+
           return (
             <motion.li
               key={m.missionId}
@@ -192,9 +276,11 @@ export function MissionBoard({
               className={[
                 "rounded-bubble-lg border",
                 compact ? "px-2.5 py-2" : "px-3 py-2.5",
-                m.isCompleted
-                  ? "border-primary/35 bg-primary/10"
-                  : "border-border/80 bg-muted/25",
+                claimable
+                  ? "border-accent/55 bg-accent/12 ring-1 ring-accent/30"
+                  : claimed
+                    ? "border-primary/35 bg-primary/10"
+                    : "border-foreground/8 bg-background/90 shadow-sm",
               ].join(" ")}
             >
               <div className="flex items-center gap-2">
@@ -203,12 +289,14 @@ export function MissionBoard({
                   className={[
                     "flex shrink-0 items-center justify-center rounded-full font-display text-xs font-black",
                     compact ? "h-7 w-7" : "h-8 w-8",
-                    m.isCompleted
+                    claimed
                       ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground",
+                      : claimable
+                        ? "bg-accent text-accent-foreground"
+                        : "bg-muted text-muted-foreground",
                   ].join(" ")}
                 >
-                  {m.isCompleted ? "✓" : toLocaleDigits(i + 1, locale)}
+                  {claimed ? "✓" : claimable ? "🎁" : toLocaleDigits(i + 1, locale)}
                 </span>
 
                 <div className="min-w-0 flex-1">
@@ -217,7 +305,7 @@ export function MissionBoard({
                       className={[
                         "min-w-0 font-display font-bold leading-snug text-surface-foreground",
                         compact ? "text-[13px]" : "text-sm",
-                        m.isCompleted ? "line-through opacity-70" : "",
+                        claimed ? "line-through opacity-70" : "",
                       ].join(" ")}
                     >
                       {title}
@@ -237,23 +325,37 @@ export function MissionBoard({
                     <motion.div
                       className={[
                         "h-full rounded-full",
-                        m.isCompleted ? "bg-primary" : "bg-secondary",
+                        claimed
+                          ? "bg-primary"
+                          : claimable
+                            ? "bg-accent"
+                            : "bg-secondary",
                       ].join(" ")}
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
-                      transition={{ type: "spring", stiffness: 220, damping: 24 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 220,
+                        damping: 24,
+                      }}
                     />
                   </div>
 
                   <div className="mt-1.5 flex items-center justify-between gap-2">
                     {(m.rewardCoins > 0 || m.rewardXp > 0) && (
-                      <p className="font-body text-[10px] font-semibold text-muted-foreground">
+                      <p
+                        className={[
+                          "font-body text-[10px] font-semibold text-muted-foreground",
+                          claimed ? "line-through opacity-60" : "",
+                        ].join(" ")}
+                      >
                         {t("missions.missionReward", {
                           coins: toLocaleDigits(m.rewardCoins, locale),
                           xp: toLocaleDigits(m.rewardXp, locale),
                         })}
                       </p>
                     )}
+
                     {!m.isCompleted && (
                       <Link
                         href={href}
@@ -261,6 +363,31 @@ export function MissionBoard({
                       >
                         {t("missions.goPlay")}
                       </Link>
+                    )}
+
+                    {claimable && (
+                      <motion.button
+                        type="button"
+                        disabled={busy || pending}
+                        onClick={(e) => handleDripClaim(m.missionId, e)}
+                        animate={{ scale: [1, 1.06, 1] }}
+                        transition={{
+                          repeat: Infinity,
+                          duration: 1.05,
+                          ease: "easeInOut",
+                        }}
+                        whileTap={{ scale: 0.94 }}
+                        className="ms-auto inline-flex min-h-9 items-center gap-1 rounded-full border-2 border-accent bg-accent px-3 font-display text-[12px] font-black text-accent-foreground shadow-[0_0_16px_hsl(var(--accent)/0.45)] disabled:opacity-60"
+                      >
+                        <span aria-hidden>🎁</span>
+                        {busy ? t("missions.claiming") : t("missions.claimDrip")}
+                      </motion.button>
+                    )}
+
+                    {claimed && (
+                      <span className="ms-auto inline-flex min-h-8 items-center rounded-full bg-primary/15 px-2.5 font-display text-[11px] font-bold text-primary">
+                        ✓ {t("missions.claimed")}
+                      </span>
                     )}
                   </div>
                 </div>

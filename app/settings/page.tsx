@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useSound } from "@/lib/audio/useSound";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { LOCALES, type Locale } from "@/lib/i18n/config";
+import { logout } from "@/actions/auth";
+import { haptic, HAPTIC } from "@/lib/audio/haptics";
 
 type Theme = "day" | "dark";
 
@@ -99,16 +102,29 @@ function OptionButton({
 }
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [theme, setTheme] = useState<Theme>("day");
   const { isMuted, toggleMute, play } = useSound();
   const { t, locale, setLocale } = useTranslation();
   // Avoid hydration mismatch: mute state comes from persisted client storage.
   const [mounted, setMounted] = useState(false);
+  const [loggingOut, startLogout] = useTransition();
 
   useEffect(() => {
     setTheme(getTheme());
     setMounted(true);
   }, []);
+
+  function handleLogout() {
+    if (loggingOut) return;
+    startLogout(async () => {
+      play("click");
+      haptic(HAPTIC.light);
+      await logout();
+      router.replace("/login");
+      router.refresh();
+    });
+  }
 
   function handleToggleMute() {
     const willUnmute = isMuted;
@@ -226,6 +242,23 @@ export default function SettingsPage() {
         >
           {soundOn ? t("settings.on") : t("settings.off")}
         </span>
+      </div>
+
+      <div className="rounded-bubble-xl border border-border bg-surface p-5 shadow-fantasy">
+        <CardHeader
+          icon="🚪"
+          tint="bg-destructive/10"
+          title={t("settings.account")}
+          desc={t("settings.accountDesc")}
+        />
+        <button
+          type="button"
+          disabled={loggingOut}
+          onClick={handleLogout}
+          className="btn-fantasy mt-4 flex min-h-touch w-full items-center justify-center border-2 border-destructive/40 bg-destructive/10 font-display text-base font-bold text-destructive transition-transform active:scale-[0.98] disabled:opacity-60"
+        >
+          {loggingOut ? t("settings.loggingOut") : t("settings.logout")}
+        </button>
       </div>
 
       <footer className="mt-auto pt-4 text-center">

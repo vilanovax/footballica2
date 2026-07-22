@@ -76,6 +76,7 @@ export function StatusBar({
   return (
     <div className="grid grid-cols-3 items-start gap-2">
       <motion.div
+        id="coin-balance-target"
         animate={pulse ? { scale: [1, 1.12, 1] } : { scale: 1 }}
         transition={{ duration: 0.5 }}
         className={[

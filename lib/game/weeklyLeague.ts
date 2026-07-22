@@ -68,8 +68,12 @@ export async function ensureWeeklyLeagueReset(
   }
 
   await prisma.$transaction(async (tx) => {
+    // Humans only — keep seed/mock leaderboard flavor (`*@footballica.local`).
     await tx.user.updateMany({
-      where: { isBot: false },
+      where: {
+        isBot: false,
+        NOT: { email: { endsWith: "@footballica.local" } },
+      },
       data: { weeklyXp: 0 },
     });
 

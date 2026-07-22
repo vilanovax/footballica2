@@ -17,9 +17,11 @@ import { tickDuelJobs } from "@/lib/duel/jobs";
 import { toDuelSnapshot, type DuelSnapshot } from "@/lib/duel/snapshot";
 import { duelSnapshotInclude } from "@/lib/duel/include";
 import { listDuelEligibleCategories } from "@/lib/duel/draw";
+import { creditDuelTurnMissions } from "@/lib/game/missionEngine";
+import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
 
 export type SubmitAttackResult =
-  | { ok: true; duel: DuelSnapshot }
+  | { ok: true; duel: DuelSnapshot; missions?: EvaluateMissionsResult }
   | {
       ok: false;
       error:
@@ -140,7 +142,25 @@ export async function submitDuelAttack(
       : [];
     const draftOptions = cats.filter((c) => draftIds.includes(c.id));
 
-    return { ok: true, duel: toDuelSnapshot(updated, user.id, draftOptions) };
+    let missions: EvaluateMissionsResult | undefined;
+    try {
+      const credited = await creditDuelTurnMissions({
+        userId: user.id,
+        duelId: duel.id,
+        roundNumber: turn.roundNumber,
+        role: "attack",
+        goals: attackCorrect,
+      });
+      if (credited) missions = credited;
+    } catch (err) {
+      console.error("creditDuelTurnMissions after attack", err);
+    }
+
+    return {
+      ok: true,
+      duel: toDuelSnapshot(updated, user.id, draftOptions),
+      missions,
+    };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "";
     if (
