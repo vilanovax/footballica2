@@ -275,6 +275,12 @@ const fa: Dictionary = {
     yourStadium: "استادیوم تو",
     upgrades: "ارتقاها",
     dailyNews: "اخبار روزانه",
+    nextGoalLabel: "هدف بعدی",
+    nextGoalReady: "آمادهٔ خرید",
+    nextGoalBuy: "همین الان {name} را ارتقا بده",
+    nextGoalWins: "{n} برد دیگر ← {coins} سکه برای {name}",
+    nextGoalCta: "برای بازی ضربه بزن ←",
+    nextGoalMaxed: "همهٔ امکانات در حداکثرند. افسانه!",
   },
   shop: {
     eyebrow: "بازار نقل‌وانتقالات",
@@ -327,6 +333,12 @@ const fa: Dictionary = {
   upgrades: {
     upgrade: "ارتقا",
     max: "حداکثر",
+    impact: {
+      maxStamina: "حداکثر انرژی: {from} ← {to}",
+      fansCap: "ظرفیت هوادار: {from} ← {to}",
+      stadiumTier: "سطح استادیوم: {from} ← {to}",
+      medicalLevel: "بخش پزشکی: سطح {from} ← {to}",
+    },
     STADIUM: { name: "استادیوم", desc: "جایگاه بزرگ‌تر، هواداران بیشتر، زمین بهتر." },
     MEDICAL: { name: "بخش پزشکی", desc: "ریکاوری سریع‌تر انرژی بین مسابقه‌ها." },
     TRAINING_GROUND: {
@@ -336,6 +348,14 @@ const fa: Dictionary = {
   },
   stadium: {
     lvl: "سطح",
+    fans: "هوادار",
+    openDetails: "جزئیات استادیوم",
+    sheetTitle: "امکانات باشگاه",
+    sheetHint: "امکانات پایین را ارتقا بده تا ظرفیت و آمادگی مسابقه بالا برود.",
+    statStadium: "استادیوم",
+    statFans: "هواداران",
+    statTraining: "زمین تمرین",
+    statMedical: "بخش پزشکی",
     tiers: ["زمین مخروبه", "زمین خاکی", "زمین چمن", "ورزشگاه نورافکن‌دار"],
   },
   ftue: {
@@ -375,6 +395,17 @@ const fa: Dictionary = {
     hofWeek: "هفته {week} · {year}",
     hofEmpty: "هنوز افسانه‌ای ثبت نشده",
     hofEmptyHint: "در جمع ۳ نفر اول هفته بمان تا باشگاهت در تاریخ حک شود.",
+    weeklyXp: "XP هفته",
+    rowStats: "{points} امتیاز · {matches} بازی",
+    playedZero: "۰ امتیاز · {n} بازی",
+    notPlayed: "هنوز بازی نکرده",
+    prizeBanner: "جایزه قهرمان هفته: {n} سکه",
+    prizeTap: "سطوح",
+    prizeSheetTitle: "جوایز هفتگی",
+    prizeSheetSub: "پرداخت بعد از ریست دوشنبه (تهران).",
+    prizePlace: "رتبه {n}",
+    prizeSheetHint:
+      "قبل از ریست جدول را بالا برو. تساوی با تعداد بازی کمتر شکسته می‌شود.",
   },
   settings: {
     eyebrow: "تنظیمات",

@@ -220,6 +220,7 @@ export function Shop({
                   key={def.key}
                   def={def}
                   level={level}
+                  maxStamina={club.maxStamina}
                   cost={cost}
                   canAfford={canAfford}
                   pending={pending === def.key}

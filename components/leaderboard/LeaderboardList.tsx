@@ -8,47 +8,35 @@ import type { HallOfFameWeek } from "@/actions/getHallOfFame";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { formatNumber, toLocaleDigits } from "@/lib/i18n/format";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
+import { playSound } from "@/lib/audio/SoundManager";
 import { LeaderboardPodium } from "./LeaderboardPodium";
 import { HallOfFamePanel } from "./HallOfFamePanel";
+import { BottomSheet } from "@/components/ui/BottomSheet";
+import {
+  WEEKLY_PRIZE_TIERS,
+  weeklyChampionCoins,
+} from "@/lib/game/weeklyPrizes";
 
 type LeaderboardListProps = {
   rows: LeaderboardRow[];
   resetsInDays?: number;
   hallOfFame?: HallOfFameWeek[];
+  currentUserRow?: LeaderboardRow | null;
 };
 
 type TabKey = "weekly" | "hof";
 
-// Podium styling for the top three — gold / silver / bronze.
-const MEDALS: Record<number, { emoji: string; ring: string; bg: string }> = {
-  1: {
-    emoji: "🥇",
-    ring: "border-[#e0a800]",
-    bg: "bg-gradient-to-r from-[#fff3c4] to-[#ffe07a]",
-  },
-  2: {
-    emoji: "🥈",
-    ring: "border-[#9aa4ad]",
-    bg: "bg-gradient-to-r from-[#f1f4f7] to-[#d3dae0]",
-  },
-  3: {
-    emoji: "🥉",
-    ring: "border-[#c08457]",
-    bg: "bg-gradient-to-r from-[#f7e2d0] to-[#e6b78f]",
-  },
-};
-
 const containerVariants = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.05, delayChildren: 0.05 } },
+  visible: { transition: { staggerChildren: 0.04, delayChildren: 0.04 } },
 };
 
 const rowVariants = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 14 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { type: "spring", stiffness: 280, damping: 22 },
+    transition: { type: "spring", stiffness: 300, damping: 24 },
   },
 } as const;
 
@@ -56,12 +44,22 @@ export function LeaderboardList({
   rows,
   resetsInDays = 7,
   hallOfFame = [],
+  currentUserRow = null,
 }: LeaderboardListProps) {
   const { t, locale } = useTranslation();
   const [tab, setTab] = useState<TabKey>("weekly");
-  const showPodium = rows.length >= 3;
-  const podiumRows = showPodium ? rows.slice(0, 3) : [];
-  const listRows = showPodium ? rows.slice(3) : rows;
+  const [prizesOpen, setPrizesOpen] = useState(false);
+  const showPodium = rows.filter((r) => r.playState === "scored").length >= 3;
+  const podiumRows = showPodium
+    ? rows.filter((r) => r.playState === "scored").slice(0, 3)
+    : [];
+  const listRows = showPodium
+    ? rows.filter(
+        (r) => !podiumRows.some((p) => p.userId === r.userId),
+      )
+    : rows;
+
+  const sticky = currentUserRow;
 
   function selectTab(next: TabKey) {
     if (next === tab) return;
@@ -70,8 +68,7 @@ export function LeaderboardList({
   }
 
   return (
-    <section className="flex flex-1 flex-col">
-      {/* Sticky league header + Tehran week countdown */}
+    <section className="relative flex flex-1 flex-col">
       <header className="sticky top-0 z-20 -mx-1 bg-background/90 pb-3 pt-2 backdrop-blur-md">
         <p className="font-display text-sm font-semibold uppercase tracking-widest text-primary">
           {t("leaderboard.eyebrow")}
@@ -122,7 +119,7 @@ export function LeaderboardList({
                     className={[
                       "absolute inset-0 rounded-bubble shadow-fantasy-sm",
                       item.key === "hof"
-                        ? "border border-[#e0a800]/40 bg-[#fff8e1]"
+                        ? "border border-accent/40 bg-accent/15"
                         : "bg-surface",
                     ].join(" ")}
                     transition={{ type: "spring", stiffness: 420, damping: 32 }}
@@ -142,93 +139,173 @@ export function LeaderboardList({
         <HallOfFamePanel weeks={hallOfFame} />
       ) : (
         <>
+          <button
+            type="button"
+            onClick={() => {
+              haptic(HAPTIC.tap);
+              playSound("click");
+              setPrizesOpen(true);
+            }}
+            className="mb-3 flex w-full items-center justify-between gap-2 rounded-bubble border border-accent/40 bg-accent/10 px-3 py-2 text-start shadow-fantasy-sm transition-transform active:scale-[0.99]"
+          >
+            <span className="font-display text-xs font-bold text-accent-deep">
+              🏆{" "}
+              {t("leaderboard.prizeBanner", {
+                n: toLocaleDigits(weeklyChampionCoins(), locale),
+              })}
+            </span>
+            <span className="font-display text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              {t("leaderboard.prizeTap")}
+            </span>
+          </button>
+
           {showPodium && <LeaderboardPodium rows={podiumRows} />}
 
           <motion.ol
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="flex flex-col gap-2 pb-28 pt-1"
+            className={[
+              "flex flex-col gap-1.5 pt-1",
+              sticky ? "pb-36" : "pb-28",
+            ].join(" ")}
           >
-            {listRows.map((row) => {
-              const medal = MEDALS[row.rank];
-              const isTop3 = Boolean(medal);
-
-              return (
-                <motion.li
-                  key={row.userId}
-                  variants={rowVariants}
-                  className={[
-                    "flex items-center gap-3 rounded-bubble p-3 shadow-fantasy transition-colors",
-                    row.isCurrentUser
-                      ? "border-4 border-primary bg-primary/10 ring-2 ring-primary/60 shadow-glow"
-                      : medal
-                        ? `border-2 ${medal.ring} ${medal.bg}`
-                        : "border-2 border-border bg-surface",
-                  ].join(" ")}
-                >
-                  <div
-                    className={[
-                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-base font-extrabold",
-                      isTop3
-                        ? "bg-black/10 text-black/80"
-                        : "bg-muted text-muted-foreground",
-                    ].join(" ")}
-                  >
-                    {medal ? (
-                      <span aria-label={`#${row.rank}`}>{medal.emoji}</span>
-                    ) : (
-                      toLocaleDigits(row.rank, locale)
-                    )}
-                  </div>
-
-                  <AvatarImage
-                    avatarKey={row.avatarKey}
-                    className="h-11 w-11 shrink-0 rounded-full"
-                  />
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p
-                        className={[
-                          "truncate font-display text-base font-bold",
-                          isTop3 ? "text-black/90" : "text-surface-foreground",
-                        ].join(" ")}
-                      >
-                        {row.clubName}
-                      </p>
-                      {row.isCurrentUser && (
-                        <span className="flex shrink-0 items-center gap-1 rounded-full bg-primary px-2 py-0.5 font-display text-[10px] font-extrabold uppercase tracking-wide text-primary-foreground shadow-fantasy-sm">
-                          <span aria-hidden>⭐</span> {t("leaderboard.you")}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="shrink-0 text-end">
-                    <p
-                      className={[
-                        "font-display text-lg font-extrabold leading-none",
-                        isTop3 ? "text-black/90" : "text-primary",
-                      ].join(" ")}
-                    >
-                      {formatNumber(row.weeklyXp, locale)}
-                    </p>
-                    <p
-                      className={[
-                        "text-[10px] font-bold uppercase tracking-widest",
-                        isTop3 ? "text-black/50" : "text-muted-foreground",
-                      ].join(" ")}
-                    >
-                      {t("result.xp")}
-                    </p>
-                  </div>
-                </motion.li>
-              );
-            })}
+            {listRows.map((row) => (
+              <li key={row.userId} className="list-none">
+                <LeaderboardRowItem row={row} compact />
+              </li>
+            ))}
           </motion.ol>
         </>
       )}
+
+      {tab === "weekly" && sticky && (
+        <div className="pointer-events-none fixed inset-x-0 z-40 mx-auto w-full max-w-mobile px-3 bottom-[calc(theme(spacing.nav)+0.35rem)]">
+          <div className="pointer-events-auto rounded-bubble-lg border-2 border-primary bg-surface/95 p-0.5 shadow-fantasy-lg backdrop-blur-md">
+            <LeaderboardRowItem row={sticky} compact sticky />
+          </div>
+        </div>
+      )}
+
+      <BottomSheet
+        open={prizesOpen}
+        onClose={() => setPrizesOpen(false)}
+        title={t("leaderboard.prizeSheetTitle")}
+        subtitle={t("leaderboard.prizeSheetSub")}
+        closeLabel={t("common.close")}
+      >
+        <ul className="flex flex-col gap-2">
+          {WEEKLY_PRIZE_TIERS.map((tier) => (
+            <li
+              key={tier.place}
+              className="flex items-center justify-between gap-3 rounded-bubble border border-border bg-muted/40 px-3 py-2.5"
+            >
+              <span className="font-display text-sm font-bold text-foreground">
+                {tier.place === 1 ? "🥇" : tier.place === 2 ? "🥈" : "🥉"}{" "}
+                {t("leaderboard.prizePlace", {
+                  n: toLocaleDigits(tier.place, locale),
+                })}
+              </span>
+              <span className="text-end font-display text-xs font-bold text-muted-foreground">
+                💰 {toLocaleDigits(tier.coins, locale)}
+                <br />⭐ {toLocaleDigits(tier.xp, locale)} XP
+              </span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-4 font-body text-xs font-semibold text-muted-foreground">
+          {t("leaderboard.prizeSheetHint")}
+        </p>
+      </BottomSheet>
     </section>
+  );
+}
+
+function LeaderboardRowItem({
+  row,
+  compact,
+  sticky,
+}: {
+  row: LeaderboardRow;
+  compact?: boolean;
+  sticky?: boolean;
+}) {
+  const { t, locale } = useTranslation();
+  const unplayed = row.playState === "unplayed";
+  const zeroPlayed = row.playState === "playedZero";
+
+  return (
+    <motion.div
+      variants={sticky ? undefined : rowVariants}
+      className={[
+        "flex items-center gap-2.5 rounded-bubble border shadow-fantasy-sm",
+        compact ? "px-2.5 py-2" : "p-3",
+        sticky
+          ? "border-transparent bg-primary/10"
+          : row.isCurrentUser
+            ? "border-primary bg-primary/10"
+            : unplayed
+              ? "border-dashed border-border bg-muted/30 opacity-70"
+              : "border-border bg-surface",
+      ].join(" ")}
+    >
+      <div
+        className={[
+          "flex shrink-0 items-center justify-center rounded-full bg-muted font-display font-extrabold text-muted-foreground",
+          compact ? "h-7 w-7 text-xs" : "h-9 w-9 text-base",
+        ].join(" ")}
+      >
+        {unplayed ? "—" : toLocaleDigits(row.rank, locale)}
+      </div>
+
+      <AvatarImage
+        avatarKey={row.avatarKey}
+        className={[
+          "shrink-0 rounded-full",
+          compact ? "h-9 w-9" : "h-11 w-11",
+          unplayed ? "grayscale" : "",
+        ].join(" ")}
+      />
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <p className="truncate font-display text-sm font-bold text-surface-foreground">
+            {row.clubName}
+          </p>
+          {row.isCurrentUser && (
+            <span className="shrink-0 rounded-full bg-primary px-1.5 py-0.5 font-display text-[9px] font-extrabold uppercase text-primary-foreground">
+              {t("leaderboard.you")}
+            </span>
+          )}
+        </div>
+        <p className="truncate font-body text-[11px] font-semibold text-muted-foreground">
+          {unplayed
+            ? t("leaderboard.notPlayed")
+            : zeroPlayed
+              ? t("leaderboard.playedZero", {
+                  n: toLocaleDigits(row.matchesPlayed, locale),
+                })
+              : t("leaderboard.rowStats", {
+                  points: toLocaleDigits(row.weeklyXp, locale),
+                  matches: toLocaleDigits(row.matchesPlayed, locale),
+                })}
+        </p>
+      </div>
+
+      <div className="shrink-0 text-end">
+        <p
+          className={[
+            "font-display font-extrabold leading-none",
+            compact ? "text-base" : "text-lg",
+            unplayed ? "text-muted-foreground" : "text-primary",
+          ].join(" ")}
+        >
+          {formatNumber(row.weeklyXp, locale)}
+        </p>
+        <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+          {t("leaderboard.weeklyXp")}
+        </p>
+      </div>
+    </motion.div>
   );
 }

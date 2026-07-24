@@ -34,17 +34,20 @@ import { NewspaperModal } from "./NewspaperModal";
 import { FtueCoach } from "./FtueCoach";
 import { Confetti } from "./Confetti";
 import {
-  hasMissionRewardReady,
+  countMissionRewardsReady,
   MissionDrawer,
 } from "@/components/profile/MissionDrawer";
 import { DuelInboxBanner } from "@/components/duel/DuelInboxBanner";
 import type { DuelInboxItem } from "@/actions/duel/getInboxCount";
 import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
+import { NextGoalCard } from "@/components/club-hub/NextGoalCard";
 
 type ClubHubProps = {
   initialClub: ClubSnapshot;
   /** Soft-currency stamina top-up cost from GameConfig. */
   staminaRefillCost: number;
+  /** Typical coins from a win — drives Next Goal wins-away. */
+  coinsPerWin: number;
   /** Active Draft Duel turns waiting for the manager. */
   duelInboxCount?: number;
   duelInboxItems?: DuelInboxItem[];
@@ -55,6 +58,7 @@ type ClubHubProps = {
 export function ClubHub({
   initialClub,
   staminaRefillCost,
+  coinsPerWin,
   duelInboxCount = 0,
   duelInboxItems = [],
   missionBoard = null,
@@ -86,7 +90,7 @@ export function ClubHub({
   const [missionsOpen, setMissionsOpen] = useState(false);
 
   const canClaimNews = club.newsClaimable;
-  const missionRewardReady = hasMissionRewardReady(dailyBoard, missionBoard);
+  const missionReadyCount = countMissionRewardsReady(dailyBoard, missionBoard);
 
   // Replay onboarding whistle once after createClub redirect (tutorialStep 0).
   useEffect(() => {
@@ -194,7 +198,7 @@ export function ClubHub({
             Daily News only nags (glow + bounce + unread dot) while today's
             headline is still claimable. */}
         {ftueComplete && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 rounded-bubble border border-border bg-surface/90 p-1 shadow-fantasy-sm">
             <motion.button
               type="button"
               onClick={() => {
@@ -202,41 +206,22 @@ export function ClubHub({
                 setMissionsOpen(true);
               }}
               aria-label={t("missions.openDrawer")}
-              className={[
-                "relative flex h-12 w-12 items-center justify-center rounded-bubble border bg-surface text-2xl shadow-fantasy",
-                missionRewardReady
-                  ? "border-secondary"
-                  : "border-primary/40",
-              ].join(" ")}
-              animate={
-                missionRewardReady
-                  ? {
-                      y: [0, -3, 0],
-                      boxShadow: [
-                        "0 0 0px hsl(var(--secondary) / 0)",
-                        "0 0 16px hsl(var(--secondary) / 0.55)",
-                        "0 0 0px hsl(var(--secondary) / 0)",
-                      ],
-                    }
-                  : undefined
-              }
-              transition={
-                missionRewardReady
-                  ? { repeat: Infinity, duration: 1.5 }
-                  : undefined
-              }
+              className="relative flex h-9 w-9 items-center justify-center rounded-bubble text-lg"
               whileTap={{ scale: 0.92 }}
             >
               <span aria-hidden>🎯</span>
-              {missionRewardReady && (
-                <span className="absolute -end-1 -top-1 h-3 w-3 rounded-full bg-secondary ring-2 ring-surface" />
+              {missionReadyCount > 0 && (
+                <span className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-secondary px-1 font-display text-[10px] font-bold text-secondary-foreground ring-2 ring-surface">
+                  {toLocaleDigits(Math.min(missionReadyCount, 9), locale)}
+                  {missionReadyCount > 9 ? "+" : ""}
+                </span>
               )}
             </motion.button>
 
             <Link
               href="/shop"
               aria-label={t("shop.title")}
-              className="flex h-12 w-12 items-center justify-center rounded-bubble border border-primary/40 bg-surface text-2xl shadow-fantasy"
+              className="flex h-9 w-9 items-center justify-center rounded-bubble text-lg"
             >
               <span aria-hidden>🛒</span>
             </Link>
@@ -247,29 +232,16 @@ export function ClubHub({
               disabled={newsPending}
               aria-label={t("club.dailyNews")}
               className={[
-                "relative flex h-12 w-12 items-center justify-center rounded-bubble border bg-surface text-2xl shadow-fantasy",
-                canClaimNews ? "border-accent" : "border-border opacity-70",
+                "relative flex h-9 w-9 items-center justify-center rounded-bubble text-lg",
+                canClaimNews ? "" : "opacity-60",
               ].join(" ")}
-              animate={
-                canClaimNews
-                  ? {
-                      y: [0, -3, 0],
-                      boxShadow: [
-                        "0 0 0px hsl(var(--accent) / 0)",
-                        "0 0 18px hsl(var(--accent) / 0.7)",
-                        "0 0 0px hsl(var(--accent) / 0)",
-                      ],
-                    }
-                  : undefined
-              }
-              transition={
-                canClaimNews ? { repeat: Infinity, duration: 1.6 } : undefined
-              }
               whileTap={{ scale: 0.92 }}
             >
               <span aria-hidden>{canClaimNews ? "📬" : "📭"}</span>
               {canClaimNews && (
-                <span className="absolute -end-1 -top-1 h-3 w-3 rounded-full bg-secondary ring-2 ring-surface" />
+                <span className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 font-display text-[10px] font-bold text-accent-foreground ring-2 ring-surface">
+                  {toLocaleDigits(1, locale)}
+                </span>
               )}
             </motion.button>
           </div>
@@ -278,7 +250,6 @@ export function ClubHub({
 
       <StatusBar
         coins={club.coins}
-        fans={club.fans}
         stamina={club.stamina}
         maxStamina={club.maxStamina}
         msUntilNext={club.msUntilNext}
@@ -296,9 +267,25 @@ export function ClubHub({
 
       <StadiumHero
         stadiumLevel={club.stadiumLevel}
+        fans={club.fans}
+        trainingGroundLevel={club.trainingGroundLevel}
+        medicalLevel={club.medicalLevel}
+        maxStamina={club.maxStamina}
         celebrateKey={celebrateKey}
         celebrating={celebrating}
       />
+
+      {ftueComplete && (
+        <NextGoalCard
+          coinsPerWin={coinsPerWin}
+          milestoneInput={{
+            coins: club.coins,
+            stadiumLevel: club.stadiumLevel,
+            medicalLevel: club.medicalLevel,
+            trainingGroundLevel: club.trainingGroundLevel,
+          }}
+        />
+      )}
 
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
@@ -323,7 +310,6 @@ export function ClubHub({
           const level = getClubLevel(club, def.key);
           const cost = getUpgradeCost(def.key, level);
           const canAfford = cost !== null && club.coins >= cost;
-          // FTUE step 1 funnels the player into the Stadium upgrade only.
           const isForcedStadium = step === 1 && def.key === "STADIUM";
           const locked =
             step === 0 || (step === 1 && def.key !== "STADIUM");
@@ -332,6 +318,7 @@ export function ClubHub({
               key={def.key}
               def={def}
               level={level}
+              maxStamina={club.maxStamina}
               cost={cost}
               canAfford={canAfford}
               pending={pendingKey === def.key}

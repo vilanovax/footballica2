@@ -274,6 +274,12 @@ const en = {
     yourStadium: "Your Stadium",
     upgrades: "Upgrades",
     dailyNews: "Daily News",
+    nextGoalLabel: "Next goal",
+    nextGoalReady: "Ready to buy",
+    nextGoalBuy: "Upgrade {name} now",
+    nextGoalWins: "Win {n} more → {coins} coins for {name}",
+    nextGoalCta: "Tap to play Match Day →",
+    nextGoalMaxed: "Every facility is maxed. Legend.",
   },
   shop: {
     eyebrow: "Transfer Market",
@@ -326,6 +332,12 @@ const en = {
   upgrades: {
     upgrade: "Upgrade",
     max: "MAX",
+    impact: {
+      maxStamina: "Max energy: {from} → {to}",
+      fansCap: "Fan capacity: {from} → {to}",
+      stadiumTier: "Stadium tier: {from} → {to}",
+      medicalLevel: "Medical bay: Lv {from} → {to}",
+    },
     STADIUM: { name: "Stadium", desc: "Bigger stands, more fans, better pitch." },
     MEDICAL: { name: "Medical Bay", desc: "Recover stamina faster between matches." },
     TRAINING_GROUND: {
@@ -335,6 +347,14 @@ const en = {
   },
   stadium: {
     lvl: "Lv.",
+    fans: "Fans",
+    openDetails: "Stadium details",
+    sheetTitle: "Club facilities",
+    sheetHint: "Upgrade facilities below to grow capacity and match readiness.",
+    statStadium: "Stadium",
+    statFans: "Fans",
+    statTraining: "Training ground",
+    statMedical: "Medical bay",
     tiers: ["Ruined Ground", "Dirt Pitch", "Grass Pitch", "Floodlit Arena"],
   },
   ftue: {
@@ -374,6 +394,17 @@ const en = {
     hofWeek: "Week {week} · {year}",
     hofEmpty: "No legends yet",
     hofEmptyHint: "Finish in the weekly Top 3 to etch your club into history.",
+    weeklyXp: "Week XP",
+    rowStats: "{points} pts · {matches} matches",
+    playedZero: "0 pts · {n} matches",
+    notPlayed: "Not played yet",
+    prizeBanner: "Weekly champion prize: {n} coins",
+    prizeTap: "Tiers",
+    prizeSheetTitle: "Weekly prizes",
+    prizeSheetSub: "Paid after Monday reset (Tehran).",
+    prizePlace: "Place {n}",
+    prizeSheetHint:
+      "Climb the weekly table before reset. Ties break on fewer matches played.",
   },
   settings: {
     eyebrow: "Settings",

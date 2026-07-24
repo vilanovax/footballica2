@@ -29,6 +29,7 @@ export default async function ClubPage() {
     <ClubHub
       initialClub={club}
       staminaRefillCost={config.costs.staminaRefill}
+      coinsPerWin={config.rewards.coinsPerWin}
       duelInboxCount={duelInboxCount}
       duelInboxItems={duelInboxItems}
       missionBoard={missionBoard}

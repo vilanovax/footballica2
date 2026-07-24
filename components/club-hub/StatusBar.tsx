@@ -14,11 +14,9 @@ import { toLocaleDigits } from "@/lib/i18n/format";
 
 type StatusBarProps = {
   coins: number;
-  fans: number;
   stamina: number;
   maxStamina: number;
   msUntilNext: number;
-  /** Soft-currency cost from GameConfig (server). */
   staminaRefillCost: number;
   onClubUpdate?: (club: ClubSnapshot) => void;
 };
@@ -44,9 +42,9 @@ function PlusChip({ className }: { className?: string }) {
   );
 }
 
+/** Consumables only — coins + stamina. Fans live on the Stadium hero. */
 export function StatusBar({
   coins,
-  fans,
   stamina,
   maxStamina,
   msUntilNext,
@@ -59,7 +57,6 @@ export function StatusBar({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  // Subtle pulse only when coins recently INCREASED (e.g. after a match).
   useEffect(() => {
     if (coins > prevCoins.current) {
       setPulse(true);
@@ -70,7 +67,6 @@ export function StatusBar({
     prevCoins.current = coins;
   }, [coins]);
 
-  // Live stamina countdown (local, no reload). Resync when server data changes.
   const [localStamina, setLocalStamina] = useState(stamina);
   const [remainingMs, setRemainingMs] = useState(msUntilNext);
   const remainingRef = useRef(msUntilNext);
@@ -83,7 +79,6 @@ export function StatusBar({
 
   useEffect(() => {
     if (localStamina >= maxStamina) return;
-
     const id = setInterval(() => {
       remainingRef.current -= 1000;
       if (remainingRef.current <= 0) {
@@ -92,7 +87,6 @@ export function StatusBar({
       }
       setRemainingMs(remainingRef.current);
     }, 1000);
-
     return () => clearInterval(id);
   }, [localStamina, maxStamina]);
 
@@ -142,13 +136,13 @@ export function StatusBar({
 
   return (
     <>
-      <div className="grid grid-cols-3 items-start gap-2">
+      <div className="grid grid-cols-2 items-start gap-2">
         <motion.div
           id="coin-balance-target"
           animate={pulse ? { scale: [1, 1.12, 1] } : { scale: 1 }}
           transition={{ duration: 0.5 }}
           className={[
-            "relative flex items-center justify-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-3 py-2 shadow-fantasy-sm",
+            "relative flex items-center justify-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-3 py-2.5 shadow-fantasy-sm",
             pulse ? "ring-2 ring-accent" : "",
           ].join(" ")}
         >
@@ -166,17 +160,10 @@ export function StatusBar({
           </Link>
         </motion.div>
 
-        <div className="flex items-center justify-center gap-1.5 rounded-full border border-secondary/30 bg-secondary/10 px-3 py-2 shadow-fantasy-sm">
-          <span aria-hidden>👥</span>
-          <span className="font-display text-sm font-bold text-secondary tabular-nums">
-            {toLocaleDigits(fans, locale)}
-          </span>
-        </div>
-
         <div className="flex flex-col items-center gap-1">
           <div
             className={[
-              "relative flex w-full items-center justify-center gap-1.5 rounded-full border px-3 py-2 shadow-fantasy-sm transition-colors",
+              "relative flex w-full items-center justify-center gap-1.5 rounded-full border px-3 py-2.5 shadow-fantasy-sm transition-colors",
               staminaLow
                 ? "border-destructive/40 bg-destructive/10"
                 : "border-primary/30 bg-primary/10",

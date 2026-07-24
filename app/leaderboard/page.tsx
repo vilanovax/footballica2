@@ -22,6 +22,7 @@ export default async function LeaderboardPage() {
       rows={board.rows}
       resetsInDays={board.resetsInDays}
       hallOfFame={hallOfFame}
+      currentUserRow={board.currentUserRow}
     />
   );
 }
