@@ -98,7 +98,8 @@ const config: Config = {
         "glow-accent": "0 0 20px hsl(var(--accent) / 0.5)",
       },
       spacing: {
-        nav: "5.5rem",
+        // Clears the floating Play FAB + safe-area so list tails aren't clipped.
+        nav: "8.75rem",
         "safe-b": "env(safe-area-inset-bottom, 0px)",
       },
       minHeight: {

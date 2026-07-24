@@ -23,8 +23,9 @@ import {
 import { computeStreakUpdate } from "@/lib/game/streak";
 import { evaluateAllMissionTracks } from "@/lib/game/missionEngine";
 import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
+import { SOLO_STAMINA_COST } from "@/lib/play/modeEconomy";
 
-const STAMINA_COST = 1;
+const STAMINA_COST = SOLO_STAMINA_COST;
 
 /** Guaranteed FTUE payout — exactly the cost of the first Stadium upgrade. */
 const TUTORIAL_REWARD = { coins: 100, xp: 20, fans: 10 } as const;

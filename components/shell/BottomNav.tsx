@@ -169,17 +169,17 @@ export function BottomNav() {
                       : label
                   }
                   tabIndex={leaveOpen ? -1 : undefined}
-                  className="relative -mt-8 flex min-h-touch min-w-18 flex-col items-center gap-1"
+                  className="relative -mt-6 flex min-h-touch min-w-16 flex-col items-center gap-0.5"
                 >
                   <span
                     className={[
-                      "relative flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-secondary-foreground transition-transform",
-                      "shadow-[0_6px_0_0_hsl(var(--secondary-deep)),0_12px_22px_hsl(var(--secondary)/0.6)]",
-                      "active:translate-y-1 active:shadow-[0_2px_0_0_hsl(var(--secondary-deep)),0_6px_14px_hsl(var(--secondary)/0.5)]",
-                      active ? "ring-4 ring-accent/70" : "",
+                      "relative flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-secondary-foreground transition-transform",
+                      "shadow-[0_4px_0_0_hsl(var(--secondary-deep)),0_8px_16px_hsl(var(--secondary)/0.45)]",
+                      "active:translate-y-1 active:shadow-[0_2px_0_0_hsl(var(--secondary-deep)),0_4px_10px_hsl(var(--secondary)/0.4)]",
+                      active ? "ring-2 ring-accent/70" : "",
                     ].join(" ")}
                   >
-                    <Icon className="h-8 w-8 fill-white/20" strokeWidth={2.5} />
+                    <Icon className="h-7 w-7 fill-white/20" strokeWidth={2.5} />
                     {duelInbox > 0 && (
                       <span className="absolute -end-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 font-display text-[11px] font-bold text-accent-foreground ring-2 ring-nav">
                         {toLocaleDigits(Math.min(duelInbox, 9), locale)}

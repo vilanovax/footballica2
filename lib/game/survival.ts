@@ -21,6 +21,13 @@ export const SURVIVAL_MIN_CATEGORY_QUESTIONS = 5;
 /** Stamina spent to open a Survival run. */
 export const SURVIVAL_STAMINA_COST = 1;
 
+/** Soft rewards per verified correct answer (see computeSurvivalRewards). */
+export const SURVIVAL_COINS_PER_CORRECT = 5;
+export const SURVIVAL_XP_PER_CORRECT = 10;
+export const SURVIVAL_FANS_PER_CORRECT = 2;
+export const SURVIVAL_CLEARED_COIN_BONUS = 25;
+export const SURVIVAL_CLEARED_XP_BONUS = 50;
+
 export type SurvivalEndReason = "eliminated" | "cleared";
 
 export type SurvivalRewardBreakdown = {
@@ -39,12 +46,15 @@ export function computeSurvivalRewards(input: {
   endReason: SurvivalEndReason;
 }): SurvivalRewardBreakdown {
   const score = Math.max(0, Math.floor(input.score));
-  const clearedBonus = input.endReason === "cleared" ? 25 : 0;
+  const clearedBonus =
+    input.endReason === "cleared" ? SURVIVAL_CLEARED_COIN_BONUS : 0;
+  const clearedXp =
+    input.endReason === "cleared" ? SURVIVAL_CLEARED_XP_BONUS : 0;
   return {
     score,
-    coins: score * 5 + clearedBonus,
-    xp: score * 10 + (input.endReason === "cleared" ? 50 : 0),
-    fans: score * 2,
+    coins: score * SURVIVAL_COINS_PER_CORRECT + clearedBonus,
+    xp: score * SURVIVAL_XP_PER_CORRECT + clearedXp,
+    fans: score * SURVIVAL_FANS_PER_CORRECT,
     bestCombo: Math.max(0, Math.floor(input.bestCombo)),
     endReason: input.endReason,
   };
