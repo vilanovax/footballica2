@@ -31,10 +31,10 @@ export function RecentDuelHistory({
     variant === "play" ? t("play.recentDuelsHint") : t("duel.lobbyHistoryHint");
 
   return (
-    <div className="relative z-10 flex flex-col gap-3">
+    <div className="relative z-10 mt-1 flex flex-col gap-2.5 border-t border-border/60 pt-4">
       <div className="flex items-end justify-between gap-2 px-0.5">
         <div className="min-w-0">
-          <h2 className="font-display text-sm font-bold uppercase tracking-widest text-muted-foreground">
+          <h2 className="font-display text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
             {title}
           </h2>
           <p className="mt-0.5 font-body text-[11px] font-semibold text-muted-foreground">

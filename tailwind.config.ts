@@ -98,8 +98,8 @@ const config: Config = {
         "glow-accent": "0 0 20px hsl(var(--accent) / 0.5)",
       },
       spacing: {
-        // Clears the floating Play FAB + safe-area so list tails aren't clipped.
-        nav: "8.75rem",
+        // Fallback token; AppShell uses calc(10.5rem + safe-area) for real clearance.
+        nav: "10.5rem",
         "safe-b": "env(safe-area-inset-bottom, 0px)",
       },
       minHeight: {

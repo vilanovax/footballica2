@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { AvatarImage } from "@/components/common/AvatarImage";
 import type { LeaderboardRow } from "@/actions/getLeaderboard";
@@ -60,6 +60,37 @@ export function LeaderboardList({
     : rows;
 
   const sticky = currentUserRow;
+  const youInList = Boolean(
+    sticky && listRows.some((r) => r.userId === sticky.userId),
+  );
+  const youOnPodium = Boolean(
+    sticky && podiumRows.some((r) => r.userId === sticky.userId),
+  );
+  const [youAnchor, setYouAnchor] = useState<HTMLElement | null>(null);
+  const [youInView, setYouInView] = useState(true);
+  const stickyId = sticky?.userId ?? null;
+
+  // Sticky "you" bar only when the in-page row/podium card is off-screen.
+  useEffect(() => {
+    if (tab !== "weekly" || !stickyId || !youAnchor) {
+      setYouInView(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => setYouInView(entry.isIntersecting),
+      {
+        root: null,
+        // Account for sticky header + bottom nav chrome.
+        rootMargin: "-72px 0px -140px 0px",
+        threshold: 0,
+      },
+    );
+    io.observe(youAnchor);
+    return () => io.disconnect();
+  }, [tab, stickyId, youAnchor]);
+
+  const showStickyYou =
+    tab === "weekly" && Boolean(sticky) && !youInView;
 
   function selectTab(next: TabKey) {
     if (next === tab) return;
@@ -159,7 +190,13 @@ export function LeaderboardList({
             </span>
           </button>
 
-          {showPodium && <LeaderboardPodium rows={podiumRows} />}
+          {showPodium && (
+            <div
+              ref={youOnPodium ? setYouAnchor : undefined}
+            >
+              <LeaderboardPodium rows={podiumRows} />
+            </div>
+          )}
 
           <motion.ol
             variants={containerVariants}
@@ -167,20 +204,27 @@ export function LeaderboardList({
             animate="visible"
             className={[
               "flex flex-col gap-1.5 pt-1",
-              sticky ? "pb-36" : "pb-28",
+              showStickyYou ? "pb-36" : "pb-28",
             ].join(" ")}
           >
-            {listRows.map((row) => (
-              <li key={row.userId} className="list-none">
-                <LeaderboardRowItem row={row} compact />
-              </li>
-            ))}
+            {listRows.map((row) => {
+              const isYou = sticky?.userId === row.userId;
+              return (
+                <li
+                  key={row.userId}
+                  className="list-none"
+                  ref={isYou && youInList ? setYouAnchor : undefined}
+                >
+                  <LeaderboardRowItem row={row} compact />
+                </li>
+              );
+            })}
           </motion.ol>
         </>
       )}
 
-      {tab === "weekly" && sticky && (
-        <div className="pointer-events-none fixed inset-x-0 z-40 mx-auto w-full max-w-mobile px-3 bottom-[calc(theme(spacing.nav)+0.35rem)]">
+      {showStickyYou && sticky && (
+        <div className="pointer-events-none fixed inset-x-0 z-40 mx-auto w-full max-w-mobile px-3 bottom-[calc(10.5rem+env(safe-area-inset-bottom,0px))]">
           <div className="pointer-events-auto rounded-bubble-lg border-2 border-primary bg-surface/95 p-0.5 shadow-fantasy-lg backdrop-blur-md">
             <LeaderboardRowItem row={sticky} compact sticky />
           </div>

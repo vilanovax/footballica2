@@ -14,29 +14,29 @@ export type MatchCardTone = "penalty" | "quick" | "survival" | "duel";
 
 const TONE: Record<
   MatchCardTone,
-  { border: string; iconBg: string; cta: string; icon: string }
+  { tint: string; iconBg: string; cta: string; icon: string }
 > = {
   penalty: {
-    border: "border-secondary/30",
-    iconBg: "bg-secondary/15 text-secondary",
+    tint: "border-secondary/25 bg-secondary/8",
+    iconBg: "bg-secondary text-secondary-foreground",
     cta: "btn-fantasy-secondary",
     icon: "🧤",
   },
   quick: {
-    border: "border-primary/30",
-    iconBg: "bg-primary/15 text-primary",
+    tint: "border-primary/25 bg-primary/8",
+    iconBg: "bg-primary text-primary-foreground",
     cta: "btn-fantasy-primary",
     icon: "⚡",
   },
   survival: {
-    border: "border-destructive/25",
-    iconBg: "bg-destructive/10 text-destructive",
+    tint: "border-destructive/20 bg-destructive/8",
+    iconBg: "bg-destructive text-destructive-foreground",
     cta: "btn-fantasy-secondary",
     icon: "❤️",
   },
   duel: {
-    border: "border-accent/35",
-    iconBg: "bg-accent/20 text-accent-deep",
+    tint: "border-accent/30 bg-accent/10",
+    iconBg: "bg-accent text-accent-foreground",
     cta: "btn-fantasy-accent",
     icon: "⚔️",
   },
@@ -49,14 +49,14 @@ type MatchCardProps = {
   blurb: string;
   ctaLabel: string;
   economy: PlayModeEconomy;
+  /** Club-wide MAX(maxSurvivalScore). */
   survivalBest?: number | null;
   tone: MatchCardTone;
-  /** Featured = larger hierarchy; compact = denser list row. */
-  variant?: "featured" | "compact";
-  /** Optional badge above title (e.g. Today's pick). */
-  badge?: string | null;
 };
 
+/**
+ * Phase 1 Match Card — light tint, chip meta, 1-click CTA + [i] → BottomSheet.
+ */
 export function MatchCard({
   modeId,
   href,
@@ -66,17 +66,14 @@ export function MatchCard({
   economy,
   survivalBest = null,
   tone,
-  variant = "compact",
-  badge = null,
 }: MatchCardProps) {
   const { t, locale } = useTranslation();
   const [infoOpen, setInfoOpen] = useState(false);
   const style = TONE[tone];
-  const featured = variant === "featured";
 
-  function openInfo(e?: React.MouseEvent) {
-    e?.preventDefault();
-    e?.stopPropagation();
+  function openInfo(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
     haptic(HAPTIC.light);
     playSound("click");
     setInfoOpen(true);
@@ -86,98 +83,85 @@ export function MatchCard({
     <>
       <article
         className={[
-          "relative rounded-bubble-xl border bg-surface",
-          style.border,
-          featured
-            ? "p-4 shadow-fantasy"
-            : "p-3 shadow-fantasy-sm",
+          "rounded-bubble-xl border p-3.5 shadow-fantasy-sm",
+          style.tint,
         ].join(" ")}
       >
-        <button
-          type="button"
-          aria-label={t("play.modeInfo")}
-          onClick={openInfo}
-          className="absolute end-1 top-1 z-10 flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <Info className="h-3.5 w-3.5" strokeWidth={2.25} />
-        </button>
-
-        <button
-          type="button"
-          onClick={() => openInfo()}
-          className="w-full pe-8 text-start"
-        >
-          {badge && (
-            <p className="mb-1.5 font-display text-[10px] font-bold uppercase tracking-widest text-secondary">
-              {badge}
+        <div className="flex items-start gap-3">
+          <span
+            className={[
+              "flex h-12 w-12 shrink-0 items-center justify-center rounded-bubble text-2xl shadow-fantasy-sm",
+              style.iconBg,
+            ].join(" ")}
+            aria-hidden
+          >
+            {style.icon}
+          </span>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-display text-lg font-bold text-foreground">
+              {title}
+            </h3>
+            <p className="mt-0.5 font-body text-xs font-semibold text-muted-foreground">
+              {blurb}
             </p>
-          )}
-          <div className="flex items-start gap-2.5">
-            <span
-              className={[
-                "flex shrink-0 items-center justify-center rounded-bubble text-xl",
-                style.iconBg,
-                featured ? "h-11 w-11" : "h-9 w-9 text-lg",
-              ].join(" ")}
-              aria-hidden
-            >
-              {style.icon}
-            </span>
-            <div className="min-w-0 flex-1">
-              <h3
-                className={[
-                  "font-display font-bold text-foreground",
-                  featured ? "text-lg" : "text-base",
-                ].join(" ")}
-              >
-                {title}
-              </h3>
-              <p className="mt-0.5 font-body text-xs font-semibold leading-snug text-muted-foreground">
-                {blurb}
-              </p>
-            </div>
           </div>
-        </button>
+        </div>
 
-        <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-display text-xs font-bold text-foreground">
-          <span>
-            ⚡ {toLocaleDigits(economy.staminaCost, locale)}{" "}
-            <span className="font-semibold text-muted-foreground">
-              {t("play.metaEnergy")}
-            </span>
-          </span>
-          <span className="text-border" aria-hidden>
-            |
-          </span>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <Chip>⚡ {toLocaleDigits(economy.staminaCost, locale)}</Chip>
           {modeId === "survival" ? (
-            <span>
-              {t("play.chipRecord", {
-                n: toLocaleDigits(survivalBest ?? 0, locale),
-              })}
-            </span>
+            <>
+              <Chip>
+                {t("play.chipPerCorrect", {
+                  coins: toLocaleDigits(economy.perCorrectCoins ?? 0, locale),
+                  xp: toLocaleDigits(economy.perCorrectXp ?? 0, locale),
+                })}
+              </Chip>
+              <Chip>
+                {t("play.chipRecord", {
+                  n: toLocaleDigits(survivalBest ?? 0, locale),
+                })}
+              </Chip>
+            </>
           ) : (
-            <span>
-              {t("play.chipWin", {
+            <Chip>
+              {t("play.chipReward", {
                 coins: toLocaleDigits(economy.approxCoins, locale),
                 xp: toLocaleDigits(economy.approxXp, locale),
               })}
-            </span>
+            </Chip>
+          )}
+          {modeId === "duel" && economy.duelWinWeeklyXp != null && (
+            <Chip>
+              {t("play.chipWeeklyXp", {
+                n: toLocaleDigits(economy.duelWinWeeklyXp, locale),
+              })}
+            </Chip>
           )}
         </div>
 
-        <Link
-          href={href}
-          onClick={() => {
-            playSound("click");
-            haptic(HAPTIC.tap);
-          }}
-          className={[
-            "btn-fantasy mt-3 w-full !min-h-12 !py-2.5 text-sm",
-            style.cta,
-          ].join(" ")}
-        >
-          {ctaLabel}
-        </Link>
+        <div className="mt-3 flex items-center gap-2">
+          <Link
+            href={href}
+            onClick={() => {
+              playSound("click");
+              haptic(HAPTIC.tap);
+            }}
+            className={["btn-fantasy flex-1 min-h-12! py-2.5! text-sm", style.cta].join(
+              " ",
+            )}
+          >
+            {ctaLabel}
+          </Link>
+          <button
+            type="button"
+            aria-label={t("play.modeInfo")}
+            onClick={openInfo}
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-bubble border border-border bg-surface text-muted-foreground shadow-fantasy-sm transition-colors active:bg-muted active:text-foreground"
+          >
+            <Info className="h-5 w-5" strokeWidth={2.5} />
+          </button>
+        </div>
       </article>
 
       <BottomSheet
@@ -194,6 +178,14 @@ export function MatchCard({
         />
       </BottomSheet>
     </>
+  );
+}
+
+function Chip({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center rounded-full border border-border/80 bg-surface/90 px-2.5 py-1 font-display text-[11px] font-bold text-foreground shadow-fantasy-sm">
+      {children}
+    </span>
   );
 }
 
@@ -221,7 +213,7 @@ function ModeInfoBody({
           <>
             <InfoRow
               label={t("play.info.perCorrect")}
-              value={t("play.infoPerCorrectValue", {
+              value={t("play.chipPerCorrect", {
                 coins: n(economy.perCorrectCoins ?? 0),
                 xp: n(economy.perCorrectXp ?? 0),
               })}
@@ -249,7 +241,7 @@ function ModeInfoBody({
             )}
             <InfoRow
               label={t("play.info.approxWin")}
-              value={t("play.chipWin", {
+              value={t("play.chipReward", {
                 coins: n(economy.approxCoins),
                 xp: n(economy.approxXp),
               })}

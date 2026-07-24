@@ -16,6 +16,10 @@ import {
 } from "@/actions/missions";
 import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
 import type { MissionObjective } from "@/generated/prisma/client";
+import {
+  formatCountdownHms,
+  msUntilTehranMidnight,
+} from "@/lib/game/tehranClock";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
@@ -31,20 +35,14 @@ export type MissionBoardData = EvaluateMissionsResult;
 
 type MissionBoardProps = {
   initialBoard: MissionBoardData;
-  /** Campaign ladder vs Tehran daily reset board. */
   variant?: "campaign" | "daily";
-  /** Compact layout for bottom-sheet / dense surfaces. */
   density?: "comfortable" | "compact";
-  /** Called after a successful chest claim (e.g. refresh parent badge). */
   onClaimed?: () => void;
-  /**
-   * After a drip claim, parent can tick Hub coins when flying coins land.
-   * Called immediately with balances; delay display yourself (~800ms).
-   */
   onDripClaimed?: (balances: { coins: number; xp: number }) => void;
 };
 
-function playHrefForObjective(type: MissionObjective): string {
+/** Deep-link for a mission objective — shared with MissionDrawer footer. */
+export function playHrefForObjective(type: MissionObjective): string {
   switch (type) {
     case "PLAY_DUEL":
     case "WIN_DUEL":
@@ -55,8 +53,8 @@ function playHrefForObjective(type: MissionObjective): string {
 }
 
 /**
- * LiveOps / daily mission board — 3 active objectives + batch chest.
- * Mission row states: Go → Claim → Claimed.
+ * LiveOps / daily mission board — 3 objectives + batch chest.
+ * Compact density is tuned for MissionDrawer (claim-first UX).
  */
 export function MissionBoard({
   initialBoard,
@@ -138,7 +136,6 @@ export function MissionBoard({
       playSound("upgrade");
       haptic(HAPTIC.goal);
 
-      // Optimistic: flip to claimed; Hub coins tick when particles land.
       setBoard((prev) => ({
         ...prev,
         missions: prev.missions.map((m) =>
@@ -165,8 +162,8 @@ export function MissionBoard({
         compact
           ? "rounded-bubble-lg border-foreground/10 p-3 shadow-fantasy-sm"
           : "rounded-bubble-xl border-2 p-4",
-        isDaily ? "border-secondary/55" : "border-border",
-        board.chestReady ? "ring-2 ring-accent/50" : "",
+        isDaily ? "border-secondary/40" : "border-border",
+        board.chestReady ? "ring-2 ring-accent/55" : "",
       ].join(" ")}
     >
       <FlyingCoins
@@ -176,13 +173,15 @@ export function MissionBoard({
 
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-35"
+        className="pointer-events-none absolute inset-0 opacity-30"
         style={{
           background: isDaily
-            ? "radial-gradient(ellipse at 15% 0%, hsl(var(--secondary) / 0.22), transparent 50%)"
-            : "radial-gradient(ellipse at 85% 0%, hsl(var(--accent) / 0.2), transparent 50%)",
+            ? "radial-gradient(ellipse at 15% 0%, hsl(var(--secondary) / 0.2), transparent 50%)"
+            : "radial-gradient(ellipse at 85% 0%, hsl(var(--accent) / 0.18), transparent 50%)",
         }}
       />
+
+      {isDaily && compact && <DailyResetCountdown />}
 
       <header
         className={[
@@ -191,41 +190,58 @@ export function MissionBoard({
         ].join(" ")}
       >
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span
-              className={[
-                "inline-flex items-center rounded-full px-2 py-0.5 font-display text-[10px] font-bold uppercase tracking-wider",
-                isDaily
-                  ? "bg-secondary/15 text-secondary"
-                  : "bg-primary/15 text-primary",
-              ].join(" ")}
-            >
-              {isDaily ? t("missions.dailyEyebrow") : t("missions.eyebrow")}
-            </span>
-            {board.chestReady && (
-              <span className="inline-flex items-center rounded-full bg-accent/20 px-2 py-0.5 font-display text-[10px] font-bold text-accent-deep">
-                {t("missions.chestReadyBadge")}
-              </span>
-            )}
-          </div>
-          <h2
-            className={[
-              "mt-1 font-display font-black text-foreground",
-              compact ? "text-base" : "text-lg",
-            ].join(" ")}
-          >
-            {isDaily
-              ? t("missions.dailyTitle")
-              : t("missions.title", {
-                  n: toLocaleDigits(board.batchIndex ?? 1, locale),
-                })}
-          </h2>
-          <div className="mt-1.5 flex items-center gap-2">
+          {/* Comfortable (profile): full titles. Compact drawer: skip daily title. */}
+          {!compact && (
+            <>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span
+                  className={[
+                    "inline-flex items-center rounded-full px-2 py-0.5 font-display text-[10px] font-bold uppercase tracking-wider",
+                    isDaily
+                      ? "bg-secondary/15 text-secondary"
+                      : "bg-primary/15 text-primary",
+                  ].join(" ")}
+                >
+                  {isDaily ? t("missions.dailyEyebrow") : t("missions.eyebrow")}
+                </span>
+                {board.chestReady && (
+                  <span className="inline-flex items-center rounded-full bg-accent/20 px-2 py-0.5 font-display text-[10px] font-bold text-accent-deep">
+                    {t("missions.chestReadyBadge")}
+                  </span>
+                )}
+              </div>
+              <h2 className="mt-1 font-display text-lg font-black text-foreground">
+                {isDaily
+                  ? t("missions.dailyTitle")
+                  : t("missions.title", {
+                      n: toLocaleDigits(board.batchIndex ?? 1, locale),
+                    })}
+              </h2>
+            </>
+          )}
+
+          {compact && !isDaily && (
+            <h2 className="mb-1.5 font-display text-sm font-black text-foreground">
+              {t("missions.title", {
+                n: toLocaleDigits(board.batchIndex ?? 1, locale),
+              })}
+            </h2>
+          )}
+
+          {compact && isDaily && board.chestReady && (
+            <p className="mb-1.5 font-display text-[11px] font-bold text-accent-deep">
+              {t("missions.chestReadyBadge")}
+            </p>
+          )}
+
+          <div className="flex items-center gap-2">
             <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
               <motion.div
                 className={[
                   "h-full rounded-full",
-                  batchPct >= 100 ? "bg-accent" : "bg-primary",
+                  board.chestReady || batchPct >= 100
+                    ? "bg-accent"
+                    : "bg-secondary",
                 ].join(" ")}
                 initial={{ width: 0 }}
                 animate={{ width: `${batchPct}%` }}
@@ -243,6 +259,8 @@ export function MissionBoard({
           ready={board.chestReady}
           coins={board.chestCoins}
           xp={board.chestXp}
+          done={doneCount}
+          total={board.missions.length}
           pending={pending}
           celebrating={Boolean(celebrate)}
           compact={compact}
@@ -279,7 +297,7 @@ export function MissionBoard({
                 claimable
                   ? "border-accent/55 bg-accent/12 ring-1 ring-accent/30"
                   : claimed
-                    ? "border-primary/35 bg-primary/10"
+                    ? "border-border/60 bg-muted/40 opacity-80"
                     : "border-foreground/8 bg-background/90 shadow-sm",
               ].join(" ")}
             >
@@ -290,13 +308,17 @@ export function MissionBoard({
                     "flex shrink-0 items-center justify-center rounded-full font-display text-xs font-black",
                     compact ? "h-7 w-7" : "h-8 w-8",
                     claimed
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-muted text-muted-foreground"
                       : claimable
                         ? "bg-accent text-accent-foreground"
-                        : "bg-muted text-muted-foreground",
+                        : "bg-secondary/15 text-secondary",
                   ].join(" ")}
                 >
-                  {claimed ? "✓" : claimable ? "🎁" : toLocaleDigits(i + 1, locale)}
+                  {claimed
+                    ? "✓"
+                    : claimable
+                      ? "🎁"
+                      : toLocaleDigits(i + 1, locale)}
                 </span>
 
                 <div className="min-w-0 flex-1">
@@ -305,14 +327,27 @@ export function MissionBoard({
                       className={[
                         "min-w-0 font-display font-bold leading-snug text-surface-foreground",
                         compact ? "text-[13px]" : "text-sm",
-                        claimed ? "line-through opacity-70" : "",
+                        claimed ? "line-through opacity-60" : "",
                       ].join(" ")}
                     >
                       {title}
                     </p>
-                    <span className="shrink-0 font-display text-[11px] font-bold tabular-nums text-muted-foreground">
-                      {toLocaleDigits(m.progress, locale)}/
-                      {toLocaleDigits(m.targetValue, locale)}
+                    <span
+                      className={[
+                        "shrink-0 font-display text-[11px] font-bold tabular-nums",
+                        claimable
+                          ? "text-accent-deep"
+                          : claimed
+                            ? "text-muted-foreground"
+                            : "text-muted-foreground",
+                      ].join(" ")}
+                      aria-hidden={claimable || claimed}
+                    >
+                      {claimed
+                        ? "✓"
+                        : claimable
+                          ? "🎁"
+                          : `${toLocaleDigits(m.progress, locale)}/${toLocaleDigits(m.targetValue, locale)}`}
                     </span>
                   </div>
 
@@ -326,13 +361,13 @@ export function MissionBoard({
                       className={[
                         "h-full rounded-full",
                         claimed
-                          ? "bg-primary"
+                          ? "bg-muted-foreground/35"
                           : claimable
                             ? "bg-accent"
                             : "bg-secondary",
                       ].join(" ")}
                       initial={{ width: 0 }}
-                      animate={{ width: `${pct}%` }}
+                      animate={{ width: `${claimed || claimable ? 100 : pct}%` }}
                       transition={{
                         type: "spring",
                         stiffness: 220,
@@ -345,11 +380,11 @@ export function MissionBoard({
                     {(m.rewardCoins > 0 || m.rewardXp > 0) && (
                       <p
                         className={[
-                          "font-body text-[10px] font-semibold text-muted-foreground",
-                          claimed ? "line-through opacity-60" : "",
+                          "font-display text-[10px] font-bold text-muted-foreground",
+                          claimed ? "line-through opacity-50" : "",
                         ].join(" ")}
                       >
-                        {t("missions.missionReward", {
+                        {t("missions.missionRewardCompact", {
                           coins: toLocaleDigits(m.rewardCoins, locale),
                           xp: toLocaleDigits(m.rewardXp, locale),
                         })}
@@ -359,7 +394,7 @@ export function MissionBoard({
                     {!m.isCompleted && (
                       <Link
                         href={href}
-                        className="ms-auto inline-flex min-h-8 items-center rounded-full bg-primary/15 px-2.5 font-display text-[11px] font-bold text-primary transition-transform active:scale-95"
+                        className="ms-auto inline-flex min-h-8 items-center rounded-full border border-border bg-surface px-2.5 font-display text-[11px] font-bold text-muted-foreground transition-colors active:bg-muted"
                       >
                         {t("missions.goPlay")}
                       </Link>
@@ -380,13 +415,15 @@ export function MissionBoard({
                         className="ms-auto inline-flex min-h-9 items-center gap-1 rounded-full border-2 border-accent bg-accent px-3 font-display text-[12px] font-black text-accent-foreground shadow-[0_0_16px_hsl(var(--accent)/0.45)] disabled:opacity-60"
                       >
                         <span aria-hidden>🎁</span>
-                        {busy ? t("missions.claiming") : t("missions.claimDrip")}
+                        {busy
+                          ? t("missions.claiming")
+                          : t("missions.claimDrip")}
                       </motion.button>
                     )}
 
                     {claimed && (
-                      <span className="ms-auto inline-flex min-h-8 items-center rounded-full bg-primary/15 px-2.5 font-display text-[11px] font-bold text-primary">
-                        ✓ {t("missions.claimed")}
+                      <span className="ms-auto inline-flex min-h-8 items-center rounded-full px-2 font-display text-[11px] font-bold text-muted-foreground">
+                        ✓
                       </span>
                     )}
                   </div>
@@ -451,10 +488,38 @@ export function MissionBoard({
   );
 }
 
+function DailyResetCountdown() {
+  const { t, locale } = useTranslation();
+  const [ms, setMs] = useState(() => msUntilTehranMidnight());
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setMs(msUntilTehranMidnight());
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const { h, m, s } = formatCountdownHms(ms);
+  const pad = (n: number) =>
+    toLocaleDigits(n.toString().padStart(2, "0"), locale);
+  const time =
+    h > 0
+      ? `${pad(h)}:${pad(m)}:${pad(s)}`
+      : `${pad(m)}:${pad(s)}`;
+
+  return (
+    <p className="relative mb-2 text-center font-display text-[11px] font-bold text-muted-foreground">
+      {t("missions.dailyResetIn", { time })}
+    </p>
+  );
+}
+
 function ChestButton({
   ready,
   coins,
   xp,
+  done,
+  total,
   pending,
   celebrating,
   compact,
@@ -463,6 +528,8 @@ function ChestButton({
   ready: boolean;
   coins: number;
   xp: number;
+  done: number;
+  total: number;
   pending: boolean;
   celebrating: boolean;
   compact: boolean;
@@ -479,38 +546,59 @@ function ChestButton({
         whileTap={ready ? { scale: 0.92 } : undefined}
         animate={
           ready && !celebrating
-            ? { y: [0, -4, 0], rotate: [0, -3, 3, 0], scale: [1, 1.04, 1] }
+            ? {
+                y: [0, -5, 0],
+                rotate: [0, -4, 4, 0],
+                scale: [1, 1.08, 1],
+              }
             : { y: 0, rotate: 0, scale: 1 }
         }
         transition={
           ready && !celebrating
-            ? { repeat: Infinity, duration: 1.15 }
+            ? { repeat: Infinity, duration: 0.95 }
             : { duration: 0.2 }
         }
         className={[
           "relative flex items-center justify-center rounded-bubble-lg border-2 shadow-fantasy",
-          compact ? "h-12 w-12 text-2xl" : "h-16 w-16 text-3xl",
+          compact ? "h-14 w-14 text-3xl" : "h-16 w-16 text-3xl",
           ready
-            ? "border-accent bg-accent/25 shadow-[0_0_20px_hsl(var(--accent)/0.4)]"
-            : "border-border bg-muted/50 opacity-75",
+            ? "border-accent bg-accent/30 shadow-[0_0_28px_hsl(var(--accent)/0.55)] ring-2 ring-accent/40"
+            : "border-border bg-muted/50",
         ].join(" ")}
         aria-label={t("missions.claimChest")}
       >
         <span aria-hidden>{ready ? "🎁" : "📦"}</span>
+        {!ready && (
+          <span
+            aria-hidden
+            className="absolute -end-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-foreground px-1 font-display text-[9px] font-black text-background"
+          >
+            🔒
+          </span>
+        )}
       </motion.button>
       <p
         className={[
-          "mt-1 text-center font-display font-bold leading-tight text-muted-foreground",
-          compact ? "max-w-14 text-[9px]" : "max-w-20 text-[10px]",
+          "mt-1 text-center font-display font-bold leading-tight",
+          compact ? "max-w-16 text-[9px]" : "max-w-20 text-[10px]",
+          ready ? "text-accent-deep" : "text-muted-foreground",
         ].join(" ")}
       >
         {ready
           ? t("missions.tapClaim")
-          : t("missions.chestHint", {
-              coins: toLocaleDigits(coins, locale),
-              xp: toLocaleDigits(xp, locale),
+          : t("missions.chestLocked", {
+              done: toLocaleDigits(done, locale),
+              total: toLocaleDigits(total, locale),
             })}
       </p>
+      {!ready && (
+        <p className="mt-0.5 max-w-16 text-center font-display text-[8px] font-semibold text-muted-foreground/80">
+          {t("missions.chestHint", {
+            coins: toLocaleDigits(coins, locale),
+            xp: toLocaleDigits(xp, locale),
+          })}
+        </p>
+      )}
     </div>
   );
 }

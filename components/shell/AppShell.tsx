@@ -31,7 +31,10 @@ export function AppShell({ children }: AppShellProps) {
       <main
         className={[
           "flex flex-1 flex-col px-4 pt-[max(1rem,env(safe-area-inset-top))]",
-          bareChrome ? "pb-8" : "pb-nav",
+          // Extra clearance for floating Play FAB + iOS home indicator.
+          bareChrome
+            ? "pb-8"
+            : "pb-[calc(10.5rem+env(safe-area-inset-bottom,0px))]",
         ].join(" ")}
       >
         {children}

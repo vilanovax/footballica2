@@ -3,19 +3,27 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { MissionBoard } from "@/components/profile/MissionBoard";
-import { getMyMissions } from "@/actions/missions";
+import { toast } from "sonner";
+import {
+  MissionBoard,
+  playHrefForObjective,
+} from "@/components/profile/MissionBoard";
+import {
+  claimMyMissionChest,
+  claimMyMissionReward,
+  getMyMissions,
+} from "@/actions/missions";
 import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
+import { playSound } from "@/lib/audio/SoundManager";
 
 type MissionDrawerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   dailyBoard?: EvaluateMissionsResult | null;
   missionBoard?: EvaluateMissionsResult | null;
-  /** Hub coin/XP tick after drip claim (delay display to match flying coins). */
   onEconomyUpdate?: (balances: { coins: number; xp: number }) => void;
 };
 
@@ -27,7 +35,6 @@ function hasUnclaimedDrip(board?: EvaluateMissionsResult | null): boolean {
   );
 }
 
-/** True when a chest or individual drip is waiting to be tapped. */
 export function hasMissionRewardReady(
   daily?: EvaluateMissionsResult | null,
   campaign?: EvaluateMissionsResult | null,
@@ -35,7 +42,6 @@ export function hasMissionRewardReady(
   return countMissionRewardsReady(daily, campaign) > 0;
 }
 
-/** Count claimable mission rewards (drips + ready chests) for Hub badges. */
 export function countMissionRewardsReady(
   daily?: EvaluateMissionsResult | null,
   campaign?: EvaluateMissionsResult | null,
@@ -51,18 +57,30 @@ export function countMissionRewardsReady(
 
 function boardStats(board?: EvaluateMissionsResult | null) {
   if (!board?.batchId || !board.missions.length) {
-    return { done: 0, total: 0, ready: false };
+    return { done: 0, total: 0, ready: false, claimableCount: 0 };
   }
   const done = board.missions.filter((m) => m.isCompleted).length;
+  const claimableCount = board.missions.filter(
+    (m) => m.isCompleted && !m.isClaimed,
+  ).length;
   return {
     done,
     total: board.missions.length,
-    ready: Boolean(board.chestReady || hasUnclaimedDrip(board)),
+    ready: Boolean(board.chestReady || claimableCount > 0),
+    claimableCount,
   };
 }
 
+function firstIncompleteHref(
+  board?: EvaluateMissionsResult | null,
+): string | null {
+  const m = board?.missions.find((x) => !x.isCompleted);
+  if (!m) return null;
+  return playHrefForObjective(m.objectiveType);
+}
+
 /**
- * Bottom-sheet mission hub — tabbed, compact, focused on claim + play.
+ * Bottom-sheet mission hub — claim-first footer, Daily / Path tabs.
  */
 export function MissionDrawer({
   open,
@@ -75,6 +93,7 @@ export function MissionDrawer({
   const [liveDaily, setLiveDaily] = useState(dailyBoard);
   const [liveCampaign, setLiveCampaign] = useState(missionBoard);
   const [, startRefresh] = useTransition();
+  const [claimingAll, setClaimingAll] = useState(false);
 
   useEffect(() => {
     setLiveDaily(dailyBoard);
@@ -84,7 +103,6 @@ export function MissionDrawer({
     setLiveCampaign(missionBoard);
   }, [missionBoard]);
 
-  // Pull fresh progress whenever the sheet opens (post-match / post-duel).
   useEffect(() => {
     if (!open) return;
     startRefresh(async () => {
@@ -124,9 +142,14 @@ export function MissionDrawer({
 
   const dailyStats = boardStats(liveDaily);
   const campaignStats = boardStats(liveCampaign);
+  const activeBoard = tab === "daily" ? liveDaily : liveCampaign;
   const activeStats = tab === "daily" ? dailyStats : campaignStats;
-  const rewardReady = hasMissionRewardReady(liveDaily, liveCampaign);
+  const anyRewardReady = hasMissionRewardReady(liveDaily, liveCampaign);
   const showTabs = hasDaily && hasCampaign;
+  const continueHref = firstIncompleteHref(activeBoard);
+
+  const claimableTotal =
+    activeStats.claimableCount + (activeBoard?.chestReady ? 1 : 0);
 
   function close() {
     haptic(HAPTIC.light);
@@ -139,6 +162,62 @@ export function MissionDrawer({
     setTab(next);
   }
 
+  async function refreshBoards() {
+    const res = await getMyMissions();
+    if (!res.ok) return null;
+    setLiveDaily(res.daily);
+    setLiveCampaign(res.board);
+    return res;
+  }
+
+  async function handleClaimAll() {
+    if (!activeBoard?.batchId || claimingAll) return;
+    setClaimingAll(true);
+    playSound("click");
+    haptic(HAPTIC.tap);
+
+    try {
+      let lastBalances: { coins: number; xp: number } | null = null;
+      const drips = activeBoard.missions.filter(
+        (m) => m.isCompleted && !m.isClaimed,
+      );
+
+      for (const m of drips) {
+        const res = await claimMyMissionReward(m.missionId);
+        if (!res.ok) {
+          toast.error(t("missions.errClaimDrip"));
+          break;
+        }
+        lastBalances = res.balances;
+      }
+
+      const afterDrips = await refreshBoards();
+      const boardAfter =
+        tab === "daily" ? afterDrips?.daily : afterDrips?.board;
+
+      if (boardAfter?.chestReady && boardAfter.batchId) {
+        const chest = await claimMyMissionChest(boardAfter.batchId);
+        if (!chest.ok) {
+          toast.error(t("missions.errClaim"));
+        } else {
+          lastBalances = chest.balances;
+          playSound("upgrade");
+          haptic(HAPTIC.goal);
+        }
+        await refreshBoards();
+      } else if (lastBalances) {
+        playSound("upgrade");
+        haptic(HAPTIC.goal);
+      }
+
+      if (lastBalances) {
+        onEconomyUpdate?.(lastBalances);
+      }
+    } finally {
+      setClaimingAll(false);
+    }
+  }
+
   return (
     <AnimatePresence>
       {open && (
@@ -149,7 +228,6 @@ export function MissionDrawer({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
         >
-          {/* Heavy scrim — Hub greens must not bleed through the sheet edge. */}
           <button
             type="button"
             aria-label={t("common.close")}
@@ -167,7 +245,6 @@ export function MissionDrawer({
             transition={{ type: "spring", stiffness: 420, damping: 36 }}
             className="relative z-10 flex max-h-[82dvh] flex-col overflow-hidden rounded-t-[1.75rem] border-x-2 border-t-2 border-foreground/12 bg-surface shadow-[0_-18px_48px_rgba(15,35,55,0.28)]"
           >
-            {/* Ambient header wash — stronger so sheet reads as its own surface */}
             <div
               aria-hidden
               className="pointer-events-none absolute inset-x-0 top-0 h-32"
@@ -200,7 +277,7 @@ export function MissionDrawer({
                     </h2>
                   </div>
                   <p className="mt-0.5 font-body text-xs font-semibold text-muted-foreground">
-                    {rewardReady
+                    {anyRewardReady
                       ? t("missions.drawerSubtitleReady")
                       : t("missions.drawerSubtitle", {
                           done: toLocaleDigits(
@@ -234,12 +311,12 @@ export function MissionDrawer({
                     [
                       {
                         key: "daily" as const,
-                        label: t("missions.dailyEyebrow"),
+                        label: t("missions.tabDaily"),
                         stats: dailyStats,
                       },
                       {
                         key: "campaign" as const,
-                        label: t("missions.eyebrow"),
+                        label: t("missions.tabPath"),
                         stats: campaignStats,
                       },
                     ] as const
@@ -299,7 +376,7 @@ export function MissionDrawer({
               <AnimatePresence mode="wait">
                 {tab === "daily" && hasDaily && liveDaily && (
                   <motion.div
-                    key={`daily-${liveDaily.batchId}-${dailyStats.done}-${liveDaily.missions.map((m) => m.progress).join(".")}`}
+                    key={`daily-${liveDaily.batchId}-${dailyStats.done}-${liveDaily.missions.map((m) => `${m.progress}-${m.isClaimed}`).join(".")}`}
                     initial={{ opacity: 0, x: 12 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -12 }}
@@ -312,10 +389,7 @@ export function MissionDrawer({
                       onDripClaimed={onEconomyUpdate}
                       onClaimed={() => {
                         startRefresh(async () => {
-                          const res = await getMyMissions();
-                          if (!res.ok) return;
-                          setLiveDaily(res.daily);
-                          setLiveCampaign(res.board);
+                          await refreshBoards();
                         });
                       }}
                     />
@@ -323,7 +397,7 @@ export function MissionDrawer({
                 )}
                 {tab === "campaign" && hasCampaign && liveCampaign && (
                   <motion.div
-                    key={`campaign-${liveCampaign.batchId}-${campaignStats.done}-${liveCampaign.missions.map((m) => m.progress).join(".")}`}
+                    key={`campaign-${liveCampaign.batchId}-${campaignStats.done}-${liveCampaign.missions.map((m) => `${m.progress}-${m.isClaimed}`).join(".")}`}
                     initial={{ opacity: 0, x: 12 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -12 }}
@@ -336,10 +410,7 @@ export function MissionDrawer({
                       onDripClaimed={onEconomyUpdate}
                       onClaimed={() => {
                         startRefresh(async () => {
-                          const res = await getMyMissions();
-                          if (!res.ok) return;
-                          setLiveDaily(res.daily);
-                          setLiveCampaign(res.board);
+                          await refreshBoards();
                         });
                       }}
                     />
@@ -366,19 +437,41 @@ export function MissionDrawer({
               </AnimatePresence>
             </div>
 
-            {/* Sticky play CTA — only when the active board isn't fully done */}
-            {activeStats.total > 0 && activeStats.done < activeStats.total && (
+            {/* Dynamic footer: Claim All when ready, else deep-link continue. */}
+            {activeStats.ready ? (
+              <div className="relative shrink-0 border-t border-foreground/10 bg-surface px-4 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(15,35,55,0.08)]">
+                <motion.button
+                  type="button"
+                  disabled={claimingAll}
+                  onClick={handleClaimAll}
+                  animate={{ scale: [1, 1.02, 1] }}
+                  transition={{
+                    repeat: Infinity,
+                    duration: 1.1,
+                    ease: "easeInOut",
+                  }}
+                  className="btn-fantasy btn-fantasy-accent flex min-h-12 w-full items-center justify-center gap-2 font-display text-base font-bold disabled:opacity-60"
+                >
+                  <span aria-hidden>🎁</span>
+                  {claimingAll
+                    ? t("missions.claiming")
+                    : claimableTotal > 1
+                      ? t("missions.drawerClaimAll")
+                      : t("missions.drawerClaimReward")}
+                </motion.button>
+              </div>
+            ) : continueHref ? (
               <div className="relative shrink-0 border-t border-foreground/10 bg-surface px-4 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(15,35,55,0.08)]">
                 <Link
-                  href="/play"
+                  href={continueHref}
                   onClick={close}
                   className="btn-fantasy btn-fantasy-pitch flex min-h-12 w-full items-center justify-center gap-2 font-display text-base font-bold"
                 >
                   <span aria-hidden>⚽</span>
-                  {t("missions.drawerPlayCta")}
+                  {t("missions.drawerContinueCta")}
                 </Link>
               </div>
-            )}
+            ) : null}
           </motion.div>
         </motion.div>
       )}
