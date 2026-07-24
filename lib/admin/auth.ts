@@ -12,8 +12,8 @@ export const ADMIN_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 1 week
 
 /**
  * Admin unlock secret.
- * Production: must set `ADMIN_SECRET` (no default — fail closed).
- * Development: falls back to a known local value.
+ * Deployed (Vercel): must set `ADMIN_SECRET` (no default — fail closed).
+ * Local (dev or `next start`): falls back to a known value.
  */
 export function getAdminSecret(): string | null {
   return readSecret("ADMIN_SECRET", {

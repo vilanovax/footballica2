@@ -17,6 +17,7 @@ import { toLocaleDigits } from "@/lib/i18n/format";
 import { QuickTimer } from "./QuickTimer";
 import { QuestionCard } from "./QuestionCard";
 import { AnswerButton } from "./AnswerButton";
+import { ExplanationFact } from "./ExplanationFact";
 import { HelperDock } from "./HelperDock";
 import { MatchResult } from "./MatchResult";
 import { GoalBurst } from "./GoalBurst";
@@ -157,9 +158,13 @@ export function QuickMatch({
       setShake(true);
     }
 
-    const timer = setTimeout(() => next(), QUICK_REVEAL_MS);
+    const hasFact = Boolean(questions[currentIndex]?.explanation);
+    const timer = setTimeout(
+      () => next(),
+      hasFact ? 1600 : QUICK_REVEAL_MS,
+    );
     return () => clearTimeout(timer);
-  }, [phase, feedback, next]);
+  }, [phase, feedback, next, questions, currentIndex]);
 
   if (phase === "finished" && rewards) {
     return (
@@ -277,6 +282,11 @@ export function QuickMatch({
             </motion.div>
           ))}
         </motion.div>
+
+        <ExplanationFact
+          explanation={question.explanation}
+          visible={locked}
+        />
 
         {helpers && (
           <HelperDock

@@ -8,6 +8,19 @@ export function isProduction(): boolean {
 }
 
 /**
+ * True on a real hosted deploy (Vercel, etc.).
+ * Local `next start` sets NODE_ENV=production but is NOT a deploy — keep
+ * developer fallbacks there so admin/cron secrets still work without a full
+ * Vercel env matrix.
+ */
+export function isDeployed(): boolean {
+  return (
+    process.env.VERCEL === "1" ||
+    process.env.FORCE_STRICT_SECRETS === "1"
+  );
+}
+
+/**
  * Constant-time string compare for secrets.
  * Length mismatch short-circuits (still constant relative to equal lengths).
  */
@@ -27,8 +40,8 @@ export function secretsEqual(
 }
 
 /**
- * Require a non-empty env var. In production, missing secrets must fail closed.
- * In development, `devFallback` may be used when the var is unset.
+ * Require a non-empty env var. On deployed hosts, missing secrets fail closed.
+ * Locally (including `next start`), `devFallback` may be used when unset.
  */
 export function requireSecret(
   name: string,
@@ -36,19 +49,19 @@ export function requireSecret(
 ): string {
   const value = process.env[name]?.trim();
   if (value) return value;
-  if (!isProduction() && opts?.devFallback) return opts.devFallback;
+  if (!isDeployed() && opts?.devFallback) return opts.devFallback;
   throw new Error(
-    `${name} is required${isProduction() ? " in production" : ""}. Set it in the environment.`,
+    `${name} is required${isDeployed() ? " on deployed hosts" : ""}. Set it in the environment.`,
   );
 }
 
-/** Soft read: null when unset (and no fallback allowed in prod). */
+/** Soft read: null when unset (and no fallback allowed on deployed hosts). */
 export function readSecret(
   name: string,
   opts?: { devFallback?: string },
 ): string | null {
   const value = process.env[name]?.trim();
   if (value) return value;
-  if (!isProduction() && opts?.devFallback) return opts.devFallback;
+  if (!isDeployed() && opts?.devFallback) return opts.devFallback;
   return null;
 }

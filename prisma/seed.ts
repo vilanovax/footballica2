@@ -32,6 +32,7 @@ type RealQuestion = {
   source?: string;
   isTemporal?: boolean;
   content: { en: LocaleContent; fa: LocaleContent };
+  explanation?: { en: string; fa: string } | null;
 };
 
 /** Primary content buckets. `general` keeps the original penalty mocks. */
@@ -64,12 +65,22 @@ async function upsertQuestion(params: {
   category: Category;
   source: string;
   isTemporal: boolean;
+  explanation?: { en: string; fa: string } | null;
 }) {
   const contentHash = computeContentHash(params.content);
   const localized = buildLocalizedContent(
     params.content,
     params.category,
   ) as Prisma.InputJsonValue;
+
+  const explanation =
+    params.explanation &&
+    (params.explanation.en.trim() || params.explanation.fa.trim())
+      ? {
+          en: params.explanation.en.trim(),
+          fa: params.explanation.fa.trim(),
+        }
+      : null;
 
   const shared = {
     type: "TEXT" as const,
@@ -80,6 +91,8 @@ async function upsertQuestion(params: {
     source: params.source,
     isTemporal: params.isTemporal,
     categoryId: params.category.id,
+    explanation: (explanation ??
+      Prisma.DbNull) as Prisma.InputJsonValue | typeof Prisma.DbNull,
   };
 
   await prisma.question.upsert({
@@ -159,6 +172,7 @@ async function main() {
       category,
       source: q.source ?? "SEED_V1",
       isTemporal: q.isTemporal ?? false,
+      explanation: q.explanation ?? null,
     });
     inserted++;
   }

@@ -9,6 +9,7 @@ import { buildLocalizedContent, computeContentHash } from "@/lib/admin/content";
 import {
   questionFormSchema,
   QUESTION_STATUSES,
+  normalizeExplanation,
   type QuestionFormValues,
 } from "@/lib/admin/questionSchema";
 
@@ -76,6 +77,7 @@ export async function createQuestion(
         difficulty: values.difficulty,
         correctIndex: values.correctIndex,
         content: buildContent(values, category),
+        explanation: normalizeExplanation(values.explanation) ?? Prisma.DbNull,
         status: values.status,
         isTemporal: values.isTemporal,
         asOfDate: parseAsOfDate(values.asOfDate),
@@ -130,6 +132,7 @@ export async function updateQuestion(
         difficulty: values.difficulty,
         correctIndex: values.correctIndex,
         content: buildContent(values, category),
+        explanation: normalizeExplanation(values.explanation) ?? Prisma.DbNull,
         status: values.status,
         isTemporal: values.isTemporal,
         asOfDate: parseAsOfDate(values.asOfDate),

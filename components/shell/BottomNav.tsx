@@ -9,6 +9,7 @@ import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { usePenaltyStore } from "@/stores/penaltyStore";
+import { useSurvivalStore } from "@/stores/survivalStore";
 import { getDuelInboxCount } from "@/actions/duel/getInboxCount";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { toast } from "sonner";
@@ -43,11 +44,17 @@ export function BottomNav() {
   const { t, locale } = useTranslation();
 
   // A match is "in flight" while a kick is live or its result is showing.
-  const matchActive = usePenaltyStore(
+  const penaltyActive = usePenaltyStore(
     (s) => s.phase === "playing" || s.phase === "reveal",
   );
+  const survivalActive = useSurvivalStore(
+    (s) => s.phase === "playing" || s.phase === "reveal",
+  );
+  const matchActive = penaltyActive || survivalActive;
   const resetMatch = usePenaltyStore((s) => s.reset);
+  const resetSurvival = useSurvivalStore((s) => s.reset);
   const setPaused = usePenaltyStore((s) => s.setPaused);
+  const setSurvivalPaused = useSurvivalStore((s) => s.setPaused);
 
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const [duelInbox, setDuelInbox] = useState(0);
@@ -106,7 +113,8 @@ export function BottomNav() {
       // Intercept: don't lose match progress on a stray tap.
       e.preventDefault();
       haptic(HAPTIC.tap);
-      setPaused(true); // freeze the fuse while the player decides
+      setPaused(true);
+      setSurvivalPaused(true);
       setPendingHref(href);
       return;
     }
@@ -117,21 +125,29 @@ export function BottomNav() {
     const href = pendingHref;
     setPendingHref(null);
     resetMatch();
+    resetSurvival();
     playSound("click");
     if (href) router.push(href);
   }
 
   function cancelLeave() {
     playSound("click");
-    setPaused(false); // resume the match right where it was frozen
+    setPaused(false);
+    setSurvivalPaused(false);
     setPendingHref(null);
   }
+
+  const leaveOpen = pendingHref !== null;
 
   return (
     <>
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-mobile px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+        aria-hidden={leaveOpen}
+        className={[
+          "fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-mobile px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] transition-opacity duration-200",
+          leaveOpen ? "pointer-events-none opacity-0" : "opacity-100",
+        ].join(" ")}
       >
         <div className="flex items-end justify-between gap-1 rounded-bubble-xl border border-border bg-nav/95 px-2 py-2 shadow-nav-float backdrop-blur-md">
           {tabs.map(({ href, labelKey, icon: Icon, ...rest }) => {
@@ -152,6 +168,7 @@ export function BottomNav() {
                       ? `${label} (${duelInbox})`
                       : label
                   }
+                  tabIndex={leaveOpen ? -1 : undefined}
                   className="relative -mt-8 flex min-h-touch min-w-18 flex-col items-center gap-1"
                 >
                   <span
@@ -183,6 +200,7 @@ export function BottomNav() {
                 href={href}
                 onClick={(e) => handleNav(e, href)}
                 aria-current={active ? "page" : undefined}
+                tabIndex={leaveOpen ? -1 : undefined}
                 className={[
                   "relative flex min-h-touch min-w-16 flex-1 flex-col items-center justify-center gap-1 rounded-bubble px-2 py-2 transition-colors",
                   active
@@ -212,7 +230,7 @@ export function BottomNav() {
       </nav>
 
       <LeaveMatchDialog
-        open={pendingHref !== null}
+        open={leaveOpen}
         onStay={cancelLeave}
         onLeave={confirmLeave}
       />
@@ -236,46 +254,63 @@ function LeaveMatchDialog({
       {open && (
         <motion.div
           key="leave-match-dialog"
-          className="fixed inset-0 z-60 flex items-center justify-center px-6"
+          className="fixed inset-0 z-[70] flex items-center justify-center px-5"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: 0.16 }}
         >
           <button
+            type="button"
             aria-label={t("quiz.leaveStay")}
             onClick={onStay}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/75 backdrop-blur-[6px]"
           />
           <motion.div
             role="alertdialog"
             aria-modal="true"
-            className="relative w-full max-w-mobile rounded-bubble-xl border border-border bg-card p-6 text-center shadow-fantasy"
-            initial={{ scale: 0.85, y: 24, opacity: 0 }}
+            aria-labelledby="leave-match-title"
+            aria-describedby="leave-match-desc"
+            className="relative w-full max-w-[22rem] overflow-hidden rounded-bubble-xl border border-border bg-surface p-6 pt-7 text-center shadow-fantasy-lg"
+            initial={{ scale: 0.92, y: 18, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
-            exit={{ scale: 0.9, y: 12, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 420, damping: 30 }}
+            exit={{ scale: 0.96, y: 10, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 420, damping: 28 }}
           >
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-accent/15 text-accent-deep">
-              <AlertTriangle className="h-8 w-8" strokeWidth={2.5} />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-accent/20 to-transparent"
+            />
+
+            <div className="relative mx-auto mb-5 flex h-[4.25rem] w-[4.25rem] items-center justify-center rounded-full bg-accent text-accent-foreground shadow-[0_5px_0_0_hsl(var(--accent-deep)),0_10px_24px_hsl(var(--accent)/0.35)] ring-4 ring-accent/25">
+              <AlertTriangle className="h-8 w-8" strokeWidth={2.75} />
             </div>
 
-            <h2 className="font-display text-xl font-bold text-foreground">
+            <h2
+              id="leave-match-title"
+              className="relative font-display text-xl font-bold tracking-tight text-foreground"
+            >
               {t("quiz.leaveTitle")}
             </h2>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            <p
+              id="leave-match-desc"
+              className="relative mt-2.5 text-sm leading-relaxed text-muted-foreground"
+            >
               {t("quiz.leaveBody")}
             </p>
 
-            <div className="mt-6 flex flex-col gap-3">
+            <div className="relative mt-7 flex flex-col gap-2.5">
               <button
+                type="button"
                 onClick={onStay}
-                className="flex min-h-touch items-center justify-center rounded-bubble bg-primary px-5 py-3 font-display text-base font-bold text-primary-foreground shadow-[0_4px_0_0_hsl(var(--primary-deep))] transition-transform active:translate-y-0.5 active:shadow-[0_2px_0_0_hsl(var(--primary-deep))]"
+                className="btn-fantasy btn-fantasy-primary w-full"
               >
                 {t("quiz.leaveStay")}
               </button>
               <button
+                type="button"
                 onClick={onLeave}
-                className="flex min-h-touch items-center justify-center rounded-bubble border-2 border-destructive/40 px-5 py-3 font-display text-base font-semibold text-destructive transition-colors active:bg-destructive/10"
+                className="flex min-h-touch w-full items-center justify-center rounded-bubble border-2 border-destructive/50 bg-destructive/10 px-5 py-3 font-display text-base font-bold text-destructive transition-transform active:scale-[0.98] active:bg-destructive/15"
               >
                 {t("quiz.leaveConfirm")}
               </button>

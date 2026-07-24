@@ -6,7 +6,10 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ADMIN_COOKIE, isValidAdminToken } from "@/lib/admin/auth";
 import { buildLocalizedContent } from "@/lib/admin/content";
-import { importPayloadSchema } from "@/lib/admin/questionSchema";
+import {
+  importPayloadSchema,
+  normalizeExplanation,
+} from "@/lib/admin/questionSchema";
 
 async function assertAdmin(): Promise<boolean> {
   const cookieStore = await cookies();
@@ -20,6 +23,7 @@ type ExportedQuestion = {
   difficulty: "EASY" | "MEDIUM" | "HARD";
   correctIndex: number;
   content: unknown;
+  explanation: { en: string; fa: string } | null;
   tags: string[];
   status: "DRAFT" | "IN_REVIEW" | "PUBLISHED" | "RETIRED";
   isTemporal: boolean;
@@ -80,6 +84,9 @@ export async function exportQuestions(
         difficulty: q.difficulty,
         correctIndex: q.correctIndex,
         content: q.content,
+        explanation: normalizeExplanation(
+          q.explanation as { en: string; fa: string } | null,
+        ),
         tags: q.tags.map((t) => t.slug),
         status: q.status,
         isTemporal: q.isTemporal,
@@ -154,6 +161,8 @@ export async function importQuestions(input: {
               q.content,
               category,
             ) as Prisma.InputJsonValue,
+            explanation:
+              normalizeExplanation(q.explanation ?? null) ?? Prisma.DbNull,
             tags: slugs.length
               ? {
                   connectOrCreate: slugs.map((slug) => ({

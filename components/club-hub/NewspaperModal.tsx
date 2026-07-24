@@ -17,7 +17,7 @@ export function NewspaperModal({ news, state, onClaim }: NewspaperModalProps) {
   if (state === "cooldown" || !news) {
     return (
       <motion.div
-        className="fixed inset-0 z-60 mx-auto flex max-w-mobile items-center justify-center px-5"
+        className="fixed inset-0 z-[70] mx-auto flex max-w-mobile items-center justify-center px-5"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -78,7 +78,7 @@ export function NewspaperModal({ news, state, onClaim }: NewspaperModalProps) {
   const headline = translated === headlineKey ? news.headline : translated;
   return (
     <motion.div
-      className="fixed inset-0 z-60 mx-auto flex max-w-mobile items-center justify-center px-5"
+      className="fixed inset-0 z-[70] mx-auto flex max-w-mobile items-center justify-center px-5"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}

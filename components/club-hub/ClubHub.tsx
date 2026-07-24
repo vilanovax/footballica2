@@ -369,7 +369,7 @@ export function ClubHub({
         />
       )}
 
-      {/* FTUE Step 1 — full mask + coach dialog gating everything but the CTA. */}
+      {/* FTUE Step 0 — full mask + coach CTA (above bottom nav, centered). */}
       <AnimatePresence>
         {step === 0 && (
           <motion.div
@@ -377,7 +377,7 @@ export function ClubHub({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 flex items-end justify-center bg-black/70 p-4 pb-8 backdrop-blur-sm sm:items-center sm:pb-4"
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 pb-[calc(theme(spacing.nav)+1rem)] backdrop-blur-sm sm:pb-4"
           >
             <FtueCoach
               avatarKey={avatarKey}
@@ -392,7 +392,7 @@ export function ClubHub({
         )}
       </AnimatePresence>
 
-      {/* FTUE Step 2 — dim the hub, spotlight the Stadium card (raised above). */}
+      {/* FTUE Step 1 — dim the hub, spotlight the Stadium card (raised above). */}
       <AnimatePresence>
         {step === 1 && (
           <motion.div
@@ -411,7 +411,7 @@ export function ClubHub({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-4 sm:bottom-auto sm:top-3"
+            className="pointer-events-none fixed inset-x-0 top-3 z-[60] flex justify-center px-4"
           >
             <FtueCoach
               avatarKey={avatarKey}
@@ -422,7 +422,7 @@ export function ClubHub({
         )}
       </AnimatePresence>
 
-      {/* FTUE graduation — coach toast + confetti celebration. */}
+      {/* FTUE graduation — coach toast + confetti (clears bottom nav). */}
       <AnimatePresence>
         {justGraduated && (
           <motion.div
@@ -430,7 +430,7 @@ export function ClubHub({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="pointer-events-none fixed inset-0 z-50 flex items-end justify-center px-4 pb-28 sm:items-start sm:pt-3 sm:pb-0"
+            className="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center px-4 pb-[calc(theme(spacing.nav)+1rem)] sm:items-start sm:pt-3 sm:pb-0"
           >
             <div className="relative w-full max-w-mobile">
               <Confetti />

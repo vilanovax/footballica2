@@ -9,6 +9,7 @@ import { toLocaleDigits } from "@/lib/i18n/format";
 import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { AnswerButton } from "@/components/quiz/AnswerButton";
+import { ExplanationFact } from "@/components/quiz/ExplanationFact";
 import type { DuelAnswerSubmission } from "@/lib/duel/types";
 
 type DuelQuizProps = {
@@ -78,7 +79,7 @@ export function DuelQuiz({
       setRevealResult(null);
       setLocked(false);
       setQStartedAt(performance.now());
-    }, 750);
+    }, q.explanation ? 1600 : 750);
   }
 
   return (
@@ -133,6 +134,10 @@ export function DuelQuiz({
             onSelect={() => handleSelect(i)}
           />
         ))}
+        <ExplanationFact
+          explanation={q.explanation}
+          visible={Boolean(revealResult)}
+        />
       </div>
     </section>
   );

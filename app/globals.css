@@ -43,6 +43,13 @@
   --nav-foreground: 210 15% 40%;
   --nav-active: 142 85% 38%;
 
+  /* Game surfaces for cards / modals (not admin-only) */
+  --card: 0 0% 100%;
+  --card-foreground: 210 45% 12%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 210 45% 12%;
+  --input: 110 20% 82%;
+
   --hub-from: 120 45% 88%;
   --hub-via: 110 40% 96%;
   --hub-to: 100 35% 94%;
@@ -89,6 +96,12 @@
   --nav: 215 45% 12%;
   --nav-foreground: 210 20% 70%;
   --nav-active: 155 100% 48%;
+
+  --card: 215 45% 14%;
+  --card-foreground: 210 40% 96%;
+  --popover: 215 45% 14%;
+  --popover-foreground: 210 40% 96%;
+  --input: 215 30% 22%;
 
   --hub-from: 155 60% 18%;
   --hub-via: 215 55% 8%;

@@ -441,6 +441,55 @@ export function QuestionForm({
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle>Explanation (Did you know?)</CardTitle>
+            <CardDescription>
+              Optional trivia fact shown after the answer is revealed. Keep it
+              short — one or two lines.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="explanation.en"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>English</FormLabel>
+                  <FormControl>
+                    <textarea
+                      rows={3}
+                      placeholder="e.g. Argentina lifted the trophy in Qatar 2022…"
+                      className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="explanation.fa"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Persian</FormLabel>
+                  <FormControl>
+                    <textarea
+                      rows={3}
+                      dir="rtl"
+                      placeholder="مثلاً: آرژانتین جام را در قطر ۲۰۲۲ بالا برد…"
+                      className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+        </Card>
+
         {serverError && (
           <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
             <AlertCircle className="h-4 w-4" />

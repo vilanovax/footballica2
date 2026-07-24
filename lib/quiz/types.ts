@@ -28,6 +28,8 @@ export type QuizQuestion = {
   type?: QuizQuestionType;
   /** Image URL for IMAGE-type questions (null/undefined for TEXT). */
   mediaUrl?: string | null;
+  /** Optional bilingual trivia fact shown after reveal. */
+  explanation?: { en: string; fa: string } | null;
 };
 
 /** Outcome of a single penalty kick (one question). */

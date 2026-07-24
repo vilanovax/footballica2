@@ -31,6 +31,8 @@ enum MatchMode {
   TUTORIAL
   QUICK_MATCH
   PENALTY
+  /// Endless 3-lives category run (Survival Mode).
+  SURVIVAL
 }
 
 enum MatchStatus {
@@ -247,6 +249,7 @@ model Club {
   missions       ClubMission[]
   purchases    PurchaseLog[]
   adminGrants  AdminCoinGrant[]
+  categoryRecords CategoryRecord[]
 
   @@index([fans])
   @@index([coins])
@@ -341,6 +344,10 @@ model Match {
   mode   MatchMode
   status MatchStatus @default(COMPLETED)
 
+  /// Survival (and future solo) category lock. Null for mixed-bank Penalty/Quick.
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
   // Football-framed scoreline (Correct = goal for, Wrong = conceded / miss)
   goalsFor       Int @default(0)
   goalsAgainst   Int @default(0)
@@ -368,6 +375,7 @@ model Match {
   @@index([userId, finishedAt])
   @@index([clubId, finishedAt])
   @@index([mode, finishedAt])
+  @@index([categoryId, finishedAt])
 }
 
 // ─── GameConfig (Live-Ops economy tuning) ────────────────────────────────────
@@ -399,6 +407,26 @@ model Category {
 
   questions Question[]
   duelRounds DuelRound[]
+  matches    Match[]
+  records    CategoryRecord[]
+}
+
+/// Per-club, per-category Survival high-score ledger.
+model CategoryRecord {
+  id               String   @id @default(cuid())
+  clubId           String
+  club             Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  categoryId       String
+  category         Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  /// Best correct-answer streak/score in Survival for this category.
+  maxSurvivalScore Int      @default(0)
+  matchesPlayed    Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([clubId, categoryId])
+  @@index([categoryId, maxSurvivalScore])
+  @@index([clubId])
 }
 
 // ─── Tag (free-form labels) ──────────────────────────────────────────────────
@@ -446,6 +474,9 @@ model Question {
   eloRating    Float @default(1500)
   timesServed  Int   @default(0)
   timesCorrect Int   @default(0)
+
+  /// Optional bilingual trivia fact shown after reveal: `{ en: string, fa: string }`.
+  explanation Json?
 
   // Content lifecycle metadata
   /// True when the fact expires over time ("current Real Madrid coach") and

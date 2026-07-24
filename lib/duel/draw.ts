@@ -1,21 +1,14 @@
 import "server-only";
 
-import { prisma } from "@/lib/prisma";
-import { dbQuestionToQuiz } from "@/lib/quiz/questionMapper";
-import type { QuizQuestion } from "@/lib/quiz/types";
 import { getGameConfig } from "@/lib/game/gameConfig";
 import type { DuelCategoryOption } from "@/lib/duel/types";
+import {
+  getCategoryQuestions,
+  listEligibleCategories,
+} from "@/lib/quiz/categoryDraw";
+import type { QuizQuestion } from "@/lib/quiz/types";
 
 export type { DuelCategoryOption };
-
-function shuffle<T>(items: T[]): T[] {
-  const arr = [...items];
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
 
 /**
  * Active categories that have enough PUBLISHED questions for one attack.
@@ -25,26 +18,7 @@ export async function listDuelEligibleCategories(
 ): Promise<DuelCategoryOption[]> {
   const config = await getGameConfig();
   const need = minQuestions ?? config.duel.questionsPerAttack;
-
-  const cats = await prisma.category.findMany({
-    where: { isActive: true },
-    include: {
-      _count: {
-        select: { questions: { where: { status: "PUBLISHED" } } },
-      },
-    },
-  });
-
-  return cats
-    .filter((c) => c._count.questions >= need)
-    .map((c) => ({
-      id: c.id,
-      slug: c.slug,
-      nameEn: c.nameEn,
-      nameFa: c.nameFa,
-      icon: c.icon,
-      questionCount: c._count.questions,
-    }));
+  return listEligibleCategories(need);
 }
 
 /** Category ids already locked in this duel (must stay unique across rounds). */
@@ -74,7 +48,12 @@ export async function pickDraftCategories(
     throw new Error("not_enough_categories");
   }
   const take = Math.min(n, pool.length);
-  return shuffle(pool).slice(0, take);
+  const arr = [...pool];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr.slice(0, take);
 }
 
 /** Draw `count` PUBLISHED questions from a category (no semantic dedupe for duel v1). */
@@ -84,12 +63,9 @@ export async function drawCategoryQuestions(
 ): Promise<QuizQuestion[]> {
   const config = await getGameConfig();
   const need = count ?? config.duel.questionsPerAttack;
-
-  const rows = await prisma.question.findMany({
-    where: { categoryId, status: "PUBLISHED" },
-  });
-  if (rows.length < need) {
+  const questions = await getCategoryQuestions(categoryId, need, []);
+  if (questions.length < need) {
     throw new Error("not_enough_questions");
   }
-  return shuffle(rows).slice(0, need).map(dbQuestionToQuiz);
+  return questions;
 }

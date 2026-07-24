@@ -16,6 +16,7 @@ import { toLocaleDigits } from "@/lib/i18n/format";
 import { FuseTimer } from "./FuseTimer";
 import { QuestionCard } from "./QuestionCard";
 import { AnswerButton } from "./AnswerButton";
+import { ExplanationFact } from "./ExplanationFact";
 import { HelperDock } from "./HelperDock";
 import { Scoreboard } from "./Scoreboard";
 import { MatchResult } from "./MatchResult";
@@ -163,13 +164,15 @@ export function PenaltyMatch({
     }
 
     if (feedback.result === "goal") {
-      const t = setTimeout(() => next(), GOAL_REVEAL_MS);
+      const hasFact = Boolean(questions[currentIndex]?.explanation);
+      const hold = hasFact ? 2200 : GOAL_REVEAL_MS;
+      const t = setTimeout(() => next(), hold);
       return () => clearTimeout(t);
     }
 
     // Miss → shake the container; advance waits for the popup's Continue.
     setShake(true);
-  }, [phase, feedback, next]);
+  }, [phase, feedback, next, questions, currentIndex]);
 
   if (phase === "finished" && rewards) {
     return (
@@ -266,6 +269,11 @@ export function PenaltyMatch({
             </motion.div>
           ))}
         </motion.div>
+
+        <ExplanationFact
+          explanation={question.explanation}
+          visible={locked}
+        />
 
         {!tutorial && helpers && (
           <HelperDock

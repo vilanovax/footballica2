@@ -8,6 +8,12 @@ export const localeContentSchema = z.object({
     .length(4, "Exactly 4 options are required"),
 });
 
+/** Optional bilingual trivia fact shown after answer reveal. */
+export const explanationSchema = z.object({
+  en: z.string(),
+  fa: z.string(),
+});
+
 /**
  * Shared create/edit validation for admin questions. Used by BOTH the client
  * form (RHF resolver) and the server actions (never trust the client).
@@ -44,6 +50,7 @@ export const questionFormSchema = z
       en: localeContentSchema,
       fa: localeContentSchema,
     }),
+    explanation: explanationSchema,
   })
   .refine((d) => d.type !== "IMAGE" || d.mediaUrl.length > 0, {
     message: "Media URL is required for IMAGE questions",
@@ -62,6 +69,7 @@ export const importQuestionSchema = z.object({
   difficulty: z.enum(["EASY", "MEDIUM", "HARD"]).default("EASY"),
   correctIndex: z.number().int().min(0).max(3),
   content: z.object({ en: localeContentSchema, fa: localeContentSchema }),
+  explanation: explanationSchema.nullish(),
   /** Optional per-question tag slugs (merged with the global import tags). */
   tags: z.array(z.string().trim().min(1)).optional().default([]),
   // Optional production metadata — makes an exported bundle round-trippable.
@@ -95,4 +103,16 @@ export const emptyQuestionForm: QuestionFormValues = {
     en: { text: "", options: ["", "", "", ""] },
     fa: { text: "", options: ["", "", "", ""] },
   },
+  explanation: { en: "", fa: "" },
 };
+
+/** Persist null when both locales are blank. */
+export function normalizeExplanation(
+  exp: { en: string; fa: string } | null | undefined,
+): { en: string; fa: string } | null {
+  if (!exp) return null;
+  const en = exp.en.trim();
+  const fa = exp.fa.trim();
+  if (!en && !fa) return null;
+  return { en, fa };
+}

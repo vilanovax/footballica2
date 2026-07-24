@@ -134,7 +134,7 @@ export function MissionDrawer({
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-60 mx-auto flex max-w-mobile flex-col justify-end"
+          className="fixed inset-0 z-[70] mx-auto flex max-w-mobile flex-col justify-end"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

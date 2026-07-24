@@ -75,6 +75,18 @@ export function PlayModes({
             </span>
           </span>
         </Link>
+
+        <Link
+          href="/play/survival"
+          className="btn-fantasy btn-fantasy-secondary w-full text-start"
+        >
+          <span className="flex w-full flex-col items-start gap-1">
+            <span className="text-lg">{t("play.survival")}</span>
+            <span className="text-sm font-semibold opacity-80">
+              {t("play.survivalDesc")}
+            </span>
+          </span>
+        </Link>
       </div>
 
       <RecentDuelHistory history={recentDuels} variant="play" />

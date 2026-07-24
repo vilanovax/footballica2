@@ -5,7 +5,7 @@ import {
   ADMIN_COOKIE_MAX_AGE,
   getAdminSecret,
 } from "@/lib/admin/auth";
-import { isProduction, secretsEqual } from "@/lib/env";
+import { secretsEqual } from "@/lib/env";
 
 /**
  * Next.js 16 "Proxy" (formerly Middleware). Its only job for the admin gate is
@@ -26,7 +26,9 @@ export function proxy(request: NextRequest): NextResponse {
     const response = NextResponse.redirect(cleanUrl);
     response.cookies.set(ADMIN_COOKIE, expected!, {
       httpOnly: true,
-      secure: isProduction(),
+      // Secure cookies on plain http://localhost break some browsers when
+      // NODE_ENV=production; only mark Secure on real HTTPS.
+      secure: request.nextUrl.protocol === "https:",
       sameSite: "lax",
       path: "/admin",
       maxAge: ADMIN_COOKIE_MAX_AGE,

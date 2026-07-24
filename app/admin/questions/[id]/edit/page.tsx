@@ -50,6 +50,11 @@ export default async function EditQuestionPage({
     fa?: StoredLocale;
   };
 
+  const explanationRaw = (question.explanation ?? {}) as {
+    en?: string;
+    fa?: string;
+  };
+
   const initialValues: QuestionFormValues = {
     type: question.type,
     mediaUrl: question.mediaUrl ?? "",
@@ -73,6 +78,10 @@ export default async function EditQuestionPage({
         text: content.fa?.text ?? "",
         options: toFourOptions(content.fa?.options),
       },
+    },
+    explanation: {
+      en: explanationRaw.en ?? "",
+      fa: explanationRaw.fa ?? "",
     },
   };
 

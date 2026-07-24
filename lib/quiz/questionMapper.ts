@@ -12,6 +12,17 @@ const DIFFICULTY_MAP: Record<PrismaDifficulty, QuestionDifficulty> = {
   HARD: "hard",
 };
 
+function parseExplanation(
+  raw: unknown,
+): { en: string; fa: string } | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const en = typeof o.en === "string" ? o.en.trim() : "";
+  const fa = typeof o.fa === "string" ? o.fa.trim() : "";
+  if (!en && !fa) return null;
+  return { en, fa };
+}
+
 /**
  * Map a persisted `Question` row to the framework-free `QuizQuestion` the game
  * engine + scoring expect. The `content` JSON column is stored in exactly the
@@ -25,5 +36,6 @@ export function dbQuestionToQuiz(row: Question): QuizQuestion {
     difficulty: DIFFICULTY_MAP[row.difficulty],
     type: row.type,
     mediaUrl: row.mediaUrl,
+    explanation: parseExplanation(row.explanation),
   };
 }
