@@ -1,6 +1,18 @@
 // Pure club-economy logic. Framework-free so both the server action and the UI
 // can share the exact same cost/level rules (single source of truth).
 
+import type { BoosterType } from "@/lib/boosters/boosters";
+
+/** Live Newspaper Event still within its TTL (hub chip + match math). */
+export type ActiveNewsBoosterSnapshot = {
+  type: BoosterType;
+  multiplier: number;
+  /** Stable `news.events.*` key stored in ActiveBooster.headline. */
+  headline: string;
+  /** ISO expiry. */
+  expiresAt: string;
+};
+
 export type ClubSnapshot = {
   /** Club display name (personalizes the Hub header). */
   name: string;
@@ -24,6 +36,8 @@ export type ClubSnapshot = {
   tutorialStep: number;
   /** True when today's Newspaper booster can still be claimed. */
   newsClaimable: boolean;
+  /** Unexpired Newspaper Event, if any. */
+  activeNewsBooster: ActiveNewsBoosterSnapshot | null;
 };
 
 export type UpgradeKey = "STADIUM" | "MEDICAL" | "TRAINING_GROUND";

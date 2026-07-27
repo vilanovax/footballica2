@@ -6,6 +6,7 @@ import { requireUserClub } from "@/lib/player/current";
 import {
   BOOSTER_DURATION_HOURS,
   canClaimNews,
+  newspaperEventById,
   pickRandomEvent,
   type BoosterType,
 } from "@/lib/boosters/boosters";
@@ -51,12 +52,13 @@ export async function claimDailyNews(): Promise<ClaimNewsResult> {
         });
 
         if (existing) {
+          const catalog = newspaperEventById(existing.headline);
           return {
             state: "active",
             news: {
               type: existing.type as BoosterType,
               multiplier: existing.multiplier,
-              emoji: "📰",
+              emoji: catalog?.emoji ?? "📰",
               headline: existing.headline,
               expiresAt: existing.expiresAt.toISOString(),
             },

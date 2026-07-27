@@ -18,10 +18,16 @@ import {
   type SurvivalRewardBreakdown,
 } from "@/lib/game/survival";
 import {
+  applyBoosterMultipliers,
+  type BoosterType,
+} from "@/lib/boosters/boosters";
+import {
   isChallengeTargetMet,
   isRecordChallengeLive,
 } from "@/lib/game/recordChallenge";
 import { isCategoryAllowedForChallenge } from "@/lib/game/challengeCategories";
+import { evaluateAllMissionTracks } from "@/lib/game/missionEngine";
+import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
 
 class SurvivalError extends Error {}
 
@@ -58,9 +64,11 @@ export type SettleSurvivalResult =
         conquered: boolean;
         badgeGranted: boolean;
         badgeSlug: string | null;
+        badgeEmoji: string | null;
         targetScore: number;
         bestScore: number;
       } | null;
+      missions: EvaluateMissionsResult;
     }
   | { ok: false; error: string };
 
@@ -115,6 +123,7 @@ export async function settleSurvival(input: {
       id: string;
       targetScore: number;
       rewardBadgeSlug: string | null;
+      rewardBadgeEmoji: string | null;
     } | null = null;
 
     if (challengeId) {
@@ -144,6 +153,7 @@ export async function settleSurvival(input: {
         id: challenge.id,
         targetScore: challenge.targetScore,
         rewardBadgeSlug: challenge.rewardBadgeSlug,
+        rewardBadgeEmoji: challenge.rewardBadgeEmoji,
       };
     } else if (category.challengeOnly) {
       return { ok: false, error: "category_not_found" };
@@ -214,7 +224,7 @@ export async function settleSurvival(input: {
       return { ok: false, error: "invalid_end_reason" };
     }
 
-    const rewards = computeSurvivalRewards(
+    const baseRewards = computeSurvivalRewards(
       { score, bestCombo, endReason },
       config,
     );
@@ -237,6 +247,24 @@ export async function settleSurvival(input: {
         throw new SurvivalError("not_enough_stamina");
       }
 
+      // Newspaper Event multipliers — same stack as Penalty / Quick.
+      const activeBoosters = await tx.activeBooster.findMany({
+        where: { clubId: club.id, expiresAt: { gt: new Date() } },
+        select: { type: true, multiplier: true },
+      });
+      const boosted = applyBoosterMultipliers(
+        baseRewards,
+        activeBoosters.map((b) => ({
+          type: b.type as BoosterType,
+          multiplier: b.multiplier,
+        })),
+      );
+      const rewards: SurvivalRewardBreakdown = {
+        ...boosted,
+        boosterCoinBonus: Math.max(0, boosted.coins - baseRewards.coins),
+        boosterFanBonus: Math.max(0, boosted.fans - baseRewards.fans),
+      };
+
       const streak = computeStreakUpdate(
         {
           dailyStreak: club.dailyStreak,
@@ -245,15 +273,6 @@ export async function settleSurvival(input: {
         },
         new Date(),
       );
-
-      const prevXp = club.user.xp;
-      const oldLevel = calculateLevel(prevXp).level;
-      const nextXp = prevXp + rewards.xp;
-      const levelInfo = calculateLevel(nextXp);
-      const leveledUp = levelInfo.level > oldLevel;
-      const levelUpCoins = leveledUp
-        ? (levelInfo.level - oldLevel) * config.rewards.levelUpCoins
-        : 0;
 
       const existing = await tx.categoryRecord.findUnique({
         where: {
@@ -279,7 +298,7 @@ export async function settleSurvival(input: {
         },
       });
 
-      await tx.match.create({
+      const matchRow = await tx.match.create({
         data: {
           userId: user.id,
           clubId: club.id,
@@ -291,7 +310,7 @@ export async function settleSurvival(input: {
           goalsAgainst: misses,
           questionsTotal: dedupedSubmissions.length,
           correctCount: rewards.score,
-          coinsEarned: rewards.coins + levelUpCoins,
+          coinsEarned: rewards.coins,
           xpEarned: rewards.xp,
           fansEarned: rewards.fans,
           staminaSpent: staminaCost,
@@ -302,11 +321,46 @@ export async function settleSurvival(input: {
         },
       });
 
+      const missionResult = await evaluateAllMissionTracks(
+        club.id,
+        {
+          matchId: matchRow.id,
+          goals: rewards.score,
+          won: endReason === "cleared" || rewards.score > 0,
+          perfect: endReason === "cleared",
+          combo: rewards.bestCombo,
+          isTutorial: false,
+        },
+        tx,
+      );
+      const missionCoins = missionResult.missionRewards.coins;
+      const missionXp = missionResult.missionRewards.xp;
+
+      const prevXp = club.user.xp;
+      const oldLevel = calculateLevel(prevXp).level;
+      const nextXp = prevXp + rewards.xp + missionXp;
+      const levelInfo = calculateLevel(nextXp);
+      const leveledUp = levelInfo.level > oldLevel;
+      const levelUpCoins = leveledUp
+        ? (levelInfo.level - oldLevel) * config.rewards.levelUpCoins
+        : 0;
+
+      if (levelUpCoins > 0 || missionCoins > 0 || missionXp > 0) {
+        await tx.match.update({
+          where: { id: matchRow.id },
+          data: {
+            coinsEarned: rewards.coins + levelUpCoins + missionCoins,
+            xpEarned: rewards.xp + missionXp,
+          },
+        });
+      }
+
       let challengeResult: {
         id: string;
         conquered: boolean;
         badgeGranted: boolean;
         badgeSlug: string | null;
+        badgeEmoji: string | null;
         targetScore: number;
         bestScore: number;
       } | null = null;
@@ -331,12 +385,9 @@ export async function settleSurvival(input: {
         const alreadyConquered = Boolean(existingRun?.conqueredAt);
         const badgeSlug = challengeRow.rewardBadgeSlug;
         let badgeGranted = Boolean(existingRun?.badgeGranted);
+        let justGrantedBadge = false;
 
-        if (
-          conquered &&
-          badgeSlug &&
-          !badgeGranted
-        ) {
+        if (conquered && badgeSlug && !badgeGranted) {
           const owned = await tx.clubBadge.findUnique({
             where: {
               clubId_badgeSlug: { clubId: club.id, badgeSlug },
@@ -352,6 +403,7 @@ export async function settleSurvival(input: {
                 sourceChallengeId: challengeRow.id,
               },
             });
+            justGrantedBadge = true;
           }
           badgeGranted = true;
         }
@@ -385,20 +437,31 @@ export async function settleSurvival(input: {
         challengeResult = {
           id: challengeRow.id,
           conquered: Boolean(run.conqueredAt) || conquered,
-          badgeGranted,
+          /** True only when this settle newly granted the challenge badge. */
+          badgeGranted: justGrantedBadge,
           badgeSlug,
+          badgeEmoji: challengeRow.rewardBadgeEmoji,
           targetScore: challengeRow.targetScore,
           bestScore: run.bestScore,
         };
       }
 
+      const finalStamina = leveledUp
+        ? club.maxStamina
+        : regen.stamina - staminaCost;
+      const finalStaminaAnchor = leveledUp
+        ? new Date()
+        : regen.lastStaminaUpdate;
+
       const updatedClub = await tx.club.update({
         where: { id: club.id },
         data: {
-          coins: { increment: rewards.coins + levelUpCoins },
+          coins: {
+            increment: rewards.coins + levelUpCoins + missionCoins,
+          },
           fans: { increment: rewards.fans },
-          stamina: regen.stamina - staminaCost,
-          lastStaminaUpdate: regen.lastStaminaUpdate,
+          stamina: finalStamina,
+          lastStaminaUpdate: finalStaminaAnchor,
           matchesPlayed: { increment: 1 },
           goalsTotal: { increment: rewards.score },
           highestCombo: Math.max(club.highestCombo, rewards.bestCombo),
@@ -413,7 +476,10 @@ export async function settleSurvival(input: {
         data: {
           xp: nextXp,
           managerLevel: levelInfo.level,
-          weeklyXp: { increment: survivalWeeklyXp(rewards.score, config) },
+          weeklyXp: {
+            increment:
+              survivalWeeklyXp(rewards.score, config) + missionXp,
+          },
         },
       });
 
@@ -444,6 +510,7 @@ export async function settleSurvival(input: {
           isNewDay: streak.isNewDay,
         },
         challenge: challengeResult,
+        missions: missionResult,
       };
     });
 

@@ -3,8 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
-import { toClubSnapshot } from "@/lib/dev/dummyClub";
-import { requireUserClub } from "@/lib/player/current";
+import {
+  requireUserClub,
+  toClubSnapshotWithBooster,
+} from "@/lib/player/current";
 import {
   UPGRADES,
   getUpgradeCost,
@@ -99,7 +101,7 @@ export async function buyUpgrade(key: UpgradeKey): Promise<ShopResult> {
       if (club.tutorialStep === 1) data.tutorialStep = 2;
 
       const updated = await tx.club.update({ where: { id: club.id }, data });
-      return toClubSnapshot(updated);
+      return toClubSnapshotWithBooster(updated, tx);
     });
 
     revalidatePath("/shop");
@@ -139,7 +141,7 @@ export async function buyBooster(type: BoosterShopType): Promise<ShopResult> {
           [def.field]: { increment: 1 },
         },
       });
-      return toClubSnapshot(updated);
+      return toClubSnapshotWithBooster(updated, tx);
     });
 
     revalidatePath("/shop");
@@ -187,7 +189,7 @@ export async function buyStaminaRefill(): Promise<ShopResult> {
           lastStaminaUpdate: now,
         },
       });
-      return toClubSnapshot(updated);
+      return toClubSnapshotWithBooster(updated, tx);
     });
 
     revalidatePath("/shop");
@@ -238,7 +240,7 @@ export async function purchaseCoinPack(
         where: { id: club.id },
         data: { coins: { increment: pack.coinsGranted } },
       });
-      return toClubSnapshot(updated);
+      return toClubSnapshotWithBooster(updated, tx);
     });
 
     revalidatePath("/shop");

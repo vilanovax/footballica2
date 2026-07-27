@@ -9,9 +9,11 @@ import {
 } from "@/actions/match/settleSurvival";
 import type { KickSubmission } from "@/lib/quiz/scoring";
 import type { SurvivalEndReason } from "@/lib/game/survival";
+import { calculateLevel } from "@/lib/game/economy";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
-import { CountUp } from "@/components/quiz/CountUp";
+import { PostMatchSummary } from "@/components/match/PostMatchSummary";
+import type { PostMatchTrophy } from "@/components/match/postMatchTypes";
 
 type SurvivalResultProps = {
   categoryId: string;
@@ -79,12 +81,16 @@ export function SurvivalResult({
 
   if (save.status === "error") {
     return (
-      <section className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
+      <section className="flex flex-1 flex-col items-center justify-center gap-6 text-center">
         <p className="font-display text-lg font-bold text-destructive">
           {t("survival.settleError")}
         </p>
         <p className="text-sm text-muted-foreground">{save.message}</p>
-        <button type="button" onClick={onExit} className="btn-fantasy btn-fantasy-primary">
+        <button
+          type="button"
+          onClick={onExit}
+          className="btn-fantasy btn-fantasy-primary"
+        >
           {t("survival.backLobby")}
         </button>
       </section>
@@ -93,116 +99,171 @@ export function SurvivalResult({
 
   const { data } = save;
   const cleared = data.rewards.endReason === "cleared";
-  const catName = locale === "fa" ? data.category.nameFa : data.category.nameEn;
+  const catName =
+    locale === "fa" ? data.category.nameFa : data.category.nameEn;
+
+  const missionCoins = data.missions?.missionRewards.coins ?? 0;
+  const missionXp = data.missions?.missionRewards.xp ?? 0;
+  const matchXp = data.rewards.xp;
+  const prevProgress = calculateLevel(
+    data.balances.xp - matchXp - missionXp,
+  ).progress;
+  const barFrom = data.levelUp ? 0 : prevProgress;
+
+  const bonusLines = [
+    data.rewards.boosterCoinBonus > 0
+      ? {
+          key: "boosterCoin",
+          label: t("result.boosterBonus"),
+          amount: data.rewards.boosterCoinBonus,
+          unit: "💰",
+        }
+      : null,
+    data.rewards.boosterFanBonus > 0
+      ? {
+          key: "boosterFan",
+          label: t("result.boosterBonus"),
+          amount: data.rewards.boosterFanBonus,
+          unit: "📣",
+        }
+      : null,
+    missionCoins > 0
+      ? {
+          key: "missionCoins",
+          label: t("result.missionCoins"),
+          amount: missionCoins,
+          unit: "💰",
+        }
+      : null,
+    missionXp > 0
+      ? {
+          key: "missionXp",
+          label: t("result.missionXp"),
+          amount: missionXp,
+          unit: "XP",
+        }
+      : null,
+  ].filter(Boolean) as Array<{
+    key: string;
+    label: string;
+    amount: number;
+    unit: string;
+  }>;
+
+  const trophies: PostMatchTrophy[] = [];
+  if (data.isNewRecord) {
+    trophies.push({
+      key: "record",
+      emoji: "📈",
+      title: t("result.newRecordTrophy"),
+      subtitle: t("survival.newRecord", {
+        n: toLocaleDigits(data.rewards.score, locale),
+      }),
+    });
+  }
+  if (data.challenge?.conquered) {
+    trophies.push({
+      key: "challenge",
+      emoji: data.challenge.badgeEmoji ?? "🏆",
+      title: t("result.challengeConquered"),
+      subtitle: t("survival.challengeConquered", {
+        n: toLocaleDigits(data.challenge.targetScore, locale),
+      }),
+    });
+  }
+
+  const challengeBadges =
+    data.challenge?.badgeGranted && data.challenge.badgeSlug
+      ? [
+          {
+            slug: data.challenge.badgeSlug,
+            emoji: data.challenge.badgeEmoji ?? "🏅",
+            nameEn: data.challenge.badgeSlug,
+            nameFa: data.challenge.badgeSlug,
+            coins: 0,
+            xp: 0,
+          },
+        ]
+      : [];
+
+  const chips = [
+    {
+      key: "score",
+      label: `${t("survival.score")} ${toLocaleDigits(data.rewards.score, locale)}`,
+      tone: "accent" as const,
+    },
+    data.rewards.bestCombo >= 2
+      ? {
+          key: "combo",
+          label: `⚡ ×${toLocaleDigits(data.rewards.bestCombo, locale)}`,
+          tone: "secondary" as const,
+        }
+      : null,
+  ].filter(Boolean) as Array<{
+    key: string;
+    label: string;
+    tone: "accent" | "secondary";
+  }>;
+
+  const streakNote = data.streak.extended
+    ? data.streak.dailyStreak > 1
+      ? t("result.streakExtended", {
+          n: toLocaleDigits(data.streak.dailyStreak, locale),
+        })
+      : t("result.streakStarted")
+    : null;
 
   return (
-    <section className="flex flex-1 flex-col items-center justify-center gap-6 text-center">
-      <motion.div
-        initial={{ scale: 0.6, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 320, damping: 18 }}
-        className="text-6xl"
-        aria-hidden
-      >
-        {cleared ? "🏆" : "💔"}
-      </motion.div>
-
-      <div>
-        <p className="font-display text-sm font-semibold uppercase tracking-widest text-secondary">
-          {data.category.icon || "📚"} {catName}
-        </p>
-        <h1 className="mt-2 font-display text-3xl font-bold text-foreground">
-          {cleared ? t("survival.clearedTitle") : t("survival.eliminatedTitle")}
-        </h1>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          {cleared ? t("survival.clearedBody") : t("survival.eliminatedBody")}
-        </p>
-      </div>
-
-      <div className="grid w-full max-w-sm grid-cols-2 gap-3">
-        <div className="rounded-bubble-lg border border-border bg-surface p-4 shadow-fantasy-sm">
-          <p className="font-display text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            {t("survival.score")}
-          </p>
-          <p className="mt-1 font-display text-3xl font-bold text-primary">
-            <CountUp value={data.rewards.score} locale={locale} />
-          </p>
-        </div>
-        <div className="rounded-bubble-lg border border-border bg-surface p-4 shadow-fantasy-sm">
-          <p className="font-display text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            {t("survival.bestCombo")}
-          </p>
-          <p className="mt-1 font-display text-3xl font-bold text-accent-deep">
-            ×{toLocaleDigits(data.rewards.bestCombo, locale)}
-          </p>
-        </div>
-      </div>
-
-      {data.isNewRecord && (
-        <motion.p
-          initial={{ y: 8, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="rounded-full bg-accent/20 px-4 py-2 font-display text-sm font-bold text-accent-deep"
-        >
-          {t("survival.newRecord", {
-            n: toLocaleDigits(data.rewards.score, locale),
-          })}
-        </motion.p>
-      )}
-
-      {data.challenge?.conquered && (
-        <motion.p
-          initial={{ y: 8, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="rounded-full bg-secondary/20 px-4 py-2 font-display text-sm font-bold text-secondary"
-        >
-          {t("survival.challengeConquered", {
-            n: toLocaleDigits(data.challenge.targetScore, locale),
-          })}
-          {data.challenge.badgeGranted && data.challenge.badgeSlug
-            ? ` · 🏅 ${data.challenge.badgeSlug}`
-            : ""}
-        </motion.p>
-      )}
-
-      <div className="flex w-full max-w-sm flex-col gap-2 rounded-bubble-lg border border-border bg-muted/40 p-4 text-sm">
-        <div className="flex justify-between font-display font-bold">
-          <span>🪙 {t("result.coins")}</span>
-          <span>+{toLocaleDigits(data.rewards.coins, locale)}</span>
-        </div>
-        <div className="flex justify-between font-display font-bold">
-          <span>⭐ {t("result.xp")}</span>
-          <span>+{toLocaleDigits(data.rewards.xp, locale)}</span>
-        </div>
-        <div className="flex justify-between font-display font-bold">
-          <span>📣 {t("result.fans")}</span>
-          <span>+{toLocaleDigits(data.rewards.fans, locale)}</span>
-        </div>
-        {!data.isNewRecord && data.previousRecord > 0 && (
-          <p className="mt-1 text-xs text-muted-foreground">
-            {t("survival.recordHint", {
-              n: toLocaleDigits(data.previousRecord, locale),
-            })}
-          </p>
-        )}
-      </div>
-
-      <div className="flex w-full max-w-sm flex-col gap-3">
-        <button
-          type="button"
-          onClick={onPlayAgain}
-          className="btn-fantasy btn-fantasy-primary w-full"
-        >
-          {t("survival.playAgain")}
-        </button>
-        <button
-          type="button"
-          onClick={onExit}
-          className="btn-fantasy btn-fantasy-secondary w-full"
-        >
-          {t("survival.backLobby")}
-        </button>
-      </div>
-    </section>
+    <PostMatchSummary
+      outcome={{
+        emoji: cleared ? "🏆" : "💔",
+        title: cleared
+          ? t("survival.clearedTitle")
+          : t("survival.eliminatedTitle"),
+        subtitle: `${data.category.icon || "📚"} ${catName}`,
+        hint: cleared ? t("survival.clearedBody") : t("survival.eliminatedBody"),
+        hintTone: cleared ? "positive" : "negative",
+        chips,
+      }}
+      rewards={{
+        coins: data.rewards.coins + missionCoins,
+        xp: data.rewards.xp + missionXp,
+        fans: data.rewards.fans,
+        bonusLines,
+        balances: {
+          coins: data.balances.coins,
+          fans: data.balances.fans,
+          stamina: data.balances.stamina,
+          maxStamina: data.balances.maxStamina,
+        },
+      }}
+      achievements={{
+        level: {
+          level: data.level.level,
+          currentLevelXp: data.level.currentLevelXp,
+          nextLevelXp: data.level.nextLevelXp,
+          progress: data.level.progress,
+          barFrom,
+          levelUp: data.levelUp,
+        },
+        badges: challengeBadges,
+        trophies,
+        missions: data.missions,
+        streakNote,
+      }}
+      celebrateBadges={challengeBadges.length > 0}
+      ctas={{
+        primary: {
+          label: t("survival.playAgain"),
+          onClick: onPlayAgain,
+          variant: "primary",
+        },
+        secondary: {
+          label: t("survival.backLobby"),
+          onClick: onExit,
+          variant: "accent",
+        },
+      }}
+    />
   );
 }

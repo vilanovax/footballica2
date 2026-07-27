@@ -13,9 +13,7 @@ import { calculateLevel } from "@/lib/game/economy";
 import { nextMilestone, winsAway } from "@/lib/club/milestones";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
-import { CountUp } from "./CountUp";
-import { BadgeUnlockPopup } from "./BadgeUnlockPopup";
-import { MissionProgressBanner } from "@/components/missions/MissionProgressBanner";
+import { PostMatchSummary } from "@/components/match/PostMatchSummary";
 
 type MatchResultProps = {
   totalKicks: number;
@@ -49,10 +47,6 @@ export function MatchResult({
 }: MatchResultProps) {
   const { t, locale } = useTranslation();
   const [save, setSave] = useState<SaveState>({ status: "saving" });
-  // Whether the player has dismissed the badge-unlock celebration overlay.
-  const [badgesDismissed, setBadgesDismissed] = useState(false);
-
-  // Guard against double-submit in React strict/dev double-invoke.
   const submittedRef = useRef(false);
 
   async function submit() {
@@ -88,11 +82,9 @@ export function MatchResult({
         >
           ⚽️
         </motion.div>
-        <div>
-          <h1 className="font-display text-2xl font-bold text-foreground">
-            {t("result.saving")}
-          </h1>
-        </div>
+        <h1 className="font-display text-2xl font-bold text-foreground">
+          {t("result.saving")}
+        </h1>
       </section>
     );
   }
@@ -131,7 +123,6 @@ export function MatchResult({
     );
   }
 
-  // Saved — show server-confirmed rewards + new balances.
   const {
     rewards: confirmed,
     balances,
@@ -143,67 +134,59 @@ export function MatchResult({
     missions,
   } = save.data;
   const won = confirmed.won;
-  const showBadges = unlockedBadges.length > 0 && !badgesDismissed;
   const outOfEnergy = balances.stamina <= 0;
-  // In the tutorial, funnel straight back to the Hub for the forced upgrade.
   const hidePlayAgain = tutorial || outOfEnergy;
 
-  // Progress bar: fill from where the player was BEFORE this match's XP to the
-  // new position. On a level-up we fill the fresh level from empty.
   const prevProgress = calculateLevel(balances.xp - confirmed.xp).progress;
   const barFrom = levelUp ? 0 : prevProgress;
 
-  // Coins that came from an active Newspaper booster (final minus itemized base).
   const coinBase =
-    confirmed.breakdown.coinsWin + confirmed.breakdown.coinsPerfectBonus;
+    confirmed.breakdown.coinsWin +
+    confirmed.breakdown.coinsPerfectBonus +
+    confirmed.breakdown.comboCoinBonus;
   const boosterCoinBonus = Math.max(0, confirmed.coins - coinBase);
 
-  // Itemized bonus lines (only the ones that actually fired).
-  const bonusLines: { key: string; label: string; amount: number; unit: string }[] =
-    [
-      {
-        key: "correct",
-        label: t("result.correctAnswers", {
-          n: toLocaleDigits(confirmed.goals, locale),
-        }),
-        amount: confirmed.breakdown.xpFromGoals,
-        unit: "XP",
-      },
-      {
-        key: "winxp",
-        label: t("result.winBonus"),
-        amount: confirmed.breakdown.xpWinBonus,
-        unit: "XP",
-      },
-      {
-        key: "perfect",
-        label: t("result.perfectBonus"),
-        amount: confirmed.breakdown.coinsPerfectBonus,
-        unit: "💰",
-      },
-      {
-        key: "comboxp",
-        label: t("result.comboBonus"),
-        amount: confirmed.breakdown.comboXpBonus,
-        unit: "XP",
-      },
-      {
-        key: "combocoin",
-        label: t("result.comboBonus"),
-        amount: confirmed.breakdown.comboCoinBonus,
-        unit: "💰",
-      },
-      {
-        key: "booster",
-        label: t("result.boosterBonus"),
-        amount: boosterCoinBonus,
-        unit: "💰",
-      },
-    ].filter((l) => l.amount > 0);
+  const bonusLines = [
+    {
+      key: "correct",
+      label: t("result.correctAnswers", {
+        n: toLocaleDigits(confirmed.goals, locale),
+      }),
+      amount: confirmed.breakdown.xpFromGoals,
+      unit: "XP",
+    },
+    {
+      key: "winxp",
+      label: t("result.winBonus"),
+      amount: confirmed.breakdown.xpWinBonus,
+      unit: "XP",
+    },
+    {
+      key: "perfect",
+      label: t("result.perfectBonus"),
+      amount: confirmed.breakdown.coinsPerfectBonus,
+      unit: "💰",
+    },
+    {
+      key: "comboxp",
+      label: t("result.comboBonus"),
+      amount: confirmed.breakdown.comboXpBonus,
+      unit: "XP",
+    },
+    {
+      key: "combocoin",
+      label: t("result.comboBonus"),
+      amount: confirmed.breakdown.comboCoinBonus,
+      unit: "💰",
+    },
+    {
+      key: "booster",
+      label: t("result.boosterBonus"),
+      amount: boosterCoinBonus,
+      unit: "💰",
+    },
+  ].filter((l) => l.amount > 0);
 
-  // Next Milestone — the upgrade the player is closest to affording. Drives the
-  // goal-oriented "just one more win…" nudge. Hidden during the FTUE tutorial
-  // (that flow already funnels straight into the forced first upgrade).
   const milestone = tutorial
     ? null
     : nextMilestone({
@@ -213,14 +196,14 @@ export function MatchResult({
         trainingGroundLevel: balances.trainingGroundLevel,
       });
 
-  let milestoneText: string | null = null;
+  let milestoneBody: string | null = null;
   if (milestone) {
     const name = locale === "fa" ? milestone.faName : milestone.name;
     if (milestone.affordable) {
-      milestoneText = t("result.milestoneReady", { name });
+      milestoneBody = t("result.milestoneReady", { name });
     } else {
       const wins = winsAway(milestone.remaining, coinsPerWin);
-      milestoneText =
+      milestoneBody =
         wins <= 1
           ? t("result.milestoneOneWin", { name })
           : t("result.milestoneBudget", {
@@ -230,266 +213,116 @@ export function MatchResult({
     }
   }
 
+  const title =
+    mode === "quick"
+      ? won
+        ? t("result.wonQuick")
+        : t("result.lostQuick")
+      : won
+        ? t("result.won")
+        : t("result.lost");
+
+  const chips = [
+    confirmed.combo >= 2
+      ? {
+          key: "combo",
+          label: `⚡ ${t("result.combo", {
+            n: toLocaleDigits(confirmed.combo, locale),
+          })}`,
+          tone: "accent" as const,
+        }
+      : null,
+    streak.dailyStreak >= 1
+      ? {
+          key: "streak",
+          label: `🔥 ${t("result.streakDays", {
+            n: toLocaleDigits(streak.dailyStreak, locale),
+          })}`,
+          tone: "secondary" as const,
+        }
+      : null,
+  ].filter(Boolean) as Array<{
+    key: string;
+    label: string;
+    tone: "accent" | "secondary";
+  }>;
+
+  const streakNote = streak.extended
+    ? streak.dailyStreak > 1
+      ? t("result.streakExtended", {
+          n: toLocaleDigits(streak.dailyStreak, locale),
+        })
+      : t("result.streakStarted")
+    : null;
+
   return (
-    <>
-      {showBadges && (
-        <BadgeUnlockPopup
-          badges={unlockedBadges}
-          onClose={() => setBadgesDismissed(true)}
-        />
-      )}
-      <motion.section
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ type: "spring", stiffness: 220, damping: 18 }}
-        className="flex flex-1 flex-col items-center justify-center gap-5 text-center"
-      >
-      <motion.div
-        animate={{ rotate: [0, -6, 6, 0], scale: [1, 1.1, 1] }}
-        transition={{ duration: 0.6 }}
-        className="text-6xl"
-        aria-hidden
-      >
-        {won ? "🏆" : "🧤"}
-      </motion.div>
-
-      <div>
-        <h1 className="font-display text-3xl font-bold text-foreground">
-          {mode === "quick"
-            ? won
-              ? t("result.wonQuick")
-              : t("result.lostQuick")
-            : won
-              ? t("result.won")
-              : t("result.lost")}
-        </h1>
-        <p className="mt-1 font-display text-lg font-semibold text-muted-foreground">
-          {t("result.goalsScored", {
-            goals: toLocaleDigits(confirmed.goals, locale),
-            total: toLocaleDigits(totalKicks, locale),
-          })}
-        </p>
-        <p
-          className={[
-            "mt-2 font-display text-sm font-bold",
-            won ? "text-primary" : "text-accent-deep",
-          ].join(" ")}
-        >
-          {won ? t("result.wonHint") : t("result.lostHint")}
-        </p>
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-          {confirmed.combo >= 2 && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.7 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: "spring", stiffness: 300, damping: 14, delay: 0.25 }}
-              className="inline-flex items-center gap-1.5 rounded-full bg-accent/15 px-3 py-1 font-display text-sm font-bold text-accent-deep"
-            >
-              ⚡ {t("result.combo", { n: toLocaleDigits(confirmed.combo, locale) })}
-            </motion.div>
-          )}
-          {streak.dailyStreak >= 1 && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.7 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: "spring", stiffness: 300, damping: 14, delay: 0.32 }}
-              className="inline-flex items-center gap-1.5 rounded-full bg-secondary/15 px-3 py-1 font-display text-sm font-bold text-secondary"
-            >
-              🔥 {t("result.streakDays", { n: toLocaleDigits(streak.dailyStreak, locale) })}
-            </motion.div>
-          )}
-        </div>
-        {streak.extended && (
-          <motion.p
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.45 }}
-            className="mt-2 font-display text-xs font-bold text-secondary"
-          >
-            {streak.dailyStreak > 1
-              ? t("result.streakExtended", {
-                  n: toLocaleDigits(streak.dailyStreak, locale),
-                })
-              : t("result.streakStarted")}
-          </motion.p>
-        )}
-      </div>
-
-      <div className="grid w-full grid-cols-3 gap-3">
-        {[
-          { label: t("result.coins"), amount: confirmed.coins, tone: "text-accent-deep" },
-          { label: t("result.xp"), amount: confirmed.xp, tone: "text-primary" },
-          { label: t("result.fans"), amount: confirmed.fans, tone: "text-secondary" },
-        ].map((r) => {
-          const earned = r.amount > 0;
-          return (
-            <div
-              key={r.label}
-              className={[
-                "rounded-bubble border px-3 py-4 shadow-fantasy transition-colors",
-                earned ? "border-border bg-surface" : "border-border bg-muted/50",
-              ].join(" ")}
-            >
-              <p
-                className={[
-                  "font-display text-xl font-bold",
-                  earned ? r.tone : "text-muted-foreground",
-                ].join(" ")}
-              >
-                {earned ? (
-                  <CountUp value={r.amount} locale={locale} prefix="+" delay={0.15} />
-                ) : (
-                  `+${toLocaleDigits(0, locale)}`
-                )}
-              </p>
-              <p className="mt-1 text-xs font-semibold text-muted-foreground">
-                {r.label}
-              </p>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Itemized "how the math worked" lines */}
-      {bonusLines.length > 0 && (
-        <div className="w-full space-y-1">
-          {bonusLines.map((line) => (
-            <div
-              key={line.key}
-              className="flex items-center justify-between rounded-full bg-muted/60 px-3 py-1.5 text-xs font-semibold"
-            >
-              <span className="text-muted-foreground">{line.label}</span>
-              <span className="font-display font-bold text-surface-foreground">
-                +{toLocaleDigits(line.amount, locale)} {line.unit}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {missions && (missions.updates.length > 0 || missions.chestReady) && (
-        <MissionProgressBanner missions={missions} />
-      )}
-
-      {/* Level + XP progress */}
-      <div className="w-full rounded-bubble border border-border bg-surface p-4 shadow-fantasy">
-        <div className="flex items-center justify-between">
-          <span className="font-display text-sm font-bold text-primary">
-            {t("result.level", { n: toLocaleDigits(level.level, locale) })}
-          </span>
-          <span className="font-display text-xs font-semibold text-muted-foreground">
-            {t("result.xpToGo", {
-              cur: toLocaleDigits(level.currentLevelXp, locale),
-              next: toLocaleDigits(level.nextLevelXp, locale),
-            })}
-          </span>
-        </div>
-        <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-muted">
-          <motion.div
-            className="h-full rounded-full bg-linear-to-r from-primary to-secondary"
-            initial={{ width: `${Math.round(barFrom * 100)}%` }}
-            animate={{ width: `${Math.round(level.progress * 100)}%` }}
-            transition={{ duration: 0.9, delay: 0.35, ease: "easeOut" }}
-          />
-        </div>
-        {levelUp && (
-          <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ type: "spring", stiffness: 260, damping: 16, delay: 0.6 }}
-            className="mt-3 flex flex-wrap items-center justify-center gap-x-2 rounded-bubble bg-accent/15 px-3 py-2 font-display text-sm font-bold text-accent-deep"
-          >
-            <span>🎉 {t("result.levelUp")}</span>
-            <span className="text-muted-foreground">·</span>
-            <span>
-              {t("result.levelUpPerk", {
-                coins: toLocaleDigits(levelUp.coinReward, locale),
-              })}
-            </span>
-          </motion.div>
-        )}
-      </div>
-
-      {/* Next Milestone — the psychological "almost there" nudge */}
-      {milestone && milestoneText && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, type: "spring", stiffness: 220, damping: 20 }}
-          className="w-full rounded-bubble border-2 border-accent/40 bg-accent/10 p-4 shadow-fantasy"
-        >
-          <div className="flex items-center gap-3 text-start">
-            <span className="text-3xl" aria-hidden>
-              {milestone.icon}
-            </span>
-            <div className="flex-1">
-              <p className="font-display text-[0.7rem] font-bold uppercase tracking-widest text-accent-deep">
-                {t("result.milestoneTitle")}
-              </p>
-              <p className="mt-0.5 font-display text-sm font-bold text-foreground">
-                {milestoneText}
-              </p>
-            </div>
-          </div>
-          {!milestone.affordable && (
-            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
-              <motion.div
-                className="h-full rounded-full bg-linear-to-r from-accent to-secondary"
-                initial={{ width: 0 }}
-                animate={{
-                  width: `${Math.min(
-                    100,
-                    Math.round((balances.coins / milestone.cost) * 100),
-                  )}%`,
-                }}
-                transition={{ duration: 0.9, delay: 0.7, ease: "easeOut" }}
-              />
-            </div>
-          )}
-        </motion.div>
-      )}
-
-      {/* Server-confirmed club totals */}
-      <div className="flex items-center gap-1.5 rounded-full bg-surface px-4 py-2 font-display text-sm font-bold shadow-fantasy-sm">
-        <span className="text-accent-deep">💰 {toLocaleDigits(balances.coins, locale)}</span>
-        <span className="text-muted-foreground">·</span>
-        <span className="text-secondary">👥 {toLocaleDigits(balances.fans, locale)}</span>
-        <span className="text-muted-foreground">·</span>
-        <span className="text-primary">
-          ⚡ {toLocaleDigits(balances.stamina, locale)}/{toLocaleDigits(balances.maxStamina, locale)}
-        </span>
-      </div>
-
-      <div className="flex w-full flex-col gap-3">
-        {tutorial ? (
-          <div className="w-full rounded-bubble border border-accent/40 bg-accent/10 px-4 py-3 text-center font-display text-sm font-bold text-accent-deep">
-            {t("result.spendCoins")}
-          </div>
-        ) : outOfEnergy ? (
-          <div className="w-full rounded-bubble border border-border bg-muted px-4 py-3 text-center font-display text-sm font-bold text-muted-foreground">
-            {t("result.outOfEnergy")}
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={onPlayAgain}
-            className="btn-fantasy btn-fantasy-primary w-full justify-center"
-          >
-            {t("result.playAgain")}
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={onExit}
-          className={[
-            "btn-fantasy w-full justify-center",
-            hidePlayAgain ? "btn-fantasy-primary" : "btn-fantasy-accent",
-          ].join(" ")}
-        >
-          {t("common.backToClub")}
-        </button>
-      </div>
-      </motion.section>
-    </>
+    <PostMatchSummary
+      outcome={{
+        emoji: won ? "🏆" : "🧤",
+        title,
+        subtitle: t("result.goalsScored", {
+          goals: toLocaleDigits(confirmed.goals, locale),
+          total: toLocaleDigits(totalKicks, locale),
+        }),
+        hint: won ? t("result.wonHint") : t("result.lostHint"),
+        hintTone: won ? "positive" : "negative",
+        chips,
+      }}
+      rewards={{
+        coins: confirmed.coins,
+        xp: confirmed.xp,
+        fans: confirmed.fans,
+        bonusLines,
+        balances: {
+          coins: balances.coins,
+          fans: balances.fans,
+          stamina: balances.stamina,
+          maxStamina: balances.maxStamina,
+        },
+      }}
+      achievements={{
+        level: {
+          level: level.level,
+          currentLevelXp: level.currentLevelXp,
+          nextLevelXp: level.nextLevelXp,
+          progress: level.progress,
+          barFrom,
+          levelUp,
+        },
+        badges: unlockedBadges,
+        missions,
+        streakNote,
+        milestone:
+          milestone && milestoneBody
+            ? {
+                icon: milestone.icon,
+                eyebrow: t("result.milestoneTitle"),
+                body: milestoneBody,
+                fill: milestone.affordable
+                  ? undefined
+                  : Math.min(1, balances.coins / milestone.cost),
+              }
+            : null,
+      }}
+      ctas={{
+        notice: tutorial
+          ? t("result.spendCoins")
+          : outOfEnergy
+            ? t("result.outOfEnergy")
+            : null,
+        primary: hidePlayAgain
+          ? null
+          : {
+              label: t("result.playAgain"),
+              onClick: onPlayAgain,
+              variant: "primary",
+            },
+        secondary: {
+          label: t("common.backToClub"),
+          onClick: onExit,
+          variant: hidePlayAgain ? "primary" : "accent",
+        },
+      }}
+    />
   );
 }

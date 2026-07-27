@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { DuelSnapshot } from "@/lib/duel/snapshot";
 import { toScorecard } from "@/lib/duel/toScorecard";
+import { DEFAULT_GAME_CONFIG } from "@/lib/game/economy";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { toLocaleDigits } from "@/lib/i18n/format";
 import { DuelScorecard } from "./DuelScorecard";
-import { MissionProgressBanner } from "@/components/missions/MissionProgressBanner";
+import { PostMatchSummary } from "@/components/match/PostMatchSummary";
 import { getMyMissions } from "@/actions/missions";
 import { startDuel } from "@/actions/duel/startDuel";
 import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
@@ -22,7 +24,7 @@ type DuelResultProps = {
 
 export function DuelResult({ duel, missions: initialMissions }: DuelResultProps) {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const data = toScorecard(duel);
   const [pending, startTransition] = useTransition();
   const [missions, setMissions] = useState<EvaluateMissionsResult | null>(
@@ -77,56 +79,135 @@ export function DuelResult({ duel, missions: initialMissions }: DuelResultProps)
     }
   }
 
-  const showMissions =
+  const missionBoard =
     missions &&
-    (missions.updates.length > 0 ||
-      missions.chestReady ||
-      (!initialMissions && missions.missions.some((m) => m.progress > 0)));
+    (initialMissions
+      ? missions
+      : {
+          ...missions,
+          updates: missions.missions
+            .filter((m) => m.progress > 0 || m.isCompleted)
+            .slice(0, 3)
+            .map((m) => ({
+              missionId: m.missionId,
+              titleEn: m.titleEn,
+              titleFa: m.titleFa,
+              progress: m.progress,
+              targetValue: m.targetValue,
+              isCompleted: m.isCompleted,
+              justCompleted: m.isCompleted,
+              delta: 0,
+            })),
+        });
+
+  const missionCoins = initialMissions?.missionRewards.coins ?? 0;
+  const missionXp = initialMissions?.missionRewards.xp ?? 0;
+  const won = data.outcome === "WIN";
+  const weeklyXp =
+    won && DEFAULT_GAME_CONFIG.duel.winWeeklyXp > 0
+      ? DEFAULT_GAME_CONFIG.duel.winWeeklyXp
+      : 0;
+
+  const title =
+    data.outcome === "WIN"
+      ? t("duel.resultWin")
+      : data.outcome === "DRAW"
+        ? t("duel.resultDraw")
+        : t("duel.resultLose");
+  const emoji =
+    data.outcome === "WIN" ? "🏆" : data.outcome === "DRAW" ? "🤝" : "🧤";
+
+  const bonusLines = [
+    missionCoins > 0
+      ? {
+          key: "missionCoins",
+          label: t("result.missionCoins"),
+          amount: missionCoins,
+          unit: "💰",
+        }
+      : null,
+    missionXp > 0
+      ? {
+          key: "missionXp",
+          label: t("result.missionXp"),
+          amount: missionXp,
+          unit: "XP",
+        }
+      : null,
+    weeklyXp > 0
+      ? {
+          key: "weekly",
+          label: t("result.weeklyXpBonus"),
+          amount: weeklyXp,
+          unit: "XP",
+        }
+      : null,
+  ].filter(Boolean) as Array<{
+    key: string;
+    label: string;
+    amount: number;
+    unit: string;
+  }>;
 
   return (
-    <div className="flex flex-1 flex-col gap-3">
-      <DuelScorecard
-        data={{
-          ...data,
-          status: "COMPLETED",
-          ctaLabel: pending
-            ? t("duel.starting")
-            : t("duel.scorecard.rematch"),
-        }}
-        onPrimaryAction={handleRematch}
-        onSecondaryAction={() => router.push("/play/duel")}
-      />
-      <button
-        type="button"
-        onClick={() => void handleShare()}
-        className="min-h-touch rounded-bubble border border-border bg-surface px-4 py-2.5 font-display text-sm font-bold text-muted-foreground transition-transform active:scale-[0.98]"
-      >
-        {t("duel.scorecard.share")}
-      </button>
-      {showMissions && missions && (
-        <MissionProgressBanner
-          missions={
-            initialMissions
-              ? missions
-              : {
-                  ...missions,
-                  updates: missions.missions
-                    .filter((m) => m.progress > 0 || m.isCompleted)
-                    .slice(0, 3)
-                    .map((m) => ({
-                      missionId: m.missionId,
-                      titleEn: m.titleEn,
-                      titleFa: m.titleFa,
-                      progress: m.progress,
-                      targetValue: m.targetValue,
-                      isCompleted: m.isCompleted,
-                      justCompleted: m.isCompleted,
-                      delta: 0,
-                    })),
-                }
-          }
-        />
-      )}
-    </div>
+    <PostMatchSummary
+      outcome={{
+        emoji,
+        title,
+        subtitle: `${toLocaleDigits(data.youScore, locale)} – ${toLocaleDigits(data.themScore, locale)}`,
+        hintTone:
+          data.outcome === "WIN"
+            ? "positive"
+            : data.outcome === "LOSE"
+              ? "negative"
+              : "neutral",
+        children: (
+          <DuelScorecard
+            data={{ ...data, status: "COMPLETED" }}
+            hideFooter
+            hideOutcomeBanner
+          />
+        ),
+      }}
+      rewards={{
+        coins: missionCoins,
+        xp: missionXp,
+        fans: 0,
+        bonusLines,
+      }}
+      achievements={{
+        missions: missionBoard,
+        trophies:
+          weeklyXp > 0
+            ? [
+                {
+                  key: "weekly",
+                  emoji: "📅",
+                  title: t("result.weeklyXpBonus"),
+                  subtitle: `+${toLocaleDigits(weeklyXp, locale)} XP`,
+                },
+              ]
+            : [],
+      }}
+      celebrateBadges={false}
+      ctas={{
+        primary: {
+          label: pending ? t("duel.starting") : t("duel.scorecard.rematch"),
+          onClick: handleRematch,
+          disabled: pending,
+          variant: "primary",
+        },
+        secondary: {
+          label: t("duel.backLobby"),
+          onClick: () => router.push("/play/duel"),
+          variant: "accent",
+        },
+        tertiary: {
+          label: t("duel.scorecard.share"),
+          onClick: () => void handleShare(),
+          variant: "secondary",
+        },
+      }}
+    />
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useRef } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { upgradeClub } from "@/actions/upgradeClub";
@@ -31,6 +31,7 @@ import { StatusBar } from "./StatusBar";
 import { StadiumHero } from "./StadiumHero";
 import { UpgradeCard } from "./UpgradeCard";
 import { NewspaperModal } from "./NewspaperModal";
+import { ActiveNewsChip } from "./ActiveNewsChip";
 import { FtueCoach } from "./FtueCoach";
 import { Confetti } from "./Confetti";
 import {
@@ -91,6 +92,7 @@ export function ClubHub({
 
   const canClaimNews = club.newsClaimable;
   const missionReadyCount = countMissionRewardsReady(dailyBoard, missionBoard);
+  const newsAutoOpenedRef = useRef(false);
 
   // Replay onboarding whistle once after createClub redirect (tutorialStep 0).
   useEffect(() => {
@@ -117,16 +119,42 @@ export function ClubHub({
         return;
       }
       setNews({ payload: result.news, state: result.state });
-      // A fresh claim spends today's ticket — stop the mailbox nagging.
-      if (result.state === "fresh") {
-        setClub((c) => ({ ...c, newsClaimable: false }));
-        playSound("upgrade");
-        haptic([30, 30, 60]);
+      // Fresh / still-active → sync hub chip; cooldown clears claimable.
+      if (result.state === "fresh" || result.state === "active") {
+        const payload = result.news;
+        setClub((c) => ({
+          ...c,
+          newsClaimable: false,
+          activeNewsBooster: payload
+            ? {
+                type: payload.type,
+                multiplier: payload.multiplier,
+                headline: payload.headline,
+                expiresAt: payload.expiresAt,
+              }
+            : c.activeNewsBooster,
+        }));
+        if (result.state === "fresh") {
+          playSound("upgrade");
+          haptic([30, 30, 60]);
+        } else {
+          haptic(HAPTIC.light);
+        }
       } else {
+        setClub((c) => ({ ...c, newsClaimable: false }));
         haptic(HAPTIC.light);
       }
     });
   }
+
+  // Auto-open today's Newspaper once FTUE is done and the day is claimable.
+  useEffect(() => {
+    if (!ftueComplete || !canClaimNews || newsAutoOpenedRef.current) return;
+    if (news || newsPending) return;
+    newsAutoOpenedRef.current = true;
+    handleDailyNews();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot on hub land
+  }, [ftueComplete, canClaimNews]);
 
   function handleUpgrade(key: UpgradeKey) {
     if (pendingKey) return;
@@ -256,6 +284,19 @@ export function ClubHub({
         staminaRefillCost={staminaRefillCost}
         onClubUpdate={setClub}
       />
+
+      <AnimatePresence>
+        {ftueComplete && club.activeNewsBooster && (
+          <ActiveNewsChip
+            key={club.activeNewsBooster.expiresAt}
+            booster={club.activeNewsBooster}
+            onOpen={handleDailyNews}
+            onExpired={() =>
+              setClub((c) => ({ ...c, activeNewsBooster: null }))
+            }
+          />
+        )}
+      </AnimatePresence>
 
       {ftueComplete && (
         <DuelInboxBanner

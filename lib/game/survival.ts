@@ -83,6 +83,10 @@ export type SurvivalRewardBreakdown = {
   fans: number;
   bestCombo: number;
   endReason: SurvivalEndReason;
+  /** Extra coins from an active Newspaper Event (0 when none). */
+  boosterCoinBonus: number;
+  /** Extra fans from an active Newspaper Event (0 when none). */
+  boosterFanBonus: number;
 };
 
 /**
@@ -109,6 +113,8 @@ export function computeSurvivalRewards(
     fans: score * s.fansPerCorrect,
     bestCombo: Math.max(0, Math.floor(input.bestCombo)),
     endReason: input.endReason,
+    boosterCoinBonus: 0,
+    boosterFanBonus: 0,
   };
 }
 

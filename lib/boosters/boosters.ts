@@ -2,6 +2,7 @@
 // multipliers and copy stay consistent (single source of truth).
 
 import type { RewardBreakdown } from "@/lib/game/economy";
+import { tehranDayKeyClient } from "@/lib/game/tehranClock";
 
 /** Mirrors the Prisma `BoosterType` enum. */
 export type BoosterType = "COIN_BOOST" | "FAN_BOOST";
@@ -10,12 +11,17 @@ export type BoosterType = "COIN_BOOST" | "FAN_BOOST";
 export const BOOSTER_DURATION_HOURS = 2;
 
 /**
- * Daily claim gate. The Newspaper can be claimed once per calendar day; a new
- * day (server-local) re-opens it regardless of whether the booster still runs.
+ * Daily claim gate — once per Asia/Tehran calendar day (aligned with missions).
+ * A new Tehran day re-opens the mailbox even if a booster is still running.
  */
 export function canClaimNews(lastNewsClaim: Date | null, now: Date): boolean {
   if (!lastNewsClaim) return true;
-  return lastNewsClaim.toDateString() !== now.toDateString();
+  return tehranDayKeyClient(lastNewsClaim) !== tehranDayKeyClient(now);
+}
+
+/** Look up catalog metadata for a stored headline id. */
+export function newspaperEventById(id: string): NewspaperEvent | undefined {
+  return NEWSPAPER_EVENTS.find((e) => e.id === id);
 }
 
 /** A booster instance as far as reward math cares. */
@@ -54,25 +60,43 @@ export function formatMultiplier(multiplier: number): string {
   return Number.isInteger(multiplier) ? `${multiplier}` : multiplier.toFixed(1);
 }
 
-/**
- * Apply active boosters to computed rewards. Multipliers of the same target
- * stack multiplicatively. Pure — the server calls this before persisting.
- */
-export function applyBoosters(
-  rewards: RewardBreakdown,
-  boosters: BoosterLike[],
-): RewardBreakdown {
+/** Stacked coin/fan multipliers from active Newspaper boosters. */
+export function boosterMultipliers(boosters: BoosterLike[]): {
+  coinMultiplier: number;
+  fanMultiplier: number;
+} {
   let coinMultiplier = 1;
   let fanMultiplier = 1;
-
   for (const booster of boosters) {
     if (booster.type === "COIN_BOOST") coinMultiplier *= booster.multiplier;
     if (booster.type === "FAN_BOOST") fanMultiplier *= booster.multiplier;
   }
+  return { coinMultiplier, fanMultiplier };
+}
 
+/**
+ * Apply active boosters to any { coins, fans } reward bag.
+ * Same-type multipliers stack multiplicatively. Pure.
+ */
+export function applyBoosterMultipliers<T extends { coins: number; fans: number }>(
+  rewards: T,
+  boosters: BoosterLike[],
+): T {
+  const { coinMultiplier, fanMultiplier } = boosterMultipliers(boosters);
   return {
     ...rewards,
     coins: Math.round(rewards.coins * coinMultiplier),
     fans: Math.round(rewards.fans * fanMultiplier),
   };
+}
+
+/**
+ * Apply active boosters to Match `RewardBreakdown`.
+ * Pure — the server calls this before persisting.
+ */
+export function applyBoosters(
+  rewards: RewardBreakdown,
+  boosters: BoosterLike[],
+): RewardBreakdown {
+  return applyBoosterMultipliers(rewards, boosters);
 }

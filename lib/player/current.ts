@@ -2,15 +2,51 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import type { Club, Prisma, PrismaClient, User } from "@/generated/prisma/client";
-import type { ClubSnapshot } from "@/lib/club/upgrades";
+import type {
+  ActiveNewsBoosterSnapshot,
+  ClubSnapshot,
+} from "@/lib/club/upgrades";
+import type { BoosterType } from "@/lib/boosters/boosters";
 import { computeStaminaRegen } from "@/lib/club/stamina";
-import { canClaimNews } from "@/lib/boosters/boosters";
 import { getSessionUserId } from "@/lib/auth/session";
 import { toClubSnapshot, type ProfileSnapshot } from "@/lib/dev/dummyClub";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
 export type { ProfileSnapshot };
+
+/** Unexpired Newspaper Event for hub chip + match math. */
+export async function loadActiveNewsBooster(
+  clubId: string,
+  db: Db = prisma,
+): Promise<ActiveNewsBoosterSnapshot | null> {
+  const row = await db.activeBooster.findFirst({
+    where: { clubId, expiresAt: { gt: new Date() } },
+    orderBy: { expiresAt: "desc" },
+    select: {
+      type: true,
+      multiplier: true,
+      headline: true,
+      expiresAt: true,
+    },
+  });
+  if (!row) return null;
+  return {
+    type: row.type as BoosterType,
+    multiplier: row.multiplier,
+    headline: row.headline,
+    expiresAt: row.expiresAt.toISOString(),
+  };
+}
+
+/** ClubSnapshot including any live Newspaper Event. */
+export async function toClubSnapshotWithBooster(
+  club: Club,
+  db: Db = prisma,
+): Promise<ClubSnapshot> {
+  const activeNewsBooster = await loadActiveNewsBooster(club.id, db);
+  return toClubSnapshot(club, activeNewsBooster);
+}
 
 export type UserWithClub = User & { club: Club | null };
 
@@ -41,18 +77,18 @@ export async function getClubSnapshot(): Promise<ClubSnapshot | null> {
   if (!user?.club) return null;
 
   const regen = computeStaminaRegen(user.club);
-  if (regen.changed) {
-    const updated = await prisma.club.update({
-      where: { id: user.club.id },
-      data: {
-        stamina: regen.stamina,
-        lastStaminaUpdate: regen.lastStaminaUpdate,
-      },
-    });
-    return toClubSnapshot(updated);
-  }
+  const club = regen.changed
+    ? await prisma.club.update({
+        where: { id: user.club.id },
+        data: {
+          stamina: regen.stamina,
+          lastStaminaUpdate: regen.lastStaminaUpdate,
+        },
+      })
+    : user.club;
 
-  return toClubSnapshot(user.club);
+  const activeNewsBooster = await loadActiveNewsBooster(club.id);
+  return toClubSnapshot(club, activeNewsBooster);
 }
 
 /** Profile / trophy-room payload for the session user. */

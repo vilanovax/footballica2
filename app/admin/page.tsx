@@ -4,28 +4,28 @@ import {
   CheckCircle2,
   Flag,
   Layers,
-  Tags,
   Activity,
-  Clock,
   AlertTriangle,
   GaugeCircle,
   ArrowUpRight,
   BarChart3,
   Sparkles,
+  Users,
+  Trophy,
+  Target,
+  Coins,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { getGameConfig } from "@/lib/game/gameConfig";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { DifficultyBadge, QuestionStatusBadge } from "@/components/admin/AdminBadge";
+  DifficultyBadge,
+  QuestionStatusBadge,
+} from "@/components/admin/AdminBadge";
 
 export const dynamic = "force-dynamic";
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const n = (v: number) => v.toLocaleString("en-US");
 const pct = (part: number, whole: number) =>
@@ -51,8 +51,6 @@ function preview(content: unknown): { en: string; fa: string } {
     fa: c.fa?.text?.trim() || "",
   };
 }
-
-// ─── Presentational pieces ───────────────────────────────────────────────────
 
 function KpiCard({
   label,
@@ -85,9 +83,9 @@ function KpiCard({
         <p className="text-3xl font-semibold tabular-nums text-slate-900">
           {n(value)}
         </p>
-        {hint && (
+        {hint ? (
           <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
-        )}
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -112,7 +110,7 @@ function Panel({
           <Icon className="h-4 w-4 text-slate-400" strokeWidth={2} />
           {title}
         </CardTitle>
-        {action && (
+        {action ? (
           <Link
             href={action.href}
             className="inline-flex items-center gap-0.5 text-xs font-medium text-slate-500 hover:text-slate-800"
@@ -120,7 +118,7 @@ function Panel({
             {action.label}
             <ArrowUpRight className="h-3 w-3" />
           </Link>
-        )}
+        ) : null}
       </CardHeader>
       <CardContent>{children}</CardContent>
     </Card>
@@ -146,11 +144,11 @@ function StatBar({
       <div className="flex items-center justify-between text-sm">
         <span className="flex items-baseline gap-2 text-slate-600">
           {label}
-          {sublabel && (
+          {sublabel ? (
             <span dir="rtl" className="text-xs text-slate-400">
               {sublabel}
             </span>
-          )}
+          ) : null}
         </span>
         <span className="font-medium tabular-nums text-slate-800">
           {n(value)}
@@ -166,10 +164,32 @@ function StatBar({
   );
 }
 
-// ─── Page ────────────────────────────────────────────────────────────────────
+function SnapChip({
+  label,
+  value,
+  unit,
+}: {
+  label: string;
+  value: number | string;
+  unit?: string;
+}) {
+  return (
+    <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs shadow-sm">
+      <span className="font-medium text-slate-500">{label}</span>
+      <span className="font-mono text-sm font-bold tabular-nums text-slate-900">
+        {value}
+      </span>
+      {unit ? <span className="text-slate-400">{unit}</span> : null}
+    </div>
+  );
+}
 
 export default async function AdminDashboardPage() {
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
   const [
+    config,
     totalQuestions,
     totalTags,
     statusGroups,
@@ -180,7 +200,21 @@ export default async function AdminDashboardPage() {
     categories,
     recent,
     mostPlayed,
+    playerCount,
+    botCount,
+    matchesWeek,
+    modeGroups,
+    challengeLive,
+    challengeTotal,
+    challengeUnlocks,
+    challengeConquers,
+    missionActiveBatches,
+    missionBatchesTotal,
+    chestClaims,
+    survivalMatchesWeek,
+    coinsEarnedWeek,
   ] = await Promise.all([
+    getGameConfig(),
     prisma.question.count(),
     prisma.tag.count(),
     prisma.question.groupBy({ by: ["status"], _count: true }),
@@ -195,6 +229,7 @@ export default async function AdminDashboardPage() {
         id: true,
         nameEn: true,
         nameFa: true,
+        challengeOnly: true,
         _count: { select: { questions: true } },
       },
     }),
@@ -220,6 +255,41 @@ export default async function AdminDashboardPage() {
         timesCorrect: true,
       },
     }),
+    prisma.user.count({ where: { isBot: false } }),
+    prisma.user.count({ where: { isBot: true } }),
+    prisma.match.count({
+      where: { finishedAt: { gte: weekAgo } },
+    }),
+    prisma.match.groupBy({
+      by: ["mode"],
+      where: { finishedAt: { gte: weekAgo } },
+      _count: true,
+      _sum: { coinsEarned: true, xpEarned: true },
+    }),
+    prisma.recordChallenge.count({
+      where: {
+        isActive: true,
+        startsAt: { lte: now },
+        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+      },
+    }),
+    prisma.recordChallenge.count(),
+    prisma.clubChallengeAccess.count(),
+    prisma.clubChallengeRun.count({
+      where: { conqueredAt: { not: null } },
+    }),
+    prisma.missionBatch.count({ where: { isActive: true } }),
+    prisma.missionBatch.count(),
+    prisma.clubMissionBatch.count({
+      where: { chestClaimedAt: { not: null } },
+    }),
+    prisma.match.count({
+      where: { mode: "SURVIVAL", finishedAt: { gte: weekAgo } },
+    }),
+    prisma.match.aggregate({
+      where: { finishedAt: { gte: weekAgo } },
+      _sum: { coinsEarned: true },
+    }),
   ]);
 
   const status = {
@@ -243,7 +313,6 @@ export default async function AdminDashboardPage() {
   const totalPlays = plays._sum.timesServed ?? 0;
   const totalCorrect = plays._sum.timesCorrect ?? 0;
   const accuracy = pct(totalCorrect, totalPlays);
-
   const publishedPct = pct(status.PUBLISHED, totalQuestions);
   const needsReview = status.DRAFT + status.IN_REVIEW;
 
@@ -255,52 +324,257 @@ export default async function AdminDashboardPage() {
     0,
     totalQuestions - categories.reduce((s, c) => s + c._count.questions, 0),
   );
+  const challengeOnlyBanks = categories.filter((c) => c.challengeOnly).length;
+
+  const modeMap: Record<
+    string,
+    { count: number; coins: number; xp: number }
+  > = {};
+  for (const g of modeGroups) {
+    modeMap[g.mode] = {
+      count: g._count,
+      coins: g._sum.coinsEarned ?? 0,
+      xp: g._sum.xpEarned ?? 0,
+    };
+  }
+  const modeRows = [
+    { id: "SURVIVAL", label: "Survival", color: "bg-rose-500" },
+    { id: "PENALTY", label: "Penalty", color: "bg-emerald-500" },
+    { id: "QUICK_MATCH", label: "Quick Match", color: "bg-amber-500" },
+    { id: "TUTORIAL", label: "Tutorial", color: "bg-slate-400" },
+  ] as const;
+  const maxModeCount = Math.max(
+    1,
+    ...modeRows.map((m) => modeMap[m.id]?.count ?? 0),
+  );
+
+  const weekCoins = coinsEarnedWeek._sum.coinsEarned ?? 0;
+
+  const liveChallenges = await prisma.recordChallenge.findMany({
+    where: {
+      isActive: true,
+      startsAt: { lte: now },
+      OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+    },
+    orderBy: { startsAt: "desc" },
+    take: 5,
+    select: {
+      id: true,
+      titleEn: true,
+      titleFa: true,
+      unlockCostCoins: true,
+      targetScore: true,
+      expiresAt: true,
+      _count: { select: { access: true, runs: true } },
+    },
+  });
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold text-slate-900">Dashboard</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Content health at a glance.
+          Live Ops pulse + content health — what&apos;s live, what&apos;s
+          earning, what needs attention.
         </p>
       </div>
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
         <KpiCard
-          label="Total Questions"
-          value={totalQuestions}
-          icon={ListChecks}
-          accent="bg-slate-100 text-slate-600"
-          hint={`${n(totalTags)} tags applied`}
-          href="/admin/questions"
+          label="Players"
+          value={playerCount}
+          icon={Users}
+          accent="bg-sky-100 text-sky-700"
+          hint={`${n(botCount)} bots`}
+          href="/admin/users"
         />
         <KpiCard
-          label="Published & Live"
+          label="Matches (7d)"
+          value={matchesWeek}
+          icon={Activity}
+          accent="bg-violet-100 text-violet-700"
+          hint={`${n(weekCoins)} coins paid`}
+        />
+        <KpiCard
+          label="Live challenges"
+          value={challengeLive}
+          icon={Trophy}
+          accent="bg-amber-100 text-amber-700"
+          hint={`${n(challengeTotal)} total · ${n(challengeConquers)} conquered`}
+          href="/admin/challenges"
+        />
+        <KpiCard
+          label="Mission batches"
+          value={missionActiveBatches}
+          icon={Target}
+          accent="bg-indigo-100 text-indigo-700"
+          hint={`${n(missionBatchesTotal)} total · ${n(chestClaims)} chests claimed`}
+          href="/admin/missions"
+        />
+        <KpiCard
+          label="Published Qs"
           value={status.PUBLISHED}
           icon={CheckCircle2}
           accent="bg-emerald-100 text-emerald-600"
-          hint={`${publishedPct}% of the bank`}
-        />
-        <KpiCard
-          label="Needs Review"
-          value={needsReview}
-          icon={Clock}
-          accent="bg-amber-100 text-amber-600"
-          hint={`${n(status.DRAFT)} draft · ${n(status.IN_REVIEW)} in review`}
+          hint={`${publishedPct}% of ${n(totalQuestions)}`}
           href="/admin/questions"
         />
         <KpiCard
-          label="Pending Reports"
+          label="Open reports"
           value={reports.PENDING}
           icon={Flag}
           accent="bg-rose-100 text-rose-600"
-          hint={reports.PENDING > 0 ? "Awaiting triage" : "Queue is clear"}
+          hint={reports.PENDING > 0 ? "Needs triage" : "Queue clear"}
           href="/admin/reports"
         />
       </div>
 
-      {/* Pipeline + difficulty */}
+      {/* Economy snapshot */}
+      <Panel
+        title="Economy (live rates)"
+        icon={Coins}
+        action={{ label: "Tune", href: "/admin/config" }}
+      >
+        <p className="mb-3 text-xs text-muted-foreground">
+          From GameConfig — change anytime on the Economy page without a
+          redeploy. Watch Survival coins if wallets inflate.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <SnapChip
+            label="Survival 🪙"
+            value={config.survival.coinsPerCorrect}
+            unit="/correct"
+          />
+          <SnapChip
+            label="Survival XP"
+            value={config.survival.xpPerCorrect}
+            unit="/correct"
+          />
+          <SnapChip
+            label="Match win"
+            value={config.rewards.coinsPerWin}
+            unit="coins"
+          />
+          <SnapChip
+            label="Match XP/goal"
+            value={config.rewards.baseXp}
+          />
+          <SnapChip
+            label="Duel week"
+            value={config.duel.winWeeklyXp}
+            unit="XP"
+          />
+          <SnapChip
+            label="Survival stamina"
+            value={config.survival.staminaCost}
+          />
+        </div>
+      </Panel>
+
+      {/* Live Ops: challenges + match mix */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Panel
+          title="Premium challenges"
+          icon={Trophy}
+          action={{ label: "Manage", href: "/admin/challenges" }}
+        >
+          <div className="mb-4 grid grid-cols-3 gap-3">
+            <div>
+              <p className="text-2xl font-semibold tabular-nums text-slate-900">
+                {n(challengeLive)}
+              </p>
+              <p className="text-xs text-muted-foreground">live now</p>
+            </div>
+            <div>
+              <p className="text-2xl font-semibold tabular-nums text-slate-900">
+                {n(challengeUnlocks)}
+              </p>
+              <p className="text-xs text-muted-foreground">unlocks</p>
+            </div>
+            <div>
+              <p className="text-2xl font-semibold tabular-nums text-amber-700">
+                {n(challengeConquers)}
+              </p>
+              <p className="text-xs text-muted-foreground">conquers</p>
+            </div>
+          </div>
+          {liveChallenges.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              No live challenges — create one for the Survival lobby.
+            </p>
+          ) : (
+            <ul className="divide-y">
+              {liveChallenges.map((c) => (
+                <li
+                  key={c.id}
+                  className="flex items-center justify-between gap-3 py-2"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-slate-800">
+                      {c.titleEn}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      🪙{n(c.unlockCostCoins)} unlock · target {n(c.targetScore)}
+                      {c.expiresAt
+                        ? ` · ends ${timeAgo(c.expiresAt).replace("ago", "").trim()}`
+                        : ""}
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 flex-col items-end gap-0.5 text-xs text-muted-foreground">
+                    <span className="tabular-nums">
+                      {n(c._count.access)} unlocks
+                    </span>
+                    <span className="tabular-nums">
+                      {n(c._count.runs)} runs
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">
+            {n(challengeOnlyBanks)} challenge-only banks · {n(survivalMatchesWeek)}{" "}
+            Survival matches this week
+          </p>
+        </Panel>
+
+        <Panel title="Match mix (7 days)" icon={BarChart3}>
+          {matchesWeek === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+              <Sparkles className="h-6 w-6 text-slate-300" />
+              <p className="text-sm text-muted-foreground">
+                No finished matches in the last 7 days.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {modeRows.map((m) => {
+                const row = modeMap[m.id] ?? { count: 0, coins: 0, xp: 0 };
+                return (
+                  <div key={m.id}>
+                    <StatBar
+                      label={m.label}
+                      value={row.count}
+                      max={maxModeCount}
+                      color={m.color}
+                    />
+                    <p className="mt-0.5 text-[11px] text-slate-400">
+                      {n(row.coins)} coins · {n(row.xp)} XP earned
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <p className="mt-4 text-xs text-muted-foreground">
+            Active mission batches: {n(missionActiveBatches)}. Chests claimed
+            lifetime: {n(chestClaims)}.
+          </p>
+        </Panel>
+      </div>
+
+      {/* Content: pipeline + difficulty */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel
           title="Publishing pipeline"
@@ -363,13 +637,13 @@ export default async function AdminDashboardPage() {
             />
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
-            Authored buckets used for filtering. Live difficulty (Elo) evolves
-            from real play.
+            Authored buckets for filtering. Live difficulty (Elo) evolves from
+            real play.
           </p>
         </Panel>
       </div>
 
-      {/* Category coverage + engagement */}
+      {/* Category + engagement */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel
           title="Category coverage"
@@ -383,33 +657,42 @@ export default async function AdminDashboardPage() {
           ) : (
             <div className="space-y-3">
               {topCategories.map((c) => (
-                <StatBar
-                  key={c.id}
-                  label={c.nameEn}
-                  sublabel={c.nameFa}
-                  value={c._count.questions}
-                  max={maxCatCount}
-                  color="bg-sky-500"
-                />
+                <div key={c.id}>
+                  <StatBar
+                    label={c.nameEn}
+                    sublabel={c.nameFa}
+                    value={c._count.questions}
+                    max={maxCatCount}
+                    color={c.challengeOnly ? "bg-amber-500" : "bg-sky-500"}
+                  />
+                  {c.challengeOnly ? (
+                    <Badge
+                      variant="secondary"
+                      className="mt-1 bg-amber-50 text-[10px] text-amber-800"
+                    >
+                      Challenge-only
+                    </Badge>
+                  ) : null}
+                </div>
               ))}
-              {uncategorized > 0 && (
+              {uncategorized > 0 ? (
                 <StatBar
                   label="Uncategorized"
                   value={uncategorized}
                   max={maxCatCount}
                   color="bg-slate-300"
                 />
-              )}
+              ) : null}
             </div>
           )}
         </Panel>
 
-        <Panel title="Player engagement" icon={GaugeCircle}>
+        <Panel title="Answer engagement" icon={GaugeCircle}>
           {totalPlays === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
               <Sparkles className="h-6 w-6 text-slate-300" />
               <p className="text-sm text-muted-foreground">
-                No match data yet — stats appear once players start answering.
+                No answer data yet — stats appear once players start playing.
               </p>
             </div>
           ) : (
@@ -419,7 +702,7 @@ export default async function AdminDashboardPage() {
                   <p className="text-2xl font-semibold tabular-nums text-slate-900">
                     {n(totalPlays)}
                   </p>
-                  <p className="text-xs text-muted-foreground">answers served</p>
+                  <p className="text-xs text-muted-foreground">served</p>
                 </div>
                 <div>
                   <p className="text-2xl font-semibold tabular-nums text-slate-900">
@@ -454,7 +737,9 @@ export default async function AdminDashboardPage() {
                           {p.en}
                         </Link>
                         <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-                          <span className="tabular-nums">{n(q.timesServed)}×</span>
+                          <span className="tabular-nums">
+                            {n(q.timesServed)}×
+                          </span>
                           <span
                             className={`tabular-nums font-medium ${
                               acc >= 50 ? "text-emerald-600" : "text-rose-500"
@@ -473,11 +758,11 @@ export default async function AdminDashboardPage() {
         </Panel>
       </div>
 
-      {/* Recently added + health */}
+      {/* Recent + health */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <Panel
-            title="Recently added"
+            title="Recently added questions"
             icon={Sparkles}
             action={{ label: "All questions", href: "/admin/questions" }}
           >
@@ -499,14 +784,14 @@ export default async function AdminDashboardPage() {
                           <span className="block truncate text-sm font-medium text-slate-800">
                             {p.en}
                           </span>
-                          {p.fa && (
+                          {p.fa ? (
                             <span
                               dir="rtl"
                               className="block truncate text-xs text-muted-foreground"
                             >
                               {p.fa}
                             </span>
-                          )}
+                          ) : null}
                         </span>
                         <span className="flex shrink-0 items-center gap-2">
                           <DifficultyBadge difficulty={q.difficulty} />
@@ -539,10 +824,10 @@ export default async function AdminDashboardPage() {
               href="/admin/questions"
             />
             <HealthRow
-              label="Retired"
-              value={status.RETIRED}
+              label="Tags in bank"
+              value={totalTags}
               tone="slate"
-              href="/admin/questions"
+              href="/admin/categories"
             />
             <HealthRow
               label="Open reports"
@@ -556,15 +841,51 @@ export default async function AdminDashboardPage() {
               tone="ok"
               href="/admin/reports"
             />
+            <HealthRow
+              label="Questions total"
+              value={totalQuestions}
+              tone="slate"
+              href="/admin/questions"
+            />
           </ul>
           <p className="mt-4 border-t pt-3 text-xs text-muted-foreground">
             {totalReports === 0
               ? "No reports filed yet."
-              : `${n(totalReports)} total report${totalReports === 1 ? "" : "s"} lifetime.`}
+              : `${n(totalReports)} report${totalReports === 1 ? "" : "s"} lifetime.`}
           </p>
         </Panel>
       </div>
+
+      {/* Quick links */}
+      <div className="flex flex-wrap gap-2">
+        <QuickLink href="/admin/config" label="Economy" icon={Coins} />
+        <QuickLink href="/admin/challenges" label="Challenges" icon={Trophy} />
+        <QuickLink href="/admin/missions" label="Missions" icon={Target} />
+        <QuickLink href="/admin/users" label="Users & Bots" icon={Users} />
+        <QuickLink href="/admin/questions" label="Questions" icon={ListChecks} />
+        <QuickLink href="/admin/reports" label="Reports" icon={Flag} />
+      </div>
     </div>
+  );
+}
+
+function QuickLink({
+  href,
+  label,
+  icon: Icon,
+}: {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+}) {
+  return (
+    <Link
+      href={href}
+      className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:border-slate-300 hover:text-slate-900"
+    >
+      <Icon className="h-3.5 w-3.5" strokeWidth={2} />
+      {label}
+    </Link>
   );
 }
 

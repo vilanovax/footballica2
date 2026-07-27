@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { toClubSnapshot } from "@/lib/dev/dummyClub";
+import { toClubSnapshotWithBooster } from "@/lib/player/current";
 import { requireUserClub } from "@/lib/player/current";
 import type { Prisma } from "@/generated/prisma/client";
 import {
@@ -65,7 +65,7 @@ export async function upgradeClub(key: UpgradeKey): Promise<UpgradeResult> {
         data,
       });
 
-      return toClubSnapshot(updated);
+      return toClubSnapshotWithBooster(updated, tx);
     });
 
     revalidatePath("/club");

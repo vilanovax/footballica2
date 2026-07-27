@@ -13,7 +13,10 @@ import { DEFAULT_CLUB_COLOR_KEY } from "@/lib/onboarding/clubColors";
  */
 
 /** Serializable club shape shared with client components. */
-export function toClubSnapshot(club: Club): ClubSnapshot {
+export function toClubSnapshot(
+  club: Club,
+  activeNewsBooster: ClubSnapshot["activeNewsBooster"] = null,
+): ClubSnapshot {
   const regen = computeStaminaRegen(club);
   return {
     name: club.name,
@@ -31,6 +34,7 @@ export function toClubSnapshot(club: Club): ClubSnapshot {
     colorKey: club.colorKey ?? DEFAULT_CLUB_COLOR_KEY,
     tutorialStep: club.tutorialStep,
     newsClaimable: canClaimNews(club.lastNewsClaim, new Date()),
+    activeNewsBooster,
   };
 }
 

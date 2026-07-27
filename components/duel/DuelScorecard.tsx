@@ -22,6 +22,10 @@ type DuelScorecardProps = {
   onPrimaryAction?: () => void;
   /** Show a secondary action (e.g. share / rematch). */
   onSecondaryAction?: () => void;
+  /** When embedded in PostMatchSummary, omit sticky CTAs. */
+  hideFooter?: boolean;
+  /** Parent already shows Win/Lose — skip the inner banner. */
+  hideOutcomeBanner?: boolean;
 };
 
 /**
@@ -32,6 +36,8 @@ export function DuelScorecard({
   data,
   onPrimaryAction,
   onSecondaryAction,
+  hideFooter = false,
+  hideOutcomeBanner = false,
 }: DuelScorecardProps) {
   const { t, locale } = useTranslation();
   const {
@@ -75,7 +81,9 @@ export function DuelScorecard({
           style={clubAccentWashStyle(you.colorKey)}
         />
 
-        <OutcomeBanner status={status} outcome={outcome} />
+        {!hideOutcomeBanner && (
+          <OutcomeBanner status={status} outcome={outcome} />
+        )}
 
         <div className="relative mt-3 flex items-center justify-between gap-2">
           <PlayerBlock
@@ -110,47 +118,49 @@ export function DuelScorecard({
         ))}
       </div>
 
-      {/* Footer CTAs */}
-      <motion.footer
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-        className="mt-auto flex flex-col gap-2.5 pt-2"
-      >
-        {status === "WAITING" ? (
-          <div className="rounded-bubble-lg border-2 border-dashed border-border bg-muted/40 px-4 py-4 text-center">
-            <p className="font-display text-base font-bold text-muted-foreground">
-              {t("duel.scorecard.waitingTitle")}
-            </p>
-            <p className="mt-1 font-body text-xs font-semibold text-muted-foreground">
-              {t("duel.summaryAutoRefresh")}
-            </p>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={onPrimaryAction}
-            className="btn-fantasy btn-fantasy-primary w-full justify-center text-base"
-          >
-            {primaryLabel}
-          </button>
-        )}
+      {/* Footer CTAs — skipped when PostMatchSummary owns sticky actions */}
+      {!hideFooter && (
+        <motion.footer
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="mt-auto flex flex-col gap-2.5 pt-2"
+        >
+          {status === "WAITING" ? (
+            <div className="rounded-bubble-lg border-2 border-dashed border-border bg-muted/40 px-4 py-4 text-center">
+              <p className="font-display text-base font-bold text-muted-foreground">
+                {t("duel.scorecard.waitingTitle")}
+              </p>
+              <p className="mt-1 font-body text-xs font-semibold text-muted-foreground">
+                {t("duel.summaryAutoRefresh")}
+              </p>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={onPrimaryAction}
+              className="btn-fantasy btn-fantasy-primary w-full justify-center text-base"
+            >
+              {primaryLabel}
+            </button>
+          )}
 
-        {(status === "COMPLETED" || status === "WAITING") && (
-          <button
-            type="button"
-            onClick={onSecondaryAction}
-            className={[
-              "w-full justify-center min-h-touch rounded-bubble border-2 px-5 py-3 font-display text-sm font-bold transition-transform active:scale-[0.98]",
-              status === "COMPLETED"
-                ? "border-accent/50 bg-accent/15 text-accent-deep"
-                : "border-border bg-surface text-muted-foreground",
-            ].join(" ")}
-          >
-            {secondaryLabel}
-          </button>
-        )}
-      </motion.footer>
+          {(status === "COMPLETED" || status === "WAITING") && (
+            <button
+              type="button"
+              onClick={onSecondaryAction}
+              className={[
+                "w-full justify-center min-h-touch rounded-bubble border-2 px-5 py-3 font-display text-sm font-bold transition-transform active:scale-[0.98]",
+                status === "COMPLETED"
+                  ? "border-accent/50 bg-accent/15 text-accent-deep"
+                  : "border-border bg-surface text-muted-foreground",
+              ].join(" ")}
+            >
+              {secondaryLabel}
+            </button>
+          )}
+        </motion.footer>
+      )}
     </section>
   );
 }
