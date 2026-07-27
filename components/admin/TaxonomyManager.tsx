@@ -8,6 +8,7 @@ import {
   createCategory,
   updateCategory,
   toggleCategoryStatus,
+  toggleCategoryChallengeOnly,
   deleteCategory,
   createTag,
   updateTag,
@@ -17,6 +18,7 @@ import { slugify } from "@/lib/admin/taxonomySchema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -41,6 +43,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { AdminHelpTip } from "@/components/admin/AdminHelpTip";
 
 export type CategoryRow = {
   id: string;
@@ -49,6 +52,8 @@ export type CategoryRow = {
   nameFa: string;
   icon: string | null;
   isActive: boolean;
+  challengeOnly: boolean;
+  locales: string[];
   count: number;
 };
 
@@ -78,6 +83,12 @@ function CategoryFormDialog({
   const [nameFa, setNameFa] = useState(category?.nameFa ?? "");
   const [icon, setIcon] = useState(category?.icon ?? "");
   const [slug, setSlug] = useState(category?.slug ?? "");
+  const [challengeOnly, setChallengeOnly] = useState(
+    category?.challengeOnly ?? false,
+  );
+  const [locales, setLocales] = useState<string[]>(
+    category?.locales?.length ? [...category.locales] : ["en", "fa"],
+  );
   const [slugTouched, setSlugTouched] = useState(isEdit);
 
   function onOpenChange(next: boolean) {
@@ -87,11 +98,25 @@ function CategoryFormDialog({
       setNameFa(category?.nameFa ?? "");
       setIcon(category?.icon ?? "");
       setSlug(category?.slug ?? "");
+      setChallengeOnly(category?.challengeOnly ?? false);
+      setLocales(
+        category?.locales?.length ? [...category.locales] : ["en", "fa"],
+      );
       setSlugTouched(isEdit);
     }
   }
 
   const effectiveSlug = slugTouched ? slug : slugify(nameEn);
+
+  function toggleLocale(code: "en" | "fa") {
+    setLocales((prev) => {
+      if (prev.includes(code)) {
+        const next = prev.filter((l) => l !== code);
+        return next.length === 0 ? prev : next;
+      }
+      return [...prev, code];
+    });
+  }
 
   function submit() {
     start(async () => {
@@ -101,6 +126,8 @@ function CategoryFormDialog({
         nameFa: nameFa.trim(),
         icon: icon.trim() || null,
         isActive: category?.isActive ?? true,
+        challengeOnly,
+        locales: locales as ("en" | "fa")[],
       };
       const res = isEdit
         ? await updateCategory(category!.id, payload)
@@ -168,12 +195,63 @@ function CategoryFormDialog({
               />
             </div>
           </div>
+
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+            <p className="flex items-center gap-1 text-sm font-medium text-slate-700">
+              Languages
+              <AdminHelpTip text="Players only see this bank when their game language is checked. Example: Iran football → FA only." />
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {(
+                [
+                  { code: "en" as const, label: "English" },
+                  { code: "fa" as const, label: "Persian" },
+                ] as const
+              ).map((opt) => (
+                <label
+                  key={opt.code}
+                  className="flex cursor-pointer items-center gap-2 text-sm text-slate-700"
+                >
+                  <input
+                    type="checkbox"
+                    checked={locales.includes(opt.code)}
+                    onChange={() => toggleLocale(opt.code)}
+                    className="size-4 rounded border-slate-300"
+                  />
+                  {opt.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={challengeOnly}
+              onChange={(e) => setChallengeOnly(e.target.checked)}
+              className="mt-0.5 size-4 rounded border-slate-300"
+            />
+            <span>
+              <span className="flex items-center gap-1 font-medium">
+                Challenge only
+                <AdminHelpTip text="Hidden from free Survival and Duel. Assign this bank to a Premium Challenge so players can reach it." />
+              </span>
+              <span className="mt-0.5 block text-xs text-slate-500">
+                Exclusive bank for Live-Ops campaigns (e.g. تاج آبی).
+              </span>
+            </span>
+          </label>
         </div>
 
         <DialogFooter>
           <Button
             onClick={submit}
-            disabled={pending || !nameEn.trim() || !nameFa.trim()}
+            disabled={
+              pending ||
+              !nameEn.trim() ||
+              !nameFa.trim() ||
+              locales.length === 0
+            }
           >
             {pending ? "Saving…" : isEdit ? "Save changes" : "Create category"}
           </Button>
@@ -338,6 +416,50 @@ function CategoryStatusToggle({ category }: { category: CategoryRow }) {
   );
 }
 
+function ChallengeOnlyToggle({ category }: { category: CategoryRow }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const on = category.challengeOnly;
+  const label = on
+    ? "Challenge only — click to make public"
+    : "Public — click to make challenge only";
+
+  function toggle() {
+    start(async () => {
+      const res = await toggleCategoryChallengeOnly(category.id, !on);
+      if (res.ok) {
+        toast.success(on ? "Now public in Play modes." : "Challenge only.");
+        router.refresh();
+      } else {
+        toast.error(res.error);
+      }
+    });
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      disabled={pending}
+      title={label}
+      aria-label={label}
+      className={`inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium transition ${
+        on
+          ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
+          : "text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+      }`}
+    >
+      {pending ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : on ? (
+        "Challenge"
+      ) : (
+        "Public"
+      )}
+    </button>
+  );
+}
+
 function CategoryActions({ category }: { category: CategoryRow }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -456,6 +578,18 @@ export function TaxonomyManager({
                 <TableHead className="pl-6">Name</TableHead>
                 <TableHead>Slug</TableHead>
                 <TableHead className="text-center">Questions</TableHead>
+                <TableHead>
+                  <span className="inline-flex items-center gap-1">
+                    Lang
+                    <AdminHelpTip text="Which game languages show this bank in pickers." />
+                  </span>
+                </TableHead>
+                <TableHead>
+                  <span className="inline-flex items-center gap-1">
+                    Scope
+                    <AdminHelpTip text="Public = free Survival & Duel. Challenge = only when assigned to a Premium Challenge." />
+                  </span>
+                </TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="pr-6 text-right">Actions</TableHead>
               </TableRow>
@@ -464,7 +598,7 @@ export function TaxonomyManager({
               {categories.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={7}
                     className="py-10 text-center text-muted-foreground"
                   >
                     No categories yet. Create one to get started.
@@ -477,8 +611,16 @@ export function TaxonomyManager({
                       <span className="flex items-center gap-2">
                         {c.icon && <span aria-hidden>{c.icon}</span>}
                         <span className="flex flex-col leading-tight">
-                          <span className="font-medium text-slate-700">
+                          <span className="inline-flex flex-wrap items-center gap-1.5 font-medium text-slate-700">
                             {c.nameEn}
+                            {c.challengeOnly ? (
+                              <Badge
+                                variant="outline"
+                                className="border-amber-300 bg-amber-50 text-[10px] text-amber-800"
+                              >
+                                Challenge
+                              </Badge>
+                            ) : null}
                           </span>
                           <span className="text-xs text-muted-foreground">
                             {c.nameFa}
@@ -491,6 +633,23 @@ export function TaxonomyManager({
                     </TableCell>
                     <TableCell className="text-center tabular-nums">
                       {c.count}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {c.locales.includes("en") ? (
+                          <Badge variant="outline" className="text-[10px]">
+                            EN
+                          </Badge>
+                        ) : null}
+                        {c.locales.includes("fa") ? (
+                          <Badge variant="outline" className="text-[10px]">
+                            FA
+                          </Badge>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <ChallengeOnlyToggle category={c} />
                     </TableCell>
                     <TableCell>
                       <CategoryStatusToggle category={c} />

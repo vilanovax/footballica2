@@ -10,6 +10,8 @@ import {
   Settings,
   Users,
   Target,
+  Trophy,
+  Coins,
 } from "lucide-react";
 
 const LINKS = [
@@ -17,6 +19,8 @@ const LINKS = [
   { href: "/admin/questions", label: "Questions", icon: ListChecks, exact: false },
   { href: "/admin/categories", label: "Categories", icon: Layers, exact: false },
   { href: "/admin/missions", label: "Missions", icon: Target, exact: false },
+  { href: "/admin/challenges", label: "Challenges", icon: Trophy, exact: false },
+  { href: "/admin/config", label: "Economy", icon: Coins, exact: false },
   { href: "/admin/users", label: "Users & Bots", icon: Users, exact: false },
   { href: "/admin/reports", label: "Reports", icon: Flag, exact: false },
   { href: "/admin/settings", label: "Settings", icon: Settings, exact: false },

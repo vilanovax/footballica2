@@ -12,6 +12,8 @@ import {
 import type { QuizQuestion } from "@/lib/quiz/types";
 import { requireUserClub } from "@/lib/player/current";
 import { prisma } from "@/lib/prisma";
+import { isRecordChallengeLive } from "@/lib/game/recordChallenge";
+import { isCategoryAllowedForChallenge } from "@/lib/game/challengeCategories";
 
 export type SurvivalBatchResult =
   | {
@@ -25,23 +27,57 @@ export type SurvivalBatchResult =
   | { ok: false; error: string };
 
 /**
- * Draw the next Survival batch for a category, skipping already-seen question ids.
- * Empty `questions` + `bankExhausted` means Victory Cap — client must end the run.
+ * Draw the next Survival batch with progressive difficulty (EASY→MEDIUM→HARD).
+ * Optional `challengeId` requires ClubChallengeAccess (premium unlock).
  */
 export async function drawSurvivalBatch(input: {
   categoryId: string;
   seenQuestionIds: string[];
   limit?: number;
+  challengeId?: string | null;
 }): Promise<SurvivalBatchResult> {
+  let clubId: string;
   try {
     const pair = await requireUserClub();
     if (!pair) return { ok: false, error: "not_authenticated" };
+    clubId = pair.club.id;
   } catch {
     return { ok: false, error: "not_authenticated" };
   }
 
   const categoryId = typeof input.categoryId === "string" ? input.categoryId : "";
   if (!categoryId) return { ok: false, error: "invalid_category" };
+
+  const challengeId =
+    typeof input.challengeId === "string" && input.challengeId.trim()
+      ? input.challengeId.trim()
+      : null;
+
+  if (challengeId) {
+    const challenge = await prisma.recordChallenge.findUnique({
+      where: { id: challengeId },
+    });
+    if (!challenge || !isRecordChallengeLive(challenge)) {
+      return { ok: false, error: "challenge_not_live" };
+    }
+    const allowed = await isCategoryAllowedForChallenge({
+      categoryId,
+      challengeId,
+    });
+    if (!allowed) return { ok: false, error: "challenge_category_mismatch" };
+    const access = await prisma.clubChallengeAccess.findUnique({
+      where: {
+        clubId_challengeId: { clubId, challengeId },
+      },
+    });
+    if (!access) return { ok: false, error: "challenge_locked" };
+  } else {
+    const exclusive = await prisma.category.findFirst({
+      where: { id: categoryId, isActive: true, challengeOnly: true },
+      select: { id: true },
+    });
+    if (exclusive) return { ok: false, error: "category_not_found" };
+  }
 
   const category = await prisma.category.findFirst({
     where: { id: categoryId, isActive: true },
@@ -57,6 +93,7 @@ export async function drawSurvivalBatch(input: {
     Math.min(20, Math.floor(input.limit ?? SURVIVAL_BATCH_SIZE)),
   );
 
+  // Progressive tiered draw (replaces pure random shuffle).
   const questions = await getCategoryQuestions(categoryId, limit, seen);
   const seenPlusBatch = [...seen, ...questions.map((q) => q.id)];
   const remainingAfter = await countCategoryQuestionsRemaining(

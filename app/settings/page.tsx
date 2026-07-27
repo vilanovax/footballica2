@@ -136,6 +136,8 @@ export default function SettingsPage() {
   function handleSetLocale(next: Locale) {
     if (next !== locale) play("click");
     setLocale(next);
+    // Server pickers (Survival / Duel) read locale from cookie.
+    router.refresh();
   }
 
   const soundOn = mounted ? !isMuted : true;

@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import {
+  ChevronDown,
+  ChevronRight,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import {
   deleteMission,
   deleteMissionBatch,
@@ -15,14 +21,7 @@ import {
 } from "@/actions/admin/missions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -31,14 +30,39 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { AdminHelpTip, FieldLabel } from "@/components/admin/AdminHelpTip";
 
 const OBJECTIVES = [
-  "SCORE_GOALS",
-  "PLAY_MATCHES",
-  "WIN_MATCHES",
-  "PERFECT_COMBO",
-  "PLAY_DUEL",
-  "WIN_DUEL",
+  {
+    value: "SCORE_GOALS",
+    label: "Score goals",
+    tip: "Player must answer this many questions correctly (goals) across matches.",
+  },
+  {
+    value: "PLAY_MATCHES",
+    label: "Play matches",
+    tip: "Complete this many matches (any result). Duels may also count when configured.",
+  },
+  {
+    value: "WIN_MATCHES",
+    label: "Win matches",
+    tip: "Win this many matches (goal majority).",
+  },
+  {
+    value: "PERFECT_COMBO",
+    label: "Perfect combo",
+    tip: "Reach a best combo of at least this length in a single match.",
+  },
+  {
+    value: "PLAY_DUEL",
+    label: "Play a duel",
+    tip: "Finish this many Draft Duels (win or lose).",
+  },
+  {
+    value: "WIN_DUEL",
+    label: "Win a duel",
+    tip: "Win this many Draft Duels.",
+  },
 ] as const;
 
 type LivePreview = {
@@ -69,6 +93,10 @@ function fromDatetimeLocal(value: string): string | null {
   return d.toISOString();
 }
 
+function objectiveLabel(value: string): string {
+  return OBJECTIVES.find((o) => o.value === value)?.label ?? value;
+}
+
 export function MissionsPanel({
   initialBatches,
   livePreview,
@@ -77,7 +105,20 @@ export function MissionsPanel({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [batches, setBatches] = useState(initialBatches);
-  const analyticsById = new Map(analytics.map((a) => [a.batchId, a]));
+  const [openId, setOpenId] = useState<string | null>(
+    () =>
+      initialBatches.find((b) => b.id === livePreview.activeBatchId)?.id ??
+      initialBatches[0]?.id ??
+      null,
+  );
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const analyticsById = useMemo(
+    () => new Map(analytics.map((a) => [a.batchId, a])),
+    [analytics],
+  );
+
+  const campaignBatches = batches.filter((b) => b.kind === "CAMPAIGN");
+  const dailyBatches = batches.filter((b) => b.kind === "DAILY");
 
   useEffect(() => {
     setBatches(initialBatches);
@@ -106,9 +147,7 @@ export function MissionsPanel({
 
   function handleCreateBatch() {
     const nextIndex =
-      batches
-        .filter((b) => b.kind === "CAMPAIGN")
-        .reduce((m, b) => Math.max(m, b.batchIndex), 0) + 1;
+      campaignBatches.reduce((m, b) => Math.max(m, b.batchIndex), 0) + 1;
     startTransition(async () => {
       const res = await upsertMissionBatch({
         batchIndex: nextIndex,
@@ -154,6 +193,7 @@ export function MissionsPanel({
         return;
       }
       setBatches((prev) => prev.filter((b) => b.id !== id));
+      if (openId === id) setOpenId(null);
       toast.success("Batch deleted");
       refresh();
     });
@@ -205,252 +245,436 @@ export function MissionsPanel({
   }
 
   return (
-    <div className="space-y-6">
-      <Card className="border-emerald-200 bg-emerald-50/60">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Live now</CardTitle>
-          <CardDescription>
-            What players unlock as their next incomplete batch (server clock).
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-3 text-sm">
+    <div className="space-y-5">
+      {/* Live status — plain language */}
+      <Card className="border-emerald-200 bg-emerald-50/70">
+        <CardContent className="flex flex-wrap items-center gap-3 py-4 text-sm">
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-1.5 font-semibold text-emerald-900">
+              What players see now
+              <AdminHelpTip text="The campaign batch players unlock next (if Active and inside the start/end window). Daily batches reset on the Tehran calendar and are listed separately below." />
+            </p>
+            <p className="mt-0.5 text-emerald-800/80">
+              {livePreview.activeBatchIndex != null
+                ? `Campaign batch #${livePreview.activeBatchIndex} is live.`
+                : "No campaign batch is live — check Active + schedule."}
+            </p>
+          </div>
           {livePreview.activeBatchIndex != null ? (
-            <Badge className="bg-emerald-600">
-              Batch #{livePreview.activeBatchIndex} is live
-            </Badge>
+            <Badge className="bg-emerald-600">Live #{livePreview.activeBatchIndex}</Badge>
           ) : (
-            <Badge variant="secondary">No live batch</Badge>
+            <Badge variant="secondary">None live</Badge>
           )}
-          <span className="text-slate-500">{livePreview.reason}</span>
-          <span className="font-mono text-xs text-slate-400">
-            {livePreview.nowIso}
-          </span>
         </CardContent>
       </Card>
 
+      {/* Collapsible analytics */}
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Analytics</CardTitle>
-          <CardDescription>
-            Per-batch completion and chest claim rates (clubs that started the
-            batch).
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          {analytics.length === 0 ? (
-            <p className="text-sm text-slate-500">No batch data yet.</p>
+        <button
+          type="button"
+          onClick={() => setShowAnalytics((v) => !v)}
+          className="flex w-full items-center justify-between gap-2 px-6 py-4 text-start"
+        >
+          <div>
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+              Performance
+              <AdminHelpTip text="Completion = missions finished / slots for clubs that started. Chests = how many of those clubs claimed the batch chest." />
+            </p>
+            <p className="text-xs text-slate-500">
+              {analytics.length} batches · click to{" "}
+              {showAnalytics ? "hide" : "show"} stats
+            </p>
+          </div>
+          {showAnalytics ? (
+            <ChevronDown className="h-4 w-4 text-slate-400" />
           ) : (
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead className="border-b text-xs uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="py-2 pr-3 font-medium">Batch</th>
-                  <th className="py-2 pr-3 font-medium">Kind</th>
-                  <th className="py-2 pr-3 font-medium">Clubs</th>
-                  <th className="py-2 pr-3 font-medium">Completion</th>
-                  <th className="py-2 pr-3 font-medium">Chests</th>
-                </tr>
-              </thead>
-              <tbody>
-                {analytics.map((row) => (
-                  <tr key={row.batchId} className="border-b border-slate-100">
-                    <td className="py-2.5 pr-3 font-medium">
-                      #{row.batchIndex}
-                      {row.dayKey ? (
-                        <span className="ml-2 font-mono text-xs text-slate-400">
-                          {row.dayKey}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="py-2.5 pr-3">
-                      <Badge variant="outline">{row.kind}</Badge>
-                    </td>
-                    <td className="py-2.5 pr-3 tabular-nums">
-                      {row.clubsStarted}
-                    </td>
-                    <td className="py-2.5 pr-3 tabular-nums">
-                      {row.completionRate}%
-                      <span className="ml-1 text-xs text-slate-400">
-                        ({row.missionsCompleted}/{row.missionSlots})
-                      </span>
-                    </td>
-                    <td className="py-2.5 pr-3 tabular-nums">
-                      {row.chestClaimRate}%
-                      <span className="ml-1 text-xs text-slate-400">
-                        ({row.chestsClaimed}/{row.clubsStarted})
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <ChevronRight className="h-4 w-4 text-slate-400" />
           )}
-        </CardContent>
+        </button>
+        {showAnalytics && (
+          <CardContent className="border-t pt-4">
+            {analytics.length === 0 ? (
+              <p className="text-sm text-slate-500">No data yet.</p>
+            ) : (
+              <table className="w-full min-w-[560px] text-left text-sm">
+                <thead className="border-b text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="py-2 pr-3 font-medium">Batch</th>
+                    <th className="py-2 pr-3 font-medium">Type</th>
+                    <th className="py-2 pr-3 font-medium">
+                      <span className="inline-flex items-center gap-1">
+                        Clubs
+                        <AdminHelpTip text="Clubs that started this batch." />
+                      </span>
+                    </th>
+                    <th className="py-2 pr-3 font-medium">Done</th>
+                    <th className="py-2 pr-3 font-medium">Chests</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {analytics.map((row) => (
+                    <tr key={row.batchId} className="border-b border-slate-100">
+                      <td className="py-2 pr-3 font-medium">
+                        #{row.batchIndex}
+                        {row.dayKey ? (
+                          <span className="ml-2 font-mono text-xs text-slate-400">
+                            {row.dayKey}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="py-2 pr-3">
+                        <Badge variant="outline" className="text-[10px]">
+                          {row.kind === "DAILY" ? "Daily" : "Campaign"}
+                        </Badge>
+                      </td>
+                      <td className="py-2 pr-3 tabular-nums">
+                        {row.clubsStarted}
+                      </td>
+                      <td className="py-2 pr-3 tabular-nums">
+                        {row.completionRate}%
+                      </td>
+                      <td className="py-2 pr-3 tabular-nums">
+                        {row.chestClaimRate}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </CardContent>
+        )}
       </Card>
 
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-slate-500">
-          LiveOps batches of 3. Use schedule + <code>isActive</code> without a
-          deploy.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-900">
+            Campaign batches
+          </h2>
+          <p className="text-xs text-slate-500">
+            Each batch has up to 3 missions + one chest when all are done.
+          </p>
+        </div>
         <Button
           type="button"
+          size="sm"
           disabled={pending}
           onClick={handleCreateBatch}
-          className="shrink-0"
+          className="shrink-0 gap-1"
         >
-          + New batch
+          <Plus className="h-4 w-4" />
+          New campaign batch
         </Button>
       </div>
 
-      {batches.length === 0 && (
+      {campaignBatches.length === 0 && (
         <Card>
-          <CardContent className="py-10 text-center text-sm text-slate-500">
-            No batches yet. Create one or run the seed.
+          <CardContent className="py-8 text-center text-sm text-slate-500">
+            No campaign batches. Create one to start LiveOps.
           </CardContent>
         </Card>
       )}
 
-      {batches.map((batch) => {
-        const stats = analyticsById.get(batch.id);
-        return (
-        <Card key={batch.id} className="border-slate-200">
-          <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-base">
-                Batch #{batch.batchIndex}
-                <Badge variant="outline">{batch.kind}</Badge>
-                <Badge variant={batch.isActive ? "default" : "secondary"}>
-                  {batch.isActive ? "Active" : "Off"}
-                </Badge>
-                <Badge variant="outline">
-                  {batch.missions.length}/3 missions
-                </Badge>
-              </CardTitle>
-              <CardDescription>
-                Chest: {batch.chestCoins} coins · {batch.chestXp} XP
-                {batch.dayKey ? ` · day ${batch.dayKey}` : ""}
-                {stats
-                  ? ` · ${stats.completionRate}% complete · ${stats.chestClaimRate}% chests`
-                  : ""}
-              </CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={pending}
-                onClick={() => handleToggle(batch)}
-              >
-                {batch.isActive ? "Disable" : "Enable"}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="destructive"
-                disabled={pending}
-                onClick={() => handleDeleteBatch(batch.id)}
-              >
-                Delete
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <form
-              className="grid gap-3 sm:grid-cols-3"
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSaveBatch(batch, new FormData(e.currentTarget));
-              }}
-            >
-              <div>
-                <Label htmlFor={`idx-${batch.id}`}>Index</Label>
-                <Input
-                  id={`idx-${batch.id}`}
-                  name="batchIndex"
-                  type="number"
-                  defaultValue={batch.batchIndex}
-                />
-              </div>
-              <div>
-                <Label htmlFor={`cc-${batch.id}`}>Chest coins</Label>
-                <Input
-                  id={`cc-${batch.id}`}
-                  name="chestCoins"
-                  type="number"
-                  defaultValue={batch.chestCoins}
-                />
-              </div>
-              <div>
-                <Label htmlFor={`cx-${batch.id}`}>Chest XP</Label>
-                <Input
-                  id={`cx-${batch.id}`}
-                  name="chestXp"
-                  type="number"
-                  defaultValue={batch.chestXp}
-                />
-              </div>
-              <div>
-                <Label htmlFor={`sa-${batch.id}`}>Starts at</Label>
-                <Input
-                  id={`sa-${batch.id}`}
-                  name="startsAt"
-                  type="datetime-local"
-                  defaultValue={toDatetimeLocal(batch.startsAt)}
-                />
-              </div>
-              <div>
-                <Label htmlFor={`ea-${batch.id}`}>Ends at</Label>
-                <Input
-                  id={`ea-${batch.id}`}
-                  name="endsAt"
-                  type="datetime-local"
-                  defaultValue={toDatetimeLocal(batch.endsAt)}
-                />
-              </div>
-              <div className="flex items-end gap-2">
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    name="isActive"
-                    defaultChecked={batch.isActive}
-                  />
-                  Active
-                </label>
-                <Button type="submit" size="sm" disabled={pending}>
-                  Save batch
-                </Button>
-              </div>
-            </form>
+      <div className="space-y-2">
+        {campaignBatches.map((batch) => (
+          <BatchCard
+            key={batch.id}
+            batch={batch}
+            stats={analyticsById.get(batch.id)}
+            open={openId === batch.id}
+            pending={pending}
+            isLive={livePreview.activeBatchId === batch.id}
+            onToggleOpen={() =>
+              setOpenId((id) => (id === batch.id ? null : batch.id))
+            }
+            onToggleActive={() => handleToggle(batch)}
+            onDelete={() => handleDeleteBatch(batch.id)}
+            onSaveBatch={(form) => handleSaveBatch(batch, form)}
+            onSaveMission={handleSaveMission}
+            onDeleteMission={handleDeleteMission}
+          />
+        ))}
+      </div>
 
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-slate-700">Missions</h3>
-              {batch.missions.map((m) => (
-                <MissionForm
-                  key={m.id}
-                  batchId={batch.id}
-                  mission={m}
-                  pending={pending}
-                  onSave={handleSaveMission}
-                  onDelete={handleDeleteMission}
-                />
-              ))}
-              {batch.missions.length < 3 && (
-                <MissionForm
-                  batchId={batch.id}
-                  mission={null}
-                  pending={pending}
-                  onSave={handleSaveMission}
-                  onDelete={handleDeleteMission}
-                  defaultSort={batch.missions.length}
-                />
-              )}
-            </div>
-          </CardContent>
-        </Card>
-        );
-      })}
+      {dailyBatches.length > 0 && (
+        <div className="space-y-2 pt-2">
+          <div>
+            <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+              Daily batches
+              <AdminHelpTip text="Auto-generated for each Tehran calendar day. Prefer editing the daily template in code/seed; you can still tweak chest rewards and missions here." />
+            </h2>
+            <p className="text-xs text-slate-500">
+              Reset every day · usually leave Active.
+            </p>
+          </div>
+          {dailyBatches.map((batch) => (
+            <BatchCard
+              key={batch.id}
+              batch={batch}
+              stats={analyticsById.get(batch.id)}
+              open={openId === batch.id}
+              pending={pending}
+              isLive={false}
+              onToggleOpen={() =>
+                setOpenId((id) => (id === batch.id ? null : batch.id))
+              }
+              onToggleActive={() => handleToggle(batch)}
+              onDelete={() => handleDeleteBatch(batch.id)}
+              onSaveBatch={(form) => handleSaveBatch(batch, form)}
+              onSaveMission={handleSaveMission}
+              onDeleteMission={handleDeleteMission}
+            />
+          ))}
+        </div>
+      )}
     </div>
+  );
+}
+
+function BatchCard({
+  batch,
+  stats,
+  open,
+  pending,
+  isLive,
+  onToggleOpen,
+  onToggleActive,
+  onDelete,
+  onSaveBatch,
+  onSaveMission,
+  onDeleteMission,
+}: {
+  batch: AdminMissionBatch;
+  stats?: MissionBatchAnalytics;
+  open: boolean;
+  pending: boolean;
+  isLive: boolean;
+  onToggleOpen: () => void;
+  onToggleActive: () => void;
+  onDelete: () => void;
+  onSaveBatch: (form: FormData) => void;
+  onSaveMission: (
+    batchId: string,
+    mission: AdminMission | null,
+    form: FormData,
+  ) => void;
+  onDeleteMission: (id: string) => void;
+}) {
+  return (
+    <Card className={isLive ? "border-emerald-300 ring-1 ring-emerald-200" : ""}>
+      <div className="flex items-stretch gap-1">
+        <button
+          type="button"
+          onClick={onToggleOpen}
+          className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 text-start"
+        >
+          {open ? (
+            <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+          ) : (
+            <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="font-semibold text-slate-900">
+                #{batch.batchIndex}
+              </span>
+              <Badge variant="outline" className="text-[10px]">
+                {batch.kind === "DAILY" ? "Daily" : "Campaign"}
+              </Badge>
+              <Badge variant={batch.isActive ? "default" : "secondary"}>
+                {batch.isActive ? "On" : "Off"}
+              </Badge>
+              {isLive && (
+                <Badge className="bg-emerald-600 text-[10px]">Live</Badge>
+              )}
+              <span className="text-xs text-slate-500">
+                {batch.missions.length}/3 missions
+              </span>
+            </div>
+            <p className="mt-0.5 truncate text-xs text-slate-500">
+              Chest {batch.chestCoins}🪙 · {batch.chestXp} XP
+              {stats
+                ? ` · ${stats.completionRate}% done · ${stats.clubsStarted} clubs`
+                : ""}
+              {batch.dayKey ? ` · ${batch.dayKey}` : ""}
+            </p>
+          </div>
+        </button>
+        <div className="flex shrink-0 items-center gap-1 pe-3">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={pending}
+            onClick={onToggleActive}
+          >
+            {batch.isActive ? "Turn off" : "Turn on"}
+          </Button>
+        </div>
+      </div>
+
+      {open && (
+        <CardContent className="space-y-5 border-t pt-4">
+          <form
+            className="grid gap-3 sm:grid-cols-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              onSaveBatch(new FormData(e.currentTarget));
+            }}
+          >
+            <div>
+              <FieldLabel
+                tip="Order in the campaign ladder. Lower numbers unlock first."
+                htmlFor={`idx-${batch.id}`}
+              >
+                Ladder order
+              </FieldLabel>
+              <Input
+                id={`idx-${batch.id}`}
+                name="batchIndex"
+                type="number"
+                defaultValue={batch.batchIndex}
+              />
+            </div>
+            <div>
+              <FieldLabel
+                tip="Bonus coins when the player finishes all 3 missions and opens the chest."
+                htmlFor={`cc-${batch.id}`}
+              >
+                Chest coins
+              </FieldLabel>
+              <Input
+                id={`cc-${batch.id}`}
+                name="chestCoins"
+                type="number"
+                defaultValue={batch.chestCoins}
+              />
+            </div>
+            <div>
+              <FieldLabel
+                tip="Bonus XP when the batch chest is claimed."
+                htmlFor={`cx-${batch.id}`}
+              >
+                Chest XP
+              </FieldLabel>
+              <Input
+                id={`cx-${batch.id}`}
+                name="chestXp"
+                type="number"
+                defaultValue={batch.chestXp}
+              />
+            </div>
+            <div>
+              <FieldLabel
+                tip="Optional. Before this time the batch stays hidden even if Active."
+                htmlFor={`sa-${batch.id}`}
+              >
+                Starts
+              </FieldLabel>
+              <Input
+                id={`sa-${batch.id}`}
+                name="startsAt"
+                type="datetime-local"
+                defaultValue={toDatetimeLocal(batch.startsAt)}
+              />
+            </div>
+            <div>
+              <FieldLabel
+                tip="Optional. After this time the batch stops being offered."
+                htmlFor={`ea-${batch.id}`}
+              >
+                Ends
+              </FieldLabel>
+              <Input
+                id={`ea-${batch.id}`}
+                name="endsAt"
+                type="datetime-local"
+                defaultValue={toDatetimeLocal(batch.endsAt)}
+              />
+            </div>
+            <div className="flex items-end gap-2">
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  name="isActive"
+                  defaultChecked={batch.isActive}
+                />
+                Active
+                <AdminHelpTip text="Must be Active (and inside Starts/Ends) for players to receive this batch." />
+              </label>
+              <Button type="submit" size="sm" disabled={pending}>
+                Save
+              </Button>
+            </div>
+          </form>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
+                Missions
+                <AdminHelpTip text="Exactly 3 per batch. Each has its own drip reward; finishing all unlocks the chest above." />
+              </h3>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="text-destructive"
+                disabled={pending}
+                onClick={onDelete}
+              >
+                <Trash2 className="me-1 h-3.5 w-3.5" />
+                Delete batch
+              </Button>
+            </div>
+
+            {/* Compact read-only summary when missions exist */}
+            {batch.missions.length > 0 && (
+              <ul className="mb-2 space-y-1 rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2 text-xs text-slate-600">
+                {batch.missions
+                  .slice()
+                  .sort((a, b) => a.sortOrder - b.sortOrder)
+                  .map((m, i) => (
+                    <li key={m.id} className="flex flex-wrap gap-x-2">
+                      <span className="font-semibold text-slate-800">
+                        {i + 1}.
+                      </span>
+                      <span>{m.titleEn}</span>
+                      <span className="text-slate-400">·</span>
+                      <span>
+                        {objectiveLabel(m.objectiveType)} ×{m.targetValue}
+                      </span>
+                      <span className="text-slate-400">·</span>
+                      <span>
+                        +{m.rewardCoins}🪙 +{m.rewardXp}XP
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+            )}
+
+            {batch.missions.map((m) => (
+              <MissionForm
+                key={m.id}
+                batchId={batch.id}
+                mission={m}
+                pending={pending}
+                onSave={onSaveMission}
+                onDelete={onDeleteMission}
+              />
+            ))}
+            {batch.missions.length < 3 && (
+              <MissionForm
+                batchId={batch.id}
+                mission={null}
+                pending={pending}
+                onSave={onSaveMission}
+                onDelete={onDeleteMission}
+                defaultSort={batch.missions.length}
+              />
+            )}
+          </div>
+        </CardContent>
+      )}
+    </Card>
   );
 }
 
@@ -476,95 +700,168 @@ function MissionForm({
   const [objective, setObjective] = useState<AdminMission["objectiveType"]>(
     mission?.objectiveType ?? "SCORE_GOALS",
   );
+  const [expanded, setExpanded] = useState(!mission);
+
+  const objMeta = OBJECTIVES.find((o) => o.value === objective);
 
   return (
     <form
-      className="rounded-lg border border-slate-200 bg-slate-50/80 p-3"
+      className="rounded-lg border border-slate-200 bg-white"
       onSubmit={(e) => {
         e.preventDefault();
         onSave(batchId, mission, new FormData(e.currentTarget));
       }}
     >
-      <div className="grid gap-2 sm:grid-cols-2">
-        <div>
-          <Label>Title EN</Label>
-          <Input name="titleEn" defaultValue={mission?.titleEn ?? ""} required />
-        </div>
-        <div>
-          <Label>Title FA</Label>
-          <Input name="titleFa" defaultValue={mission?.titleFa ?? ""} required />
-        </div>
-        <div>
-          <Label>Objective</Label>
-          <Select
-            value={objective}
-            onValueChange={(v) =>
-              setObjective(v as AdminMission["objectiveType"])
-            }
+      {mission && !expanded ? (
+        <div className="flex items-center justify-between gap-2 px-3 py-2.5">
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            className="min-w-0 flex-1 text-start text-sm"
           >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {OBJECTIVES.map((o) => (
-                <SelectItem key={o} value={o}>
-                  {o}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <input type="hidden" name="objectiveType" value={objective} />
-        </div>
-        <div>
-          <Label>Target</Label>
-          <Input
-            name="targetValue"
-            type="number"
-            defaultValue={mission?.targetValue ?? 5}
-            required
-          />
-        </div>
-        <div>
-          <Label>Reward coins</Label>
-          <Input
-            name="rewardCoins"
-            type="number"
-            defaultValue={mission?.rewardCoins ?? 0}
-          />
-        </div>
-        <div>
-          <Label>Reward XP</Label>
-          <Input
-            name="rewardXp"
-            type="number"
-            defaultValue={mission?.rewardXp ?? 0}
-          />
-        </div>
-        <div>
-          <Label>Sort</Label>
-          <Input
-            name="sortOrder"
-            type="number"
-            defaultValue={mission?.sortOrder ?? defaultSort}
-          />
-        </div>
-      </div>
-      <div className="mt-3 flex gap-2">
-        <Button type="submit" size="sm" disabled={pending}>
-          {mission ? "Update mission" : "Add mission"}
-        </Button>
-        {mission && (
+            <span className="font-medium text-slate-900">{mission.titleEn}</span>
+            <span className="ms-2 text-xs text-slate-500">
+              {objectiveLabel(mission.objectiveType)} ×{mission.targetValue}
+            </span>
+          </button>
           <Button
             type="button"
             size="sm"
             variant="ghost"
-            disabled={pending}
-            onClick={() => onDelete(mission.id)}
+            onClick={() => setExpanded(true)}
           >
-            Delete
+            Edit
           </Button>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="space-y-3 p-3">
+          {!mission && (
+            <p className="text-xs font-semibold text-slate-500">
+              + Add mission ({defaultSort + 1}/3)
+            </p>
+          )}
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div>
+              <FieldLabel tip="English label shown in the app (EN locale).">
+                Title EN
+              </FieldLabel>
+              <Input
+                name="titleEn"
+                defaultValue={mission?.titleEn ?? ""}
+                required
+                placeholder="Score 3 goals"
+              />
+            </div>
+            <div>
+              <FieldLabel tip="Persian label shown when the app language is FA.">
+                Title FA
+              </FieldLabel>
+              <Input
+                name="titleFa"
+                defaultValue={mission?.titleFa ?? ""}
+                required
+                dir="rtl"
+                placeholder="۳ گل بزن"
+              />
+            </div>
+            <div>
+              <FieldLabel tip={objMeta?.tip ?? "What the player must do."}>
+                Goal type
+              </FieldLabel>
+              <Select
+                value={objective}
+                onValueChange={(v) =>
+                  setObjective(v as AdminMission["objectiveType"])
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {OBJECTIVES.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <input type="hidden" name="objectiveType" value={objective} />
+              {objMeta && (
+                <p className="mt-1 text-[11px] leading-snug text-slate-500">
+                  {objMeta.tip}
+                </p>
+              )}
+            </div>
+            <div>
+              <FieldLabel tip="How many times / how high the goal type must reach.">
+                Target
+              </FieldLabel>
+              <Input
+                name="targetValue"
+                type="number"
+                min={1}
+                defaultValue={mission?.targetValue ?? 1}
+                required
+              />
+            </div>
+            <div>
+              <FieldLabel tip="Coins paid when the player claims this mission (drip reward).">
+                Coins
+              </FieldLabel>
+              <Input
+                name="rewardCoins"
+                type="number"
+                min={0}
+                defaultValue={mission?.rewardCoins ?? 0}
+              />
+            </div>
+            <div>
+              <FieldLabel tip="XP paid when the player claims this mission.">
+                XP
+              </FieldLabel>
+              <Input
+                name="rewardXp"
+                type="number"
+                min={0}
+                defaultValue={mission?.rewardXp ?? 0}
+              />
+            </div>
+          </div>
+          {/* Keep sort in DOM but auto-fill — hidden from busy admins */}
+          <input
+            type="hidden"
+            name="sortOrder"
+            value={mission?.sortOrder ?? defaultSort}
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" size="sm" disabled={pending}>
+              {mission ? "Save mission" : "Add mission"}
+            </Button>
+            {mission && (
+              <>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setExpanded(false)}
+                >
+                  Collapse
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="text-destructive"
+                  disabled={pending}
+                  onClick={() => onDelete(mission.id)}
+                >
+                  Delete
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </form>
   );
 }

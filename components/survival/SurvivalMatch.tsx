@@ -29,11 +29,14 @@ const REVEAL_MS = 900;
 type SurvivalMatchProps = {
   category: DuelCategoryOption;
   initialQuestions: QuizQuestion[];
+  /** Premium RecordChallenge id (requires prior unlock). */
+  challengeId?: string | null;
 };
 
 export function SurvivalMatch({
   category,
   initialQuestions,
+  challengeId = null,
 }: SurvivalMatchProps) {
   const router = useRouter();
   const { t, locale } = useTranslation();
@@ -77,12 +80,21 @@ export function SurvivalMatch({
     prefetchLock.current = true;
     setPrefetching(true);
     try {
-      const seen = useSurvivalStore.getState().seenQuestionIds;
-      const cat = useSurvivalStore.getState().categoryId;
+      const state = useSurvivalStore.getState();
+      const cat = state.categoryId;
       if (!cat) return;
+      // Answered + still in the local queue — avoid re-drawing in-flight cards.
+      const excludeIds = [
+        ...new Set([
+          ...state.seenQuestionIds,
+          ...state.queue.map((q) => q.id),
+          ...state.log.map((e) => e.questionId),
+        ]),
+      ];
       const res = await drawSurvivalBatch({
         categoryId: cat,
-        seenQuestionIds: seen,
+        seenQuestionIds: excludeIds,
+        challengeId,
       });
       if (!res.ok) return;
       if (res.questions.length === 0) {
@@ -100,7 +112,7 @@ export function SurvivalMatch({
       prefetchLock.current = false;
       setPrefetching(false);
     }
-  }, [appendBatch, clearBank, setPrefetching]);
+  }, [appendBatch, clearBank, setPrefetching, challengeId]);
 
   // Timer loop
   useEffect(() => {
@@ -166,6 +178,7 @@ export function SurvivalMatch({
   if (phase === "finished" && endReason && categoryId) {
     return (
       <SurvivalResult
+        challengeId={challengeId}
         categoryId={categoryId}
         endReason={endReason}
         submissions={log.map((k) => ({
@@ -175,11 +188,14 @@ export function SurvivalMatch({
         }))}
         onPlayAgain={() => {
           reset();
-          router.replace(
-            `/play/survival?category=${category.id}&run=${Date.now()}`,
-          );
+          const qs = new URLSearchParams({
+            category: category.id,
+            run: String(Date.now()),
+          });
+          if (challengeId) qs.set("challenge", challengeId);
+          router.replace(`/play/survival?${qs.toString()}`);
         }}
-        onExit={() => router.push("/play")}
+        onExit={() => router.push("/play/survival")}
       />
     );
   }

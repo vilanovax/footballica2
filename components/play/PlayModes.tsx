@@ -17,11 +17,14 @@ type PlayModesProps = {
   maxStamina: number;
   survivalBest: number;
   modes: Record<"penalty" | "quick" | "survival" | "duel", PlayModeEconomy>;
+  /** Live premium challenges — chip on Survival card only. */
+  liveChallengeCount?: number;
 };
 
 /**
  * Match Day Phase 1 — tinted Match Cards, Solo / Online groups,
  * economy chips from GameConfig, 1-click CTA + [i] sheet.
+ * Challenges live under Survival lobby (`/play/survival`).
  */
 export function PlayModes({
   recentDuels = [],
@@ -31,6 +34,7 @@ export function PlayModes({
   maxStamina,
   survivalBest,
   modes,
+  liveChallengeCount = 0,
 }: PlayModesProps) {
   const { t, locale } = useTranslation();
   const staminaLow = stamina <= 1;
@@ -110,6 +114,7 @@ export function PlayModes({
           ctaLabel={t("play.ctaSurvival")}
           economy={modes.survival}
           survivalBest={survivalBest}
+          liveChallengeCount={liveChallengeCount}
         />
       </div>
 

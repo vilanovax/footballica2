@@ -11,13 +11,17 @@ import { getGameConfig } from "@/lib/game/gameConfig";
 import { computeStaminaRegen } from "@/lib/club/stamina";
 import { computeStreakUpdate } from "@/lib/game/streak";
 import {
-  SURVIVAL_LIVES,
-  SURVIVAL_STAMINA_COST,
   bestComboFromResults,
   computeSurvivalRewards,
+  survivalWeeklyXp,
   type SurvivalEndReason,
   type SurvivalRewardBreakdown,
 } from "@/lib/game/survival";
+import {
+  isChallengeTargetMet,
+  isRecordChallengeLive,
+} from "@/lib/game/recordChallenge";
+import { isCategoryAllowedForChallenge } from "@/lib/game/challengeCategories";
 
 class SurvivalError extends Error {}
 
@@ -49,6 +53,14 @@ export type SettleSurvivalResult =
         nameFa: string;
         icon: string | null;
       };
+      challenge: {
+        id: string;
+        conquered: boolean;
+        badgeGranted: boolean;
+        badgeSlug: string | null;
+        targetScore: number;
+        bestScore: number;
+      } | null;
     }
   | { ok: false; error: string };
 
@@ -60,6 +72,8 @@ export async function settleSurvival(input: {
   categoryId: string;
   submissions: KickSubmission[];
   endReason: SurvivalEndReason;
+  /** Premium RecordChallenge — requires prior unlock; run still costs 1 stamina. */
+  challengeId?: string | null;
 }): Promise<SettleSurvivalResult> {
   try {
     const pair = await requireUserClub();
@@ -69,6 +83,11 @@ export async function settleSurvival(input: {
     const categoryId =
       typeof input.categoryId === "string" ? input.categoryId.trim() : "";
     if (!categoryId) return { ok: false, error: "invalid_category" };
+
+    const challengeId =
+      typeof input.challengeId === "string" && input.challengeId.trim()
+        ? input.challengeId.trim()
+        : null;
 
     const endReason: SurvivalEndReason =
       input.endReason === "cleared" ? "cleared" : "eliminated";
@@ -82,15 +101,67 @@ export async function settleSurvival(input: {
 
     const category = await prisma.category.findFirst({
       where: { id: categoryId, isActive: true },
-      select: { id: true, nameEn: true, nameFa: true, icon: true },
+      select: {
+        id: true,
+        nameEn: true,
+        nameFa: true,
+        icon: true,
+        challengeOnly: true,
+      },
     });
     if (!category) return { ok: false, error: "category_not_found" };
 
-    const ids = submissions.map((s) => s.questionId);
-    const uniqueIds = [...new Set(ids)];
-    if (uniqueIds.length !== ids.length) {
-      return { ok: false, error: "duplicate_questions" };
+    let challengeRow: {
+      id: string;
+      targetScore: number;
+      rewardBadgeSlug: string | null;
+    } | null = null;
+
+    if (challengeId) {
+      const challenge = await prisma.recordChallenge.findUnique({
+        where: { id: challengeId },
+      });
+      if (!challenge || !isRecordChallengeLive(challenge)) {
+        return { ok: false, error: "challenge_not_live" };
+      }
+      const allowed = await isCategoryAllowedForChallenge({
+        categoryId,
+        challengeId,
+      });
+      if (!allowed) {
+        return { ok: false, error: "challenge_category_mismatch" };
+      }
+      const access = await prisma.clubChallengeAccess.findUnique({
+        where: {
+          clubId_challengeId: {
+            clubId: clubSnap.id,
+            challengeId,
+          },
+        },
+      });
+      if (!access) return { ok: false, error: "challenge_locked" };
+      challengeRow = {
+        id: challenge.id,
+        targetScore: challenge.targetScore,
+        rewardBadgeSlug: challenge.rewardBadgeSlug,
+      };
+    } else if (category.challengeOnly) {
+      return { ok: false, error: "category_not_found" };
     }
+
+    // Keep first occurrence per questionId — client prefetch races used to
+    // duplicate queue entries; hard-failing wiped legitimate runs.
+    const seenSub = new Set<string>();
+    const dedupedSubmissions = submissions.filter((s) => {
+      const id = typeof s.questionId === "string" ? s.questionId : "";
+      if (!id || seenSub.has(id)) return false;
+      seenSub.add(id);
+      return true;
+    });
+    if (dedupedSubmissions.length === 0) {
+      return { ok: false, error: "empty_run" };
+    }
+    const uniqueIds = [...seenSub];
 
     const rows = await prisma.question.findMany({
       where: {
@@ -113,7 +184,7 @@ export async function settleSurvival(input: {
       msRemaining: number;
     }[] = [];
 
-    for (const sub of submissions) {
+    for (const sub of dedupedSubmissions) {
       const q = byId.get(sub.questionId);
       if (!q) return { ok: false, error: "unknown_questions" };
       const evaluation = evaluateKick(q, sub.selectedIndex);
@@ -134,13 +205,19 @@ export async function settleSurvival(input: {
     const misses = correctFlags.filter((c) => !c).length;
     const bestCombo = bestComboFromResults(correctFlags);
 
+    const config = await getGameConfig();
+    const staminaCost = config.survival.staminaCost;
+    const lives = config.survival.lives;
+
     // Cleared runs must not have burned all lives via misses.
-    if (endReason === "cleared" && misses >= SURVIVAL_LIVES) {
+    if (endReason === "cleared" && misses >= lives) {
       return { ok: false, error: "invalid_end_reason" };
     }
 
-    const rewards = computeSurvivalRewards({ score, bestCombo, endReason });
-    const config = await getGameConfig();
+    const rewards = computeSurvivalRewards(
+      { score, bestCombo, endReason },
+      config,
+    );
 
     const result = await prisma.$transaction(async (tx) => {
       const club = await tx.club.findUniqueOrThrow({
@@ -156,7 +233,7 @@ export async function settleSurvival(input: {
         },
         new Date(),
       );
-      if (regen.stamina < SURVIVAL_STAMINA_COST) {
+      if (regen.stamina < staminaCost) {
         throw new SurvivalError("not_enough_stamina");
       }
 
@@ -209,14 +286,15 @@ export async function settleSurvival(input: {
           mode: "SURVIVAL",
           status: "COMPLETED",
           categoryId,
+          recordChallengeId: challengeRow?.id ?? null,
           goalsFor: rewards.score,
           goalsAgainst: misses,
-          questionsTotal: submissions.length,
+          questionsTotal: dedupedSubmissions.length,
           correctCount: rewards.score,
           coinsEarned: rewards.coins + levelUpCoins,
           xpEarned: rewards.xp,
           fansEarned: rewards.fans,
-          staminaSpent: SURVIVAL_STAMINA_COST,
+          staminaSpent: staminaCost,
           bestCombo: rewards.bestCombo,
           usedHelp: false,
           answerLog: answerLog as unknown as Prisma.InputJsonValue,
@@ -224,12 +302,102 @@ export async function settleSurvival(input: {
         },
       });
 
+      let challengeResult: {
+        id: string;
+        conquered: boolean;
+        badgeGranted: boolean;
+        badgeSlug: string | null;
+        targetScore: number;
+        bestScore: number;
+      } | null = null;
+
+      if (challengeRow) {
+        const conquered = isChallengeTargetMet(
+          rewards.score,
+          challengeRow.targetScore,
+        );
+        const existingRun = await tx.clubChallengeRun.findUnique({
+          where: {
+            clubId_challengeId: {
+              clubId: club.id,
+              challengeId: challengeRow.id,
+            },
+          },
+        });
+        const bestScore = Math.max(
+          existingRun?.bestScore ?? 0,
+          rewards.score,
+        );
+        const alreadyConquered = Boolean(existingRun?.conqueredAt);
+        const badgeSlug = challengeRow.rewardBadgeSlug;
+        let badgeGranted = Boolean(existingRun?.badgeGranted);
+
+        if (
+          conquered &&
+          badgeSlug &&
+          !badgeGranted
+        ) {
+          const owned = await tx.clubBadge.findUnique({
+            where: {
+              clubId_badgeSlug: { clubId: club.id, badgeSlug },
+            },
+          });
+          if (!owned) {
+            await tx.clubBadge.create({
+              data: {
+                clubId: club.id,
+                badgeSlug,
+                coinsAwarded: 0,
+                xpAwarded: 0,
+                sourceChallengeId: challengeRow.id,
+              },
+            });
+          }
+          badgeGranted = true;
+        }
+
+        const run = await tx.clubChallengeRun.upsert({
+          where: {
+            clubId_challengeId: {
+              clubId: club.id,
+              challengeId: challengeRow.id,
+            },
+          },
+          create: {
+            clubId: club.id,
+            challengeId: challengeRow.id,
+            bestScore: rewards.score,
+            attempts: 1,
+            conqueredAt: conquered ? new Date() : null,
+            badgeGranted,
+          },
+          update: {
+            bestScore,
+            attempts: { increment: 1 },
+            conqueredAt:
+              conquered && !alreadyConquered
+                ? new Date()
+                : existingRun?.conqueredAt ?? undefined,
+            badgeGranted: badgeGranted || undefined,
+          },
+        });
+
+        challengeResult = {
+          id: challengeRow.id,
+          conquered: Boolean(run.conqueredAt) || conquered,
+          badgeGranted,
+          badgeSlug,
+          targetScore: challengeRow.targetScore,
+          bestScore: run.bestScore,
+        };
+      }
+
       const updatedClub = await tx.club.update({
         where: { id: club.id },
         data: {
           coins: { increment: rewards.coins + levelUpCoins },
           fans: { increment: rewards.fans },
-          stamina: regen.stamina - SURVIVAL_STAMINA_COST,
+          stamina: regen.stamina - staminaCost,
           lastStaminaUpdate: regen.lastStaminaUpdate,
           matchesPlayed: { increment: 1 },
           goalsTotal: { increment: rewards.score },
@@ -245,7 +413,7 @@ export async function settleSurvival(input: {
         data: {
           xp: nextXp,
           managerLevel: levelInfo.level,
-          weeklyXp: { increment: Math.max(1, Math.floor(rewards.score / 3)) },
+          weeklyXp: { increment: survivalWeeklyXp(rewards.score, config) },
         },
       });
 
@@ -275,6 +443,7 @@ export async function settleSurvival(input: {
           extended: streak.extended,
           isNewDay: streak.isNewDay,
         },
+        challenge: challengeResult,
       };
     });
 

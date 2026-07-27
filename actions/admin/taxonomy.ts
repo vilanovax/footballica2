@@ -55,6 +55,8 @@ export async function createCategory(
         nameFa: parsed.data.nameFa,
         icon: parsed.data.icon || null,
         isActive: parsed.data.isActive,
+        challengeOnly: parsed.data.challengeOnly,
+        locales: [...new Set(parsed.data.locales)],
       },
     });
     revalidateTaxonomy();
@@ -87,8 +89,12 @@ export async function updateCategory(
         nameFa: parsed.data.nameFa,
         icon: parsed.data.icon || null,
         isActive: parsed.data.isActive,
+        challengeOnly: parsed.data.challengeOnly,
+        locales: [...new Set(parsed.data.locales)],
       },
     });
+    revalidatePath("/play");
+    revalidatePath("/admin/challenges");
     revalidateTaxonomy();
     return { ok: true, id };
   } catch (err) {
@@ -108,6 +114,23 @@ export async function toggleCategoryStatus(
   try {
     await prisma.category.update({ where: { id }, data: { isActive } });
     revalidateTaxonomy();
+    return { ok: true, id };
+  } catch {
+    return { ok: false, error: "Category not found." };
+  }
+}
+
+export async function toggleCategoryChallengeOnly(
+  id: string,
+  challengeOnly: boolean,
+): Promise<TaxonomyResult> {
+  if (!(await assertAdmin())) return { ok: false, error: "Unauthorized." };
+
+  try {
+    await prisma.category.update({ where: { id }, data: { challengeOnly } });
+    revalidateTaxonomy();
+    revalidatePath("/play");
+    revalidatePath("/admin/challenges");
     return { ok: true, id };
   } catch {
     return { ok: false, error: "Category not found." };

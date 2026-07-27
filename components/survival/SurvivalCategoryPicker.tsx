@@ -13,11 +13,14 @@ type SurvivalCategoryPickerProps = {
   categories: DuelCategoryOption[];
   /** Optional personal bests keyed by categoryId. */
   records?: Record<string, number>;
+  /** When set, picks stay inside this premium challenge. */
+  challengeId?: string | null;
 };
 
 export function SurvivalCategoryPicker({
   categories,
   records = {},
+  challengeId = null,
 }: SurvivalCategoryPickerProps) {
   const { t, locale } = useTranslation();
   const router = useRouter();
@@ -38,10 +41,10 @@ export function SurvivalCategoryPicker({
         </p>
         <button
           type="button"
-          onClick={() => router.push("/play")}
+          onClick={() => router.push("/play/survival")}
           className="btn-fantasy btn-fantasy-secondary"
         >
-          {t("survival.backPlay")}
+          {t("survival.backLobby")}
         </button>
       </section>
     );
@@ -57,7 +60,9 @@ export function SurvivalCategoryPicker({
           {t("survival.pickTitle")}
         </h1>
         <p className="mt-1 font-body text-sm font-semibold text-muted-foreground">
-          {t("survival.pickSub")}
+          {challengeId
+            ? t("survival.pickSubChallenge")
+            : t("survival.pickSub")}
         </p>
       </header>
 
@@ -85,7 +90,10 @@ export function SurvivalCategoryPicker({
                 playSound("click");
                 setPendingId(c.id);
                 startTransition(() => {
-                  router.push(`/play/survival?category=${c.id}`);
+                  const qs = new URLSearchParams();
+                  qs.set("category", c.id);
+                  if (challengeId) qs.set("challenge", challengeId);
+                  router.push(`/play/survival?${qs.toString()}`);
                 });
               }}
               className="flex min-h-touch items-center gap-4 rounded-bubble-lg border-2 border-border bg-surface p-4 text-start opacity-100 shadow-fantasy transition-colors active:border-secondary disabled:opacity-50"
@@ -112,6 +120,18 @@ export function SurvivalCategoryPicker({
           );
         })}
       </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          playSound("click");
+          haptic(HAPTIC.tap);
+          router.push("/play/survival");
+        }}
+        className="btn-fantasy btn-fantasy-secondary mx-auto mt-2 min-h-11 px-6 text-sm"
+      >
+        {t("survival.backLobby")}
+      </button>
     </section>
   );
 }

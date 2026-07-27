@@ -17,6 +17,7 @@ type SurvivalResultProps = {
   categoryId: string;
   endReason: SurvivalEndReason;
   submissions: KickSubmission[];
+  challengeId?: string | null;
   onPlayAgain: () => void;
   onExit: () => void;
 };
@@ -30,6 +31,7 @@ export function SurvivalResult({
   categoryId,
   endReason,
   submissions,
+  challengeId = null,
   onPlayAgain,
   onExit,
 }: SurvivalResultProps) {
@@ -46,6 +48,7 @@ export function SurvivalResult({
         categoryId,
         submissions,
         endReason,
+        challengeId,
       });
       if (result.ok) {
         setSave({ status: "saved", data: result });
@@ -54,7 +57,7 @@ export function SurvivalResult({
         setSave({ status: "error", message: result.error });
       }
     })();
-  }, [categoryId, endReason, submissions, router]);
+  }, [categoryId, endReason, submissions, challengeId, router]);
 
   if (save.status === "saving") {
     return (
@@ -82,7 +85,7 @@ export function SurvivalResult({
         </p>
         <p className="text-sm text-muted-foreground">{save.message}</p>
         <button type="button" onClick={onExit} className="btn-fantasy btn-fantasy-primary">
-          {t("survival.backPlay")}
+          {t("survival.backLobby")}
         </button>
       </section>
     );
@@ -147,6 +150,21 @@ export function SurvivalResult({
         </motion.p>
       )}
 
+      {data.challenge?.conquered && (
+        <motion.p
+          initial={{ y: 8, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="rounded-full bg-secondary/20 px-4 py-2 font-display text-sm font-bold text-secondary"
+        >
+          {t("survival.challengeConquered", {
+            n: toLocaleDigits(data.challenge.targetScore, locale),
+          })}
+          {data.challenge.badgeGranted && data.challenge.badgeSlug
+            ? ` · 🏅 ${data.challenge.badgeSlug}`
+            : ""}
+        </motion.p>
+      )}
+
       <div className="flex w-full max-w-sm flex-col gap-2 rounded-bubble-lg border border-border bg-muted/40 p-4 text-sm">
         <div className="flex justify-between font-display font-bold">
           <span>🪙 {t("result.coins")}</span>
@@ -182,7 +200,7 @@ export function SurvivalResult({
           onClick={onExit}
           className="btn-fantasy btn-fantasy-secondary w-full"
         >
-          {t("survival.backPlay")}
+          {t("survival.backLobby")}
         </button>
       </div>
     </section>

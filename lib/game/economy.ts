@@ -84,6 +84,24 @@ export type GameConfig = {
     /** Stamina spent when opening a duel. */
     staminaCost: number;
   };
+  /**
+   * Survival Mode soft economy — Live-Ops tunable (weekend 2× coins, etc.).
+   * Pure math in `lib/game/survival.ts` reads these; settle fetches config.
+   */
+  survival: {
+    coinsPerCorrect: number;
+    xpPerCorrect: number;
+    fansPerCorrect: number;
+    clearedCoinBonus: number;
+    clearedXpBonus: number;
+    /**
+     * Weekly XP = max(1, floor(score / weeklyXpDivisor)).
+     * Must be ≥ 1 (merge clamps).
+     */
+    weeklyXpDivisor: number;
+    staminaCost: number;
+    lives: number;
+  };
 };
 
 export const DEFAULT_GAME_CONFIG: GameConfig = {
@@ -126,6 +144,16 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     winWeeklyXp: 3,
     staminaCost: 1,
   },
+  survival: {
+    coinsPerCorrect: 5,
+    xpPerCorrect: 10,
+    fansPerCorrect: 2,
+    clearedCoinBonus: 25,
+    clearedXpBonus: 50,
+    weeklyXpDivisor: 3,
+    staminaCost: 1,
+    lives: 3,
+  },
 };
 
 /** Finite-number guard with fallback (rejects NaN/Infinity/non-numbers). */
@@ -147,6 +175,7 @@ export function mergeGameConfig(raw: unknown): GameConfig {
   const h = src.helpers ?? {};
   const m = src.match ?? {};
   const d = src.duel ?? {};
+  const s = src.survival ?? {};
   const D = DEFAULT_GAME_CONFIG;
 
   return {
@@ -209,6 +238,37 @@ export function mergeGameConfig(raw: unknown): GameConfig {
       ),
       winWeeklyXp: Math.max(0, Math.round(num(d.winWeeklyXp, D.duel.winWeeklyXp))),
       staminaCost: Math.max(0, Math.round(num(d.staminaCost, D.duel.staminaCost))),
+    },
+    survival: {
+      coinsPerCorrect: Math.max(
+        0,
+        Math.round(num(s.coinsPerCorrect, D.survival.coinsPerCorrect)),
+      ),
+      xpPerCorrect: Math.max(
+        0,
+        Math.round(num(s.xpPerCorrect, D.survival.xpPerCorrect)),
+      ),
+      fansPerCorrect: Math.max(
+        0,
+        Math.round(num(s.fansPerCorrect, D.survival.fansPerCorrect)),
+      ),
+      clearedCoinBonus: Math.max(
+        0,
+        Math.round(num(s.clearedCoinBonus, D.survival.clearedCoinBonus)),
+      ),
+      clearedXpBonus: Math.max(
+        0,
+        Math.round(num(s.clearedXpBonus, D.survival.clearedXpBonus)),
+      ),
+      weeklyXpDivisor: Math.max(
+        1,
+        Math.round(num(s.weeklyXpDivisor, D.survival.weeklyXpDivisor)),
+      ),
+      staminaCost: Math.max(
+        0,
+        Math.round(num(s.staminaCost, D.survival.staminaCost)),
+      ),
+      lives: Math.max(1, Math.round(num(s.lives, D.survival.lives))),
     },
   };
 }

@@ -139,31 +139,14 @@ function playStateOf(u: RawUser): LeaderboardPlayState {
 }
 
 /**
- * Rank order:
- * 1) Players with weeklyXp > 0 — by XP desc, then fewer matchesPlayed (efficiency).
- * 2) Played but 0 weekly XP.
- * 3) Never played — always at the bottom.
+ * Rank order for weekly-active players (weeklyXp > 0):
+ * XP desc, then fewer matchesPlayed (efficiency), then stable id.
  */
-function compareUsers(a: RawUser, b: RawUser): number {
-  const sa = playStateOf(a);
-  const sb = playStateOf(b);
-  const bucket = (s: LeaderboardPlayState) =>
-    s === "scored" ? 0 : s === "playedZero" ? 1 : 2;
-  const bucketDiff = bucket(sa) - bucket(sb);
-  if (bucketDiff !== 0) return bucketDiff;
-
-  if (sa === "scored") {
-    if (b.weeklyXp !== a.weeklyXp) return b.weeklyXp - a.weeklyXp;
-    const ma = a.club?.matchesPlayed ?? 0;
-    const mb = b.club?.matchesPlayed ?? 0;
-    if (ma !== mb) return ma - mb; // fewer matches = better rank on tie
-    return a.id.localeCompare(b.id);
-  }
-
-  // playedZero / unplayed: more lifetime matches first, then name stability
+function compareActiveUsers(a: RawUser, b: RawUser): number {
+  if (b.weeklyXp !== a.weeklyXp) return b.weeklyXp - a.weeklyXp;
   const ma = a.club?.matchesPlayed ?? 0;
   const mb = b.club?.matchesPlayed ?? 0;
-  if (mb !== ma) return mb - ma;
+  if (ma !== mb) return ma - mb;
   return a.id.localeCompare(b.id);
 }
 
@@ -185,7 +168,8 @@ function toRow(
 }
 
 /**
- * Weekly league standings: humans only, Top 50 after tie-break ranking.
+ * Weekly league standings: humans with weeklyXp > 0 only (Top 50).
+ * Unplayed / zero-XP players are excluded from the table.
  */
 export async function getLeaderboard(): Promise<LeaderboardPayload> {
   try {
@@ -194,8 +178,10 @@ export async function getLeaderboard(): Promise<LeaderboardPayload> {
     console.error("ensureWeeklyLeagueReset in getLeaderboard", err);
   }
 
-  const total = await prisma.user.count({ where: { isBot: false } });
-  if (total < MIN_USERS_FOR_UI) {
+  const activeCount = await prisma.user.count({
+    where: { isBot: false, weeklyXp: { gt: 0 } },
+  });
+  if (activeCount < MIN_USERS_FOR_UI) {
     await seedMockUsers(SEED_COUNT);
   }
 
@@ -219,17 +205,26 @@ export async function getLeaderboard(): Promise<LeaderboardPayload> {
     },
   })) as RawUser[];
 
-  const ranked = [...users].sort(compareUsers);
+  // Only this week's active scorers appear in the league table.
+  const ranked = users
+    .filter((u) => u.weeklyXp > 0)
+    .sort(compareActiveUsers);
   const top = ranked.slice(0, TOP_N);
   const rows = top.map((u, index) => toRow(u, index + 1, currentUserId));
 
   let currentUserRow: LeaderboardRow | null =
     rows.find((r) => r.isCurrentUser) ?? null;
 
+  // Sticky "you" bar even when you haven't scored this week yet.
   if (!currentUserRow && currentUserId) {
-    const idx = ranked.findIndex((u) => u.id === currentUserId);
-    if (idx >= 0) {
-      currentUserRow = toRow(ranked[idx]!, idx + 1, currentUserId);
+    const me = users.find((u) => u.id === currentUserId);
+    if (me) {
+      const activeIdx = ranked.findIndex((u) => u.id === currentUserId);
+      currentUserRow = toRow(
+        me,
+        activeIdx >= 0 ? activeIdx + 1 : 0,
+        currentUserId,
+      );
     }
   }
 

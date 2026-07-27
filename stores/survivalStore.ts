@@ -94,6 +94,8 @@ export const useSurvivalStore = create<SurvivalState>((set, get) => ({
     const s = get();
     if (s.phase !== "playing" || s.queue.length === 0) return;
     const question = s.queue[0]!;
+    // Guard double-fire (tap + timer timeout in the same tick window).
+    if (s.log.some((e) => e.questionId === question.id)) return;
     const evaluation = evaluateKick(question, selectedIndex);
     const entry: KickLog = {
       questionId: question.id,
@@ -186,8 +188,15 @@ export const useSurvivalStore = create<SurvivalState>((set, get) => ({
   appendBatch: (questions) => {
     const s = get();
     if (questions.length === 0) return;
-    const seen = new Set(s.seenQuestionIds);
-    const fresh = questions.filter((q) => !seen.has(q.id));
+    // Exclude answered + already-queued ids — prefetch only knew
+    // `seenQuestionIds` (answered), so without this the same bank rows
+    // re-enter the queue and settleSurvival rejects with duplicate_questions.
+    const blocked = new Set<string>([
+      ...s.seenQuestionIds,
+      ...s.queue.map((q) => q.id),
+      ...s.log.map((e) => e.questionId),
+    ]);
+    const fresh = questions.filter((q) => q?.id && !blocked.has(q.id));
     if (fresh.length === 0) return;
     set({
       queue: [...s.queue, ...fresh],

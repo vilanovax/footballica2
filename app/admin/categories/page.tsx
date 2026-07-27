@@ -14,6 +14,8 @@ export default async function AdminCategoriesPage() {
         nameFa: true,
         icon: true,
         isActive: true,
+        challengeOnly: true,
+        locales: true,
         _count: { select: { questions: true } },
       },
     }),
@@ -49,6 +51,8 @@ export default async function AdminCategoriesPage() {
           nameFa: c.nameFa,
           icon: c.icon,
           isActive: c.isActive,
+          challengeOnly: c.challengeOnly,
+          locales: c.locales,
           count: c._count.questions,
         }))}
         tags={tags.map((t) => ({

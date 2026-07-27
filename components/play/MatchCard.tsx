@@ -51,6 +51,8 @@ type MatchCardProps = {
   economy: PlayModeEconomy;
   /** Club-wide MAX(maxSurvivalScore). */
   survivalBest?: number | null;
+  /** Live RecordChallenges count — shown on Survival card. */
+  liveChallengeCount?: number;
   tone: MatchCardTone;
 };
 
@@ -65,6 +67,7 @@ export function MatchCard({
   ctaLabel,
   economy,
   survivalBest = null,
+  liveChallengeCount = 0,
   tone,
 }: MatchCardProps) {
   const { t, locale } = useTranslation();
@@ -122,6 +125,14 @@ export function MatchCard({
                   n: toLocaleDigits(survivalBest ?? 0, locale),
                 })}
               </Chip>
+              {liveChallengeCount > 0 ? (
+                <Chip>
+                  👑{" "}
+                  {t("play.chipLiveChallenges", {
+                    n: toLocaleDigits(liveChallengeCount, locale),
+                  })}
+                </Chip>
+              ) : null}
             </>
           ) : (
             <Chip>
@@ -198,6 +209,24 @@ function ModeInfoBody({
   economy: PlayModeEconomy;
   survivalBest?: number | null;
 }) {
+  if (modeId === "survival") {
+    return (
+      <SurvivalInfoBody economy={economy} survivalBest={survivalBest} />
+    );
+  }
+
+  return (
+    <StandardModeInfoBody modeId={modeId} economy={economy} />
+  );
+}
+
+function StandardModeInfoBody({
+  modeId,
+  economy,
+}: {
+  modeId: Exclude<PlayModeId, "survival">;
+  economy: PlayModeEconomy;
+}) {
   const { t, locale } = useTranslation();
   const n = (v: number) => toLocaleDigits(v, locale);
 
@@ -209,58 +238,153 @@ function ModeInfoBody({
           label={t("play.info.stamina")}
           value={`⚡ ${n(economy.staminaCost)}`}
         />
-        {modeId === "survival" ? (
-          <>
-            <InfoRow
-              label={t("play.info.perCorrect")}
-              value={t("play.chipPerCorrect", {
-                coins: n(economy.perCorrectCoins ?? 0),
-                xp: n(economy.perCorrectXp ?? 0),
-              })}
-            />
-            <InfoRow
-              label={t("play.info.lives")}
-              value={n(economy.lives ?? 3)}
-            />
-            <InfoRow
-              label={t("play.info.bestScore")}
-              value={n(survivalBest ?? 0)}
-            />
-            <InfoRow
-              label={t("play.info.clearedBonus")}
-              value={`${n(economy.clearedCoinBonus ?? 0)} 💰 · ${n(economy.clearedXpBonus ?? 0)} XP`}
-            />
-          </>
-        ) : (
-          <>
-            {economy.questionCount != null && (
-              <InfoRow
-                label={t("play.info.questions")}
-                value={n(economy.questionCount)}
-              />
-            )}
-            <InfoRow
-              label={t("play.info.approxWin")}
-              value={t("play.chipReward", {
-                coins: n(economy.approxCoins),
-                xp: n(economy.approxXp),
-              })}
-            />
-            {modeId === "duel" && economy.duelWinWeeklyXp != null && (
-              <InfoRow
-                label={t("play.info.weeklyXp")}
-                value={n(economy.duelWinWeeklyXp)}
-              />
-            )}
-          </>
+        {economy.questionCount != null && (
+          <InfoRow
+            label={t("play.info.questions")}
+            value={n(economy.questionCount)}
+          />
+        )}
+        <InfoRow
+          label={t("play.info.approxWin")}
+          value={t("play.chipReward", {
+            coins: n(economy.approxCoins),
+            xp: n(economy.approxXp),
+          })}
+        />
+        {modeId === "duel" && economy.duelWinWeeklyXp != null && (
+          <InfoRow
+            label={t("play.info.weeklyXp")}
+            value={n(economy.duelWinWeeklyXp)}
+          />
         )}
       </ul>
       <p className="text-xs">{t(`play.info.${modeId}.tip`)}</p>
-      {modeId !== "survival" && (
-        <p className="text-xs text-muted-foreground/80">
-          {t("play.rewardHint")}
+      <p className="text-xs text-muted-foreground/80">{t("play.rewardHint")}</p>
+    </div>
+  );
+}
+
+function SurvivalInfoBody({
+  economy,
+  survivalBest,
+}: {
+  economy: PlayModeEconomy;
+  survivalBest?: number | null;
+}) {
+  const { t, locale } = useTranslation();
+  const n = (v: number) => toLocaleDigits(v, locale);
+  const lives = economy.lives ?? 3;
+  const best = survivalBest ?? 0;
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Hook line */}
+      <p className="text-center font-body text-sm font-bold leading-snug text-foreground">
+        {t("play.info.survival.rules")}
+      </p>
+
+      {/* Lives arena */}
+      <div className="relative overflow-hidden rounded-3xl border border-destructive/25 bg-linear-to-b from-destructive/15 via-destructive/5 to-surface px-4 py-5 text-center shadow-fantasy-sm">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -inset-s-8 top-0 h-24 w-24 rounded-full bg-destructive/10 blur-2xl"
+        />
+        <p className="mb-3 font-display text-[11px] font-bold uppercase tracking-wide text-destructive/80">
+          {t("play.info.survival.howToPlay")}
         </p>
-      )}
+        <div className="flex items-center justify-center gap-2.5" dir="ltr">
+          {Array.from({ length: lives }, (_, i) => (
+            <span
+              key={i}
+              className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-surface text-2xl shadow-fantasy-sm ring-2 ring-destructive/20"
+              aria-hidden
+            >
+              ❤️
+            </span>
+          ))}
+        </div>
+        <p className="mt-3 font-display text-sm font-extrabold text-destructive">
+          {t("play.info.survival.missHeart")}
+        </p>
+        <p className="mt-1 font-body text-xs font-semibold text-muted-foreground">
+          {t("play.info.survival.tip")}
+        </p>
+      </div>
+
+      {/* Entry + record */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="flex flex-col items-center gap-1 rounded-2xl border border-border bg-muted/30 px-3 py-3">
+          <span className="font-body text-[11px] font-bold text-muted-foreground">
+            {t("play.info.survival.entryCost")}
+          </span>
+          <span className="font-display text-xl font-extrabold text-foreground">
+            ⚡ {n(economy.staminaCost)}
+          </span>
+        </div>
+        <div className="flex flex-col items-center gap-1 rounded-2xl border border-accent/30 bg-accent/10 px-3 py-3">
+          <span className="font-body text-[11px] font-bold text-muted-foreground">
+            {t("play.info.survival.yourBest")}
+          </span>
+          <span className="font-display text-xl font-extrabold text-foreground">
+            🏆 {n(best)}
+          </span>
+        </div>
+      </div>
+
+      {/* Loot tiles */}
+      <div className="grid grid-cols-2 gap-2">
+        <LootTile
+          emoji="✅"
+          label={t("play.info.survival.lootCorrect")}
+          value={`${n(economy.perCorrectCoins ?? 0)} 💰`}
+          sub={`${n(economy.perCorrectXp ?? 0)} XP`}
+        />
+        <LootTile
+          emoji="🏦"
+          label={t("play.info.survival.lootClear")}
+          value={`${n(economy.clearedCoinBonus ?? 0)} 💰`}
+          sub={`${n(economy.clearedXpBonus ?? 0)} XP`}
+          highlight
+        />
+      </div>
+    </div>
+  );
+}
+
+function LootTile({
+  emoji,
+  label,
+  value,
+  sub,
+  highlight,
+}: {
+  emoji: string;
+  label: string;
+  value: string;
+  sub: string;
+  highlight?: boolean;
+}) {
+  return (
+    <div
+      className={[
+        "flex flex-col items-center gap-1 rounded-2xl border px-3 py-3.5 text-center shadow-fantasy-sm",
+        highlight
+          ? "border-secondary/35 bg-secondary/12"
+          : "border-border bg-surface",
+      ].join(" ")}
+    >
+      <span className="text-xl" aria-hidden>
+        {emoji}
+      </span>
+      <span className="font-body text-[11px] font-bold text-muted-foreground">
+        {label}
+      </span>
+      <span className="font-display text-base font-extrabold text-foreground">
+        {value}
+      </span>
+      <span className="font-display text-xs font-bold text-muted-foreground">
+        {sub}
+      </span>
     </div>
   );
 }

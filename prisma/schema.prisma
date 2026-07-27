@@ -250,6 +250,8 @@ model Club {
   purchases    PurchaseLog[]
   adminGrants  AdminCoinGrant[]
   categoryRecords CategoryRecord[]
+  challengeAccess ClubChallengeAccess[]
+  challengeRuns   ClubChallengeRun[]
 
   @@index([fans])
   @@index([coins])
@@ -299,16 +301,21 @@ model ClubBadge {
   clubId String
   club   Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
 
-  /// Stable slug into the code-defined achievement catalog.
+  /// Stable slug into the code-defined achievement catalog OR a premium challenge badge.
   badgeSlug    String
   /// Small reward paid out when the badge was unlocked (audit snapshot).
   coinsAwarded Int    @default(0)
   xpAwarded    Int    @default(0)
 
+  /// When set, this showcase badge was earned by conquering a RecordChallenge.
+  sourceChallengeId String?
+  sourceChallenge   RecordChallenge? @relation(fields: [sourceChallengeId], references: [id], onDelete: SetNull)
+
   unlockedAt DateTime @default(now())
 
   @@unique([clubId, badgeSlug])
   @@index([clubId])
+  @@index([sourceChallengeId])
 }
 
 // ─── ActiveBooster (Newspaper Events) ────────────────────────────────────────
@@ -348,6 +355,10 @@ model Match {
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
+  /// Optional Premium RecordChallenge this Survival run was played under.
+  recordChallengeId String?
+  recordChallenge   RecordChallenge? @relation(fields: [recordChallengeId], references: [id], onDelete: SetNull)
+
   // Football-framed scoreline (Correct = goal for, Wrong = conceded / miss)
   goalsFor       Int @default(0)
   goalsAgainst   Int @default(0)
@@ -376,13 +387,15 @@ model Match {
   @@index([clubId, finishedAt])
   @@index([mode, finishedAt])
   @@index([categoryId, finishedAt])
+  @@index([recordChallengeId, finishedAt])
 }
 
 // ─── GameConfig (Live-Ops economy tuning) ────────────────────────────────────
 // Single-row (singleton, id = "global") key store for all balancing numbers —
-// rewards, combo multiplier, coin sinks, match size. Editable from the Admin CMS
-// so the economy can be retuned without a deploy. Shape mirrors `GameConfig` in
-// lib/game/economy.ts; unknown/missing keys fall back to DEFAULT_GAME_CONFIG.
+// Match rewards, Survival soft economy, Duel, helpers, match size.
+// Editable from Admin → Economy (`/admin/config`) without a deploy.
+// Shape mirrors `GameConfig` in lib/game/economy.ts; unknown/missing keys
+// fall back to DEFAULT_GAME_CONFIG via mergeGameConfig.
 
 model GameConfig {
   id        String   @id @default("global")
@@ -401,14 +414,107 @@ model Category {
   nameFa   String
   icon     String?
   isActive Boolean @default(true)
+  /// When true, hidden from free Survival / Duel pickers — only usable via RecordChallenge links.
+  challengeOnly Boolean @default(false)
+  /// UI locales that may see this bank in pickers (e.g. ["fa"] for Iran-only topics).
+  locales  String[] @default(["en", "fa"])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  questions Question[]
-  duelRounds DuelRound[]
+  questions       Question[]
+  duelRounds      DuelRound[]
+  matches         Match[]
+  records         CategoryRecord[]
+  challengeLinks  RecordChallengeCategory[]
+}
+
+// ─── RecordChallenge (Premium Live-Ops survival events) ──────────────────────
+// Thematic campaigns (e.g. تاج آبی / Road to Euro). Hybrid economy:
+// one-time unlockCostCoins + standard SURVIVAL_STAMINA_COST per run.
+
+model RecordChallenge {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  titleEn     String
+  titleFa     String
+  descriptionEn String @default("")
+  descriptionFa String @default("")
+
+  /// One-time coin sink to unlock the campaign for this event window.
+  unlockCostCoins Int
+  /// Score required to conquer the challenge and earn the showcase badge.
+  targetScore     Int
+  /// Badge slug written to ClubBadge on conquer (prestige; not shop-purchasable).
+  rewardBadgeSlug String?
+  rewardBadgeEmoji String? @default("🏆")
+
+  isActive  Boolean   @default(true)
+  startsAt  DateTime  @default(now())
+  expiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Assigned banks — empty = any public (non-challengeOnly) eligible category.
+  categories RecordChallengeCategory[]
+  access     ClubChallengeAccess[]
+  runs       ClubChallengeRun[]
   matches    Match[]
-  records    CategoryRecord[]
+  badges     ClubBadge[]
+
+  @@index([isActive, expiresAt])
+}
+
+/// Many-to-many: which category banks a premium challenge may use.
+model RecordChallengeCategory {
+  id          String          @id @default(cuid())
+  challengeId String
+  challenge   RecordChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  categoryId  String
+  category    Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([challengeId, categoryId])
+  @@index([categoryId])
+}
+
+/// Paid unlock ledger — club paid unlockCostCoins once (per challenge).
+model ClubChallengeAccess {
+  id          String @id @default(cuid())
+  clubId      String
+  club        Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  challengeId String
+  challenge   RecordChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  coinsSpent Int
+  unlockedAt DateTime @default(now())
+
+  @@unique([clubId, challengeId])
+  @@index([challengeId])
+  @@index([clubId])
+}
+
+/// Best attempt + conquer state for a club on a premium challenge.
+model ClubChallengeRun {
+  id          String @id @default(cuid())
+  clubId      String
+  club        Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  challengeId String
+  challenge   RecordChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  bestScore     Int       @default(0)
+  attempts      Int       @default(0)
+  conqueredAt   DateTime?
+  badgeGranted  Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clubId, challengeId])
+  @@index([challengeId, bestScore])
+  @@index([clubId])
 }
 
 /// Per-club, per-category Survival high-score ledger.

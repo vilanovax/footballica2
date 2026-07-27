@@ -4,6 +4,7 @@ import { getMyDuels } from "@/actions/duel/getMyDuels";
 import { getDuelInbox } from "@/actions/duel/getInboxCount";
 import { getGameConfig } from "@/lib/game/gameConfig";
 import { getPlayModeEconomy } from "@/lib/play/modeEconomy";
+import { listRecordChallenges } from "@/actions/challenge/recordChallenge";
 import { prisma } from "@/lib/prisma";
 import { PlayModes } from "@/components/play/PlayModes";
 
@@ -17,7 +18,7 @@ export default async function PlayPage() {
   const club = await getClubSnapshot();
   if (!club) redirect("/onboarding");
 
-  const [res, inbox, config, bestAgg] = await Promise.all([
+  const [res, inbox, config, bestAgg, challengeRes] = await Promise.all([
     getMyDuels(),
     getDuelInbox(),
     getGameConfig(),
@@ -27,11 +28,15 @@ export default async function PlayPage() {
           _max: { maxSurvivalScore: true },
         })
       : Promise.resolve({ _max: { maxSurvivalScore: null } }),
+    listRecordChallenges(),
   ]);
 
   const recentDuels = res.ok ? res.history : [];
   const modes = getPlayModeEconomy(config);
   const survivalBest = bestAgg._max.maxSurvivalScore ?? 0;
+  const liveChallengeCount = challengeRes.ok
+    ? challengeRes.challenges.length
+    : 0;
 
   return (
     <PlayModes
@@ -42,6 +47,7 @@ export default async function PlayPage() {
       maxStamina={club.maxStamina}
       survivalBest={survivalBest}
       modes={modes}
+      liveChallengeCount={liveChallengeCount}
     />
   );
 }

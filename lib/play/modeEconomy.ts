@@ -1,17 +1,9 @@
 /**
- * Play Match Day economy previews — derived from GameConfig / Survival constants.
+ * Play Match Day economy previews — derived from GameConfig.
  * Framework-free so server page + client cards share the same numbers.
  */
 
 import type { GameConfig } from "@/lib/game/economy";
-import {
-  SURVIVAL_CLEARED_COIN_BONUS,
-  SURVIVAL_CLEARED_XP_BONUS,
-  SURVIVAL_COINS_PER_CORRECT,
-  SURVIVAL_LIVES,
-  SURVIVAL_STAMINA_COST,
-  SURVIVAL_XP_PER_CORRECT,
-} from "@/lib/game/survival";
 
 /** Solo Penalty / Quick spend this much stamina (matches resolveMatch). */
 export const SOLO_STAMINA_COST = 1;
@@ -44,6 +36,7 @@ export function getPlayModeEconomy(config: GameConfig): Record<
   PlayModeEconomy
 > {
   const r = config.rewards;
+  const s = config.survival;
   const penaltyQ = config.match.questionCount;
   const quickQ = config.match.quickQuestionCount;
 
@@ -70,15 +63,15 @@ export function getPlayModeEconomy(config: GameConfig): Record<
     },
     survival: {
       id: "survival",
-      staminaCost: SURVIVAL_STAMINA_COST,
-      approxCoins: SURVIVAL_COINS_PER_CORRECT * 10,
-      approxXp: SURVIVAL_XP_PER_CORRECT * 10,
+      staminaCost: s.staminaCost,
+      approxCoins: s.coinsPerCorrect * 10,
+      approxXp: s.xpPerCorrect * 10,
       questionCount: null,
-      perCorrectCoins: SURVIVAL_COINS_PER_CORRECT,
-      perCorrectXp: SURVIVAL_XP_PER_CORRECT,
-      lives: SURVIVAL_LIVES,
-      clearedCoinBonus: SURVIVAL_CLEARED_COIN_BONUS,
-      clearedXpBonus: SURVIVAL_CLEARED_XP_BONUS,
+      perCorrectCoins: s.coinsPerCorrect,
+      perCorrectXp: s.xpPerCorrect,
+      lives: s.lives,
+      clearedCoinBonus: s.clearedCoinBonus,
+      clearedXpBonus: s.clearedXpBonus,
     },
     duel: {
       id: "duel",
