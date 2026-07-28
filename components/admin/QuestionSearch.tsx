@@ -47,7 +47,7 @@ export function QuestionSearch() {
   }
 
   return (
-    <div className="relative w-full sm:w-80">
+    <div className="relative w-full">
       <span className="pointer-events-none absolute inset-y-0 inset-s-0 flex items-center ps-3 text-slate-400">
         {pending ? (
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -58,8 +58,8 @@ export function QuestionSearch() {
       <Input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Search question text…"
-        className="ps-9 pe-9"
+        placeholder="Search EN or FA text…"
+        className="h-9 border-slate-200 bg-white ps-9 pe-9"
       />
       {value && (
         <button

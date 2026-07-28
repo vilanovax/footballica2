@@ -20,6 +20,10 @@ import {
   evaluateAchievements,
   type BadgeTier,
 } from "@/lib/game/achievements";
+import {
+  applyPresentation,
+  getBadgePresentationsBySlug,
+} from "@/lib/game/badgeCatalog";
 import { computeStreakUpdate } from "@/lib/game/streak";
 import { evaluateAllMissionTracks } from "@/lib/game/missionEngine";
 import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
@@ -51,8 +55,12 @@ export type ResolveMatchOptions = {
 export type UnlockedBadge = {
   slug: string;
   emoji: string;
+  /** Optional admin-uploaded art; preferred over emoji in the celebration UI. */
+  imageUrl: string | null;
   nameEn: string;
   nameFa: string;
+  descriptionEn: string;
+  descriptionFa: string;
   tier: BadgeTier;
   coins: number;
   xp: number;
@@ -241,7 +249,7 @@ export async function resolveMatch(
         select: { badgeSlug: true },
       });
       const ownedSlugs = new Set(owned.map((b) => b.badgeSlug));
-      const newlyUnlocked = evaluateAchievements(
+      const rawUnlocked = evaluateAchievements(
         {
           match: {
             combo: finalRewards.combo,
@@ -263,6 +271,17 @@ export async function resolveMatch(
         },
         ownedSlugs,
       );
+      // Live-Ops presentation + reward overrides from BadgeDefinition admin rows.
+      const presentations = await getBadgePresentationsBySlug(
+        rawUnlocked.map((a) => a.slug),
+        tx,
+      );
+      const newlyUnlocked = rawUnlocked
+        .map((a) => applyPresentation(a, presentations.get(a.slug)))
+        .filter((a) => {
+          const row = presentations.get(a.slug);
+          return row ? row.isActive : true;
+        });
       const badgeCoins = newlyUnlocked.reduce((n, a) => n + a.reward.coins, 0);
       const badgeXp = newlyUnlocked.reduce((n, a) => n + a.reward.xp, 0);
 
@@ -413,8 +432,11 @@ export async function resolveMatch(
         unlockedBadges: newlyUnlocked.map((a) => ({
           slug: a.slug,
           emoji: a.emoji,
+          imageUrl: a.imageUrl,
           nameEn: a.nameEn,
           nameFa: a.nameFa,
+          descriptionEn: a.descriptionEn,
+          descriptionFa: a.descriptionFa,
           tier: a.tier,
           coins: a.reward.coins,
           xp: a.reward.xp,

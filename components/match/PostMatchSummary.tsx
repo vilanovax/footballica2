@@ -50,8 +50,11 @@ export function PostMatchSummary({
   const popupBadges: UnlockedBadge[] = badges.map((b) => ({
     slug: b.slug,
     emoji: b.emoji,
+    imageUrl: b.imageUrl ?? null,
     nameEn: b.nameEn,
     nameFa: b.nameFa,
+    descriptionEn: b.descriptionEn ?? "",
+    descriptionFa: b.descriptionFa ?? "",
     tier: b.tier ?? "bronze",
     coins: b.coins ?? 0,
     xp: b.xp ?? 0,

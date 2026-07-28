@@ -3,7 +3,6 @@
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -11,21 +10,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FieldLabel } from "@/components/admin/AdminHelpTip";
 
 type Option = { id: string; nameEn: string; nameFa: string };
 
 const ALL = "all";
+
+const STATUSES = [
+  { value: "PUBLISHED", label: "Published" },
+  { value: "DRAFT", label: "Draft" },
+  { value: "IN_REVIEW", label: "In review" },
+  { value: "RETIRED", label: "Retired" },
+] as const;
 
 export function QuestionFilters({
   categories,
   tags,
   category,
   tag,
+  status,
 }: {
   categories: Option[];
   tags: Option[];
   category?: string;
   tag?: string;
+  status?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -40,41 +49,76 @@ export function QuestionFilters({
     router.push(qs ? `${pathname}?${qs}` : pathname);
   }
 
-  const hasFilters = Boolean(category || tag);
+  const hasFilters = Boolean(category || tag || status);
 
   return (
-    <div className="flex flex-wrap items-end gap-4">
-      <div className="space-y-1.5">
-        <Label className="text-xs text-muted-foreground">Category</Label>
-        <Select
-          value={category ?? ALL}
-          onValueChange={(v) => setParam("category", v)}
+    <div className="flex flex-wrap items-end gap-3">
+      <div className="min-w-[9.5rem]">
+        <FieldLabel
+          tipTitle="Status"
+          tip="Published questions can appear in matches. Draft / In review stay out of the live bank. Retired is soft-removed."
         >
-          <SelectTrigger className="w-52">
-            <SelectValue />
+          Status
+        </FieldLabel>
+        <Select
+          value={status ?? ALL}
+          onValueChange={(v) => setParam("status", v)}
+        >
+          <SelectTrigger className="h-9 w-full bg-white">
+            <SelectValue placeholder="All statuses" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>All categories</SelectItem>
-            {categories.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.nameEn} · {c.nameFa}
+            <SelectItem value={ALL}>All statuses</SelectItem>
+            {STATUSES.map((s) => (
+              <SelectItem key={s.value} value={s.value}>
+                {s.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
-      <div className="space-y-1.5">
-        <Label className="text-xs text-muted-foreground">Tag</Label>
+      <div className="min-w-[11rem]">
+        <FieldLabel
+          tipTitle="Category"
+          tip="Topic bucket used for Survival, Duel drafts, and Match Day draws."
+        >
+          Category
+        </FieldLabel>
+        <Select
+          value={category ?? ALL}
+          onValueChange={(v) => setParam("category", v)}
+        >
+          <SelectTrigger className="h-9 w-full bg-white">
+            <SelectValue placeholder="All categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>All categories</SelectItem>
+            {categories.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.nameEn}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="min-w-[9rem]">
+        <FieldLabel
+          tipTitle="Tag"
+          tip="Optional labels for Live-Ops filtering (e.g. World Cup, Classics)."
+        >
+          Tag
+        </FieldLabel>
         <Select value={tag ?? ALL} onValueChange={(v) => setParam("tag", v)}>
-          <SelectTrigger className="w-52">
-            <SelectValue />
+          <SelectTrigger className="h-9 w-full bg-white">
+            <SelectValue placeholder="All tags" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={ALL}>All tags</SelectItem>
             {tags.map((t) => (
               <SelectItem key={t.id} value={t.id}>
-                {t.nameEn} · {t.nameFa}
+                {t.nameEn}
               </SelectItem>
             ))}
           </SelectContent>
@@ -85,11 +129,19 @@ export function QuestionFilters({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => router.push(pathname)}
-          className="text-muted-foreground"
+          onClick={() => {
+            const next = new URLSearchParams(params.toString());
+            next.delete("category");
+            next.delete("tag");
+            next.delete("status");
+            next.delete("page");
+            const qs = next.toString();
+            router.push(qs ? `${pathname}?${qs}` : pathname);
+          }}
+          className="h-9 text-slate-500"
         >
           <X className="h-3.5 w-3.5" />
-          Clear
+          Clear filters
         </Button>
       )}
     </div>

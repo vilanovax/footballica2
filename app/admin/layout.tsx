@@ -64,10 +64,10 @@ export default async function AdminLayout({
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 items-center justify-between border-b border-slate-200 bg-white px-6">
           <h2 className="text-sm font-semibold text-slate-700">
-            Content Management
+            Admin
           </h2>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">
-            Read-only
+          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+            Live-Ops
           </span>
         </header>
         <main className="flex-1 overflow-x-auto p-6">{children}</main>

@@ -178,8 +178,11 @@ export function SurvivalResult({
           {
             slug: data.challenge.badgeSlug,
             emoji: data.challenge.badgeEmoji ?? "🏅",
+            imageUrl: null,
             nameEn: data.challenge.badgeSlug,
             nameFa: data.challenge.badgeSlug,
+            descriptionEn: t("result.challengeBadge"),
+            descriptionFa: t("result.challengeBadge"),
             coins: 0,
             xp: 0,
           },

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Pencil, ArrowDownUp } from "lucide-react";
+import { Plus, Pencil, ArrowDownUp, BookOpen } from "lucide-react";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
@@ -21,10 +21,17 @@ import { QuestionFilters } from "@/components/admin/QuestionFilters";
 import { QuestionSearch } from "@/components/admin/QuestionSearch";
 import { SortableHeader } from "@/components/admin/SortableHeader";
 import { Pagination } from "@/components/admin/Pagination";
+import {
+  AdminHelpTip,
+  AdminHowItWorks,
+} from "@/components/admin/AdminHelpTip";
 
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 20;
+
+const STATUS_VALUES = ["DRAFT", "IN_REVIEW", "PUBLISHED", "RETIRED"] as const;
+type QuestionStatus = (typeof STATUS_VALUES)[number];
 
 type LocalePreview = { text?: string };
 
@@ -41,12 +48,12 @@ type SearchParams = {
   category?: string;
   tag?: string;
   q?: string;
+  status?: string;
   sort?: string;
   dir?: string;
   page?: string;
 };
 
-/** Translate the sort/dir params into a Prisma orderBy (defaults to newest). */
 function buildOrderBy(
   sort: string | undefined,
   dir: "asc" | "desc",
@@ -63,6 +70,13 @@ function buildOrderBy(
   }
 }
 
+function parseStatus(raw: string | undefined): QuestionStatus | undefined {
+  if (!raw) return undefined;
+  return STATUS_VALUES.includes(raw as QuestionStatus)
+    ? (raw as QuestionStatus)
+    : undefined;
+}
+
 export default async function AdminQuestionsPage({
   searchParams,
 }: {
@@ -70,6 +84,7 @@ export default async function AdminQuestionsPage({
 }) {
   const sp = await searchParams;
   const { category, tag } = sp;
+  const status = parseStatus(sp.status);
   const q = sp.q?.trim() || "";
   const sort = sp.sort;
   const dir: "asc" | "desc" = sp.dir === "desc" ? "desc" : "asc";
@@ -78,6 +93,7 @@ export default async function AdminQuestionsPage({
   const where: Prisma.QuestionWhereInput = {
     ...(category ? { categoryId: category } : {}),
     ...(tag ? { tags: { some: { id: tag } } } : {}),
+    ...(status ? { status } : {}),
     ...(q
       ? {
           OR: [
@@ -90,9 +106,9 @@ export default async function AdminQuestionsPage({
 
   const orderBy = buildOrderBy(sort, dir);
 
-  // Count first so we can clamp the page and paginate the heavy query.
-  const [total, categories, tags] = await Promise.all([
+  const [total, publishedCount, categories, tags] = await Promise.all([
     prisma.question.count({ where }),
+    prisma.question.count({ where: { status: "PUBLISHED" } }),
     prisma.category.findMany({
       orderBy: { nameEn: "asc" },
       select: { id: true, nameEn: true, nameFa: true },
@@ -122,50 +138,81 @@ export default async function AdminQuestionsPage({
     },
   });
 
-  const isFiltered = Boolean(category || tag || q);
+  const isFiltered = Boolean(category || tag || q || status);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-end justify-between">
+    <div className="mx-auto max-w-6xl space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Questions</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {total.toLocaleString("en-US")} question
-            {total === 1 ? "" : "s"}
-            {isFiltered ? " match your filters." : " in the bank."}
+          <h1 className="flex items-center gap-1.5 text-xl font-semibold text-slate-900">
+            Questions
+            <AdminHelpTip
+              wide
+              title="Question bank"
+              text="Only Published questions are drawn into Penalty, Quick, Survival, and Duel. Use Draft while writing, then Publish when ready."
+            />
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            {total.toLocaleString("en-US")} shown
+            {isFiltered ? " (filtered)" : ""}
+            {" · "}
+            {publishedCount.toLocaleString("en-US")} live in matches
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button asChild variant="outline">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="outline" size="sm">
             <Link href="/admin/settings">
               <ArrowDownUp className="h-4 w-4" />
               Import / Export
             </Link>
           </Button>
-          <Button asChild>
+          <Button asChild size="sm">
             <Link href="/admin/questions/new">
               <Plus className="h-4 w-4" />
-              Create Question
+              Create
             </Link>
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <QuestionSearch />
-        <QuestionFilters
-          categories={categories}
-          tags={tags}
-          category={category}
-          tag={tag}
-        />
+      <AdminHowItWorks
+        title="How the question bank works"
+        steps={[
+          "Write EN + FA text (and options) on the Create / Edit form.",
+          "Assign a category and difficulty so matchmaking can pick fairly.",
+          "Set status to Published — only then can the question appear in a match.",
+        ]}
+      />
+
+      {/* Toolbar */}
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="w-full lg:max-w-sm">
+            <p className="mb-1 flex items-center gap-1 text-xs font-medium text-slate-600">
+              Search
+              <AdminHelpTip
+                title="Full-text search"
+                text="Matches English or Persian prompt text. Filters reset to page 1."
+              />
+            </p>
+            <QuestionSearch />
+          </div>
+          <QuestionFilters
+            categories={categories}
+            tags={tags}
+            category={category}
+            tag={tag}
+            status={status}
+          />
+        </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+      {/* Table */}
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
-              <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <TableRow className="border-slate-100 bg-slate-50/90 hover:bg-slate-50/90">
+              <TableHead className="ps-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Question
               </TableHead>
               <TableHead>
@@ -180,7 +227,7 @@ export default async function AdminQuestionsPage({
               <TableHead>
                 <SortableHeader label="Status" sortKey="status" />
               </TableHead>
-              <TableHead className="text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <TableHead className="pe-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Actions
               </TableHead>
             </TableRow>
@@ -188,50 +235,67 @@ export default async function AdminQuestionsPage({
           <TableBody>
             {questions.length === 0 ? (
               <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="py-14 text-center text-muted-foreground"
-                >
-                  {isFiltered
-                    ? "No questions match your search or filters."
-                    : "No questions yet. Create one to get started."}
+                <TableCell colSpan={6} className="py-16 text-center">
+                  <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                      <BookOpen className="h-5 w-5" />
+                    </span>
+                    <p className="text-sm font-medium text-slate-700">
+                      {isFiltered ? "No matches" : "Bank is empty"}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {isFiltered
+                        ? "Try clearing search or filters."
+                        : "Create a question to start filling Match Day."}
+                    </p>
+                    {!isFiltered && (
+                      <Button asChild size="sm" className="mt-2">
+                        <Link href="/admin/questions/new">
+                          <Plus className="h-4 w-4" />
+                          Create question
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
               questions.map((question) => {
                 const preview = questionPreview(question.content);
                 return (
-                  <TableRow key={question.id} className="group">
-                    <TableCell className="max-w-sm py-3">
+                  <TableRow
+                    key={question.id}
+                    className="group border-slate-100 hover:bg-slate-50/70"
+                  >
+                    <TableCell className="max-w-md py-3.5 ps-4">
                       <Link
                         href={`/admin/questions/${question.id}/edit`}
-                        className="flex items-center gap-2"
+                        className="flex items-start gap-2.5"
                       >
                         <TypeBadge type={question.type} />
-                        <span className="flex min-w-0 flex-col">
-                          <span className="block truncate font-medium text-slate-800 group-hover:text-slate-950 group-hover:underline">
+                        <span className="flex min-w-0 flex-col gap-0.5">
+                          <span className="line-clamp-2 font-medium leading-snug text-slate-800 group-hover:text-slate-950 group-hover:underline">
                             {preview.en}
                           </span>
-                          {preview.fa && (
+                          {preview.fa ? (
                             <span
                               dir="rtl"
-                              className="block truncate text-xs text-muted-foreground"
+                              className="line-clamp-1 text-xs text-slate-400"
+                              title={preview.fa}
                             >
                               {preview.fa}
                             </span>
-                          )}
+                          ) : null}
                         </span>
                       </Link>
                     </TableCell>
                     <TableCell>
                       {question.category ? (
-                        <span className="flex flex-col leading-tight">
-                          <span className="font-medium text-slate-700">
-                            {question.category.nameEn}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {question.category.nameFa}
-                          </span>
+                        <span
+                          className="text-sm font-medium text-slate-700"
+                          title={question.category.nameFa}
+                        >
+                          {question.category.nameEn}
                         </span>
                       ) : (
                         <span className="text-slate-300">—</span>
@@ -239,15 +303,20 @@ export default async function AdminQuestionsPage({
                     </TableCell>
                     <TableCell>
                       {question.tags.length ? (
-                        <div className="flex flex-wrap gap-1">
-                          {question.tags.map((t) => (
+                        <div className="flex max-w-[8rem] flex-wrap gap-1">
+                          {question.tags.slice(0, 2).map((t) => (
                             <span
                               key={t.slug}
-                              className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600"
+                              className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600"
                             >
                               {t.slug}
                             </span>
                           ))}
+                          {question.tags.length > 2 && (
+                            <span className="text-[11px] text-slate-400">
+                              +{question.tags.length - 2}
+                            </span>
+                          )}
                         </div>
                       ) : (
                         <span className="text-slate-300">—</span>
@@ -259,9 +328,14 @@ export default async function AdminQuestionsPage({
                     <TableCell>
                       <QuestionStatusBadge status={question.status} />
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button asChild variant="ghost" size="sm">
+                    <TableCell className="pe-4 text-right">
+                      <div className="flex items-center justify-end gap-0.5">
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="sm"
+                          className="text-slate-600"
+                        >
                           <Link href={`/admin/questions/${question.id}/edit`}>
                             <Pencil className="h-3.5 w-3.5" />
                             Edit

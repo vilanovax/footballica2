@@ -3,17 +3,16 @@
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { UnlockedBadge } from "@/actions/resolveMatch";
-import { ACHIEVEMENTS_BY_SLUG, type BadgeTier } from "@/lib/game/achievements";
+import type { BadgeTier } from "@/lib/game/achievements";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 
-/** Tier → medal ring styling (bronze / silver / gold). */
-const TIER_RING: Record<BadgeTier, string> = {
-  bronze: "from-amber-200 to-amber-500 text-amber-900",
-  silver: "from-slate-200 to-slate-400 text-slate-800",
-  gold: "from-yellow-200 to-yellow-500 text-yellow-900",
+const TIER_GLOW: Record<BadgeTier, string> = {
+  bronze: "from-amber-200 via-amber-300 to-amber-500 shadow-amber-400/40",
+  silver: "from-slate-100 via-slate-200 to-slate-400 shadow-slate-400/40",
+  gold: "from-yellow-200 via-amber-300 to-yellow-500 shadow-yellow-400/50",
 };
 
 type BadgeUnlockPopupProps = {
@@ -22,9 +21,9 @@ type BadgeUnlockPopupProps = {
 };
 
 /**
- * Celebratory overlay shown after a match when one or more badges are unlocked.
- * Pops in with a spring, plays a goal cheer + heavy haptic, and lists every new
- * badge with its localized name, description, and one-off reward.
+ * Celebratory badge unlock sheet — gamified card list with art, copy, and
+ * reward pills. Content (title / description / image) comes from admin
+ * BadgeDefinition rows merged at settle time.
  */
 export function BadgeUnlockPopup({ badges, onClose }: BadgeUnlockPopupProps) {
   const { t, locale } = useTranslation();
@@ -43,23 +42,52 @@ export function BadgeUnlockPopup({ badges, onClose }: BadgeUnlockPopupProps) {
     <AnimatePresence>
       <motion.div
         key="badge-unlock"
-        className="fixed inset-0 z-[70] flex items-center justify-center px-6"
+        className="fixed inset-0 z-[70] flex items-end justify-center px-4 pb-6 pt-10 sm:items-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.18 }}
+        transition={{ duration: 0.2 }}
       >
         <button
+          type="button"
           aria-label={t("result.badgeContinue")}
           onClick={onClose}
-          className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+          className="absolute inset-0 bg-black/55 backdrop-blur-[6px]"
         />
+
+        {/* Soft confetti sparks */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 overflow-hidden"
+        >
+          {["✨", "⭐", "🎉", "💫", "🏅"].map((spark, i) => (
+            <motion.span
+              key={spark + i}
+              className="absolute text-xl"
+              style={{
+                left: `${12 + i * 18}%`,
+                top: `${18 + (i % 3) * 10}%`,
+              }}
+              initial={{ opacity: 0, y: 20, scale: 0.4 }}
+              animate={{
+                opacity: [0, 1, 0],
+                y: [-10, -40, -70],
+                scale: [0.4, 1.1, 0.8],
+                rotate: [-12, 8, 20],
+              }}
+              transition={{ duration: 1.4, delay: 0.1 + i * 0.08 }}
+            >
+              {spark}
+            </motion.span>
+          ))}
+        </div>
 
         <motion.div
           role="alertdialog"
           aria-modal="true"
-          className="relative w-full max-w-mobile rounded-bubble-xl border border-border bg-card p-6 text-center shadow-fantasy"
-          initial={{ scale: 0.8, y: 24, opacity: 0 }}
+          aria-labelledby="badge-unlock-title"
+          className="relative w-full max-w-mobile overflow-hidden rounded-[1.75rem] border border-black/5 bg-[#fffdf8] p-5 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.45)]"
+          initial={{ scale: 0.88, y: 40, opacity: 0 }}
           animate={{
             scale: 1,
             y: 0,
@@ -67,72 +95,84 @@ export function BadgeUnlockPopup({ badges, onClose }: BadgeUnlockPopupProps) {
             transition: { type: "spring", stiffness: 380, damping: 24 },
           }}
         >
-          {/* Sparkle burst behind the title */}
-          <motion.div
+          <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-4 text-center text-2xl"
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: [0, 1, 0], scale: [0.5, 1.2, 1.4] }}
-            transition={{ duration: 1.1, times: [0, 0.3, 1] }}
+            className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-linear-to-b from-amber-200/50 to-transparent"
+          />
+
+          <h2
+            id="badge-unlock-title"
+            className="relative text-center font-display text-xl font-black tracking-tight text-amber-600 drop-shadow-sm"
           >
-            ✨🎉✨
-          </motion.div>
-
-          <p className="font-display text-sm font-bold uppercase tracking-widest text-accent-deep">
             {title}
-          </p>
+          </h2>
 
-          <div className="mt-4 flex flex-col gap-3">
+          <div className="relative mt-4 flex max-h-[min(52dvh,420px)] flex-col gap-2.5 overflow-y-auto overscroll-contain pe-0.5">
             {badges.map((badge, i) => {
-              const def = ACHIEVEMENTS_BY_SLUG[badge.slug];
               const name = locale === "fa" ? badge.nameFa : badge.nameEn;
               const desc =
-                def && (locale === "fa" ? def.descriptionFa : def.descriptionEn);
+                locale === "fa" ? badge.descriptionFa : badge.descriptionEn;
               return (
                 <motion.div
                   key={badge.slug}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, x: locale === "fa" ? 18 : -18 }}
+                  animate={{ opacity: 1, x: 0 }}
                   transition={{
                     type: "spring",
-                    stiffness: 300,
+                    stiffness: 320,
                     damping: 22,
-                    delay: 0.15 + i * 0.12,
+                    delay: 0.12 + i * 0.1,
                   }}
-                  className="flex items-center gap-4 rounded-bubble border border-border bg-surface p-3 text-start shadow-fantasy-sm"
+                  className="flex items-center gap-3 rounded-2xl border border-black/6 bg-white p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_4px_14px_-6px_rgba(0,0,0,0.12)]"
                 >
-                  <motion.span
-                    initial={{ scale: 0, rotate: -30 }}
+                  <motion.div
+                    initial={{ scale: 0, rotate: -24 }}
                     animate={{ scale: 1, rotate: 0 }}
                     transition={{
                       type: "spring",
-                      stiffness: 260,
+                      stiffness: 280,
                       damping: 14,
-                      delay: 0.25 + i * 0.12,
+                      delay: 0.2 + i * 0.1,
                     }}
-                    className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-linear-to-b text-3xl shadow-fantasy ${TIER_RING[badge.tier]}`}
+                    className={[
+                      "relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-linear-to-b shadow-lg ring-[3px] ring-white",
+                      TIER_GLOW[badge.tier],
+                    ].join(" ")}
                   >
-                    {badge.emoji}
-                  </motion.span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-display text-lg font-bold text-surface-foreground">
+                    {badge.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={badge.imageUrl}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-3xl drop-shadow-sm" aria-hidden>
+                        {badge.emoji}
+                      </span>
+                    )}
+                  </motion.div>
+
+                  <div className="min-w-0 flex-1 text-start">
+                    <p className="font-display text-base font-extrabold leading-tight text-slate-900">
                       {name}
                     </p>
                     {desc && (
-                      <p className="mt-0.5 font-body text-xs font-semibold text-muted-foreground">
+                      <p className="mt-0.5 line-clamp-2 font-body text-[12px] font-semibold leading-snug text-slate-500">
                         {desc}
                       </p>
                     )}
                     {(badge.coins > 0 || badge.xp > 0) && (
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
                         {badge.coins > 0 && (
-                          <span className="rounded-full bg-accent/15 px-2 py-0.5 font-display text-xs font-bold text-accent-deep">
-                            +{toLocaleDigits(badge.coins, locale)} 💰
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 font-display text-xs font-black text-amber-700 ring-1 ring-amber-200/80">
+                            <span aria-hidden>🪙</span>+
+                            {toLocaleDigits(badge.coins, locale)}
                           </span>
                         )}
                         {badge.xp > 0 && (
-                          <span className="rounded-full bg-primary/15 px-2 py-0.5 font-display text-xs font-bold text-primary">
-                            +{toLocaleDigits(badge.xp, locale)} XP
+                          <span className="inline-flex items-center rounded-full bg-emerald-500 px-2 py-0.5 font-display text-[11px] font-black text-white shadow-sm">
+                            XP +{toLocaleDigits(badge.xp, locale)}
                           </span>
                         )}
                       </div>
@@ -143,13 +183,14 @@ export function BadgeUnlockPopup({ badges, onClose }: BadgeUnlockPopupProps) {
             })}
           </div>
 
-          <button
+          <motion.button
             type="button"
             onClick={onClose}
-            className="btn-fantasy btn-fantasy-primary mt-5 w-full justify-center"
+            whileTap={{ scale: 0.98, y: 2 }}
+            className="mt-5 flex min-h-touch w-full items-center justify-center rounded-2xl bg-emerald-500 px-5 py-3.5 font-display text-base font-black text-white shadow-[0_6px_0_0_#059669] transition-transform active:shadow-[0_2px_0_0_#059669]"
           >
             {t("result.badgeContinue")}
-          </button>
+          </motion.button>
         </motion.div>
       </motion.div>
     </AnimatePresence>

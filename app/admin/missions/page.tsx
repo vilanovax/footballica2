@@ -4,6 +4,7 @@ import {
   listAdminMissionBatches,
 } from "@/actions/admin/missions";
 import { MissionsPanel } from "@/components/admin/MissionsPanel";
+import { AdminHelpTip } from "@/components/admin/AdminHelpTip";
 
 export const dynamic = "force-dynamic";
 
@@ -15,16 +16,18 @@ export default async function AdminMissionsPage() {
   ]);
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-3xl space-y-5">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Missions</h1>
-        <p className="mt-1 max-w-2xl text-sm text-slate-500">
-          Build LiveOps quests players chase in the app. Each batch = 3 missions
-          + a chest. Hover the{" "}
-          <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-600">
-            ?
-          </span>{" "}
-          icons for field help.
+        <h1 className="flex items-center gap-1.5 text-xl font-semibold text-slate-900">
+          Missions
+          <AdminHelpTip
+            wide
+            title="LiveOps quests"
+            text="Players chase a ladder of batches in the app. Each batch has up to 3 missions and a chest reward when all three are claimed. Use the ? next to any field for details."
+          />
+        </h1>
+        <p className="mt-1 text-sm text-slate-500">
+          One live campaign at a time · edit rewards & goals · hover ? for help.
         </p>
       </div>
 

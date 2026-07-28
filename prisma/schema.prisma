@@ -291,9 +291,42 @@ model AdminCoinGrant {
   @@index([clubId, createdAt])
 }
 
+// ─── BadgeDefinition (admin-editable badge presentation) ─────────────────────
+// Unlock rules stay in `lib/game/achievements.ts` (system) or RecordChallenge
+// (showcase). This table owns Live-Ops copy + art: title, description, emoji,
+// image URL, and reward amounts. Seeded from the code catalog on first admin load.
+
+model BadgeDefinition {
+  id             String   @id @default(cuid())
+  /// Stable key — matches Achievement.slug or challenge rewardBadgeSlug.
+  slug           String   @unique
+  nameEn         String
+  nameFa         String
+  descriptionEn  String
+  descriptionFa  String
+  emoji          String   @default("🏅")
+  /// Optional art URL (`/badges/...` or absolute). When set, UI prefers image over emoji.
+  imageUrl       String?
+  rewardCoins    Int      @default(0)
+  rewardXp       Int      @default(0)
+  /// skill | purity | dedication | volume | showcase
+  category       String   @default("skill")
+  /// bronze | silver | gold
+  tier           String   @default("bronze")
+  /// True when seeded from the code achievement catalog.
+  isSystem       Boolean  @default(true)
+  isActive       Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+  @@index([category])
+}
+
 // ─── ClubBadge (unlocked achievements) ───────────────────────────────────────
-// Join row: which club unlocked which badge (badge catalog lives in code at
-// lib/game/achievements.ts, keyed by `badgeSlug`). Reward granted at unlock is
+// Join row: which club unlocked which badge. Presentation comes from
+// BadgeDefinition (fallback: code catalog). Reward granted at unlock is
 // snapshotted for an audit trail. One row per (club, badge).
 
 model ClubBadge {

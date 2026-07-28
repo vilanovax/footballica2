@@ -52,8 +52,11 @@ export type PostMatchLevelProgress = {
 export type PostMatchBadge = {
   slug: string;
   emoji: string;
+  imageUrl?: string | null;
   nameEn: string;
   nameFa: string;
+  descriptionEn?: string;
+  descriptionFa?: string;
   tier?: BadgeTier;
   coins?: number;
   xp?: number;
