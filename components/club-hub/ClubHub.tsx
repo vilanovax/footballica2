@@ -290,6 +290,7 @@ export function ClubHub({
         stamina={club.stamina}
         maxStamina={club.maxStamina}
         msUntilNext={club.msUntilNext}
+        medicalLevel={club.medicalLevel}
         staminaRefillCost={staminaRefillCost}
         onClubUpdate={setClub}
       />

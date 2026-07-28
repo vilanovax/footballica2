@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Confetti } from "./Confetti";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { fansSoftCap } from "@/lib/club/upgradeEffects";
+import { staminaRegenIntervalMinutes } from "@/lib/club/stamina";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
@@ -92,6 +93,7 @@ export function StadiumHero({
   const fillPct = Math.min(100, Math.round((fans / Math.max(1, cap)) * 100));
   const trainEmoji = trainingProp(trainingGroundLevel);
   const medEmoji = medicalProp(medicalLevel);
+  const regenMinutes = staminaRegenIntervalMinutes(medicalLevel);
 
   function openSheet() {
     haptic(HAPTIC.tap);
@@ -224,7 +226,7 @@ export function StadiumHero({
           <FacilityBadge
             emoji={medEmoji}
             label={t("stadium.badgeMedical", {
-              n: toLocaleDigits(medicalLevel, locale),
+              n: toLocaleDigits(regenMinutes, locale),
             })}
             side="end"
             level={medicalLevel}
@@ -257,7 +259,10 @@ export function StadiumHero({
           </p>
           <p className="mt-0.5 font-body text-[10px] font-semibold text-white/75">
             ⚡ {toLocaleDigits(maxStamina, locale)} {t("stadium.maxEnergy")} ·{" "}
-            {t("stadium.tapDetails")}
+            {t("stadium.regenEvery", {
+              n: toLocaleDigits(regenMinutes, locale),
+            })}{" "}
+            · {t("stadium.tapDetails")}
           </p>
         </div>
 
@@ -294,7 +299,7 @@ export function StadiumHero({
           />
           <StatRow
             label={t("stadium.statMedical")}
-            value={`${t("stadium.lvl")} ${toLocaleDigits(medicalLevel, locale)}`}
+            value={`${t("stadium.lvl")} ${toLocaleDigits(medicalLevel, locale)} · ${t("stadium.regenEvery", { n: toLocaleDigits(regenMinutes, locale) })}`}
           />
         </ul>
         <p className="mt-4 font-body text-xs font-semibold leading-relaxed text-muted-foreground">

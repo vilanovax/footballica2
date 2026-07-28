@@ -1,9 +1,10 @@
 /**
  * Pure upgrade impact math for Hub cards / sheets.
- * Mirrors what `upgradeClub` actually applies — never invent UI-only numbers.
+ * Mirrors what upgradeClub / stamina regen actually apply — never invent UI-only numbers.
  */
 
 import type { UpgradeKey } from "@/lib/club/upgrades";
+import { staminaRegenIntervalMinutes } from "@/lib/club/stamina";
 
 /** Soft fan capacity shown on the stadium (grows with stadium upgrades). */
 export function fansSoftCap(stadiumLevel: number): number {
@@ -12,7 +13,7 @@ export function fansSoftCap(stadiumLevel: number): number {
 
 export type UpgradeImpact = {
   /** Stable i18n key under upgrades.impact.* */
-  kind: "maxStamina" | "fansCap" | "stadiumTier" | "medicalLevel";
+  kind: "maxStamina" | "fansCap" | "stadiumTier" | "regenMinutes";
   from: number;
   to: number;
 };
@@ -42,12 +43,11 @@ export function getUpgradeImpact(
         to: fansSoftCap(next),
       };
     case "MEDICAL":
-      // Medical level is persisted; regen interval is not yet wired to it.
-      // Show the level step honestly rather than a fake regen delta.
+      // Authoritative: computeStaminaRegen uses staminaRegenIntervalMs(level).
       return {
-        kind: "medicalLevel",
-        from: currentLevel,
-        to: next,
+        kind: "regenMinutes",
+        from: staminaRegenIntervalMinutes(currentLevel),
+        to: staminaRegenIntervalMinutes(next),
       };
     default:
       return null;

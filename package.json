@@ -13,7 +13,8 @@
     "prisma:studio": "prisma studio",
     "db:deploy": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
-    "db:status": "prisma migrate status"
+    "db:status": "prisma migrate status",
+    "smoke:medical-regen": "tsx scripts/smoke-medical-regen.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

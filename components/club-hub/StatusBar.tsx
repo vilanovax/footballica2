@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import { buyStaminaRefill, type ShopErrorCode } from "@/actions/shop";
 import type { ClubSnapshot } from "@/lib/club/upgrades";
-import { STAMINA_REGEN_INTERVAL_MS } from "@/lib/club/stamina";
+import { staminaRegenIntervalMs } from "@/lib/club/stamina";
 import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -18,6 +18,8 @@ type StatusBarProps = {
   stamina: number;
   maxStamina: number;
   msUntilNext: number;
+  /** Medical bay level — drives the local +1 tick interval. */
+  medicalLevel: number;
   staminaRefillCost: number;
   onClubUpdate?: (club: ClubSnapshot) => void;
 };
@@ -49,6 +51,7 @@ export function StatusBar({
   stamina,
   maxStamina,
   msUntilNext,
+  medicalLevel,
   staminaRefillCost,
   onClubUpdate,
 }: StatusBarProps) {
@@ -57,6 +60,7 @@ export function StatusBar({
   const [pulse, setPulse] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const regenIntervalMs = staminaRegenIntervalMs(medicalLevel);
 
   useEffect(() => {
     if (coins > prevCoins.current) {
@@ -76,7 +80,7 @@ export function StatusBar({
     setLocalStamina(stamina);
     setRemainingMs(msUntilNext);
     remainingRef.current = msUntilNext;
-  }, [stamina, maxStamina, msUntilNext]);
+  }, [stamina, maxStamina, msUntilNext, medicalLevel]);
 
   useEffect(() => {
     if (localStamina >= maxStamina) return;
@@ -84,12 +88,12 @@ export function StatusBar({
       remainingRef.current -= 1000;
       if (remainingRef.current <= 0) {
         setLocalStamina((s) => Math.min(maxStamina, s + 1));
-        remainingRef.current = STAMINA_REGEN_INTERVAL_MS;
+        remainingRef.current = regenIntervalMs;
       }
       setRemainingMs(remainingRef.current);
     }, 1000);
     return () => clearInterval(id);
-  }, [localStamina, maxStamina]);
+  }, [localStamina, maxStamina, regenIntervalMs]);
 
   const regenerating = localStamina < maxStamina;
   const staminaLow = localStamina <= 1;

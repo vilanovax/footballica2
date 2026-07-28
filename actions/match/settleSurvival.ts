@@ -240,6 +240,7 @@ export async function settleSurvival(input: {
           stamina: club.stamina,
           maxStamina: club.maxStamina,
           lastStaminaUpdate: club.lastStaminaUpdate,
+          medicalLevel: club.medicalLevel,
         },
         new Date(),
       );
