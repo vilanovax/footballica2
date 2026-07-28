@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Home, Play, Trophy, Settings, AlertTriangle } from "lucide-react";
+import { Home, Play, Trophy, User, AlertTriangle } from "lucide-react";
 import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -32,9 +32,9 @@ const tabs = [
     icon: Trophy,
   },
   {
-    href: "/settings",
-    labelKey: "nav.settings",
-    icon: Settings,
+    href: "/profile",
+    labelKey: "nav.profile",
+    icon: User,
   },
 ] as const;
 
@@ -153,14 +153,8 @@ export function BottomNav() {
           {tabs.map(({ href, labelKey, icon: Icon, ...rest }) => {
             const label = t(labelKey);
             const featured = "featured" in rest && rest.featured;
-            // Profile is club metagame identity — keep Club tab lit, never Play.
             const active =
-              href === "/club"
-                ? pathname === "/club" ||
-                  pathname.startsWith("/club/") ||
-                  pathname === "/profile" ||
-                  pathname.startsWith("/profile/")
-                : pathname === href || pathname.startsWith(`${href}/`);
+              pathname === href || pathname.startsWith(`${href}/`);
 
             if (featured) {
               return (

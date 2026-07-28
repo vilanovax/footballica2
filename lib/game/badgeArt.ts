@@ -6,6 +6,8 @@
 export const DEFAULT_BADGE_ART: Partial<Record<string, string>> = {
   /** Warming Up / گرم‌شدن */
   streak_3: "/badges/warm_up.png",
+  /** Hat-trick / هتریک */
+  hat_trick: "/badges/hat_trick.png",
 };
 
 export function resolveBadgeImageUrl(

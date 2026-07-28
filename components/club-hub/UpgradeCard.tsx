@@ -9,6 +9,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
+import { ResourceIcon } from "@/components/common/ResourceIcon";
 
 type UpgradeCardProps = {
   def: UpgradeDef;
@@ -143,7 +144,8 @@ export function UpgradeCard({
                   canAfford ? "opacity-90" : "font-bold text-destructive",
                 ].join(" ")}
               >
-                💰 {toLocaleDigits(cost, locale)}
+                <ResourceIcon kind="coin" size="sm" />
+                {toLocaleDigits(cost, locale)}
               </span>
             </>
           )}
@@ -184,9 +186,20 @@ export function UpgradeCard({
                 : "bg-muted text-muted-foreground opacity-60",
             ].join(" ")}
           >
-            {canAfford
-              ? `${t("upgrades.upgrade")} · 💰 ${toLocaleDigits(cost!, locale)}`
-              : `💰 ${toLocaleDigits(cost ?? 0, locale)}`}
+            <span className="inline-flex items-center justify-center gap-1.5">
+              {canAfford ? (
+                <>
+                  {t("upgrades.upgrade")} ·
+                  <ResourceIcon kind="coin" size="sm" />
+                  {toLocaleDigits(cost!, locale)}
+                </>
+              ) : (
+                <>
+                  <ResourceIcon kind="coin" size="sm" />
+                  {toLocaleDigits(cost ?? 0, locale)}
+                </>
+              )}
+            </span>
           </motion.button>
         )}
       </BottomSheet>

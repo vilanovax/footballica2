@@ -9,6 +9,7 @@ import {
 } from "@/lib/club/milestones";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
+import { ResourceIcon } from "@/components/common/ResourceIcon";
 
 type NextGoalCardProps = {
   milestoneInput: MilestoneInput;
@@ -47,8 +48,9 @@ export function NextGoalCard({
         <p className="mt-1 font-display text-base font-bold text-foreground">
           {goal.icon} {t("club.nextGoalBuy", { name })}
         </p>
-        <p className="mt-0.5 font-body text-xs font-semibold text-muted-foreground">
-          💰 {toLocaleDigits(goal.cost, locale)}
+        <p className="mt-0.5 flex items-center gap-1.5 font-body text-xs font-semibold text-muted-foreground">
+          <ResourceIcon kind="coin" size="sm" />
+          {toLocaleDigits(goal.cost, locale)}
         </p>
       </div>
     );

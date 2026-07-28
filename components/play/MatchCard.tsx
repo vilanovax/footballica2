@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Info } from "lucide-react";
 import { BottomSheet } from "@/components/ui/BottomSheet";
@@ -9,6 +9,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
+import { ResourceIcon } from "@/components/common/ResourceIcon";
 
 export type MatchCardTone = "penalty" | "quick" | "survival" | "duel";
 
@@ -111,7 +112,10 @@ export function MatchCard({
         </div>
 
         <div className="mt-3 flex flex-wrap gap-1.5">
-          <Chip>⚡ {toLocaleDigits(economy.staminaCost, locale)}</Chip>
+          <Chip>
+            <ResourceIcon kind="energy" size="sm" className="me-1" />
+            {toLocaleDigits(economy.staminaCost, locale)}
+          </Chip>
           {modeId === "survival" ? (
             <>
               <Chip>
@@ -136,6 +140,7 @@ export function MatchCard({
             </>
           ) : (
             <Chip>
+              <ResourceIcon kind="coin" size="sm" className="me-1" />
               {t("play.chipReward", {
                 coins: toLocaleDigits(economy.approxCoins, locale),
                 xp: toLocaleDigits(economy.approxXp, locale),
@@ -192,7 +197,7 @@ export function MatchCard({
   );
 }
 
-function Chip({ children }: { children: React.ReactNode }) {
+function Chip({ children }: { children: ReactNode }) {
   return (
     <span className="inline-flex items-center rounded-full border border-border/80 bg-surface/90 px-2.5 py-1 font-display text-[11px] font-bold text-foreground shadow-fantasy-sm">
       {children}
@@ -200,6 +205,10 @@ function Chip({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Unified game-style mode sheet: one rule line + 3 equal tiles.
+ * Survival adds a compact hearts strip; no Live-Ops fine print.
+ */
 function ModeInfoBody({
   modeId,
   economy,
@@ -209,191 +218,128 @@ function ModeInfoBody({
   economy: PlayModeEconomy;
   survivalBest?: number | null;
 }) {
-  if (modeId === "survival") {
-    return (
-      <SurvivalInfoBody economy={economy} survivalBest={survivalBest} />
-    );
-  }
-
-  return (
-    <StandardModeInfoBody modeId={modeId} economy={economy} />
-  );
-}
-
-function StandardModeInfoBody({
-  modeId,
-  economy,
-}: {
-  modeId: Exclude<PlayModeId, "survival">;
-  economy: PlayModeEconomy;
-}) {
-  const { t, locale } = useTranslation();
-  const n = (v: number) => toLocaleDigits(v, locale);
-
-  return (
-    <div className="flex flex-col gap-3 font-body text-sm font-semibold leading-relaxed text-muted-foreground">
-      <p>{t(`play.info.${modeId}.rules`)}</p>
-      <ul className="flex flex-col gap-2">
-        <InfoRow
-          label={t("play.info.stamina")}
-          value={`⚡ ${n(economy.staminaCost)}`}
-        />
-        {economy.questionCount != null && (
-          <InfoRow
-            label={t("play.info.questions")}
-            value={n(economy.questionCount)}
-          />
-        )}
-        <InfoRow
-          label={t("play.info.approxWin")}
-          value={t("play.chipReward", {
-            coins: n(economy.approxCoins),
-            xp: n(economy.approxXp),
-          })}
-        />
-        {modeId === "duel" && economy.duelWinWeeklyXp != null && (
-          <InfoRow
-            label={t("play.info.weeklyXp")}
-            value={n(economy.duelWinWeeklyXp)}
-          />
-        )}
-      </ul>
-      <p className="text-xs">{t(`play.info.${modeId}.tip`)}</p>
-      <p className="text-xs text-muted-foreground/80">{t("play.rewardHint")}</p>
-    </div>
-  );
-}
-
-function SurvivalInfoBody({
-  economy,
-  survivalBest,
-}: {
-  economy: PlayModeEconomy;
-  survivalBest?: number | null;
-}) {
   const { t, locale } = useTranslation();
   const n = (v: number) => toLocaleDigits(v, locale);
   const lives = economy.lives ?? 3;
-  const best = survivalBest ?? 0;
+  const isSurvival = modeId === "survival";
+
+  const lengthLabel = isSurvival
+    ? t("play.info.tileHearts")
+    : modeId === "duel"
+      ? t("play.info.tileRounds")
+      : t("play.info.tileLength");
+
+  const lengthValue = isSurvival
+    ? n(lives)
+    : modeId === "duel"
+      ? n(2)
+      : n(economy.questionCount ?? 0);
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Hook line */}
-      <p className="text-center font-body text-sm font-bold leading-snug text-foreground">
-        {t("play.info.survival.rules")}
+      <p className="text-center font-display text-sm font-bold leading-snug text-foreground">
+        {t(`play.info.${modeId}.rules`)}
       </p>
 
-      {/* Lives arena */}
-      <div className="relative overflow-hidden rounded-3xl border border-destructive/25 bg-linear-to-b from-destructive/15 via-destructive/5 to-surface px-4 py-5 text-center shadow-fantasy-sm">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -inset-s-8 top-0 h-24 w-24 rounded-full bg-destructive/10 blur-2xl"
+      {isSurvival && (
+        <div className="rounded-2xl border border-destructive/20 bg-destructive/8 px-3 py-3 text-center">
+          <div className="flex items-center justify-center gap-2" dir="ltr">
+            {Array.from({ length: lives }, (_, i) => (
+              <span
+                key={i}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-surface text-xl shadow-fantasy-sm ring-1 ring-destructive/25"
+                aria-hidden
+              >
+                ❤️
+              </span>
+            ))}
+          </div>
+          <p className="mt-2 font-display text-xs font-extrabold text-destructive">
+            {t("play.info.survival.missHeart")}
+          </p>
+          {survivalBest != null && survivalBest > 0 && (
+            <p className="mt-1 font-display text-[11px] font-bold text-muted-foreground">
+              🏆 {t("play.info.survival.yourBest")}: {n(survivalBest)}
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="grid grid-cols-3 gap-2">
+        <StatTile
+          label={t("play.info.tileEntry")}
+          icon={<ResourceIcon kind="energy" size="md" />}
+          value={n(economy.staminaCost)}
         />
-        <p className="mb-3 font-display text-[11px] font-bold uppercase tracking-wide text-destructive/80">
-          {t("play.info.survival.howToPlay")}
-        </p>
-        <div className="flex items-center justify-center gap-2.5" dir="ltr">
-          {Array.from({ length: lives }, (_, i) => (
-            <span
-              key={i}
-              className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-surface text-2xl shadow-fantasy-sm ring-2 ring-destructive/20"
-              aria-hidden
-            >
-              ❤️
+        <StatTile
+          label={lengthLabel}
+          icon={
+            <span className="text-xl" aria-hidden>
+              {isSurvival ? "❤️" : modeId === "duel" ? "⚔️" : "🎯"}
             </span>
-          ))}
-        </div>
-        <p className="mt-3 font-display text-sm font-extrabold text-destructive">
-          {t("play.info.survival.missHeart")}
-        </p>
-        <p className="mt-1 font-body text-xs font-semibold text-muted-foreground">
-          {t("play.info.survival.tip")}
-        </p>
-      </div>
-
-      {/* Entry + record */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="flex flex-col items-center gap-1 rounded-2xl border border-border bg-muted/30 px-3 py-3">
-          <span className="font-body text-[11px] font-bold text-muted-foreground">
-            {t("play.info.survival.entryCost")}
-          </span>
-          <span className="font-display text-xl font-extrabold text-foreground">
-            ⚡ {n(economy.staminaCost)}
-          </span>
-        </div>
-        <div className="flex flex-col items-center gap-1 rounded-2xl border border-accent/30 bg-accent/10 px-3 py-3">
-          <span className="font-body text-[11px] font-bold text-muted-foreground">
-            {t("play.info.survival.yourBest")}
-          </span>
-          <span className="font-display text-xl font-extrabold text-foreground">
-            🏆 {n(best)}
-          </span>
-        </div>
-      </div>
-
-      {/* Loot tiles */}
-      <div className="grid grid-cols-2 gap-2">
-        <LootTile
-          emoji="✅"
-          label={t("play.info.survival.lootCorrect")}
-          value={`${n(economy.perCorrectCoins ?? 0)} 💰`}
-          sub={`${n(economy.perCorrectXp ?? 0)} XP`}
+          }
+          value={lengthValue}
         />
-        <LootTile
-          emoji="🏦"
-          label={t("play.info.survival.lootClear")}
-          value={`${n(economy.clearedCoinBonus ?? 0)} 💰`}
-          sub={`${n(economy.clearedXpBonus ?? 0)} XP`}
-          highlight
+        <StatTile
+          label={t("play.info.tileReward")}
+          icon={<ResourceIcon kind="coin" size="md" />}
+          value={t("play.info.rewardLine", {
+            coins: n(economy.approxCoins),
+          })}
+          sub={t("play.info.xpLine", { xp: n(economy.approxXp) })}
         />
       </div>
+
+      {isSurvival && (
+        <p className="text-center font-body text-[11px] font-semibold leading-snug text-muted-foreground">
+          {t("play.info.perCorrectShort", {
+            coins: n(economy.perCorrectCoins ?? 0),
+            xp: n(economy.perCorrectXp ?? 0),
+          })}
+          {" · "}
+          {t("play.info.clearBonusShort", {
+            coins: n(economy.clearedCoinBonus ?? 0),
+            xp: n(economy.clearedXpBonus ?? 0),
+          })}
+        </p>
+      )}
+
+      {modeId === "duel" && economy.duelWinWeeklyXp != null && (
+        <p className="text-center font-display text-[11px] font-bold text-muted-foreground">
+          {t("play.chipWeeklyXp", {
+            n: n(economy.duelWinWeeklyXp),
+          })}
+        </p>
+      )}
     </div>
   );
 }
 
-function LootTile({
-  emoji,
+function StatTile({
   label,
+  icon,
   value,
   sub,
-  highlight,
 }: {
-  emoji: string;
   label: string;
+  icon: ReactNode;
   value: string;
-  sub: string;
-  highlight?: boolean;
+  sub?: string;
 }) {
   return (
-    <div
-      className={[
-        "flex flex-col items-center gap-1 rounded-2xl border px-3 py-3.5 text-center shadow-fantasy-sm",
-        highlight
-          ? "border-secondary/35 bg-secondary/12"
-          : "border-border bg-surface",
-      ].join(" ")}
-    >
-      <span className="text-xl" aria-hidden>
-        {emoji}
-      </span>
-      <span className="font-body text-[11px] font-bold text-muted-foreground">
+    <div className="flex flex-col items-center gap-1.5 rounded-2xl border border-border bg-muted/35 px-2 py-3 text-center shadow-fantasy-sm">
+      <span className="font-display text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
         {label}
       </span>
-      <span className="font-display text-base font-extrabold text-foreground">
+      <span className="flex h-7 items-center justify-center">{icon}</span>
+      <span className="font-display text-base font-black tabular-nums leading-none text-foreground">
         {value}
       </span>
-      <span className="font-display text-xs font-bold text-muted-foreground">
-        {sub}
-      </span>
+      {sub ? (
+        <span className="font-display text-[10px] font-bold text-muted-foreground">
+          {sub}
+        </span>
+      ) : null}
     </div>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <li className="flex items-center justify-between gap-3 rounded-bubble border border-border bg-muted/40 px-3 py-2">
-      <span>{label}</span>
-      <span className="font-display font-bold text-foreground">{value}</span>
-    </li>
   );
 }

@@ -101,15 +101,6 @@ function FractionText({
   );
 }
 
-function shortUnlockDate(iso: string, locale: Locale): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString(locale === "fa" ? "fa-IR" : "en-GB", {
-    month: "short",
-    day: "numeric",
-  });
-}
-
 export function PlayerProfile({
   profile,
   badgeCatalog = [],
@@ -821,9 +812,6 @@ function BadgeTile({
     ? Math.min(100, Math.round((prog.current / prog.target) * 100))
     : 0;
   const stepsLeft = prog ? Math.max(0, prog.target - prog.current) : 0;
-  const unlockLabel = unlockedAt
-    ? shortUnlockDate(unlockedAt, locale) || t(`profile.tier.${a.tier}`)
-    : t(`profile.tier.${a.tier}`);
   const hasArt = Boolean(imageUrl);
   const isHeroArt = hasArt; // game card: art as the badge surface
 
@@ -846,14 +834,7 @@ function BadgeTile({
       className={[
         "relative flex w-full flex-col items-center text-center transition-colors",
         isHeroArt
-          ? [
-              "min-h-[9.5rem] gap-1 overflow-hidden rounded-bubble border p-2",
-              state === "unlocked"
-                ? "border-orange-400/50 bg-linear-to-b from-[#1a0a00] via-[#2a1208] to-[#0f172a] shadow-[0_0_18px_rgba(249,115,22,0.35)]"
-                : state === "progress"
-                  ? "border-orange-400/35 bg-linear-to-b from-[#1a1008] via-[#1c140c] to-[#111827] shadow-[0_0_12px_rgba(249,115,22,0.2)]"
-                  : "border-black/20 bg-linear-to-b from-[#1a1a1a] to-[#0f172a] shadow-[inset_0_2px_8px_rgba(0,0,0,0.35)]",
-            ].join(" ")
+          ? "min-h-0 gap-1 bg-transparent p-1"
           : [
               "min-h-[7.5rem] gap-1.5 rounded-bubble border p-2.5",
               state === "unlocked"
@@ -866,13 +847,13 @@ function BadgeTile({
       aria-label={name}
     >
       {isHeroArt ? (
-        <span className="relative flex h-[4.25rem] w-full items-center justify-center" aria-hidden>
+        <span className="relative flex h-[5.4rem] w-full items-center justify-center" aria-hidden>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={imageUrl!}
             alt=""
             className={[
-              "h-full w-auto max-w-full object-contain drop-shadow-[0_4px_12px_rgba(249,115,22,0.45)]",
+              "h-full w-auto max-w-full object-contain drop-shadow-[0_4px_14px_rgba(249,115,22,0.5)]",
               state === "locked" ? "grayscale opacity-50" : "",
               state === "progress" ? "opacity-95" : "",
             ].join(" ")}
@@ -908,7 +889,7 @@ function BadgeTile({
         className={[
           "line-clamp-1 w-full font-display text-[11px] font-black",
           isHeroArt
-            ? "text-white drop-shadow-sm"
+            ? "text-surface-foreground"
             : state === "unlocked"
               ? "text-surface-foreground"
               : state === "progress"
@@ -919,36 +900,25 @@ function BadgeTile({
         {name}
       </p>
 
-      {state === "unlocked" ? (
-        <span
-          className={[
-            "font-display text-[10px] font-bold",
-            isHeroArt ? "text-orange-200/90" : "text-muted-foreground",
-          ].join(" ")}
-        >
-          {unlockLabel}
-        </span>
-      ) : prog ? (
+      {state === "unlocked" ? null : prog ? (
         <div className="w-full px-0.5">
-          <div
-            className={[
-              "h-1.5 w-full overflow-hidden rounded-full shadow-[inset_0_1px_2px_rgba(0,0,0,0.35)]",
-              isHeroArt ? "bg-black/50" : "bg-muted",
-            ].join(" ")}
-          >
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]">
             <div
-              className="h-full rounded-full bg-linear-to-r from-orange-400 via-amber-300 to-yellow-300"
+              className={[
+                "h-full rounded-full",
+                isHeroArt
+                  ? "bg-linear-to-r from-orange-400 via-amber-300 to-yellow-300"
+                  : "bg-linear-to-r from-primary to-secondary",
+              ].join(" ")}
               style={{ width: `${pct}%` }}
             />
           </div>
           <p
             className={[
               "mt-1 font-display text-[10px] font-bold",
-              isHeroArt
-                ? "text-orange-100"
-                : state === "progress"
-                  ? "text-primary"
-                  : "text-slate-500",
+              isHeroArt || state === "progress"
+                ? "text-primary"
+                : "text-slate-500",
             ].join(" ")}
           >
             <FractionText
@@ -957,26 +927,20 @@ function BadgeTile({
               locale={locale}
             />
           </p>
-          {state === "progress" && stepsLeft > 0 && stepsLeft <= 3 && (
-            <p
-              className={[
-                "font-body text-[9px] font-semibold",
-                isHeroArt ? "text-amber-200" : "text-accent-deep",
-              ].join(" ")}
-            >
-              {t("profile.trophyStepsLeft", {
-                n: toLocaleDigits(stepsLeft, locale),
-              })}
-            </p>
-          )}
+          {/* Hero art: skip "only N left" — let the icon dominate */}
+          {!isHeroArt &&
+            state === "progress" &&
+            stepsLeft > 0 &&
+            stepsLeft <= 3 && (
+              <p className="font-body text-[9px] font-semibold text-accent-deep">
+                {t("profile.trophyStepsLeft", {
+                  n: toLocaleDigits(stepsLeft, locale),
+                })}
+              </p>
+            )}
         </div>
       ) : (
-        <span
-          className={[
-            "font-display text-[10px] font-bold",
-            isHeroArt ? "text-white/50" : "text-slate-500",
-          ].join(" ")}
-        >
+        <span className="font-display text-[10px] font-bold text-slate-500">
           {t("profile.trophyLocked")}
         </span>
       )}
@@ -1017,8 +981,6 @@ function TrophyInspectSheet({
     : 0;
   const stepsLeft = prog ? Math.max(0, prog.target - prog.current) : 0;
   const hasReward = a.reward.coins > 0 || a.reward.xp > 0;
-  const dateLabel = unlockedAt ? shortUnlockDate(unlockedAt, locale) : "";
-
   return (
     <motion.div
       className="fixed inset-0 z-[70] flex items-end justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-12 sm:items-center sm:p-6"
@@ -1122,9 +1084,7 @@ function TrophyInspectSheet({
               ].join(" ")}
             >
               {state === "unlocked"
-                ? dateLabel
-                  ? t("profile.unlockedOn", { date: dateLabel })
-                  : t("profile.trophyUnlocked")
+                ? t(`profile.tier.${a.tier}`)
                 : state === "progress"
                   ? t("profile.trophyInProgress")
                   : t("profile.trophyLocked")}

@@ -3,6 +3,7 @@
 import { useState, useTransition, useEffect, useRef } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
+import { Settings } from "lucide-react";
 import { upgradeClub } from "@/actions/upgradeClub";
 import {
   claimDailyNews,
@@ -222,58 +223,66 @@ export function ClubHub({
           </div>
         </div>
 
-        {/* Shop + Daily News show ONLY after FTUE completion (tutorialStep === 2).
-            Daily News only nags (glow + bounce + unread dot) while today's
-            headline is still claimable. */}
-        {ftueComplete && (
-          <div className="flex items-center gap-1 rounded-bubble border border-border bg-surface/90 p-1 shadow-fantasy-sm">
-            <motion.button
-              type="button"
-              onClick={() => {
-                haptic(HAPTIC.light);
-                setMissionsOpen(true);
-              }}
-              aria-label={t("missions.openDrawer")}
-              className="relative flex h-9 w-9 items-center justify-center rounded-bubble text-lg"
-              whileTap={{ scale: 0.92 }}
-            >
-              <span aria-hidden>🎯</span>
-              {missionReadyCount > 0 && (
-                <span className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-secondary px-1 font-display text-[10px] font-bold text-secondary-foreground ring-2 ring-surface">
-                  {toLocaleDigits(Math.min(missionReadyCount, 9), locale)}
-                  {missionReadyCount > 9 ? "+" : ""}
-                </span>
-              )}
-            </motion.button>
+        {/* Utility tray: Settings always; Shop / News / Missions after FTUE. */}
+        <div className="flex items-center gap-1 rounded-bubble border border-border bg-surface/90 p-1 shadow-fantasy-sm">
+          {ftueComplete && (
+            <>
+              <motion.button
+                type="button"
+                onClick={() => {
+                  haptic(HAPTIC.light);
+                  setMissionsOpen(true);
+                }}
+                aria-label={t("missions.openDrawer")}
+                className="relative flex h-9 w-9 items-center justify-center rounded-bubble text-lg"
+                whileTap={{ scale: 0.92 }}
+              >
+                <span aria-hidden>🎯</span>
+                {missionReadyCount > 0 && (
+                  <span className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-secondary px-1 font-display text-[10px] font-bold text-secondary-foreground ring-2 ring-surface">
+                    {toLocaleDigits(Math.min(missionReadyCount, 9), locale)}
+                    {missionReadyCount > 9 ? "+" : ""}
+                  </span>
+                )}
+              </motion.button>
 
-            <Link
-              href="/shop"
-              aria-label={t("shop.title")}
-              className="flex h-9 w-9 items-center justify-center rounded-bubble text-lg"
-            >
-              <span aria-hidden>🛒</span>
-            </Link>
+              <Link
+                href="/shop"
+                aria-label={t("shop.title")}
+                className="flex h-9 w-9 items-center justify-center rounded-bubble text-lg"
+              >
+                <span aria-hidden>🛒</span>
+              </Link>
 
-            <motion.button
-              type="button"
-              onClick={handleDailyNews}
-              disabled={newsPending}
-              aria-label={t("club.dailyNews")}
-              className={[
-                "relative flex h-9 w-9 items-center justify-center rounded-bubble text-lg",
-                canClaimNews ? "" : "opacity-60",
-              ].join(" ")}
-              whileTap={{ scale: 0.92 }}
-            >
-              <span aria-hidden>{canClaimNews ? "📬" : "📭"}</span>
-              {canClaimNews && (
-                <span className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 font-display text-[10px] font-bold text-accent-foreground ring-2 ring-surface">
-                  {toLocaleDigits(1, locale)}
-                </span>
-              )}
-            </motion.button>
-          </div>
-        )}
+              <motion.button
+                type="button"
+                onClick={handleDailyNews}
+                disabled={newsPending}
+                aria-label={t("club.dailyNews")}
+                className={[
+                  "relative flex h-9 w-9 items-center justify-center rounded-bubble text-lg",
+                  canClaimNews ? "" : "opacity-60",
+                ].join(" ")}
+                whileTap={{ scale: 0.92 }}
+              >
+                <span aria-hidden>{canClaimNews ? "📬" : "📭"}</span>
+                {canClaimNews && (
+                  <span className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 font-display text-[10px] font-bold text-accent-foreground ring-2 ring-surface">
+                    {toLocaleDigits(1, locale)}
+                  </span>
+                )}
+              </motion.button>
+            </>
+          )}
+
+          <Link
+            href="/settings"
+            aria-label={t("nav.settings")}
+            className="flex h-9 w-9 items-center justify-center rounded-bubble text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <Settings className="h-5 w-5" strokeWidth={2.25} />
+          </Link>
+        </div>
       </header>
 
       <StatusBar

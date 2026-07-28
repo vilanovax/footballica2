@@ -11,6 +11,7 @@ import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
+import { ResourceIcon } from "@/components/common/ResourceIcon";
 
 type StatusBarProps = {
   coins: number;
@@ -142,12 +143,12 @@ export function StatusBar({
           animate={pulse ? { scale: [1, 1.12, 1] } : { scale: 1 }}
           transition={{ duration: 0.5 }}
           className={[
-            "relative flex items-center justify-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-3 py-2.5 shadow-fantasy-sm",
+            "relative flex min-h-11 items-center justify-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3.5 py-2 shadow-fantasy-sm",
             pulse ? "ring-2 ring-accent" : "",
           ].join(" ")}
         >
-          <span aria-hidden>💰</span>
-          <span className="font-display text-sm font-bold text-accent-deep tabular-nums">
+          <ResourceIcon kind="coin" size="md" />
+          <span className="font-display text-base font-bold tabular-nums text-accent-deep">
             {toLocaleDigits(coins, locale)}
           </span>
           <Link
@@ -163,16 +164,16 @@ export function StatusBar({
         <div className="flex flex-col items-center gap-1">
           <div
             className={[
-              "relative flex w-full items-center justify-center gap-1.5 rounded-full border px-3 py-2.5 shadow-fantasy-sm transition-colors",
+              "relative flex min-h-11 w-full items-center justify-center gap-2 rounded-full border px-3.5 py-2 shadow-fantasy-sm transition-colors",
               staminaLow
                 ? "border-destructive/40 bg-destructive/10"
                 : "border-primary/30 bg-primary/10",
             ].join(" ")}
           >
-            <span aria-hidden>⚡</span>
+            <ResourceIcon kind="energy" size="md" />
             <span
               className={[
-                "font-display text-sm font-bold tabular-nums",
+                "font-display text-base font-bold tabular-nums",
                 staminaLow ? "text-destructive" : "text-primary",
               ].join(" ")}
             >
@@ -225,8 +226,8 @@ export function StatusBar({
               onClick={(e) => e.stopPropagation()}
               className="w-full max-w-sm rounded-3xl border border-border bg-surface p-5 shadow-fantasy"
             >
-              <div className="mb-3 flex justify-center text-4xl" aria-hidden>
-                ⚡
+              <div className="mb-3 flex justify-center" aria-hidden>
+                <ResourceIcon kind="energy" size="lg" className="h-12 w-12" />
               </div>
               <h2
                 id="stamina-refill-title"
@@ -265,8 +266,9 @@ export function StatusBar({
                   ) : (
                     <>
                       <span>{t("status.refillConfirm")}</span>
-                      <span className="text-xs opacity-90">
-                        💰 {toLocaleDigits(staminaRefillCost, locale)}
+                      <span className="mt-0.5 flex items-center gap-1 text-xs opacity-95">
+                        <ResourceIcon kind="coin" size="sm" />
+                        {toLocaleDigits(staminaRefillCost, locale)}
                       </span>
                     </>
                   )}
