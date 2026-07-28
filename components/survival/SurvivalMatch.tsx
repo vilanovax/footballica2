@@ -300,6 +300,10 @@ export function SurvivalMatch({
           key={question.id}
           text={content.text}
           category={content.category || catLabel}
+          type={question.type}
+          mediaUrl={question.mediaUrl}
+          careerPath={content.careerPath}
+          higherLower={content.higherLower}
           onReport={() => setReportOpen(true)}
         />
 

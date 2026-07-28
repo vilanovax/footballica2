@@ -35,6 +35,8 @@ export function toClubSnapshot(
     tutorialStep: club.tutorialStep,
     newsClaimable: canClaimNews(club.lastNewsClaim, new Date()),
     activeNewsBooster,
+    mysteryStreak: club.mysteryStreak,
+    longestMysteryStreak: club.longestMysteryStreak,
   };
 }
 
@@ -53,5 +55,8 @@ export type ProfileSnapshot = {
   highestCombo: number;
   dailyStreak: number;
   longestDailyStreak: number;
+  mysteryStreak: number;
+  longestMysteryStreak: number;
+  mysterySolves: number;
   badges: { slug: string; unlockedAt: string }[];
 };

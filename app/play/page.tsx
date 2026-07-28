@@ -5,6 +5,7 @@ import { getDuelInbox } from "@/actions/duel/getInboxCount";
 import { getGameConfig } from "@/lib/game/gameConfig";
 import { getPlayModeEconomy } from "@/lib/play/modeEconomy";
 import { listRecordChallenges } from "@/actions/challenge/recordChallenge";
+import { getDailyMystery } from "@/actions/mystery/getDailyMystery";
 import { prisma } from "@/lib/prisma";
 import { PlayModes } from "@/components/play/PlayModes";
 
@@ -18,18 +19,20 @@ export default async function PlayPage() {
   const club = await getClubSnapshot();
   if (!club) redirect("/onboarding");
 
-  const [res, inbox, config, bestAgg, challengeRes] = await Promise.all([
-    getMyDuels(),
-    getDuelInbox(),
-    getGameConfig(),
-    user.club
-      ? prisma.categoryRecord.aggregate({
-          where: { clubId: user.club.id },
-          _max: { maxSurvivalScore: true },
-        })
-      : Promise.resolve({ _max: { maxSurvivalScore: null } }),
-    listRecordChallenges(),
-  ]);
+  const [res, inbox, config, bestAgg, challengeRes, mysteryRes] =
+    await Promise.all([
+      getMyDuels(),
+      getDuelInbox(),
+      getGameConfig(),
+      user.club
+        ? prisma.categoryRecord.aggregate({
+            where: { clubId: user.club.id },
+            _max: { maxSurvivalScore: true },
+          })
+        : Promise.resolve({ _max: { maxSurvivalScore: null } }),
+      listRecordChallenges(),
+      getDailyMystery(),
+    ]);
 
   const recentDuels = res.ok ? res.history : [];
   const modes = getPlayModeEconomy(config);
@@ -48,6 +51,7 @@ export default async function PlayPage() {
       survivalBest={survivalBest}
       modes={modes}
       liveChallengeCount={liveChallengeCount}
+      mystery={mysteryRes.ok ? mysteryRes.mystery : null}
     />
   );
 }

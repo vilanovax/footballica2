@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { Type as TypeIcon, Image as ImageIcon } from "lucide-react";
+import { Type as TypeIcon, Image as ImageIcon, Sparkles } from "lucide-react";
+import type { QuizQuestionType } from "@/lib/quiz/types";
 
 type BadgeTone =
   | "slate"
@@ -36,16 +37,19 @@ export function AdminBadge({
 
 // ─── Domain-specific badge mappings ──────────────────────────────────────────
 
-export function TypeBadge({ type }: { type: "TEXT" | "IMAGE" }) {
-  const Icon = type === "IMAGE" ? ImageIcon : TypeIcon;
+export function TypeBadge({ type }: { type: QuizQuestionType }) {
+  const isImage = type === "IMAGE" || type === "REVEAL_IMAGE";
+  const isFormat = type === "CAREER_PATH" || type === "HIGHER_LOWER";
+  const Icon = isImage ? ImageIcon : isFormat ? Sparkles : TypeIcon;
+  const tone = isImage
+    ? "bg-indigo-100 text-indigo-700 ring-indigo-200"
+    : isFormat
+      ? "bg-amber-100 text-amber-800 ring-amber-200"
+      : "bg-slate-100 text-slate-600 ring-slate-200";
   return (
     <span
-      title={type === "IMAGE" ? "Image question" : "Text question"}
-      className={`inline-flex h-7 w-7 items-center justify-center rounded-md ring-1 ring-inset ${
-        type === "IMAGE"
-          ? "bg-indigo-100 text-indigo-700 ring-indigo-200"
-          : "bg-slate-100 text-slate-600 ring-slate-200"
-      }`}
+      title={type}
+      className={`inline-flex h-7 w-7 items-center justify-center rounded-md ring-1 ring-inset ${tone}`}
     >
       <Icon className="h-4 w-4" strokeWidth={2} />
       <span className="sr-only">{type}</span>

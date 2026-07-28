@@ -41,7 +41,7 @@ export type ReportReviewData = {
   };
   question: {
     id: string;
-    type: "TEXT" | "IMAGE";
+    type: "TEXT" | "IMAGE" | "CAREER_PATH" | "HIGHER_LOWER" | "REVEAL_IMAGE";
     difficulty: "EASY" | "MEDIUM" | "HARD";
     correctIndex: number;
     mediaUrl: string | null;

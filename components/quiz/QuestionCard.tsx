@@ -3,6 +3,9 @@
 import { motion } from "framer-motion";
 import { Flag } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import type { CareerPathPayload, HigherLowerPayload } from "@/lib/quiz/formats";
+import type { QuizQuestionType } from "@/lib/quiz/types";
+import { FormatPrompt } from "./FormatPrompt";
 
 type QuestionCardProps = {
   /** Localized question text for the active language. */
@@ -11,9 +14,21 @@ type QuestionCardProps = {
   category: string;
   /** Opens the report flow (modal is owned by the match, above the options). */
   onReport: () => void;
+  type?: QuizQuestionType;
+  mediaUrl?: string | null;
+  careerPath?: CareerPathPayload;
+  higherLower?: HigherLowerPayload;
 };
 
-export function QuestionCard({ text, category, onReport }: QuestionCardProps) {
+export function QuestionCard({
+  text,
+  category,
+  onReport,
+  type,
+  mediaUrl,
+  careerPath,
+  higherLower,
+}: QuestionCardProps) {
   const { t } = useTranslation();
 
   return (
@@ -41,6 +56,12 @@ export function QuestionCard({ text, category, onReport }: QuestionCardProps) {
       <p className="mt-3 font-display text-xl font-bold leading-snug text-surface-foreground">
         {text}
       </p>
+      <FormatPrompt
+        type={type}
+        mediaUrl={mediaUrl}
+        careerPath={careerPath}
+        higherLower={higherLower}
+      />
     </motion.div>
   );
 }

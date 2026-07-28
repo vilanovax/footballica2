@@ -18,7 +18,7 @@ async function assertAdmin(): Promise<boolean> {
 
 /** Portable shape of a question inside an export/backup file. */
 type ExportedQuestion = {
-  type: "TEXT" | "IMAGE";
+  type: "TEXT" | "IMAGE" | "CAREER_PATH" | "HIGHER_LOWER" | "REVEAL_IMAGE";
   mediaUrl: string | null;
   difficulty: "EASY" | "MEDIUM" | "HARD";
   correctIndex: number;
@@ -148,7 +148,10 @@ export async function importQuestions(input: {
         return prisma.question.create({
           data: {
             type: q.type,
-            mediaUrl: q.type === "IMAGE" ? (q.mediaUrl ?? null) : null,
+            mediaUrl:
+              q.type === "IMAGE" || q.type === "REVEAL_IMAGE"
+                ? (q.mediaUrl ?? null)
+                : null,
             difficulty: q.difficulty,
             correctIndex: q.correctIndex,
             categoryId: input.categoryId,

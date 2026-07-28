@@ -10,6 +10,7 @@ import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { AnswerButton } from "@/components/quiz/AnswerButton";
 import { ExplanationFact } from "@/components/quiz/ExplanationFact";
+import { FormatPrompt } from "@/components/quiz/FormatPrompt";
 import type { DuelAnswerSubmission } from "@/lib/duel/types";
 
 type DuelQuizProps = {
@@ -112,6 +113,12 @@ export function DuelQuiz({
           <p className="font-display text-lg font-bold leading-snug text-surface-foreground">
             {content.text}
           </p>
+          <FormatPrompt
+            type={q.type}
+            mediaUrl={q.mediaUrl}
+            careerPath={content.careerPath}
+            higherLower={content.higherLower}
+          />
         </motion.div>
       </AnimatePresence>
 

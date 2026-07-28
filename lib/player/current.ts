@@ -127,6 +127,9 @@ export async function getProfileSnapshot(): Promise<ProfileSnapshot | null> {
     highestCombo: club.highestCombo,
     dailyStreak: club.dailyStreak,
     longestDailyStreak: club.longestDailyStreak,
+    mysteryStreak: club.mysteryStreak,
+    longestMysteryStreak: club.longestMysteryStreak,
+    mysterySolves: club.mysterySolves,
     badges: club.badges.map((b) => ({
       slug: b.badgeSlug,
       unlockedAt: b.unlockedAt.toISOString(),

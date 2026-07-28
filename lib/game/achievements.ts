@@ -33,6 +33,11 @@ export type PlayerStats = {
   highestCombo: number;
   dailyStreak: number;
   longestDailyStreak: number;
+  /** Mysterious Player — consecutive solved Tehran days. */
+  mysteryStreak: number;
+  longestMysteryStreak: number;
+  /** Lifetime days solved (Mysterious Player). */
+  mysterySolves: number;
 };
 
 export type AchievementContext = {
@@ -164,6 +169,47 @@ export const ACHIEVEMENTS: Achievement[] = [
     unlocksAvatar: "CLUB_LEGEND",
     check: ({ player }) => player.dailyStreak >= 30,
     progress: (p) => toward(p.longestDailyStreak, 30),
+  },
+
+  // ── Dedication (Mysterious Player daily) ────────────────────────────────────
+  {
+    slug: "mystery_debut",
+    category: "dedication",
+    tier: "bronze",
+    emoji: "🕵️",
+    nameEn: "First Suspect",
+    nameFa: "اولین مظنون",
+    descriptionEn: "Solve your first Mysterious Player of the day.",
+    descriptionFa: "اولین بازیکن مرموز روز را پیدا کن.",
+    reward: { coins: 25, xp: 10 },
+    check: ({ player }) => player.mysterySolves >= 1,
+    progress: (p) => toward(p.mysterySolves, 1),
+  },
+  {
+    slug: "mystery_streak_3",
+    category: "dedication",
+    tier: "silver",
+    emoji: "🔎",
+    nameEn: "Hot on the Trail",
+    nameFa: "ردپا داغ",
+    descriptionEn: "Solve Mysterious Player 3 days in a row.",
+    descriptionFa: "۳ روز پشت سر هم بازیکن مرموز را حل کن.",
+    reward: { coins: 60, xp: 20 },
+    check: ({ player }) => player.mysteryStreak >= 3,
+    progress: (p) => toward(p.longestMysteryStreak, 3),
+  },
+  {
+    slug: "mystery_streak_7",
+    category: "dedication",
+    tier: "gold",
+    emoji: "🕶️",
+    nameEn: "Master Detective",
+    nameFa: "کارآگاه ارشد",
+    descriptionEn: "Keep a 7-day Mysterious Player streak.",
+    descriptionFa: "استریک ۷ روزهٔ بازیکن مرموز را حفظ کن.",
+    reward: { coins: 150, xp: 50 },
+    check: ({ player }) => player.mysteryStreak >= 7,
+    progress: (p) => toward(p.longestMysteryStreak, 7),
   },
 
   // ── Volume (lifetime milestones) ─────────────────────────────────────────────

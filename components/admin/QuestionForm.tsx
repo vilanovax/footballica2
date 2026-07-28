@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray, type UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Plus, Trash2 } from "lucide-react";
 import {
   questionFormSchema,
   type QuestionFormValues,
@@ -38,6 +38,20 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
+
+const EMPTY_CAREER = {
+  steps: [
+    { name: "", logoUrl: "" },
+    { name: "", logoUrl: "" },
+    { name: "", logoUrl: "" },
+  ],
+};
+
+const EMPTY_HL = {
+  left: { name: "", imageUrl: "" },
+  right: { name: "", imageUrl: "" },
+  metricLabel: "",
+};
 
 type Category = { id: string; nameEn: string; nameFa: string };
 type Tag = { id: string; nameEn: string; nameFa: string };
@@ -74,6 +88,10 @@ export function QuestionForm({
   const type = form.watch("type");
   const correctIndex = form.watch("correctIndex");
   const isTemporal = form.watch("isTemporal");
+
+  useEffect(() => {
+    seedFormatDefaults(form, type);
+  }, [type, form]);
 
   function onSubmit(values: QuestionFormValues) {
     setServerError(null);
@@ -113,7 +131,13 @@ export function QuestionForm({
                 <FormItem>
                   <FormLabel>Type</FormLabel>
                   <Select
-                    onValueChange={field.onChange}
+                    onValueChange={(v) => {
+                      field.onChange(v);
+                      seedFormatDefaults(
+                        form,
+                        v as QuestionFormValues["type"],
+                      );
+                    }}
                     value={field.value}
                   >
                     <FormControl>
@@ -124,8 +148,14 @@ export function QuestionForm({
                     <SelectContent>
                       <SelectItem value="TEXT">Text</SelectItem>
                       <SelectItem value="IMAGE">Image</SelectItem>
+                      <SelectItem value="CAREER_PATH">Career path</SelectItem>
+                      <SelectItem value="HIGHER_LOWER">Higher / Lower</SelectItem>
+                      <SelectItem value="REVEAL_IMAGE">Reveal image</SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormDescription>
+                    Format only — still 4 MCQ options. No new Play mode.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -237,7 +267,7 @@ export function QuestionForm({
               )}
             />
 
-            {type === "IMAGE" && (
+            {(type === "IMAGE" || type === "REVEAL_IMAGE") && (
               <FormField
                 control={form.control}
                 name="mediaUrl"
@@ -251,7 +281,9 @@ export function QuestionForm({
                       />
                     </FormControl>
                     <FormDescription>
-                      External image link shown with the prompt.
+                      {type === "REVEAL_IMAGE"
+                        ? "Image shown slightly obscured; answer via options."
+                        : "External image link shown with the prompt."}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -412,6 +444,14 @@ export function QuestionForm({
                     )}
                   />
 
+                  {type === "CAREER_PATH" && (
+                    <CareerPathEditor form={form} locale={l.key} />
+                  )}
+
+                  {type === "HIGHER_LOWER" && (
+                    <HigherLowerEditor form={form} locale={l.key} />
+                  )}
+
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     {OPTION_INDEXES.map((i) => (
                       <FormField
@@ -516,5 +556,193 @@ export function QuestionForm({
         </div>
       </form>
     </Form>
+  );
+}
+
+function seedFormatDefaults(
+  form: UseFormReturn<QuestionFormValues>,
+  type: QuestionFormValues["type"],
+) {
+  if (type === "CAREER_PATH") {
+    for (const locale of ["en", "fa"] as const) {
+      const cur = form.getValues(`content.${locale}.careerPath`);
+      if (!cur?.steps?.length) {
+        form.setValue(`content.${locale}.careerPath`, structuredClone(EMPTY_CAREER));
+      }
+    }
+  }
+  if (type === "HIGHER_LOWER") {
+    for (const locale of ["en", "fa"] as const) {
+      const cur = form.getValues(`content.${locale}.higherLower`);
+      if (!cur?.left?.name && !cur?.right?.name && !cur?.metricLabel) {
+        form.setValue(`content.${locale}.higherLower`, structuredClone(EMPTY_HL));
+      }
+    }
+  }
+}
+
+function CareerPathEditor({
+  form,
+  locale,
+}: {
+  form: UseFormReturn<QuestionFormValues>;
+  locale: "en" | "fa";
+}) {
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: `content.${locale}.careerPath.steps`,
+  });
+
+  return (
+    <div className="space-y-3 rounded-md border p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <p className="text-sm font-medium">Career path</p>
+          <p className="text-xs text-muted-foreground">
+            Ordered stops shown above the options (min 2).
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => append({ name: "", logoUrl: "" })}
+        >
+          <Plus className="me-1 h-3.5 w-3.5" />
+          Stop
+        </Button>
+      </div>
+      <div className="space-y-3">
+        {fields.map((field, i) => (
+          <div
+            key={field.id}
+            className="grid grid-cols-[auto_1fr_1fr_auto] items-end gap-2"
+          >
+            <span className="pb-2 font-mono text-xs text-muted-foreground">
+              {i + 1}
+            </span>
+            <FormField
+              control={form.control}
+              name={`content.${locale}.careerPath.steps.${i}.name`}
+              render={({ field: f }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Club / stop</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Club name" {...f} value={f.value ?? ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name={`content.${locale}.careerPath.steps.${i}.logoUrl`}
+              render={({ field: f }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Logo URL</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="optional"
+                      {...f}
+                      value={f.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="mb-0.5 shrink-0"
+              disabled={fields.length <= 2}
+              onClick={() => remove(i)}
+              aria-label="Remove stop"
+            >
+              <Trash2 className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HigherLowerEditor({
+  form,
+  locale,
+}: {
+  form: UseFormReturn<QuestionFormValues>;
+  locale: "en" | "fa";
+}) {
+  return (
+    <div className="space-y-3 rounded-md border p-3">
+      <div>
+        <p className="text-sm font-medium">Higher / Lower</p>
+        <p className="text-xs text-muted-foreground">
+          Two entities + metric. Options should name who is higher (or both /
+          equal if needed).
+        </p>
+      </div>
+      <FormField
+        control={form.control}
+        name={`content.${locale}.higherLower.metricLabel`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Metric label</FormLabel>
+            <FormControl>
+              <Input
+                placeholder={
+                  locale === "fa" ? "مثلاً گل‌های ملی" : "e.g. Career goals"
+                }
+                {...field}
+                value={field.value ?? ""}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {(["left", "right"] as const).map((side) => (
+          <div key={side} className="space-y-2 rounded-md border bg-muted/20 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {side}
+            </p>
+            <FormField
+              control={form.control}
+              name={`content.${locale}.higherLower.${side}.name`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name={`content.${locale}.higherLower.${side}.imageUrl`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Image URL</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="optional"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

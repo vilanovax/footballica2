@@ -2,12 +2,14 @@
 
 import type { DuelSnapshot } from "@/lib/duel/snapshot";
 import type { DuelInboxItem } from "@/actions/duel/getInboxCount";
+import type { DailyMysterySnapshot } from "@/actions/mystery/getDailyMystery";
 import type { PlayModeEconomy } from "@/lib/play/modeEconomy";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { RecentDuelHistory } from "@/components/duel/RecentDuelHistory";
 import { DuelInboxBanner } from "@/components/duel/DuelInboxBanner";
 import { MatchCard } from "@/components/play/MatchCard";
+import { GameOfTheDayCard } from "@/components/play/GameOfTheDayCard";
 
 type PlayModesProps = {
   recentDuels?: DuelSnapshot[];
@@ -19,6 +21,8 @@ type PlayModesProps = {
   modes: Record<"penalty" | "quick" | "survival" | "duel", PlayModeEconomy>;
   /** Live premium challenges — chip on Survival card only. */
   liveChallengeCount?: number;
+  /** Rotating daily slot (Mysterious Player). */
+  mystery?: DailyMysterySnapshot | null;
 };
 
 /**
@@ -35,6 +39,7 @@ export function PlayModes({
   survivalBest,
   modes,
   liveChallengeCount = 0,
+  mystery = null,
 }: PlayModesProps) {
   const { t, locale } = useTranslation();
   const staminaLow = stamina <= 1;
@@ -80,6 +85,8 @@ export function PlayModes({
         items={inboxItems}
         variant="play"
       />
+
+      <GameOfTheDayCard mystery={mystery} />
 
       <div className="flex flex-col gap-3">
         <h2 className="font-display text-xs font-bold uppercase tracking-widest text-muted-foreground">

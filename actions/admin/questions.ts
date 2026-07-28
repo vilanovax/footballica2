@@ -30,7 +30,17 @@ function buildContent(
   values: QuestionFormValues,
   category: { nameEn: string; nameFa: string },
 ): Prisma.InputJsonValue {
-  return buildLocalizedContent(values.content, category);
+  const built = buildLocalizedContent(values.content, category);
+  // Persist format blobs only for the matching QuestionType.
+  if (values.type !== "CAREER_PATH") {
+    delete (built.en as { careerPath?: unknown }).careerPath;
+    delete (built.fa as { careerPath?: unknown }).careerPath;
+  }
+  if (values.type !== "HIGHER_LOWER") {
+    delete (built.en as { higherLower?: unknown }).higherLower;
+    delete (built.fa as { higherLower?: unknown }).higherLower;
+  }
+  return built;
 }
 
 /** "" → null, and drop unparseable dates rather than persisting Invalid Date. */
@@ -72,7 +82,10 @@ export async function createQuestion(
     const created = await prisma.question.create({
       data: {
         type: values.type,
-        mediaUrl: values.type === "IMAGE" ? values.mediaUrl : null,
+        mediaUrl:
+          values.type === "IMAGE" || values.type === "REVEAL_IMAGE"
+            ? values.mediaUrl
+            : null,
         categoryId: values.categoryId,
         difficulty: values.difficulty,
         correctIndex: values.correctIndex,
@@ -127,7 +140,10 @@ export async function updateQuestion(
       where: { id },
       data: {
         type: values.type,
-        mediaUrl: values.type === "IMAGE" ? values.mediaUrl : null,
+        mediaUrl:
+          values.type === "IMAGE" || values.type === "REVEAL_IMAGE"
+            ? values.mediaUrl
+            : null,
         categoryId: values.categoryId,
         difficulty: values.difficulty,
         correctIndex: values.correctIndex,

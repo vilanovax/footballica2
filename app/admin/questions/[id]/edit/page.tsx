@@ -4,10 +4,16 @@ import { ChevronLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { QuestionForm } from "@/components/admin/QuestionForm";
 import type { QuestionFormValues } from "@/lib/admin/questionSchema";
+import { parseCareerPath, parseHigherLower } from "@/lib/quiz/formats";
 
 export const dynamic = "force-dynamic";
 
-type StoredLocale = { text?: string; options?: unknown };
+type StoredLocale = {
+  text?: string;
+  options?: unknown;
+  careerPath?: unknown;
+  higherLower?: unknown;
+};
 
 /** Coerce a stored options blob into exactly four strings. */
 function toFourOptions(raw: unknown): [string, string, string, string] {
@@ -18,6 +24,40 @@ function toFourOptions(raw: unknown): [string, string, string, string] {
     string,
     string,
   ];
+}
+
+function localeForForm(raw: StoredLocale | undefined) {
+  const careerPath = parseCareerPath(raw?.careerPath);
+  const higherLower = parseHigherLower(raw?.higherLower);
+  return {
+    text: raw?.text ?? "",
+    options: toFourOptions(raw?.options),
+    ...(careerPath
+      ? {
+          careerPath: {
+            steps: careerPath.steps.map((s) => ({
+              name: s.name,
+              logoUrl: s.logoUrl ?? "",
+            })),
+          },
+        }
+      : {}),
+    ...(higherLower
+      ? {
+          higherLower: {
+            left: {
+              name: higherLower.left.name,
+              imageUrl: higherLower.left.imageUrl ?? "",
+            },
+            right: {
+              name: higherLower.right.name,
+              imageUrl: higherLower.right.imageUrl ?? "",
+            },
+            metricLabel: higherLower.metricLabel,
+          },
+        }
+      : {}),
+  };
 }
 
 export default async function EditQuestionPage({
@@ -70,14 +110,8 @@ export default async function EditQuestionPage({
     source: question.source ?? "",
     tagIds: question.tags.map((t) => t.id),
     content: {
-      en: {
-        text: content.en?.text ?? "",
-        options: toFourOptions(content.en?.options),
-      },
-      fa: {
-        text: content.fa?.text ?? "",
-        options: toFourOptions(content.fa?.options),
-      },
+      en: localeForForm(content.en),
+      fa: localeForForm(content.fa),
     },
     explanation: {
       en: explanationRaw.en ?? "",

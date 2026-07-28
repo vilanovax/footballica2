@@ -46,9 +46,25 @@ enum QuestionDifficulty {
   HARD
 }
 
+/// How a question is presented / answered inside existing Game Modes.
+/// New visual puzzles extend this enum — they do NOT invent a new MatchMode.
+/// See docs/adr/001-game-mode-vs-format-and-daily-mystery.md
 enum QuestionType {
   TEXT
   IMAGE
+  /// Club logos / names in career order → identify the player.
+  CAREER_PATH
+  /// Compare two entities on a hidden metric (higher / lower).
+  HIGHER_LOWER
+  /// Image starts obscured and reveals in stages; earlier guess = more points.
+  REVEAL_IMAGE
+}
+
+/// Lifecycle of a club's attempt at today's Mysterious Player puzzle.
+enum DailyMysteryAttemptStatus {
+  IN_PROGRESS
+  SOLVED
+  FAILED
 }
 
 enum QuestionStatus {
@@ -141,11 +157,11 @@ model User {
   /// Admin kill-switch — disabled bots stay in CMS but are skipped by matchmaking.
   botEnabled    Boolean        @default(true)
 
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  club    Club?
-  matches Match[]
+  club       Club?
+  matches    Match[]
   hallOfFame HallOfFame[]
 
   duelsAsChallenger DuelMatch[] @relation("DuelChallenger")
@@ -184,20 +200,20 @@ model Club {
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  name String
+  name           String
   /// Lowercased / collapsed form of `name` for unique case-insensitive checks.
-  nameNormalized String @unique
+  nameNormalized String  @unique
   /// Player-chosen stadium name (identity/profile). Falls back to a default.
-  stadiumName  String?
+  stadiumName    String?
   /// Chosen manager avatar key (see lib/onboarding/avatars), set during onboarding.
-  avatar       String?
+  avatar         String?
   /// Chosen club flag key (see lib/onboarding/flags). Cosmetic identity; premium
   /// flags are level-gated (re-checked server-side in setClubFlag).
-  flag         String?
+  flag           String?
   /// Club kit / brand palette key (see lib/onboarding/clubColors). Scoped accents only.
-  colorKey     String  @default("CLUB_GREEN")
+  colorKey       String  @default("CLUB_GREEN")
   /// FTUE progress: 0 = play tutorial match, 1 = buy first upgrade, 2 = done.
-  tutorialStep Int     @default(0)
+  tutorialStep   Int     @default(0)
 
   // Economy balances (server-authoritative)
   coins             Int       @default(0)
@@ -239,19 +255,29 @@ model Club {
   /// Day-anchor (midnight Asia/Tehran) of the last match that advanced the streak.
   lastPlayedDate     DateTime?
 
+  // ── Mysterious Player daily streak (isolated from match dailyStreak) ──
+  /// Consecutive Tehran days with a SOLVED DailyMysteryAttempt.
+  mysteryStreak        Int       @default(0)
+  longestMysteryStreak Int       @default(0)
+  /// Lifetime SOLVED mystery days (drives debut / volume mystery badges).
+  mysterySolves        Int       @default(0)
+  /// Day-anchor of the last mystery solve that advanced mysteryStreak.
+  lastMysteryDate      DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  matches  Match[]
-  boosters ActiveBooster[]
-  badges   ClubBadge[]
-  missionBatches ClubMissionBatch[]
-  missions       ClubMission[]
-  purchases    PurchaseLog[]
-  adminGrants  AdminCoinGrant[]
+  matches         Match[]
+  boosters        ActiveBooster[]
+  badges          ClubBadge[]
+  missionBatches  ClubMissionBatch[]
+  missions        ClubMission[]
+  purchases       PurchaseLog[]
+  adminGrants     AdminCoinGrant[]
   categoryRecords CategoryRecord[]
   challengeAccess ClubChallengeAccess[]
   challengeRuns   ClubChallengeRun[]
+  mysteryAttempts DailyMysteryAttempt[]
 
   @@index([fans])
   @@index([coins])
@@ -264,7 +290,7 @@ model PurchaseLog {
   clubId       String
   club         Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
   /// Server catalog tier key (`SMALL` | `MEDIUM` | `LARGE`).
-  packTier    String
+  packTier     String
   /// Fiat amount charged (mock gateway display units).
   price        Int
   currency     String
@@ -297,28 +323,28 @@ model AdminCoinGrant {
 // image URL, and reward amounts. Seeded from the code catalog on first admin load.
 
 model BadgeDefinition {
-  id             String   @id @default(cuid())
+  id            String   @id @default(cuid())
   /// Stable key — matches Achievement.slug or challenge rewardBadgeSlug.
-  slug           String   @unique
-  nameEn         String
-  nameFa         String
-  descriptionEn  String
-  descriptionFa  String
-  emoji          String   @default("🏅")
+  slug          String   @unique
+  nameEn        String
+  nameFa        String
+  descriptionEn String
+  descriptionFa String
+  emoji         String   @default("🏅")
   /// Optional art URL (`/badges/...` or absolute). When set, UI prefers image over emoji.
-  imageUrl       String?
-  rewardCoins    Int      @default(0)
-  rewardXp       Int      @default(0)
+  imageUrl      String?
+  rewardCoins   Int      @default(0)
+  rewardXp      Int      @default(0)
   /// skill | purity | dedication | volume | showcase
-  category       String   @default("skill")
+  category      String   @default("skill")
   /// bronze | silver | gold
-  tier           String   @default("bronze")
+  tier          String   @default("bronze")
   /// True when seeded from the code achievement catalog.
-  isSystem       Boolean  @default(true)
-  isActive       Boolean  @default(true)
-  sortOrder      Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  isSystem      Boolean  @default(true)
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([isActive, sortOrder])
   @@index([category])
@@ -441,25 +467,25 @@ model GameConfig {
 // Bilingual, admin-managed buckets (World Cup, Iran Pro League, Nostalgia, …).
 
 model Category {
-  id       String  @id @default(cuid())
-  slug     String  @unique
-  nameEn   String
-  nameFa   String
-  icon     String?
-  isActive Boolean @default(true)
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  nameEn        String
+  nameFa        String
+  icon          String?
+  isActive      Boolean  @default(true)
   /// When true, hidden from free Survival / Duel pickers — only usable via RecordChallenge links.
-  challengeOnly Boolean @default(false)
+  challengeOnly Boolean  @default(false)
   /// UI locales that may see this bank in pickers (e.g. ["fa"] for Iran-only topics).
-  locales  String[] @default(["en", "fa"])
+  locales       String[] @default(["en", "fa"])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  questions       Question[]
-  duelRounds      DuelRound[]
-  matches         Match[]
-  records         CategoryRecord[]
-  challengeLinks  RecordChallengeCategory[]
+  questions      Question[]
+  duelRounds     DuelRound[]
+  matches        Match[]
+  records        CategoryRecord[]
+  challengeLinks RecordChallengeCategory[]
 }
 
 // ─── RecordChallenge (Premium Live-Ops survival events) ──────────────────────
@@ -467,19 +493,19 @@ model Category {
 // one-time unlockCostCoins + standard SURVIVAL_STAMINA_COST per run.
 
 model RecordChallenge {
-  id          String  @id @default(cuid())
-  slug        String  @unique
-  titleEn     String
-  titleFa     String
+  id            String @id @default(cuid())
+  slug          String @unique
+  titleEn       String
+  titleFa       String
   descriptionEn String @default("")
   descriptionFa String @default("")
 
   /// One-time coin sink to unlock the campaign for this event window.
-  unlockCostCoins Int
+  unlockCostCoins  Int
   /// Score required to conquer the challenge and earn the showcase badge.
-  targetScore     Int
+  targetScore      Int
   /// Badge slug written to ClubBadge on conquer (prestige; not shop-purchasable).
-  rewardBadgeSlug String?
+  rewardBadgeSlug  String?
   rewardBadgeEmoji String? @default("🏆")
 
   isActive  Boolean   @default(true)
@@ -515,9 +541,9 @@ model RecordChallengeCategory {
 
 /// Paid unlock ledger — club paid unlockCostCoins once (per challenge).
 model ClubChallengeAccess {
-  id          String @id @default(cuid())
+  id          String          @id @default(cuid())
   clubId      String
-  club        Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  club        Club            @relation(fields: [clubId], references: [id], onDelete: Cascade)
   challengeId String
   challenge   RecordChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
 
@@ -531,16 +557,16 @@ model ClubChallengeAccess {
 
 /// Best attempt + conquer state for a club on a premium challenge.
 model ClubChallengeRun {
-  id          String @id @default(cuid())
+  id          String          @id @default(cuid())
   clubId      String
-  club        Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  club        Club            @relation(fields: [clubId], references: [id], onDelete: Cascade)
   challengeId String
   challenge   RecordChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
 
-  bestScore     Int       @default(0)
-  attempts      Int       @default(0)
-  conqueredAt   DateTime?
-  badgeGranted  Boolean   @default(false)
+  bestScore    Int       @default(0)
+  attempts     Int       @default(0)
+  conqueredAt  DateTime?
+  badgeGranted Boolean   @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -590,7 +616,7 @@ model Tag {
 model Question {
   id           String             @id @default(cuid())
   type         QuestionType       @default(TEXT)
-  /// Media asset for IMAGE questions (prompt image URL). Null for TEXT.
+  /// Media asset for IMAGE / REVEAL_IMAGE (and similar) prompts. Null for TEXT.
   mediaUrl     String?
   /// Localized presentation: { en: { text, options[], category }, fa: {…} }.
   content      Json
@@ -663,11 +689,11 @@ model QuestionReport {
 model DuelMatch {
   id String @id @default(cuid())
 
-  challengerId String
-  challenger   User    @relation("DuelChallenger", fields: [challengerId], references: [id], onDelete: Cascade)
+  challengerId  String
+  challenger    User    @relation("DuelChallenger", fields: [challengerId], references: [id], onDelete: Cascade)
   /// Null while MATCHING; set when a human/bot is assigned.
-  opponentId   String?
-  opponent     User?   @relation("DuelOpponent", fields: [opponentId], references: [id], onDelete: SetNull)
+  opponentId    String?
+  opponent      User?   @relation("DuelOpponent", fields: [opponentId], references: [id], onDelete: SetNull)
   isBotOpponent Boolean @default(false)
 
   status DuelStatus @default(MATCHING)
@@ -679,12 +705,12 @@ model DuelMatch {
   /// When a bot is scheduled to auto-play its next action (simulated delay).
   botPlayAt      DateTime?
 
-  challengerCorrect Int @default(0)
-  opponentCorrect   Int @default(0)
+  challengerCorrect Int     @default(0)
+  opponentCorrect   Int     @default(0)
   winnerId          String?
 
   /// Stamina already spent when the duel was opened (anti double-charge).
-  staminaSpent Int @default(0)
+  staminaSpent    Int     @default(0)
   /// Weekly leaderboard points already granted on COMPLETED.
   weeklyXpAwarded Boolean @default(false)
 
@@ -724,8 +750,8 @@ model DuelRound {
   /// Answer logs: [{ questionId, selectedIndex, correct, ms }]
   attackAnswers  Json?
   defenseAnswers Json?
-  attackCorrect  Int @default(0)
-  defenseCorrect Int @default(0)
+  attackCorrect  Int   @default(0)
+  defenseCorrect Int   @default(0)
 
   attackSubmittedAt  DateTime?
   defenseSubmittedAt DateTime?
@@ -766,9 +792,9 @@ model MissionBatch {
 }
 
 model Mission {
-  id            String           @id @default(cuid())
-  batchId       String
-  batch         MissionBatch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  id      String       @id @default(cuid())
+  batchId String
+  batch   MissionBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
 
   titleFa       String
   titleEn       String
@@ -788,17 +814,17 @@ model Mission {
 }
 
 model ClubMissionBatch {
-  id      String @id @default(cuid())
+  id      String       @id @default(cuid())
   clubId  String
   batchId String
   club    Club         @relation(fields: [clubId], references: [id], onDelete: Cascade)
   batch   MissionBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
 
   /// Null until the player claims the batch chest (all 3 missions done).
-  chestClaimedAt DateTime?
+  chestClaimedAt       DateTime?
   /// Idempotency: skip re-applying the same resolved match.
   lastProcessedMatchId String?
-  unlockedAt     DateTime  @default(now())
+  unlockedAt           DateTime  @default(now())
 
   @@unique([clubId, batchId])
   @@index([clubId])
@@ -811,13 +837,98 @@ model ClubMission {
   club      Club    @relation(fields: [clubId], references: [id], onDelete: Cascade)
   mission   Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
 
-  progress    Int     @default(0)
-  isCompleted Boolean @default(false)
-  completedAt DateTime?
+  progress        Int       @default(0)
+  isCompleted     Boolean   @default(false)
+  completedAt     DateTime?
   /// Manual drip claim: set when the player taps «Claim» (or auto for 0-reward).
   /// Completion alone does NOT pay coins/XP — that waits on this timestamp.
   rewardClaimedAt DateTime?
 
   @@unique([clubId, missionId])
   @@index([clubId])
+}
+
+// ─── FootballPlayer catalog (Mysterious Player + future formats) ─────────────
+/// Stable slug PK so DailyMysteryPuzzle.targetPlayerId stays human-readable.
+model FootballPlayer {
+  /// Stable slug, e.g. "messi" — also used as Mystery guess id.
+  slug String @id
+
+  nameEn String
+  nameFa String
+  nationality     String
+  nationalityCode String
+  /// GK | DEF | MID | FWD
+  position    String
+  league      String
+  club        String
+  age         Int
+  shirtNumber Int
+
+  /// Inactive players are hidden from guess pickers and auto-picks.
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  puzzles DailyMysteryPuzzle[]
+
+  @@index([isActive])
+  @@index([nameEn])
+  @@index([club])
+}
+
+// ─── Daily Mystery (بازیکن مرموز) ────────────────────────────────────────────
+// Isolated ledger — does NOT write Match rows. See ADR 001.
+
+/// One puzzle published per Tehran calendar day (`dateKey` = YYYY-MM-DD).
+model DailyMysteryPuzzle {
+  id String @id @default(cuid())
+
+  /// Tehran calendar day key, e.g. "2026-07-28". Unique — one puzzle per day.
+  dateKey String @unique
+
+  /// FK → FootballPlayer.slug
+  targetPlayerId String
+  targetPlayer   FootballPlayer @relation(fields: [targetPlayerId], references: [slug], onDelete: Restrict)
+
+  /// Optional Live-Ops knobs: maxGuesses, hint set, difficulty band, etc.
+  config Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attempts DailyMysteryAttempt[]
+
+  @@index([targetPlayerId])
+}
+
+/// One attempt per club per puzzle (enforced by @@unique).
+model DailyMysteryAttempt {
+  id String @id @default(cuid())
+
+  clubId String
+  club   Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  puzzleId String
+  puzzle   DailyMysteryPuzzle @relation(fields: [puzzleId], references: [id], onDelete: Cascade)
+
+  status     DailyMysteryAttemptStatus @default(IN_PROGRESS)
+  guessCount Int                       @default(0)
+
+  /// Sequential guesses, e.g. [{ playerId, isCorrectNationality, isCorrectLeague, … }].
+  guesses Json @default("[]")
+
+  /// Shareable emoji grid (🟩🟨🟥…).
+  shareCode String?
+
+  solvedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clubId, puzzleId])
+  @@index([clubId, status])
+  @@index([puzzleId])
+  @@index([solvedAt])
 }

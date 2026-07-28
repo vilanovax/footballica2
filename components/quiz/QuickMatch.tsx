@@ -247,6 +247,10 @@ export function QuickMatch({
           key={question.id}
           text={content.text}
           category={content.category}
+          type={question.type}
+          mediaUrl={question.mediaUrl}
+          careerPath={content.careerPath}
+          higherLower={content.higherLower}
           onReport={() => setReportOpen(true)}
         />
 

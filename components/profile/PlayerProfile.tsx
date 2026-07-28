@@ -179,6 +179,9 @@ export function PlayerProfile({
     highestCombo: profile.highestCombo,
     dailyStreak: profile.dailyStreak,
     longestDailyStreak: profile.longestDailyStreak,
+    mysteryStreak: profile.mysteryStreak,
+    longestMysteryStreak: profile.longestMysteryStreak,
+    mysterySolves: profile.mysterySolves,
   };
 
   const winHintKey =

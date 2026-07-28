@@ -1,4 +1,5 @@
 import type { Question, QuestionDifficulty as PrismaDifficulty } from "@/generated/prisma/client";
+import { parseCareerPath, parseHigherLower } from "./formats";
 import type {
   QuizContent,
   QuizLocale,
@@ -23,15 +24,41 @@ function parseExplanation(
   return { en, fa };
 }
 
+function parseLocaleContent(raw: unknown): QuizContent {
+  const o = (raw && typeof raw === "object" ? raw : {}) as Record<
+    string,
+    unknown
+  >;
+  const optionsRaw = Array.isArray(o.options) ? o.options : ["", "", "", ""];
+  const options = [0, 1, 2, 3].map((i) =>
+    typeof optionsRaw[i] === "string" ? optionsRaw[i] : "",
+  ) as [string, string, string, string];
+  const careerPath = parseCareerPath(o.careerPath);
+  const higherLower = parseHigherLower(o.higherLower);
+  return {
+    text: typeof o.text === "string" ? o.text : "",
+    options,
+    category: typeof o.category === "string" ? o.category : "",
+    ...(careerPath ? { careerPath } : {}),
+    ...(higherLower ? { higherLower } : {}),
+  };
+}
+
 /**
  * Map a persisted `Question` row to the framework-free `QuizQuestion` the game
- * engine + scoring expect. The `content` JSON column is stored in exactly the
- * `{ [locale]: { text, options, category } }` shape, so it passes through.
+ * engine + scoring expect. Soft-parses format payloads (careerPath / higherLower).
  */
 export function dbQuestionToQuiz(row: Question): QuizQuestion {
+  const raw = (row.content && typeof row.content === "object"
+    ? row.content
+    : {}) as Record<string, unknown>;
+  const content: Record<QuizLocale, QuizContent> = {
+    en: parseLocaleContent(raw.en),
+    fa: parseLocaleContent(raw.fa),
+  };
   return {
     id: row.id,
-    content: row.content as unknown as Record<QuizLocale, QuizContent>,
+    content,
     correctIndex: row.correctIndex,
     difficulty: DIFFICULTY_MAP[row.difficulty],
     type: row.type,

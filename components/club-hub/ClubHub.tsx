@@ -43,6 +43,7 @@ import { DuelInboxBanner } from "@/components/duel/DuelInboxBanner";
 import type { DuelInboxItem } from "@/actions/duel/getInboxCount";
 import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
 import { NextGoalCard } from "@/components/club-hub/NextGoalCard";
+import { MysteryDailyChip } from "@/components/club-hub/MysteryDailyChip";
 
 type ClubHubProps = {
   initialClub: ClubSnapshot;
@@ -294,6 +295,10 @@ export function ClubHub({
         staminaRefillCost={staminaRefillCost}
         onClubUpdate={setClub}
       />
+
+      {ftueComplete && (
+        <MysteryDailyChip mysteryStreak={club.mysteryStreak} />
+      )}
 
       <AnimatePresence>
         {ftueComplete && club.activeNewsBooster && (

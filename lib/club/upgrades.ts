@@ -38,6 +38,9 @@ export type ClubSnapshot = {
   newsClaimable: boolean;
   /** Unexpired Newspaper Event, if any. */
   activeNewsBooster: ActiveNewsBoosterSnapshot | null;
+  /** Mysterious Player consecutive solved days (Hub chip). */
+  mysteryStreak: number;
+  longestMysteryStreak: number;
 };
 
 export type UpgradeKey = "STADIUM" | "MEDICAL" | "TRAINING_GROUND";
