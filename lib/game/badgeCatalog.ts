@@ -9,6 +9,7 @@ import {
   type BadgeTier,
 } from "@/lib/game/achievements";
 import type { BadgePresentation } from "@/lib/game/badgeTypes";
+import { resolveBadgeImageUrl } from "@/lib/game/badgeArt";
 
 export type { BadgePresentation };
 
@@ -22,7 +23,7 @@ function fromAchievement(a: Achievement, sortOrder: number): BadgePresentation {
     descriptionEn: a.descriptionEn,
     descriptionFa: a.descriptionFa,
     emoji: a.emoji,
-    imageUrl: null,
+    imageUrl: resolveBadgeImageUrl(a.slug, null),
     rewardCoins: a.reward.coins,
     rewardXp: a.reward.xp,
     category: a.category,
@@ -81,7 +82,7 @@ export async function listBadgePresentations(
     descriptionEn: r.descriptionEn,
     descriptionFa: r.descriptionFa,
     emoji: r.emoji,
-    imageUrl: r.imageUrl,
+    imageUrl: resolveBadgeImageUrl(r.slug, r.imageUrl),
     rewardCoins: r.rewardCoins,
     rewardXp: r.rewardXp,
     category: r.category as BadgeCategory | "showcase",
@@ -113,7 +114,7 @@ export async function getBadgePresentationsBySlug(
       descriptionEn: r.descriptionEn,
       descriptionFa: r.descriptionFa,
       emoji: r.emoji,
-      imageUrl: r.imageUrl,
+      imageUrl: resolveBadgeImageUrl(r.slug, r.imageUrl),
       rewardCoins: r.rewardCoins,
       rewardXp: r.rewardXp,
       category: r.category as BadgeCategory | "showcase",
@@ -137,7 +138,10 @@ export function applyPresentation(
   presentation: BadgePresentation | undefined,
 ): Achievement & { imageUrl: string | null } {
   if (!presentation) {
-    return { ...achievement, imageUrl: null };
+    return {
+      ...achievement,
+      imageUrl: resolveBadgeImageUrl(achievement.slug, null),
+    };
   }
   return {
     ...achievement,
@@ -151,6 +155,6 @@ export function applyPresentation(
       coins: presentation.rewardCoins,
       xp: presentation.rewardXp,
     },
-    imageUrl: presentation.imageUrl,
+    imageUrl: resolveBadgeImageUrl(achievement.slug, presentation.imageUrl),
   };
 }

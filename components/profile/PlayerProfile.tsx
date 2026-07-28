@@ -35,6 +35,7 @@ import {
   type PlayerStats,
 } from "@/lib/game/achievements";
 import type { BadgePresentation } from "@/lib/game/badgeTypes";
+import { resolveBadgeImageUrl } from "@/lib/game/badgeArt";
 import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 
@@ -156,10 +157,16 @@ export function PlayerProfile({
   const owned = new Map(profile.badges.map((b) => [b.slug, b.unlockedAt]));
   const catalogBySlug = new Map(badgeCatalog.map((b) => [b.slug, b]));
 
-  /** Code unlock rules + admin presentation overlay. */
+  /** Code unlock rules + admin presentation overlay (+ bundled art fallback). */
   const displayAchievements = ACHIEVEMENTS.map((a) => {
     const p = catalogBySlug.get(a.slug);
-    if (!p) return { ...a, imageUrl: null as string | null, hidden: false };
+    if (!p) {
+      return {
+        ...a,
+        imageUrl: resolveBadgeImageUrl(a.slug, null),
+        hidden: false,
+      };
+    }
     return {
       ...a,
       nameEn: p.nameEn,
@@ -169,7 +176,7 @@ export function PlayerProfile({
       emoji: p.emoji || a.emoji,
       tier: p.tier || a.tier,
       reward: { coins: p.rewardCoins, xp: p.rewardXp },
-      imageUrl: p.imageUrl,
+      imageUrl: resolveBadgeImageUrl(a.slug, p.imageUrl),
       hidden: !p.isActive && !owned.has(a.slug),
     };
   }).filter((a) => !a.hidden);
@@ -795,6 +802,7 @@ type BadgeTileProps = {
 /**
  * Trophy tile with three visual states: locked (inset + silhouette),
  * in-progress (bar + nudge), unlocked (tier-colored glow + date/tier).
+ * When custom art exists (e.g. warm_up), the image owns the card — name/stats under it.
  */
 function BadgeTile({
   achievement: a,
@@ -816,6 +824,8 @@ function BadgeTile({
   const unlockLabel = unlockedAt
     ? shortUnlockDate(unlockedAt, locale) || t(`profile.tier.${a.tier}`)
     : t(`profile.tier.${a.tier}`);
+  const hasArt = Boolean(imageUrl);
+  const isHeroArt = hasArt; // game card: art as the badge surface
 
   return (
     <motion.button
@@ -834,82 +844,111 @@ function BadgeTile({
       }
       whileTap={{ scale: 0.96 }}
       className={[
-        "relative flex w-full min-h-[7.5rem] flex-col items-center gap-1.5 rounded-bubble border p-2.5 text-center transition-colors",
-        state === "unlocked"
-          ? TIER_CARD[a.tier]
-          : state === "progress"
-            ? "border-primary/40 bg-surface shadow-fantasy-sm"
-            : "border-black/10 bg-[#c5d0c8]/65 shadow-[inset_0_2px_8px_rgba(0,0,0,0.16)]",
+        "relative flex w-full flex-col items-center text-center transition-colors",
+        isHeroArt
+          ? [
+              "min-h-[9.5rem] gap-1 overflow-hidden rounded-bubble border p-2",
+              state === "unlocked"
+                ? "border-orange-400/50 bg-linear-to-b from-[#1a0a00] via-[#2a1208] to-[#0f172a] shadow-[0_0_18px_rgba(249,115,22,0.35)]"
+                : state === "progress"
+                  ? "border-orange-400/35 bg-linear-to-b from-[#1a1008] via-[#1c140c] to-[#111827] shadow-[0_0_12px_rgba(249,115,22,0.2)]"
+                  : "border-black/20 bg-linear-to-b from-[#1a1a1a] to-[#0f172a] shadow-[inset_0_2px_8px_rgba(0,0,0,0.35)]",
+            ].join(" ")
+          : [
+              "min-h-[7.5rem] gap-1.5 rounded-bubble border p-2.5",
+              state === "unlocked"
+                ? TIER_CARD[a.tier]
+                : state === "progress"
+                  ? "border-primary/40 bg-surface shadow-fantasy-sm"
+                  : "border-black/10 bg-[#c5d0c8]/65 shadow-[inset_0_2px_8px_rgba(0,0,0,0.16)]",
+            ].join(" "),
       ].join(" ")}
       aria-label={name}
     >
-      <span
-        className={[
-          "relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full text-2xl",
-          state === "unlocked"
-            ? `bg-linear-to-b ${TIER_RING[a.tier]} ${TIER_MEDAL_GLOW[a.tier]}`
-            : state === "progress"
-              ? "bg-muted/80 grayscale-[0.25]"
-              : "bg-[#a8b5ae]/90 grayscale opacity-60",
-        ].join(" ")}
-        aria-hidden
-      >
-        {imageUrl && state !== "locked" ? (
-          // eslint-disable-next-line @next/next/no-img-element
+      {isHeroArt ? (
+        <span className="relative flex h-[4.25rem] w-full items-center justify-center" aria-hidden>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={imageUrl}
+            src={imageUrl!}
             alt=""
             className={[
-              "h-full w-full object-cover",
-              state === "progress" ? "grayscale-[0.35] opacity-80" : "",
+              "h-full w-auto max-w-full object-contain drop-shadow-[0_4px_12px_rgba(249,115,22,0.45)]",
+              state === "locked" ? "grayscale opacity-50" : "",
+              state === "progress" ? "opacity-95" : "",
             ].join(" ")}
           />
-        ) : imageUrl && state === "locked" ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={imageUrl}
-            alt=""
-            className="h-full w-full object-cover grayscale opacity-55"
-          />
-        ) : (
-          a.emoji
-        )}
-        {state === "locked" && (
-          <span className="absolute -end-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full border border-white/50 bg-slate-800 text-[9px] leading-none shadow-sm">
-            🔒
-          </span>
-        )}
-      </span>
+          {state === "locked" && (
+            <span className="absolute end-1 top-0 flex h-5 w-5 items-center justify-center rounded-full border border-white/40 bg-slate-800 text-[10px] shadow-sm">
+              🔒
+            </span>
+          )}
+        </span>
+      ) : (
+        <span
+          className={[
+            "relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full text-2xl",
+            state === "unlocked"
+              ? `bg-linear-to-b ${TIER_RING[a.tier]} ${TIER_MEDAL_GLOW[a.tier]}`
+              : state === "progress"
+                ? "bg-muted/80 grayscale-[0.25]"
+                : "bg-[#a8b5ae]/90 grayscale opacity-60",
+          ].join(" ")}
+          aria-hidden
+        >
+          {a.emoji}
+          {state === "locked" && (
+            <span className="absolute -end-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full border border-white/50 bg-slate-800 text-[9px] leading-none shadow-sm">
+              🔒
+            </span>
+          )}
+        </span>
+      )}
 
       <p
         className={[
-          "line-clamp-1 w-full font-display text-[11px] font-bold",
-          state === "unlocked"
-            ? "text-surface-foreground"
-            : state === "progress"
-              ? "text-surface-foreground/90"
-              : "text-slate-600",
+          "line-clamp-1 w-full font-display text-[11px] font-black",
+          isHeroArt
+            ? "text-white drop-shadow-sm"
+            : state === "unlocked"
+              ? "text-surface-foreground"
+              : state === "progress"
+                ? "text-surface-foreground/90"
+                : "text-slate-600",
         ].join(" ")}
       >
         {name}
       </p>
 
       {state === "unlocked" ? (
-        <span className="font-display text-[10px] font-bold text-muted-foreground">
+        <span
+          className={[
+            "font-display text-[10px] font-bold",
+            isHeroArt ? "text-orange-200/90" : "text-muted-foreground",
+          ].join(" ")}
+        >
           {unlockLabel}
         </span>
       ) : prog ? (
-        <div className="w-full">
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]">
+        <div className="w-full px-0.5">
+          <div
+            className={[
+              "h-1.5 w-full overflow-hidden rounded-full shadow-[inset_0_1px_2px_rgba(0,0,0,0.35)]",
+              isHeroArt ? "bg-black/50" : "bg-muted",
+            ].join(" ")}
+          >
             <div
-              className="h-full rounded-full bg-linear-to-r from-primary to-secondary"
+              className="h-full rounded-full bg-linear-to-r from-orange-400 via-amber-300 to-yellow-300"
               style={{ width: `${pct}%` }}
             />
           </div>
           <p
             className={[
               "mt-1 font-display text-[10px] font-bold",
-              state === "progress" ? "text-primary" : "text-slate-500",
+              isHeroArt
+                ? "text-orange-100"
+                : state === "progress"
+                  ? "text-primary"
+                  : "text-slate-500",
             ].join(" ")}
           >
             <FractionText
@@ -919,7 +958,12 @@ function BadgeTile({
             />
           </p>
           {state === "progress" && stepsLeft > 0 && stepsLeft <= 3 && (
-            <p className="font-body text-[9px] font-semibold text-accent-deep">
+            <p
+              className={[
+                "font-body text-[9px] font-semibold",
+                isHeroArt ? "text-amber-200" : "text-accent-deep",
+              ].join(" ")}
+            >
               {t("profile.trophyStepsLeft", {
                 n: toLocaleDigits(stepsLeft, locale),
               })}
@@ -927,7 +971,12 @@ function BadgeTile({
           )}
         </div>
       ) : (
-        <span className="font-display text-[10px] font-bold text-slate-500">
+        <span
+          className={[
+            "font-display text-[10px] font-bold",
+            isHeroArt ? "text-white/50" : "text-slate-500",
+          ].join(" ")}
+        >
           {t("profile.trophyLocked")}
         </span>
       )}
@@ -1025,21 +1074,27 @@ function TrophyInspectSheet({
             animate={{ scale: 1, rotate: 0 }}
             transition={{ type: "spring", stiffness: 280, damping: 16 }}
             className={[
-              "relative mx-auto flex h-[5.5rem] w-[5.5rem] items-center justify-center overflow-hidden rounded-full text-5xl",
-              state === "unlocked"
-                ? `bg-linear-to-b ${TIER_RING[a.tier]} ${TIER_MEDAL_GLOW[a.tier]}`
-                : "bg-white/10 grayscale opacity-70 ring-2 ring-white/15",
+              "relative mx-auto flex items-center justify-center",
+              imageUrl
+                ? "h-36 w-full max-w-[14rem]"
+                : [
+                    "h-[5.5rem] w-[5.5rem] overflow-hidden rounded-full text-5xl",
+                    state === "unlocked"
+                      ? `bg-linear-to-b ${TIER_RING[a.tier]} ${TIER_MEDAL_GLOW[a.tier]}`
+                      : "bg-white/10 grayscale opacity-70 ring-2 ring-white/15",
+                  ].join(" "),
             ].join(" ")}
             aria-hidden
           >
-            {imageUrl && (state === "unlocked" || state === "progress") ? (
+            {imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={imageUrl}
                 alt=""
                 className={[
-                  "h-full w-full object-cover",
-                  state === "progress" ? "grayscale opacity-80" : "",
+                  "h-full w-full object-contain drop-shadow-[0_8px_24px_rgba(249,115,22,0.55)]",
+                  state === "locked" ? "grayscale opacity-55" : "",
+                  state === "progress" ? "opacity-95" : "",
                 ].join(" ")}
               />
             ) : (
