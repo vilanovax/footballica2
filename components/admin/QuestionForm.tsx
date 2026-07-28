@@ -282,7 +282,7 @@ export function QuestionForm({
                     </FormControl>
                     <FormDescription>
                       {type === "REVEAL_IMAGE"
-                        ? "Image shown slightly obscured; answer via options."
+                        ? "Starts heavily blurred and clears over ~10s; snaps sharp after answer."
                         : "External image link shown with the prompt."}
                     </FormDescription>
                     <FormMessage />

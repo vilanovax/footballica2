@@ -2,12 +2,17 @@
 
 import type { CareerPathPayload, HigherLowerPayload } from "@/lib/quiz/formats";
 import type { QuizQuestionType } from "@/lib/quiz/types";
+import { RevealImage } from "./RevealImage";
 
 type Props = {
   type?: QuizQuestionType;
   mediaUrl?: string | null;
   careerPath?: CareerPathPayload;
   higherLower?: HigherLowerPayload;
+  /** Answer locked / revealed — snap REVEAL_IMAGE to sharp. */
+  cleared?: boolean;
+  /** Question id so progressive reveal restarts per item. */
+  resetKey?: string;
 };
 
 /**
@@ -19,8 +24,17 @@ export function FormatPrompt({
   mediaUrl,
   careerPath,
   higherLower,
+  cleared,
+  resetKey,
 }: Props) {
-  if (type === "IMAGE" || type === "REVEAL_IMAGE") {
+  if (type === "REVEAL_IMAGE") {
+    if (!mediaUrl) return null;
+    return (
+      <RevealImage src={mediaUrl} cleared={cleared} resetKey={resetKey} />
+    );
+  }
+
+  if (type === "IMAGE") {
     if (!mediaUrl) return null;
     return (
       <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-muted/40">
@@ -28,10 +42,7 @@ export function FormatPrompt({
         <img
           src={mediaUrl}
           alt=""
-          className={[
-            "mx-auto max-h-48 w-full object-contain",
-            type === "REVEAL_IMAGE" ? "blur-[2px] contrast-125" : "",
-          ].join(" ")}
+          className="mx-auto max-h-48 w-full object-contain"
         />
       </div>
     );

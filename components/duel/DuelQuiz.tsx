@@ -118,6 +118,8 @@ export function DuelQuiz({
             mediaUrl={q.mediaUrl}
             careerPath={content.careerPath}
             higherLower={content.higherLower}
+            cleared={Boolean(revealResult)}
+            resetKey={q.id}
           />
         </motion.div>
       </AnimatePresence>

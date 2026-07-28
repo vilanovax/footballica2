@@ -18,6 +18,10 @@ type QuestionCardProps = {
   mediaUrl?: string | null;
   careerPath?: CareerPathPayload;
   higherLower?: HigherLowerPayload;
+  /** Snap progressive image reveal when the kick is locked. */
+  imageCleared?: boolean;
+  /** Stable id for REVEAL_IMAGE remount / restart. */
+  questionId?: string;
 };
 
 export function QuestionCard({
@@ -28,6 +32,8 @@ export function QuestionCard({
   mediaUrl,
   careerPath,
   higherLower,
+  imageCleared,
+  questionId,
 }: QuestionCardProps) {
   const { t } = useTranslation();
 
@@ -61,6 +67,8 @@ export function QuestionCard({
         mediaUrl={mediaUrl}
         careerPath={careerPath}
         higherLower={higherLower}
+        cleared={imageCleared}
+        resetKey={questionId}
       />
     </motion.div>
   );

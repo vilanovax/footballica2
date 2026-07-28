@@ -108,4 +108,6 @@ Hybrid schema (implemented in `prisma/schema.prisma`):
 3. ~~Hub streak chip + share card + mystery badges (`mystery_debut` / `_streak_3` / `_streak_7`).~~ (done)
 4. ~~`FootballPlayer` catalog + admin `/admin/players` + Mystery Day schedule `/admin/mystery`.~~ (done)
 5. ~~Authoring UX / content JSON contracts for `CAREER_PATH` and `HIGHER_LOWER` (formats first, no new Play cards).~~ (done)
-6. Later ADR if Campaign or Grid becomes a permanent pillar.
+6. ~~Later ADR if Campaign or Grid becomes a permanent pillar.~~ → [ADR 002](./002-campaign-and-grid-pillars.md) (Accepted: Campaign = metagame, Grid daily = GotD rotation — not new MatchModes).
+7. ~~Light Live-Ops format bias in draws (~1 non-TEXT per 5) so CAREER_PATH / HIGHER_LOWER / REVEAL_IMAGE / IMAGE surface in TEXT-heavy banks.~~ (done — `lib/quiz/formatBias.ts`)
+8. ~~Cron `/api/cron/mystery` pre-schedules Tehran week ahead without overwriting admin rows (still safe with `ensureTodayMysteryPuzzle` fallback).~~ (done)

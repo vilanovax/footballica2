@@ -1,0 +1,396 @@
+[
+  {
+    "type": "CAREER_PATH",
+    "categorySlug": "general",
+    "difficulty": "EASY",
+    "correctIndex": 0,
+    "source": "LIVEOPS_FORMATS_V1",
+    "content": {
+      "en": {
+        "text": "Who followed this club path?",
+        "options": [
+          "Lionel Messi",
+          "Neymar",
+          "Luis Suárez",
+          "Cristiano Ronaldo"
+        ],
+        "careerPath": {
+          "steps": [
+            { "name": "Newell's Old Boys" },
+            { "name": "Barcelona" },
+            { "name": "PSG" },
+            { "name": "Inter Miami" }
+          ]
+        }
+      },
+      "fa": {
+        "text": "این مسیر باشگاهی مال کیست؟",
+        "options": ["لیونل مسی", "نیمار", "لوئیس سوارز", "کریستیانو رونالدو"],
+        "careerPath": {
+          "steps": [
+            { "name": "نیولز اولد بویز" },
+            { "name": "بارسلونا" },
+            { "name": "پاری‌سن‌ژرمن" },
+            { "name": "اینتر میامی" }
+          ]
+        }
+      }
+    },
+    "explanation": {
+      "en": "Messi left Barcelona in 2021, spent two seasons at PSG, then joined Inter Miami.",
+      "fa": "مسی سال ۲۰۲۱ بارسا را ترک کرد، دو فصل در PSG بود و بعد به اینتر میامی رفت."
+    }
+  },
+  {
+    "type": "CAREER_PATH",
+    "categorySlug": "general",
+    "difficulty": "MEDIUM",
+    "correctIndex": 1,
+    "source": "LIVEOPS_FORMATS_V1",
+    "content": {
+      "en": {
+        "text": "Name the player from this career trail.",
+        "options": [
+          "Zlatan Ibrahimović",
+          "Cristiano Ronaldo",
+          "Karim Benzema",
+          "Gareth Bale"
+        ],
+        "careerPath": {
+          "steps": [
+            { "name": "Sporting CP" },
+            { "name": "Manchester United" },
+            { "name": "Real Madrid" },
+            { "name": "Juventus" }
+          ]
+        }
+      },
+      "fa": {
+        "text": "بازیکن این مسیر باشگاهی کیست؟",
+        "options": [
+          "زلاتان ابراهیموویچ",
+          "کریستیانو رونالدو",
+          "کریم بنزما",
+          "گرت بیل"
+        ],
+        "careerPath": {
+          "steps": [
+            { "name": "اسپورتینگ" },
+            { "name": "منچستریونایتد" },
+            { "name": "رئال مادرید" },
+            { "name": "یوونتوس" }
+          ]
+        }
+      }
+    },
+    "explanation": {
+      "en": "Ronaldo returned to United after Juventus, then moved to Al Nassr — this trail stops at Juve.",
+      "fa": "رونالدو بعد از یووه دوباره به یونایتد برگشت و بعد به النصر رفت؛ این مسیر تا یووه است."
+    }
+  },
+  {
+    "type": "CAREER_PATH",
+    "categorySlug": "iranian-league",
+    "difficulty": "MEDIUM",
+    "correctIndex": 2,
+    "source": "LIVEOPS_FORMATS_V1",
+    "content": {
+      "en": {
+        "text": "Which Iranian star took this club route?",
+        "options": [
+          "Sardar Azmoun",
+          "Alireza Jahanbakhsh",
+          "Mehdi Taremi",
+          "Karim Ansarifard"
+        ],
+        "careerPath": {
+          "steps": [
+            { "name": "Persepolis" },
+            { "name": "Rio Ave" },
+            { "name": "Porto" },
+            { "name": "Inter" }
+          ]
+        }
+      },
+      "fa": {
+        "text": "کدام ستاره ایرانی این مسیر باشگاهی را رفت؟",
+        "options": [
+          "سردار آزمون",
+          "علیرضا جهانبخش",
+          "مهدی طارمی",
+          "کریم انصاری‌فرد"
+        ],
+        "careerPath": {
+          "steps": [
+            { "name": "پرسپولیس" },
+            { "name": "ریوآوه" },
+            { "name": "پورتو" },
+            { "name": "اینتر" }
+          ]
+        }
+      }
+    },
+    "explanation": {
+      "en": "Taremi’s Europe climb: Portugal with Rio Ave/Porto, then Serie A with Inter Milan.",
+      "fa": "مسیر اروپایی طارمی: پرتغال با ریوآوه/پورتو و بعد سری‌آ با اینتر میلان."
+    }
+  },
+  {
+    "type": "CAREER_PATH",
+    "categorySlug": "champions-league",
+    "difficulty": "HARD",
+    "correctIndex": 3,
+    "source": "LIVEOPS_FORMATS_V1",
+    "content": {
+      "en": {
+        "text": "Who walked this Champions League path?",
+        "options": [
+          "Sadio Mané",
+          "Robert Lewandowski",
+          "Karim Benzema",
+          "Mohamed Salah"
+        ],
+        "careerPath": {
+          "steps": [
+            { "name": "Basel" },
+            { "name": "Chelsea" },
+            { "name": "Roma" },
+            { "name": "Liverpool" }
+          ]
+        }
+      },
+      "fa": {
+        "text": "این مسیر لیگ قهرمانان مال کیست؟",
+        "options": [
+          "سادیو مانه",
+          "روبرت لواندوفسکی",
+          "کریم بنزما",
+          "محمد صلاح"
+        ],
+        "careerPath": {
+          "steps": [
+            { "name": "بازل" },
+            { "name": "چلسی" },
+            { "name": "رم" },
+            { "name": "لیورپول" }
+          ]
+        }
+      }
+    },
+    "explanation": {
+      "en": "Salah’s stop at Chelsea was brief before he exploded at Roma, then Liverpool.",
+      "fa": "توقف صلاح در چلسی کوتاه بود؛ بعد در رم درخشید و سپس به لیورپول رفت."
+    }
+  },
+  {
+    "type": "HIGHER_LOWER",
+    "categorySlug": "general",
+    "difficulty": "EASY",
+    "correctIndex": 0,
+    "source": "LIVEOPS_FORMATS_V1",
+    "isTemporal": true,
+    "content": {
+      "en": {
+        "text": "Who has more Ballon d'Or wins?",
+        "options": ["Lionel Messi", "Cristiano Ronaldo", "Equal", "Neither has any"],
+        "higherLower": {
+          "left": { "name": "Lionel Messi" },
+          "right": { "name": "Cristiano Ronaldo" },
+          "metricLabel": "Ballon d'Or titles"
+        }
+      },
+      "fa": {
+        "text": "چه کسی توپ طلای بیشتری برده؟",
+        "options": ["لیونل مسی", "کریستیانو رونالدو", "مساوی", "هیچ‌کدام"],
+        "higherLower": {
+          "left": { "name": "لیونل مسی" },
+          "right": { "name": "کریستیانو رونالدو" },
+          "metricLabel": "تعداد توپ طلا"
+        }
+      }
+    },
+    "explanation": {
+      "en": "Messi leads the all-time Ballon d'Or tally (8) ahead of Ronaldo (5).",
+      "fa": "مسی با ۸ توپ طلا جلوتر از رونالدو (۵) است."
+    }
+  },
+  {
+    "type": "HIGHER_LOWER",
+    "categorySlug": "world-cup",
+    "difficulty": "MEDIUM",
+    "correctIndex": 1,
+    "source": "LIVEOPS_FORMATS_V1",
+    "content": {
+      "en": {
+        "text": "Who scored more goals at a single World Cup?",
+        "options": [
+          "Ronaldo (Brazil, 2002)",
+          "Just Fontaine (1958)",
+          "Equal — both 13",
+          "Gerd Müller (1970)"
+        ],
+        "higherLower": {
+          "left": { "name": "Just Fontaine" },
+          "right": { "name": "Ronaldo Nazário" },
+          "metricLabel": "Goals in one World Cup"
+        }
+      },
+      "fa": {
+        "text": "چه کسی در یک دوره جام جهانی گل بیشتری زده؟",
+        "options": [
+          "رونالدو برزیلی (۲۰۰۲)",
+          "ژوست فونتن (۱۹۵۸)",
+          "مساوی — هر دو ۱۳",
+          "گرد مولر (۱۹۷۰)"
+        ],
+        "higherLower": {
+          "left": { "name": "ژوست فونتن" },
+          "right": { "name": "رونالدو نازاریو" },
+          "metricLabel": "گل در یک جام جهانی"
+        }
+      }
+    },
+    "explanation": {
+      "en": "Fontaine’s 13 goals for France in 1958 remains the single-tournament record.",
+      "fa": "۱۳ گل فونتن برای فرانسه در ۱۹۵۸ هنوز رکورد یک دوره جام جهانی است."
+    }
+  },
+  {
+    "type": "HIGHER_LOWER",
+    "categorySlug": "champions-league",
+    "difficulty": "MEDIUM",
+    "correctIndex": 0,
+    "source": "LIVEOPS_FORMATS_V1",
+    "isTemporal": true,
+    "content": {
+      "en": {
+        "text": "Who has more UEFA Champions League titles as a player?",
+        "options": [
+          "Karim Benzema",
+          "Erling Haaland",
+          "Equal",
+          "Neither has won UCL"
+        ],
+        "higherLower": {
+          "left": { "name": "Karim Benzema" },
+          "right": { "name": "Erling Haaland" },
+          "metricLabel": "UCL titles (player)"
+        }
+      },
+      "fa": {
+        "text": "چه کسی به‌عنوان بازیکن جام لیگ قهرمانان بیشتری دارد؟",
+        "options": [
+          "کریم بنزما",
+          "ارلینگ هالند",
+          "مساوی",
+          "هیچ‌کدام قهرمان نشده"
+        ],
+        "higherLower": {
+          "left": { "name": "کریم بنزما" },
+          "right": { "name": "ارلینگ هالند" },
+          "metricLabel": "قهرمانی UCL (بازیکن)"
+        }
+      }
+    },
+    "explanation": {
+      "en": "Benzema won five UCLs with Real Madrid; Haaland has one with Manchester City (2023).",
+      "fa": "بنزما پنج‌بار با رئال قهرمان شد؛ هالند یک‌بار با سیتی (۲۰۲۳)."
+    }
+  },
+  {
+    "type": "HIGHER_LOWER",
+    "categorySlug": "iranian-league",
+    "difficulty": "EASY",
+    "correctIndex": 0,
+    "source": "LIVEOPS_FORMATS_V1",
+    "isTemporal": true,
+    "content": {
+      "en": {
+        "text": "Who is older?",
+        "options": [
+          "Alireza Jahanbakhsh",
+          "Lamine Yamal",
+          "Same age",
+          "Cannot tell"
+        ],
+        "higherLower": {
+          "left": { "name": "Alireza Jahanbakhsh" },
+          "right": { "name": "Lamine Yamal" },
+          "metricLabel": "Age"
+        }
+      },
+      "fa": {
+        "text": "کدام‌یک مسن‌تر است؟",
+        "options": [
+          "علیرضا جهانبخش",
+          "لامین یامال",
+          "هم‌سن",
+          "نمی‌شود گفت"
+        ],
+        "higherLower": {
+          "left": { "name": "علیرضا جهانبخش" },
+          "right": { "name": "لامین یامال" },
+          "metricLabel": "سن"
+        }
+      }
+    },
+    "explanation": {
+      "en": "Jahanbakhsh is in his thirties; Yamal is still a teenager.",
+      "fa": "جهانبخش در دهه سی است؛ یامال هنوز نوجوان است."
+    }
+  },
+  {
+    "type": "REVEAL_IMAGE",
+    "categorySlug": "general",
+    "difficulty": "EASY",
+    "correctIndex": 0,
+    "source": "LIVEOPS_FORMATS_V1",
+    "mediaUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Lionel-Messi-Argentina-2022-FIFA-World-Cup_%28cropped%29.jpg/440px-Lionel-Messi-Argentina-2022-FIFA-World-Cup_%28cropped%29.jpg",
+    "content": {
+      "en": {
+        "text": "Who is coming into focus?",
+        "options": [
+          "Lionel Messi",
+          "Neymar",
+          "Luis Suárez",
+          "Sergio Agüero"
+        ]
+      },
+      "fa": {
+        "text": "این بازیکن کیست؟ (عکس کم‌کم واضح می‌شود)",
+        "options": ["لیونل مسی", "نیمار", "لوئیس سوارز", "سرخیو آگوئرو"]
+      }
+    },
+    "explanation": {
+      "en": "Messi lifting Argentina’s 2022 World Cup — the clearest era-defining image.",
+      "fa": "مسی و جام جهانی ۲۰۲۲ آرژانتین — یکی از نمادین‌ترین تصاویر فوتبال."
+    }
+  },
+  {
+    "type": "REVEAL_IMAGE",
+    "categorySlug": "champions-league",
+    "difficulty": "MEDIUM",
+    "correctIndex": 2,
+    "source": "LIVEOPS_FORMATS_V1",
+    "mediaUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Cristiano_Ronaldo_2018.jpg/440px-Cristiano_Ronaldo_2018.jpg",
+    "content": {
+      "en": {
+        "text": "Guess the player before the picture clears.",
+        "options": [
+          "Karim Benzema",
+          "Gareth Bale",
+          "Cristiano Ronaldo",
+          "Raúl"
+        ]
+      },
+      "fa": {
+        "text": "قبل از واضح شدن عکس حدس بزن.",
+        "options": ["کریم بنزما", "گرت بیل", "کریستیانو رونالدو", "رائول"]
+      }
+    },
+    "explanation": {
+      "en": "Ronaldo’s silhouette and celebration style are hard to miss once focus returns.",
+      "fa": "سیلوئت و استایل جشن گل رونالدو بعد از فوکوس سخت اشتباه گرفته می‌شود."
+    }
+  }
+]

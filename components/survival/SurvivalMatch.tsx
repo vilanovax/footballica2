@@ -304,6 +304,8 @@ export function SurvivalMatch({
           mediaUrl={question.mediaUrl}
           careerPath={content.careerPath}
           higherLower={content.higherLower}
+          imageCleared={locked}
+          questionId={question.id}
           onReport={() => setReportOpen(true)}
         />
 

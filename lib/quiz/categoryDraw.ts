@@ -1,7 +1,13 @@
 import "server-only";
 
-import type { QuestionDifficulty } from "@/generated/prisma/client";
+import type { Question, QuestionDifficulty } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import {
+  FORMAT_BIAS_EVERY_N,
+  formatBiasQuota,
+  isLiveOpsFormatType,
+  shouldPreferFormatPick,
+} from "@/lib/quiz/formatBias";
 import { dbQuestionToQuiz } from "@/lib/quiz/questionMapper";
 import type { QuizQuestion } from "@/lib/quiz/types";
 import {
@@ -26,6 +32,74 @@ function pickFromPool<T extends { eloRating: number }>(
     return hardSlice[Math.floor(Math.random() * hardSlice.length)] ?? null;
   }
   return pool[Math.floor(Math.random() * pool.length)] ?? null;
+}
+
+function pickTiered(
+  pools: Record<QuestionDifficulty, Question[]>,
+  preferred: SurvivalDifficultyTier,
+  used: Set<string>,
+  formatOnly: boolean,
+): Question | null {
+  const order = survivalTierFallbackOrder(preferred);
+  for (const tier of order) {
+    const pool = pools[tier].filter(
+      (q) =>
+        !used.has(q.id) &&
+        (!formatOnly || isLiveOpsFormatType(q.type)),
+    );
+    const next = pickFromPool(pool, tier);
+    if (next) return next;
+  }
+  return null;
+}
+
+/**
+ * Ensure the batch meets Live-Ops format quota by swapping TEXT picks for
+ * unused format rows when available (same progressive bank).
+ */
+function ensureFormatQuota(
+  picked: Question[],
+  pools: Record<QuestionDifficulty, Question[]>,
+  used: Set<string>,
+): Question[] {
+  const quota = Math.min(
+    formatBiasQuota(picked.length, FORMAT_BIAS_EVERY_N),
+    [...pools.EASY, ...pools.MEDIUM, ...pools.HARD].filter((q) =>
+      isLiveOpsFormatType(q.type),
+    ).length,
+  );
+  if (quota <= 0) return picked;
+
+  const out = [...picked];
+  let formatCount = out.filter((q) => isLiveOpsFormatType(q.type)).length;
+
+  while (formatCount < quota) {
+    const format = pickTiered(
+      pools,
+      survivalTierForProgress(out.length),
+      used,
+      true,
+    );
+    if (!format) break;
+
+    // Replace the last non-format pick so earlier progressive tiers stay intact.
+    let swapAt = -1;
+    for (let i = out.length - 1; i >= 0; i--) {
+      if (!isLiveOpsFormatType(out[i]!.type)) {
+        swapAt = i;
+        break;
+      }
+    }
+    if (swapAt < 0) break;
+
+    const removed = out[swapAt]!;
+    used.delete(removed.id);
+    out[swapAt] = format;
+    used.add(format.id);
+    formatCount += 1;
+  }
+
+  return out;
 }
 
 export type CategoryOption = {
@@ -129,18 +203,19 @@ export async function getCategoryQuestionsProgressive(
     pools[row.difficulty].push(row);
   }
 
-  const picked: typeof rows = [];
+  const picked: Question[] = [];
   const used = new Set<string>(exclude);
 
   while (picked.length < take) {
     const preferred = survivalTierForProgress(progress);
-    const order = survivalTierFallbackOrder(preferred);
-    let next: (typeof rows)[number] | null = null;
+    let next: Question | null = null;
 
-    for (const tier of order) {
-      const pool = pools[tier].filter((q) => !used.has(q.id));
-      next = pickFromPool(pool, tier);
-      if (next) break;
+    // Soft Live-Ops bias: ~1/N picks try a format row in-tier first.
+    if (shouldPreferFormatPick()) {
+      next = pickTiered(pools, preferred, used, true);
+    }
+    if (!next) {
+      next = pickTiered(pools, preferred, used, false);
     }
 
     if (!next) break;
@@ -149,7 +224,8 @@ export async function getCategoryQuestionsProgressive(
     progress += 1;
   }
 
-  return picked.map(dbQuestionToQuiz);
+  const biased = ensureFormatQuota(picked, pools, used);
+  return biased.map(dbQuestionToQuiz);
 }
 
 /** Remaining PUBLISHED questions in a category after excluding `excludeIds`. */

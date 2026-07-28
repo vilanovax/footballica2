@@ -14,20 +14,25 @@ import {
   getMyMissions,
 } from "@/actions/missions";
 import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
+import type { CampaignChapterView } from "@/lib/game/campaignSeason";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
 
+type TabKey = "daily" | "campaign";
+
 type MissionDrawerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Force Daily / Campaign tab when opening from Hub Campaign card. */
+  preferredTab?: TabKey;
   dailyBoard?: EvaluateMissionsResult | null;
   missionBoard?: EvaluateMissionsResult | null;
+  /** Live RecordChallenge chapters (ADR 002 soft narrative). */
+  chapters?: CampaignChapterView[];
   onEconomyUpdate?: (balances: { coins: number; xp: number }) => void;
 };
-
-type TabKey = "daily" | "campaign";
 
 function hasUnclaimedDrip(board?: EvaluateMissionsResult | null): boolean {
   return Boolean(
@@ -80,13 +85,16 @@ function firstIncompleteHref(
 }
 
 /**
- * Bottom-sheet mission hub — claim-first footer, Daily / Path tabs.
+ * Bottom-sheet mission hub — claim-first footer, Daily / Campaign tabs.
+ * Sheet chrome uses shadow + top accent bar (no thick border on radius).
  */
 export function MissionDrawer({
   open,
   onOpenChange,
+  preferredTab,
   dailyBoard = null,
   missionBoard = null,
+  chapters = [],
   onEconomyUpdate,
 }: MissionDrawerProps) {
   const { t, locale } = useTranslation();
@@ -115,15 +123,19 @@ export function MissionDrawer({
 
   const hasDaily = Boolean(liveDaily?.batchId);
   const hasCampaign = Boolean(liveCampaign?.batchId);
+  const hasChapters = chapters.length > 0;
+  const hasCampaignPane = hasCampaign || hasChapters;
 
   const defaultTab: TabKey = useMemo(() => {
+    if (preferredTab === "campaign" && hasCampaignPane) return "campaign";
+    if (preferredTab === "daily" && hasDaily) return "daily";
     if (liveDaily?.chestReady || hasUnclaimedDrip(liveDaily)) return "daily";
     if (liveCampaign?.chestReady || hasUnclaimedDrip(liveCampaign)) {
       return "campaign";
     }
     if (hasDaily) return "daily";
     return "campaign";
-  }, [liveDaily, liveCampaign, hasDaily]);
+  }, [liveDaily, liveCampaign, hasDaily, hasCampaignPane, preferredTab]);
 
   const [tab, setTab] = useState<TabKey>(defaultTab);
 
@@ -145,7 +157,7 @@ export function MissionDrawer({
   const activeBoard = tab === "daily" ? liveDaily : liveCampaign;
   const activeStats = tab === "daily" ? dailyStats : campaignStats;
   const anyRewardReady = hasMissionRewardReady(liveDaily, liveCampaign);
-  const showTabs = hasDaily && hasCampaign;
+  const showTabs = hasDaily && hasCampaignPane;
   const continueHref = firstIncompleteHref(activeBoard);
 
   const claimableTotal =
@@ -243,7 +255,7 @@ export function MissionDrawer({
             animate={{ y: 0 }}
             exit={{ y: "105%" }}
             transition={{ type: "spring", stiffness: 420, damping: 36 }}
-            className="relative z-10 flex max-h-[82dvh] flex-col overflow-hidden rounded-t-[1.75rem] border-x-2 border-t-2 border-foreground/12 bg-surface shadow-[0_-18px_48px_rgba(15,35,55,0.28)]"
+            className="relative z-10 flex max-h-[82dvh] flex-col overflow-hidden rounded-t-[1.75rem] bg-surface shadow-[0_-18px_48px_rgba(15,35,55,0.28)]"
           >
             <div
               aria-hidden
@@ -294,7 +306,7 @@ export function MissionDrawer({
                 <button
                   type="button"
                   onClick={close}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-foreground/10 bg-muted font-display text-base font-bold text-muted-foreground transition-transform active:scale-95"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted font-display text-base font-bold text-muted-foreground transition-transform active:scale-95"
                   aria-label={t("common.close")}
                 >
                   ✕
@@ -305,7 +317,7 @@ export function MissionDrawer({
                 <div
                   role="tablist"
                   aria-label={t("missions.drawerTitle")}
-                  className="relative mt-3 grid grid-cols-2 gap-1 rounded-bubble-lg border border-foreground/8 bg-muted p-1"
+                  className="relative mt-3 grid grid-cols-2 gap-1 rounded-bubble-lg bg-muted p-1"
                 >
                   {(
                     [
@@ -316,7 +328,7 @@ export function MissionDrawer({
                       },
                       {
                         key: "campaign" as const,
-                        label: t("missions.tabPath"),
+                        label: t("missions.tabCampaign"),
                         stats: campaignStats,
                       },
                     ] as const
@@ -339,7 +351,7 @@ export function MissionDrawer({
                         {active && (
                           <motion.span
                             layoutId="mission-tab-pill"
-                            className="absolute inset-0 rounded-bubble border border-foreground/8 bg-surface shadow-fantasy-sm"
+                            className="absolute inset-0 rounded-bubble bg-surface shadow-fantasy-sm"
                             transition={{
                               type: "spring",
                               stiffness: 420,
@@ -367,8 +379,8 @@ export function MissionDrawer({
             </header>
 
             <div className="relative flex-1 space-y-3 overflow-y-auto overscroll-contain bg-gradient-to-b from-surface to-[hsl(var(--muted)/0.55)] px-4 pb-3 pt-1">
-              {!hasDaily && !hasCampaign && (
-                <p className="rounded-bubble-lg border border-border bg-surface px-4 py-8 text-center font-display text-sm font-semibold text-muted-foreground shadow-fantasy-sm">
+              {!hasDaily && !hasCampaignPane && (
+                <p className="rounded-bubble-lg bg-surface px-4 py-8 text-center font-display text-sm font-semibold text-muted-foreground shadow-fantasy-sm">
                   {t("missions.drawerEmpty")}
                 </p>
               )}
@@ -395,28 +407,87 @@ export function MissionDrawer({
                     />
                   </motion.div>
                 )}
-                {tab === "campaign" && hasCampaign && liveCampaign && (
+                {tab === "campaign" && hasCampaignPane && (
                   <motion.div
-                    key={`campaign-${liveCampaign.batchId}-${campaignStats.done}-${liveCampaign.missions.map((m) => `${m.progress}-${m.isClaimed}`).join(".")}`}
+                    key={`campaign-${liveCampaign?.batchId ?? "none"}-${campaignStats.done}-${chapters.length}`}
                     initial={{ opacity: 0, x: 12 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -12 }}
                     transition={{ duration: 0.18 }}
+                    className="space-y-3"
                   >
-                    <MissionBoard
-                      initialBoard={liveCampaign}
-                      variant="campaign"
-                      density="compact"
-                      onDripClaimed={onEconomyUpdate}
-                      onClaimed={() => {
-                        startRefresh(async () => {
-                          await refreshBoards();
-                        });
-                      }}
-                    />
+                    <div className="rounded-bubble-lg bg-secondary/15 px-3 py-2.5">
+                      <p className="font-display text-[11px] font-bold uppercase tracking-widest text-secondary">
+                        {t("campaign.eyebrow")}
+                      </p>
+                      <p className="font-display text-sm font-bold text-foreground">
+                        {t("campaign.drawerBlurb")}
+                      </p>
+                    </div>
+
+                    {hasCampaign && liveCampaign && (
+                      <MissionBoard
+                        initialBoard={liveCampaign}
+                        variant="campaign"
+                        density="compact"
+                        onDripClaimed={onEconomyUpdate}
+                        onClaimed={() => {
+                          startRefresh(async () => {
+                            await refreshBoards();
+                          });
+                        }}
+                      />
+                    )}
+
+                    {hasChapters && (
+                      <div className="space-y-2">
+                        <p className="font-display text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                          {t("campaign.chapters")}
+                        </p>
+                        <ul className="flex flex-col gap-1.5">
+                          {chapters.map((ch, i) => {
+                            const title =
+                              locale === "fa" ? ch.titleFa : ch.titleEn;
+                            return (
+                              <li key={ch.id}>
+                                <Link
+                                  href={`/play/survival?challenge=${encodeURIComponent(ch.id)}`}
+                                  onClick={close}
+                                  className={[
+                                    "flex min-h-11 items-center gap-2 rounded-2xl px-2.5 py-2 shadow-fantasy-sm",
+                                    ch.conquered
+                                      ? "bg-emerald-500/15"
+                                      : "bg-surface",
+                                  ].join(" ")}
+                                >
+                                  <span
+                                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-muted text-sm"
+                                    aria-hidden
+                                  >
+                                    {ch.conquered
+                                      ? ch.rewardBadgeEmoji || "🏆"
+                                      : toLocaleDigits(i + 1, locale)}
+                                  </span>
+                                  <span className="min-w-0 flex-1 truncate font-display text-sm font-bold">
+                                    {title}
+                                  </span>
+                                  <span className="text-[10px] font-extrabold uppercase text-muted-foreground">
+                                    {ch.conquered
+                                      ? t("campaign.chapterDone")
+                                      : ch.unlocked
+                                        ? t("campaign.chapterPlay")
+                                        : t("campaign.chapterLocked")}
+                                  </span>
+                                </Link>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    )}
                   </motion.div>
                 )}
-                {!showTabs && hasDaily && !hasCampaign && liveDaily && (
+                {!showTabs && hasDaily && !hasCampaignPane && liveDaily && (
                   <MissionBoard
                     key={`daily-solo-${liveDaily.batchId}-${dailyStats.done}`}
                     initialBoard={liveDaily}
@@ -425,21 +496,44 @@ export function MissionDrawer({
                     onDripClaimed={onEconomyUpdate}
                   />
                 )}
-                {!showTabs && hasCampaign && !hasDaily && liveCampaign && (
-                  <MissionBoard
-                    key={`campaign-solo-${liveCampaign.batchId}-${campaignStats.done}`}
-                    initialBoard={liveCampaign}
-                    variant="campaign"
-                    density="compact"
-                    onDripClaimed={onEconomyUpdate}
-                  />
+                {!showTabs && hasCampaignPane && !hasDaily && (
+                  <motion.div
+                    key={`campaign-solo-${liveCampaign?.batchId ?? "ch"}`}
+                    className="space-y-3"
+                  >
+                    {hasCampaign && liveCampaign && (
+                      <MissionBoard
+                        initialBoard={liveCampaign}
+                        variant="campaign"
+                        density="compact"
+                        onDripClaimed={onEconomyUpdate}
+                      />
+                    )}
+                    {hasChapters && (
+                      <ul className="flex flex-col gap-1.5">
+                        {chapters.map((ch, i) => (
+                          <li key={ch.id}>
+                            <Link
+                              href={`/play/survival?challenge=${encodeURIComponent(ch.id)}`}
+                              onClick={close}
+                              className="flex min-h-11 items-center gap-2 rounded-2xl bg-surface px-2.5 py-2 shadow-fantasy-sm"
+                            >
+                              <span className="font-display text-sm font-bold">
+                                {toLocaleDigits(i + 1, locale)}.{" "}
+                                {locale === "fa" ? ch.titleFa : ch.titleEn}
+                              </span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </motion.div>
                 )}
               </AnimatePresence>
             </div>
 
-            {/* Dynamic footer: Claim All when ready, else deep-link continue. */}
             {activeStats.ready ? (
-              <div className="relative shrink-0 border-t border-foreground/10 bg-surface px-4 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(15,35,55,0.08)]">
+              <div className="relative shrink-0 bg-surface px-4 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(15,35,55,0.08)]">
                 <motion.button
                   type="button"
                   disabled={claimingAll}
@@ -461,7 +555,7 @@ export function MissionDrawer({
                 </motion.button>
               </div>
             ) : continueHref ? (
-              <div className="relative shrink-0 border-t border-foreground/10 bg-surface px-4 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(15,35,55,0.08)]">
+              <div className="relative shrink-0 bg-surface px-4 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(15,35,55,0.08)]">
                 <Link
                   href={continueHref}
                   onClick={close}

@@ -14,7 +14,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "db:status": "prisma migrate status",
-    "smoke:medical-regen": "tsx scripts/smoke-medical-regen.ts"
+    "smoke:medical-regen": "tsx scripts/smoke-medical-regen.ts",
+    "seed:liveops-formats": "tsx scripts/seed-liveops-formats.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

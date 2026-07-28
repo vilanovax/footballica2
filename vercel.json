@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/duels",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/mystery",
+      "schedule": "30 20 * * *"
     }
   ]
 }

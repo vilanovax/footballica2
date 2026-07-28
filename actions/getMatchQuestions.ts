@@ -1,6 +1,11 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import {
+  FORMAT_BIAS_EVERY_N,
+  formatBiasQuota,
+  isLiveOpsFormatType,
+} from "@/lib/quiz/formatBias";
 import { dbQuestionToQuiz } from "@/lib/quiz/questionMapper";
 import type { QuizQuestion, QuestionDifficulty } from "@/lib/quiz/types";
 
@@ -37,7 +42,7 @@ function normalizeAnswer(raw: string): string {
     .toLowerCase()
     .replace(/\u200c/g, "") // zero-width non-joiner (Persian)
     .replace(/\s+/g, " ")
-    .replace(/[.,!?؟،:;'"“”]/g, "");
+    .replace(/[.,!?؟،:;'"“”']/g, "");
 }
 
 /** The normalized correct answer for a quiz question (EN canonical, FA fallback). */
@@ -47,14 +52,27 @@ function correctAnswerKey(q: QuizQuestion): string {
   return normalizeAnswer(en || fa || "");
 }
 
+function tryPick(
+  pool: QuizQuestion[],
+  picked: QuizQuestion[],
+  usedAnswers: Set<string>,
+  count: number,
+) {
+  for (const q of pool) {
+    if (picked.length >= count) return;
+    if (picked.some((p) => p.id === q.id)) continue;
+    const key = correctAnswerKey(q);
+    if (key && usedAnswers.has(key)) continue;
+    if (key) usedAnswers.add(key);
+    picked.push(q);
+  }
+}
+
 /**
- * Draw N random active questions from the DB for a match. The bank is small in
- * the MVP, so we fetch the eligible set and shuffle in memory; swap for a SQL
- * `ORDER BY RANDOM() LIMIT n` (or reservoir sampling) once it grows large.
+ * Draw N random PUBLISHED questions for a match.
  *
- * NOTE: returns the full `QuizQuestion` (including `correctIndex`) to preserve
- * the current instant client-side feedback. Hardening this (server-verified
- * per-kick reveal) is a deliberate later step, not part of Phase 1.
+ * Live-Ops bias: reserve ~1 non-TEXT format slot per {@link FORMAT_BIAS_EVERY_N}
+ * questions when the bank has formats (ADR 001). Answer-dedupe still applies.
  */
 export async function getMatchQuestions(options?: {
   /** How many questions to draw (default 5). */
@@ -74,20 +92,25 @@ export async function getMatchQuestions(options?: {
     },
   });
 
-  // Greedy pick from the shuffled pool, skipping any question whose correct
-  // answer already appears in this match. Guarantees no two kicks resolve to
-  // the same fact (e.g. two "Messi" answers) worded differently.
   const pool = shuffle(rows).map(dbQuestionToQuiz);
+  const formatPool = shuffle(pool.filter((q) => isLiveOpsFormatType(q.type)));
+  const textPool = shuffle(pool.filter((q) => !isLiveOpsFormatType(q.type)));
+
   const picked: QuizQuestion[] = [];
   const usedAnswers = new Set<string>();
+  const quota = Math.min(formatBiasQuota(count, FORMAT_BIAS_EVERY_N), formatPool.length);
 
-  for (const q of pool) {
-    if (picked.length >= count) break;
-    const key = correctAnswerKey(q);
-    if (key && usedAnswers.has(key)) continue;
-    if (key) usedAnswers.add(key);
-    picked.push(q);
+  // 1) Reserve format slots first (so TEXT volume can't drown them).
+  if (quota > 0) {
+    tryPick(formatPool, picked, usedAnswers, quota);
   }
 
-  return picked;
+  // 2) Fill remaining from TEXT-first, then leftover formats.
+  tryPick(textPool, picked, usedAnswers, count);
+  if (picked.length < count) {
+    tryPick(formatPool, picked, usedAnswers, count);
+  }
+
+  // Don't always put the format kick first — shuffle final hand.
+  return shuffle(picked);
 }

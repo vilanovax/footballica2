@@ -21,7 +21,7 @@ npm run dev
 
 1. Set env vars from `.env.example` (`DATABASE_URL`, `AUTH_SECRET`, `CRON_SECRET`, `ADMIN_SECRET`).
 2. Build Command: `npm run vercel-build` (applies `prisma migrate deploy`, then builds).
-3. Cron (`vercel.json`) hits `/api/cron/duels` every minute with `Authorization: Bearer $CRON_SECRET`.
+3. Crons (`vercel.json`): `/api/cron/duels` every minute; `/api/cron/mystery` daily at 20:30 UTC (~Tehran midnight) — both use `Authorization: Bearer $CRON_SECRET`.
 4. Unlock admin once with `/admin?secret=$ADMIN_SECRET`.
 
 Useful scripts:

@@ -251,6 +251,8 @@ export function QuickMatch({
           mediaUrl={question.mediaUrl}
           careerPath={content.careerPath}
           higherLower={content.higherLower}
+          imageCleared={locked}
+          questionId={question.id}
           onReport={() => setReportOpen(true)}
         />
 

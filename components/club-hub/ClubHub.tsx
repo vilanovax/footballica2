@@ -42,8 +42,10 @@ import {
 import { DuelInboxBanner } from "@/components/duel/DuelInboxBanner";
 import type { DuelInboxItem } from "@/actions/duel/getInboxCount";
 import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
+import type { CampaignSeasonView } from "@/lib/game/campaignSeason";
 import { NextGoalCard } from "@/components/club-hub/NextGoalCard";
 import { MysteryDailyChip } from "@/components/club-hub/MysteryDailyChip";
+import { CampaignSeasonCard } from "@/components/club-hub/CampaignSeasonCard";
 
 type ClubHubProps = {
   initialClub: ClubSnapshot;
@@ -56,6 +58,8 @@ type ClubHubProps = {
   duelInboxItems?: DuelInboxItem[];
   missionBoard?: EvaluateMissionsResult | null;
   dailyBoard?: EvaluateMissionsResult | null;
+  /** ADR 002 Campaign metagame snapshot (missions + RecordChallenge chapters). */
+  campaignSeason?: CampaignSeasonView | null;
 };
 
 export function ClubHub({
@@ -66,6 +70,7 @@ export function ClubHub({
   duelInboxItems = [],
   missionBoard = null,
   dailyBoard = null,
+  campaignSeason = null,
 }: ClubHubProps) {
   const { t, locale } = useTranslation();
   const [club, setClub] = useState(initialClub);
@@ -91,6 +96,9 @@ export function ClubHub({
   } | null>(null);
   const [newsPending, setNewsPending] = useState(false);
   const [missionsOpen, setMissionsOpen] = useState(false);
+  const [missionsTab, setMissionsTab] = useState<"daily" | "campaign">(
+    "daily",
+  );
 
   const canClaimNews = club.newsClaimable;
   const missionReadyCount = countMissionRewardsReady(dailyBoard, missionBoard);
@@ -232,6 +240,7 @@ export function ClubHub({
                 type="button"
                 onClick={() => {
                   haptic(HAPTIC.light);
+                  setMissionsTab("daily");
                   setMissionsOpen(true);
                 }}
                 aria-label={t("missions.openDrawer")}
@@ -298,6 +307,16 @@ export function ClubHub({
 
       {ftueComplete && (
         <MysteryDailyChip mysteryStreak={club.mysteryStreak} />
+      )}
+
+      {ftueComplete && campaignSeason && (
+        <CampaignSeasonCard
+          season={campaignSeason}
+          onOpenMissions={() => {
+            setMissionsTab("campaign");
+            setMissionsOpen(true);
+          }}
+        />
       )}
 
       <AnimatePresence>
@@ -401,8 +420,10 @@ export function ClubHub({
         <MissionDrawer
           open={missionsOpen}
           onOpenChange={setMissionsOpen}
+          preferredTab={missionsTab}
           dailyBoard={dailyBoard}
           missionBoard={missionBoard}
+          chapters={campaignSeason?.chapters ?? []}
           onEconomyUpdate={(balances) => {
             // Tick Hub coins when flying coins land on the status pill.
             window.setTimeout(() => {
