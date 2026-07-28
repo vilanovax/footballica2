@@ -34,7 +34,7 @@ export function AppShell({ children }: AppShellProps) {
           // Extra clearance for floating Play FAB + iOS home indicator.
           bareChrome
             ? "pb-8"
-            : "pb-[calc(10.5rem+env(safe-area-inset-bottom,0px))]",
+            : "pb-[calc(7.75rem+env(safe-area-inset-bottom,0px))]",
         ].join(" ")}
       >
         {children}

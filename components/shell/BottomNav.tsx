@@ -153,8 +153,14 @@ export function BottomNav() {
           {tabs.map(({ href, labelKey, icon: Icon, ...rest }) => {
             const label = t(labelKey);
             const featured = "featured" in rest && rest.featured;
+            // Profile is club metagame identity — keep Club tab lit, never Play.
             const active =
-              pathname === href || pathname.startsWith(`${href}/`);
+              href === "/club"
+                ? pathname === "/club" ||
+                  pathname.startsWith("/club/") ||
+                  pathname === "/profile" ||
+                  pathname.startsWith("/profile/")
+                : pathname === href || pathname.startsWith(`${href}/`);
 
             if (featured) {
               return (

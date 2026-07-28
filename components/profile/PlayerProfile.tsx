@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Pencil } from "lucide-react";
+import { ChevronDown, Pencil } from "lucide-react";
 import type { ProfileSnapshot } from "@/lib/player/current";
 import type { Locale } from "@/lib/i18n/config";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -37,11 +38,27 @@ import type { BadgePresentation } from "@/lib/game/badgeTypes";
 import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 
-/** Tier → medal ring styling (matches the unlock popup). */
+/** Tier → medal ring fill. */
 const TIER_RING: Record<BadgeTier, string> = {
-  bronze: "from-amber-200 to-amber-500 text-amber-900",
-  silver: "from-slate-200 to-slate-400 text-slate-800",
-  gold: "from-yellow-200 to-yellow-500 text-yellow-900",
+  bronze: "from-amber-200 to-amber-600 text-amber-950",
+  silver: "from-slate-100 to-slate-400 text-slate-800",
+  gold: "from-yellow-200 to-amber-400 text-yellow-950",
+};
+
+/** Card chrome glow — distinct per tier (not one amber for all). */
+const TIER_CARD: Record<BadgeTier, string> = {
+  bronze:
+    "border-amber-700/45 bg-surface shadow-[0_0_14px_rgba(180,83,9,0.35)] ring-1 ring-amber-700/30",
+  silver:
+    "border-slate-300/70 bg-surface shadow-[0_0_14px_rgba(148,163,184,0.4)] ring-1 ring-slate-200/50",
+  gold:
+    "border-yellow-400/70 bg-surface shadow-[0_0_18px_rgba(250,204,21,0.4)] ring-1 ring-yellow-300/45",
+};
+
+const TIER_MEDAL_GLOW: Record<BadgeTier, string> = {
+  bronze: "shadow-[0_0_12px_rgba(180,83,9,0.55)] ring-2 ring-amber-200/55",
+  silver: "shadow-[0_0_12px_rgba(203,213,225,0.65)] ring-2 ring-slate-100/70",
+  gold: "shadow-[0_0_14px_rgba(250,204,21,0.65)] ring-2 ring-amber-100/75",
 };
 
 const CATEGORY_ORDER: BadgeCategory[] = [
@@ -50,6 +67,47 @@ const CATEGORY_ORDER: BadgeCategory[] = [
   "dedication",
   "volume",
 ];
+
+/** RTL-safe fraction: FA "۱۹ از ۱۰۰", EN LTR "19 / 100". */
+function FractionText({
+  cur,
+  next,
+  locale,
+  suffix,
+  className,
+}: {
+  cur: number | string;
+  next: number | string;
+  locale: Locale;
+  suffix?: string;
+  className?: string;
+}) {
+  const c = toLocaleDigits(cur, locale);
+  const n = toLocaleDigits(next, locale);
+  if (locale === "fa") {
+    return (
+      <span className={className}>
+        {c} از {n}
+        {suffix ? ` ${suffix}` : ""}
+      </span>
+    );
+  }
+  return (
+    <bdi dir="ltr" className={className}>
+      {c} / {n}
+      {suffix ? ` ${suffix}` : ""}
+    </bdi>
+  );
+}
+
+function shortUnlockDate(iso: string, locale: Locale): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString(locale === "fa" ? "fa-IR" : "en-GB", {
+    month: "short",
+    day: "numeric",
+  });
+}
 
 export function PlayerProfile({
   profile,
@@ -69,6 +127,7 @@ export function PlayerProfile({
   const [pickingFlag, setPickingFlag] = useState(false);
   const [missionsOpen, setMissionsOpen] = useState(false);
   const [inspectSlug, setInspectSlug] = useState<string | null>(null);
+  const [othersOpen, setOthersOpen] = useState(false);
   const missionReadyCount = countMissionRewardsReady(dailyBoard, missionBoard);
   const hasMissionBoards = Boolean(
     dailyBoard?.batchId || missionBoard?.batchId,
@@ -179,8 +238,70 @@ export function PlayerProfile({
     ? displayAchievements.find((x) => x.slug === inspectSlug)
     : undefined;
 
+  const hasMatches = profile.matchesPlayed > 0;
+  const clubNameClass =
+    profile.clubName.length > 22
+      ? "text-base"
+      : profile.clubName.length > 14
+        ? "text-xl"
+        : "text-2xl";
+
+  const { nearUnlock, unlockedHonors, otherByCategory } = useMemo(() => {
+    type Row = (typeof displayAchievements)[number];
+    const unlocked: Row[] = [];
+    const inProgress: { row: Row; ratio: number; stepsLeft: number }[] = [];
+    const locked: Row[] = [];
+
+    for (const a of displayAchievements) {
+      if (owned.has(a.slug)) {
+        unlocked.push(a);
+        continue;
+      }
+      const prog = a.progress?.(playerStats);
+      if (prog && prog.current > 0) {
+        const ratio = prog.target > 0 ? prog.current / prog.target : 0;
+        inProgress.push({
+          row: a,
+          ratio,
+          stepsLeft: Math.max(0, prog.target - prog.current),
+        });
+      } else {
+        locked.push(a);
+      }
+    }
+
+    inProgress.sort((a, b) => b.ratio - a.ratio);
+    const near = inProgress
+      .filter((x) => x.ratio >= 0.4 || x.stepsLeft <= 3)
+      .slice(0, 3)
+      .map((x) => x.row);
+    const nearSlugs = new Set(near.map((x) => x.slug));
+    const remainderProgress = inProgress
+      .filter((x) => !nearSlugs.has(x.row.slug))
+      .map((x) => x.row);
+    const otherPool = [...remainderProgress, ...locked];
+
+    const byCat = CATEGORY_ORDER.map((cat) => ({
+      cat,
+      items: otherPool.filter((a) => a.category === cat),
+    })).filter((g) => g.items.length > 0);
+
+    return {
+      nearUnlock: near,
+      unlockedHonors: unlocked,
+      otherByCategory: byCat,
+    };
+  }, [displayAchievements, owned, playerStats]);
+
+  const honorsUseScroll = unlockedHonors.length % 3 !== 0;
+
+  function openInspect(slug: string) {
+    haptic(HAPTIC.light);
+    setInspectSlug(slug);
+  }
+
   return (
-    <section className="flex flex-1 flex-col gap-5">
+    <section className="flex flex-1 flex-col gap-4 pb-1">
       {/* ── Hero: FIFA-style player card ──────────────────────────────────── */}
       <motion.header
         initial={{ opacity: 0, y: 16 }}
@@ -258,59 +379,68 @@ export function PlayerProfile({
             <p className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-amber-300/90">
               {t(`profile.title.${titleBand}`)}
             </p>
-            <h1 className="truncate font-display text-2xl font-bold leading-tight text-white drop-shadow-sm">
+            <h1
+              className={[
+                "line-clamp-2 break-words font-display font-bold leading-snug text-white drop-shadow-sm",
+                clubNameClass,
+              ].join(" ")}
+            >
               {profile.clubName}
             </h1>
-            <p className="truncate font-body text-sm font-semibold text-white/55">
+            <p className="mt-0.5 line-clamp-2 break-words font-body text-sm font-semibold text-white/55">
               {profile.stadiumName || t("profile.noStadium")}
             </p>
           </div>
 
-          <div className="flex shrink-0 items-center gap-1 rounded-bubble border border-white/15 bg-black/35 p-1 backdrop-blur-sm">
-            {hasMissionBoards && (
-              <motion.button
-                type="button"
-                onClick={() => {
-                  haptic(HAPTIC.light);
-                  setMissionsOpen(true);
-                }}
-                aria-label={t("missions.openDrawer")}
-                className="relative flex h-9 w-9 items-center justify-center rounded-bubble text-lg"
-                whileTap={{ scale: 0.92 }}
-              >
-                <span aria-hidden>🎯</span>
-                {missionReadyCount > 0 && (
-                  <span className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-secondary px-1 font-display text-[10px] font-bold text-secondary-foreground ring-2 ring-[#0b1220]">
-                    {toLocaleDigits(Math.min(missionReadyCount, 9), locale)}
-                    {missionReadyCount > 9 ? "+" : ""}
-                  </span>
-                )}
-              </motion.button>
-            )}
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              aria-label={t("profile.edit.button")}
-              className="flex h-9 w-9 items-center justify-center rounded-bubble text-white/70 transition-transform active:scale-95"
-            >
-              <Pencil className="h-4 w-4" strokeWidth={2.5} />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            aria-label={t("profile.edit.button")}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white/85 shadow-fantasy-sm backdrop-blur-sm transition-transform active:scale-95"
+          >
+            <Pencil className="h-4 w-4" strokeWidth={2.5} />
+          </button>
         </div>
 
-        {/* Gaming XP resource bar */}
-        <div className="relative mt-5">
-          <div className="mb-1.5 flex items-center justify-between gap-2">
-            <span className="font-display text-xs font-bold text-white/70">
-              {t("profile.levelShort", {
-                n: toLocaleDigits(level.level, locale),
-              })}
-            </span>
+        {hasMissionBoards && (
+          <motion.button
+            type="button"
+            onClick={() => {
+              haptic(HAPTIC.light);
+              setMissionsOpen(true);
+            }}
+            aria-label={t("missions.openDrawer")}
+            whileTap={{ scale: 0.98 }}
+            className="relative mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-bubble border border-white/15 bg-white/10 font-display text-sm font-bold text-white backdrop-blur-sm"
+          >
+            <span aria-hidden>🎯</span>
+            <span>{t("profile.missionsChip")}</span>
+            {missionReadyCount > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-secondary px-1.5 font-display text-[11px] font-bold text-secondary-foreground">
+                {toLocaleDigits(Math.min(missionReadyCount, 9), locale)}
+                {missionReadyCount > 9 ? "+" : ""}
+              </span>
+            )}
+          </motion.button>
+        )}
+
+        {/* Gaming XP resource bar — level already on avatar medal */}
+        <div className="relative mt-4">
+          <div className="mb-1.5 flex items-center justify-end">
             <span className="font-display text-xs font-semibold tabular-nums text-white/55">
-              {t("profile.xp", {
-                cur: toLocaleDigits(level.currentLevelXp, locale),
-                next: toLocaleDigits(level.nextLevelXp, locale),
-              })}
+              {locale === "fa" ? (
+                t("profile.xpOf", {
+                  cur: toLocaleDigits(level.currentLevelXp, locale),
+                  next: toLocaleDigits(level.nextLevelXp, locale),
+                })
+              ) : (
+                <FractionText
+                  cur={level.currentLevelXp}
+                  next={level.nextLevelXp}
+                  locale={locale}
+                  suffix="XP"
+                />
+              )}
             </span>
           </div>
           <div className="relative h-4 w-full overflow-hidden rounded-full border border-white/15 bg-black/50 shadow-[inset_0_2px_6px_rgba(0,0,0,0.55)]">
@@ -364,89 +494,137 @@ export function PlayerProfile({
           </span>
         </div>
 
-        {/* Primary: Win Rate */}
-        <div className="relative mb-3 rounded-bubble border border-amber-300/25 bg-black/35 px-4 py-4 text-center shadow-[inset_0_2px_10px_rgba(0,0,0,0.45)]">
-          <p className="font-display text-[11px] font-bold uppercase tracking-[0.14em] text-amber-200/80">
-            🏆 {t("profile.winRate")}
-          </p>
-          <p className="mt-1 font-display text-5xl font-black tabular-nums leading-none text-amber-300 drop-shadow-[0_0_18px_rgba(252,211,77,0.45)]">
-            {toLocaleDigits(winRate, locale)}
-            <span className="text-3xl">
-              {locale === "fa" ? "٪" : "%"}
-            </span>
-          </p>
-          <p className="mt-2 font-body text-xs font-semibold text-white/55">
-            {t(`profile.scoreHint.${winHintKey}`)}
-          </p>
-        </div>
-
-        {/* Secondary chips */}
-        <div className="relative grid grid-cols-3 gap-2">
-          {secondaryStats.map((s, i) => (
-            <motion.div
-              key={s.key}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.16 + i * 0.05 }}
-              className="rounded-bubble border border-white/10 bg-white/5 px-2 py-2.5 text-center shadow-[inset_0_1px_4px_rgba(0,0,0,0.35)]"
+        {!hasMatches ? (
+          <div className="relative rounded-bubble border border-dashed border-amber-300/30 bg-black/30 px-4 py-6 text-center shadow-[inset_0_2px_10px_rgba(0,0,0,0.4)]">
+            <p className="text-3xl" aria-hidden>
+              🏟️
+            </p>
+            <p className="mt-2 font-body text-sm font-semibold leading-relaxed text-white/75">
+              {t("profile.scoreboardEmpty")}
+            </p>
+            <Link
+              href="/play"
+              className="mt-4 inline-flex h-11 min-w-[10rem] items-center justify-center rounded-bubble bg-secondary px-5 font-display text-sm font-bold text-secondary-foreground shadow-fantasy active:scale-[0.98]"
             >
-              <p className="flex items-center justify-center gap-1 font-display text-[10px] font-bold text-white/50">
-                <span aria-hidden>{s.icon}</span>
-                <span className="truncate">{s.label}</span>
+              {t("profile.scoreboardEmptyCta")}
+            </Link>
+          </div>
+        ) : (
+          <>
+            <div className="relative mb-3 rounded-bubble border border-amber-300/25 bg-black/35 px-4 py-4 text-center shadow-[inset_0_2px_10px_rgba(0,0,0,0.45)]">
+              <p className="font-display text-[11px] font-bold uppercase tracking-[0.14em] text-amber-200/80">
+                🏆 {t("profile.winRate")}
               </p>
-              <p className="mt-1 font-display text-xl font-black tabular-nums text-white">
-                {s.value}
+              <p className="mt-1 font-display text-5xl font-black tabular-nums leading-none text-amber-300 drop-shadow-[0_0_18px_rgba(252,211,77,0.45)]">
+                {toLocaleDigits(winRate, locale)}
+                <span className="text-3xl">
+                  {locale === "fa" ? "٪" : "%"}
+                </span>
               </p>
-              <p className="mt-0.5 line-clamp-2 font-body text-[9px] font-semibold leading-tight text-white/40">
-                {s.hint}
+              <p className="mt-2 font-body text-xs font-semibold text-white/55">
+                {t(`profile.scoreHint.${winHintKey}`)}
               </p>
-            </motion.div>
-          ))}
-        </div>
+            </div>
+
+            <div className="relative grid grid-cols-3 gap-2">
+              {secondaryStats.map((s, i) => (
+                <motion.div
+                  key={s.key}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.16 + i * 0.05 }}
+                  className="rounded-bubble border border-white/10 bg-white/5 px-2 py-2.5 text-center shadow-[inset_0_1px_4px_rgba(0,0,0,0.35)]"
+                >
+                  <p className="flex items-center justify-center gap-1 font-display text-[10px] font-bold text-white/50">
+                    <span aria-hidden>{s.icon}</span>
+                    <span className="truncate">{s.label}</span>
+                  </p>
+                  <p className="mt-1 font-display text-xl font-black tabular-nums text-white">
+                    {s.value}
+                  </p>
+                  <p className="mt-0.5 line-clamp-2 font-body text-[9px] font-semibold leading-tight text-white/40">
+                    {s.hint}
+                  </p>
+                </motion.div>
+              ))}
+            </div>
+          </>
+        )}
       </motion.div>
 
       {/* ── Trophy cabinet ───────────────────────────────────────────────── */}
       <div>
-        <div className="mb-3 overflow-hidden rounded-bubble-xl border border-amber-400/30 bg-linear-to-br from-[#1a1408] via-[#241a0c] to-[#0f172a] px-4 py-3 shadow-[0_0_20px_rgba(245,158,11,0.12)]">
-          <div className="flex items-end justify-between gap-3">
-            <div className="min-w-0">
-              <p className="font-display text-[10px] font-bold uppercase tracking-[0.18em] text-amber-300/80">
-                {t("profile.trophiesSubtitle")}
-              </p>
-              <h2 className="font-display text-xl font-black text-amber-100">
-                {t("profile.trophies")}
-              </h2>
-            </div>
-            <span className="shrink-0 rounded-full border border-amber-300/40 bg-amber-400/15 px-3 py-1 font-display text-xs font-bold text-amber-200">
-              {t("profile.trophiesCount", {
-                unlocked: toLocaleDigits(
-                  displayAchievements.filter((a) => owned.has(a.slug)).length,
-                  locale,
-                ),
+        <div className="mb-2 flex items-baseline justify-between gap-2">
+          <h2 className="font-display text-base font-black text-surface-foreground">
+            {t("profile.trophies")}
+          </h2>
+          <span className="shrink-0 rounded-full border border-border bg-muted/60 px-2.5 py-0.5 font-display text-[11px] font-bold text-muted-foreground">
+            {locale === "fa" ? (
+              t("profile.trophiesCountLabel", {
+                unlocked: toLocaleDigits(unlockedHonors.length, locale),
                 total: toLocaleDigits(displayAchievements.length, locale),
-              })}
-            </span>
-          </div>
+              })
+            ) : (
+              <bdi dir="ltr">
+                {t("profile.trophiesCountLabel", {
+                  unlocked: String(unlockedHonors.length),
+                  total: String(displayAchievements.length),
+                })}
+              </bdi>
+            )}
+          </span>
         </div>
 
         <div className="flex flex-col gap-4">
-          {CATEGORY_ORDER.map((cat) => {
-            const items = displayAchievements.filter((a) => a.category === cat);
-            if (items.length === 0) return null;
-            const catUnlocked = items.filter((a) => owned.has(a.slug)).length;
-            return (
-              <div key={cat}>
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="font-display text-[11px] font-bold uppercase tracking-wider text-primary">
-                    {t(`profile.cat.${cat}`)}
-                  </p>
-                  <span className="font-display text-[10px] font-bold text-muted-foreground">
-                    {toLocaleDigits(catUnlocked, locale)}/
-                    {toLocaleDigits(items.length, locale)}
-                  </span>
+          {nearUnlock.length > 0 && (
+            <div>
+              <p className="mb-2 font-display text-[11px] font-bold uppercase tracking-wider text-secondary">
+                {t("profile.trophyNear")}
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {nearUnlock.map((a, i) => (
+                  <BadgeTile
+                    key={a.slug}
+                    achievement={a}
+                    imageUrl={a.imageUrl}
+                    unlockedAt={owned.get(a.slug)}
+                    player={playerStats}
+                    locale={locale}
+                    delay={0.04 + i * 0.04}
+                    onInspect={() => openInspect(a.slug)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {unlockedHonors.length > 0 && (
+            <div>
+              <p className="mb-2 font-display text-[11px] font-bold uppercase tracking-wider text-amber-700">
+                {t("profile.trophyHonors")}
+              </p>
+              {honorsUseScroll ? (
+                <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {unlockedHonors.map((a, i) => (
+                    <div
+                      key={a.slug}
+                      className="w-[31%] min-w-[6.75rem] shrink-0 snap-start"
+                    >
+                      <BadgeTile
+                        achievement={a}
+                        imageUrl={a.imageUrl}
+                        unlockedAt={owned.get(a.slug)}
+                        player={playerStats}
+                        locale={locale}
+                        delay={0.06 + i * 0.04}
+                        onInspect={() => openInspect(a.slug)}
+                      />
+                    </div>
+                  ))}
                 </div>
+              ) : (
                 <div className="grid grid-cols-3 gap-2">
-                  {items.map((a, i) => (
+                  {unlockedHonors.map((a, i) => (
                     <BadgeTile
                       key={a.slug}
                       achievement={a}
@@ -454,17 +632,78 @@ export function PlayerProfile({
                       unlockedAt={owned.get(a.slug)}
                       player={playerStats}
                       locale={locale}
-                      delay={0.05 + i * 0.05}
-                      onInspect={() => {
-                        haptic(HAPTIC.light);
-                        setInspectSlug(a.slug);
-                      }}
+                      delay={0.06 + i * 0.04}
+                      onInspect={() => openInspect(a.slug)}
                     />
                   ))}
                 </div>
-              </div>
-            );
-          })}
+              )}
+            </div>
+          )}
+
+          {otherByCategory.length > 0 && (
+            <div className="rounded-bubble border border-border bg-muted/30">
+              <button
+                type="button"
+                onClick={() => {
+                  haptic(HAPTIC.light);
+                  setOthersOpen((v) => !v);
+                }}
+                className="flex min-h-11 w-full items-center justify-between gap-2 px-3 py-2.5"
+                aria-expanded={othersOpen}
+              >
+                <span className="font-display text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  {t("profile.trophyOther")}
+                </span>
+                <span className="flex items-center gap-1.5 font-display text-[10px] font-bold text-muted-foreground">
+                  {othersOpen
+                    ? t("profile.trophyOtherHide")
+                    : t("profile.trophyOtherShow")}
+                  <ChevronDown
+                    className={[
+                      "h-4 w-4 transition-transform",
+                      othersOpen ? "rotate-180" : "",
+                    ].join(" ")}
+                  />
+                </span>
+              </button>
+              <AnimatePresence initial={false}>
+                {othersOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.22 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="flex flex-col gap-3 px-3 pb-3">
+                      {otherByCategory.map(({ cat, items }) => (
+                        <div key={cat}>
+                          <p className="mb-1.5 font-display text-[11px] font-bold text-primary">
+                            {t(`profile.cat.${cat}`)}
+                          </p>
+                          <div className="grid grid-cols-3 gap-2">
+                            {items.map((a, i) => (
+                              <BadgeTile
+                                key={a.slug}
+                                achievement={a}
+                                imageUrl={a.imageUrl}
+                                unlockedAt={owned.get(a.slug)}
+                                player={playerStats}
+                                locale={locale}
+                                delay={i * 0.03}
+                                onInspect={() => openInspect(a.slug)}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
         </div>
       </div>
 
@@ -555,7 +794,7 @@ type BadgeTileProps = {
 
 /**
  * Trophy tile with three visual states: locked (inset + silhouette),
- * in-progress (bar + nudge), unlocked (tier glow + check).
+ * in-progress (bar + nudge), unlocked (tier-colored glow + date/tier).
  */
 function BadgeTile({
   achievement: a,
@@ -574,6 +813,9 @@ function BadgeTile({
     ? Math.min(100, Math.round((prog.current / prog.target) * 100))
     : 0;
   const stepsLeft = prog ? Math.max(0, prog.target - prog.current) : 0;
+  const unlockLabel = unlockedAt
+    ? shortUnlockDate(unlockedAt, locale) || t(`profile.tier.${a.tier}`)
+    : t(`profile.tier.${a.tier}`);
 
   return (
     <motion.button
@@ -592,12 +834,12 @@ function BadgeTile({
       }
       whileTap={{ scale: 0.96 }}
       className={[
-        "relative flex min-h-[7.5rem] flex-col items-center gap-1.5 rounded-bubble border p-2.5 text-center transition-colors",
+        "relative flex w-full min-h-[7.5rem] flex-col items-center gap-1.5 rounded-bubble border p-2.5 text-center transition-colors",
         state === "unlocked"
-          ? "border-amber-300/50 bg-surface shadow-[0_0_16px_rgba(251,191,36,0.35)]"
+          ? TIER_CARD[a.tier]
           : state === "progress"
-            ? "border-primary/35 bg-surface/90 shadow-fantasy-sm"
-            : "border-black/10 bg-[#c5d0c8]/70 shadow-[inset_0_2px_8px_rgba(0,0,0,0.18)]",
+            ? "border-primary/40 bg-surface shadow-fantasy-sm"
+            : "border-black/10 bg-[#c5d0c8]/65 shadow-[inset_0_2px_8px_rgba(0,0,0,0.16)]",
       ].join(" ")}
       aria-label={name}
     >
@@ -605,23 +847,35 @@ function BadgeTile({
         className={[
           "relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full text-2xl",
           state === "unlocked"
-            ? `bg-linear-to-b ${TIER_RING[a.tier]} shadow-[0_0_12px_rgba(251,191,36,0.55)]`
+            ? `bg-linear-to-b ${TIER_RING[a.tier]} ${TIER_MEDAL_GLOW[a.tier]}`
             : state === "progress"
-              ? "bg-muted/80 grayscale-[0.35]"
-              : "bg-[#9aa89e]/80 grayscale opacity-55",
+              ? "bg-muted/80 grayscale-[0.25]"
+              : "bg-[#a8b5ae]/90 grayscale opacity-60",
         ].join(" ")}
         aria-hidden
       >
-        {imageUrl && state === "unlocked" ? (
+        {imageUrl && state !== "locked" ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+          <img
+            src={imageUrl}
+            alt=""
+            className={[
+              "h-full w-full object-cover",
+              state === "progress" ? "grayscale-[0.35] opacity-80" : "",
+            ].join(" ")}
+          />
+        ) : imageUrl && state === "locked" ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={imageUrl}
+            alt=""
+            className="h-full w-full object-cover grayscale opacity-55"
+          />
         ) : (
-          <span className={state === "locked" ? "opacity-70" : undefined}>
-            {a.emoji}
-          </span>
+          a.emoji
         )}
         {state === "locked" && (
-          <span className="absolute -end-0.5 -bottom-0.5 flex h-5 w-5 items-center justify-center rounded-full border border-white/40 bg-slate-700 text-[10px] shadow-sm">
+          <span className="absolute -end-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full border border-white/50 bg-slate-800 text-[9px] leading-none shadow-sm">
             🔒
           </span>
         )}
@@ -641,10 +895,10 @@ function BadgeTile({
       </p>
 
       {state === "unlocked" ? (
-        <span className="font-display text-[10px] font-bold text-primary">
-          ✓ {t("profile.trophyUnlocked")}
+        <span className="font-display text-[10px] font-bold text-muted-foreground">
+          {unlockLabel}
         </span>
-      ) : state === "progress" && prog ? (
+      ) : prog ? (
         <div className="w-full">
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]">
             <div
@@ -652,11 +906,19 @@ function BadgeTile({
               style={{ width: `${pct}%` }}
             />
           </div>
-          <p className="mt-1 font-display text-[10px] font-bold text-primary">
-            {toLocaleDigits(prog.current, locale)} /{" "}
-            {toLocaleDigits(prog.target, locale)}
+          <p
+            className={[
+              "mt-1 font-display text-[10px] font-bold",
+              state === "progress" ? "text-primary" : "text-slate-500",
+            ].join(" ")}
+          >
+            <FractionText
+              cur={prog.current}
+              next={prog.target}
+              locale={locale}
+            />
           </p>
-          {stepsLeft > 0 && (
+          {state === "progress" && stepsLeft > 0 && stepsLeft <= 3 && (
             <p className="font-body text-[9px] font-semibold text-accent-deep">
               {t("profile.trophyStepsLeft", {
                 n: toLocaleDigits(stepsLeft, locale),
@@ -682,6 +944,12 @@ type TrophyInspectSheetProps = {
   onClose: () => void;
 };
 
+const TIER_SHEET_WASH: Record<BadgeTier, string> = {
+  bronze: "from-amber-900/90 via-[#1a140c] to-[#0f172a]",
+  silver: "from-slate-600/80 via-[#151a22] to-[#0f172a]",
+  gold: "from-amber-700/85 via-[#1a1608] to-[#0f172a]",
+};
+
 function TrophyInspectSheet({
   achievement: a,
   imageUrl,
@@ -699,99 +967,196 @@ function TrophyInspectSheet({
     ? Math.min(100, Math.round((prog.current / prog.target) * 100))
     : 0;
   const stepsLeft = prog ? Math.max(0, prog.target - prog.current) : 0;
+  const hasReward = a.reward.coins > 0 || a.reward.xp > 0;
+  const dateLabel = unlockedAt ? shortUnlockDate(unlockedAt, locale) : "";
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center"
+      className="fixed inset-0 z-[70] flex items-end justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-12 sm:items-center sm:p-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      onClick={onClose}
+      transition={{ duration: 0.18 }}
     >
+      <button
+        type="button"
+        aria-label={t("profile.trophyClose")}
+        onClick={onClose}
+        className="absolute inset-0 bg-black/60 backdrop-blur-[5px]"
+      />
+
       <motion.div
         role="dialog"
         aria-modal
         aria-labelledby="trophy-inspect-title"
-        initial={{ y: 40, opacity: 0, scale: 0.96 }}
-        animate={{ y: 0, opacity: 1, scale: 1 }}
-        exit={{ y: 24, opacity: 0 }}
-        transition={{ type: "spring", stiffness: 280, damping: 22 }}
+        initial={{ y: 56, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 40, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 320, damping: 28 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm overflow-hidden rounded-bubble-xl border border-amber-300/30 bg-surface p-5 shadow-fantasy"
+        className="relative w-full max-w-mobile overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#fffdf8] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.5)]"
       >
-        <div className="flex flex-col items-center text-center">
+        {/* Drag handle */}
+        <div className="absolute inset-x-0 top-0 z-10 flex justify-center pt-2.5">
           <span
+            aria-hidden
+            className="h-1 w-10 rounded-full bg-white/35"
+          />
+        </div>
+
+        {/* Tier hero */}
+        <div
+          className={[
+            "relative bg-linear-to-b px-5 pb-5 pt-7 text-center",
+            TIER_SHEET_WASH[a.tier],
+          ].join(" ")}
+        >
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 opacity-50"
+            style={{
+              background:
+                "radial-gradient(ellipse 70% 60% at 50% 20%, rgba(255,255,255,0.14), transparent 60%)",
+            }}
+          />
+
+          <motion.span
+            initial={{ scale: 0.7, rotate: -8 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: "spring", stiffness: 280, damping: 16 }}
             className={[
-              "flex h-20 w-20 items-center justify-center overflow-hidden rounded-full text-4xl",
+              "relative mx-auto flex h-[5.5rem] w-[5.5rem] items-center justify-center overflow-hidden rounded-full text-5xl",
               state === "unlocked"
-                ? `bg-linear-to-b ${TIER_RING[a.tier]} shadow-[0_0_22px_rgba(251,191,36,0.55)]`
-                : "bg-muted grayscale opacity-70",
+                ? `bg-linear-to-b ${TIER_RING[a.tier]} ${TIER_MEDAL_GLOW[a.tier]}`
+                : "bg-white/10 grayscale opacity-70 ring-2 ring-white/15",
             ].join(" ")}
             aria-hidden
           >
-            {imageUrl && state === "unlocked" ? (
+            {imageUrl && (state === "unlocked" || state === "progress") ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+              <img
+                src={imageUrl}
+                alt=""
+                className={[
+                  "h-full w-full object-cover",
+                  state === "progress" ? "grayscale opacity-80" : "",
+                ].join(" ")}
+              />
             ) : (
               a.emoji
             )}
-          </span>
-          <p className="mt-3 font-display text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            {state === "unlocked"
-              ? t("profile.trophyUnlocked")
-              : state === "progress"
-                ? t("profile.trophyInProgress")
-                : t("profile.trophyLocked")}
-          </p>
+            {state === "locked" && (
+              <span className="absolute -end-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full border border-white/40 bg-slate-800 text-sm shadow-md">
+                🔒
+              </span>
+            )}
+          </motion.span>
+
+          <div className="relative mt-3 flex flex-wrap items-center justify-center gap-1.5">
+            <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 font-display text-[10px] font-bold uppercase tracking-wider text-amber-100">
+              {t(`profile.tier.${a.tier}`)}
+            </span>
+            <span
+              className={[
+                "rounded-full border px-2.5 py-0.5 font-display text-[10px] font-bold",
+                state === "unlocked"
+                  ? "border-emerald-300/40 bg-emerald-400/20 text-emerald-100"
+                  : state === "progress"
+                    ? "border-sky-300/40 bg-sky-400/20 text-sky-100"
+                    : "border-white/15 bg-white/10 text-white/70",
+              ].join(" ")}
+            >
+              {state === "unlocked"
+                ? dateLabel
+                  ? t("profile.unlockedOn", { date: dateLabel })
+                  : t("profile.trophyUnlocked")
+                : state === "progress"
+                  ? t("profile.trophyInProgress")
+                  : t("profile.trophyLocked")}
+            </span>
+          </div>
+
           <h3
             id="trophy-inspect-title"
-            className="mt-1 font-display text-xl font-black text-surface-foreground"
+            className="relative mt-2 font-display text-2xl font-black text-white drop-shadow-sm"
           >
             {name}
           </h3>
-          <div className="mt-3 w-full rounded-bubble border border-border bg-muted/40 px-3 py-2.5 text-start">
+        </div>
+
+        {/* Body */}
+        <div className="flex flex-col gap-3 px-4 pb-4 pt-4">
+          <div className="rounded-bubble border border-border/80 bg-white px-3.5 py-3 text-start shadow-fantasy-sm">
             <p className="font-display text-[10px] font-bold uppercase tracking-wider text-primary">
-              {t("profile.trophyHowTo")}
+              {state === "unlocked"
+                ? t("profile.trophyRequirement")
+                : t("profile.trophyHowTo")}
             </p>
-            <p className="mt-1 font-body text-sm font-semibold text-surface-foreground">
+            <p className="mt-1 font-body text-sm font-semibold leading-relaxed text-surface-foreground">
               {desc}
             </p>
           </div>
-          {state === "progress" && prog && (
-            <div className="mt-3 w-full">
-              <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted shadow-[inset_0_1px_3px_rgba(0,0,0,0.2)]">
-                <div
+
+          {state !== "unlocked" && prog && (
+            <div className="rounded-bubble border border-primary/20 bg-primary/5 px-3.5 py-3">
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <p className="font-display text-[10px] font-bold uppercase tracking-wider text-primary">
+                  {t("profile.trophyProgress")}
+                </p>
+                <p className="font-display text-xs font-bold text-primary">
+                  <FractionText
+                    cur={prog.current}
+                    next={prog.target}
+                    locale={locale}
+                  />
+                </p>
+              </div>
+              <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted shadow-[inset_0_1px_3px_rgba(0,0,0,0.18)]">
+                <motion.div
                   className="h-full rounded-full bg-linear-to-r from-primary to-secondary"
-                  style={{ width: `${pct}%` }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${pct}%` }}
+                  transition={{ duration: 0.55, ease: "easeOut" }}
                 />
               </div>
-              <p className="mt-1.5 font-display text-xs font-bold text-primary">
-                {toLocaleDigits(prog.current, locale)} /{" "}
-                {toLocaleDigits(prog.target, locale)}
-                {stepsLeft > 0
-                  ? ` · ${t("profile.trophyStepsLeft", {
-                      n: toLocaleDigits(stepsLeft, locale),
-                    })}`
-                  : ""}
-              </p>
+              {stepsLeft > 0 && stepsLeft <= 3 && (
+                <p className="mt-1.5 font-body text-[11px] font-bold text-accent-deep">
+                  {t("profile.trophyStepsLeft", {
+                    n: toLocaleDigits(stepsLeft, locale),
+                  })}
+                </p>
+              )}
             </div>
           )}
-          {(a.reward.coins > 0 || a.reward.xp > 0) && (
-            <p className="mt-3 font-display text-xs font-bold text-amber-700">
-              {t("profile.reward")}:{" "}
-              {a.reward.coins > 0
-                ? `🪙 ${toLocaleDigits(a.reward.coins, locale)}`
-                : ""}
-              {a.reward.coins > 0 && a.reward.xp > 0 ? " · " : ""}
-              {a.reward.xp > 0
-                ? `⭐ ${toLocaleDigits(a.reward.xp, locale)} XP`
-                : ""}
-            </p>
+
+          {hasReward && (
+            <div className="rounded-bubble border border-amber-300/40 bg-linear-to-r from-amber-50 to-orange-50 px-3.5 py-3">
+              <p className="font-display text-[10px] font-bold uppercase tracking-wider text-amber-800">
+                {state === "unlocked"
+                  ? t("profile.rewardEarned")
+                  : t("profile.rewardOnUnlock")}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {a.reward.coins > 0 && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/50 bg-white px-3 py-1.5 font-display text-sm font-bold text-amber-900 shadow-sm">
+                    <span aria-hidden>🪙</span>
+                    {toLocaleDigits(a.reward.coins, locale)}
+                  </span>
+                )}
+                {a.reward.xp > 0 && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-300/50 bg-white px-3 py-1.5 font-display text-sm font-bold text-sky-900 shadow-sm">
+                    <span aria-hidden>⭐</span>
+                    {toLocaleDigits(a.reward.xp, locale)} XP
+                  </span>
+                )}
+              </div>
+            </div>
           )}
+
           <button
             type="button"
             onClick={onClose}
-            className="mt-4 flex h-11 w-full items-center justify-center rounded-bubble bg-primary font-display text-sm font-bold text-primary-foreground shadow-fantasy active:scale-[0.98]"
+            className="flex h-12 w-full items-center justify-center rounded-bubble bg-primary font-display text-base font-bold text-primary-foreground shadow-[0_4px_0_0_hsl(var(--primary)/0.45)] transition-transform active:translate-y-0.5 active:shadow-none"
           >
             {t("profile.trophyClose")}
           </button>
