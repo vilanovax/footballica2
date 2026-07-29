@@ -6,27 +6,22 @@ import type { HallOfFameWeek } from "@/actions/getHallOfFame";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { formatNumber, toLocaleDigits } from "@/lib/i18n/format";
 import { ResourceIcon } from "@/components/common/ResourceIcon";
+import { RankArt, medalKindForPlace } from "@/components/leaderboard/RankArt";
 
 type HallOfFamePanelProps = {
   weeks: HallOfFameWeek[];
 };
 
-const RANK_STYLE: Record<
-  number,
-  { emoji: string; ring: string; glow: string }
-> = {
+const RANK_STYLE: Record<number, { ring: string; glow: string }> = {
   1: {
-    emoji: "👑",
     ring: "border-[#e0a800]",
     glow: "bg-gradient-to-r from-[#fff8e1] via-[#ffe082] to-[#ffca28] shadow-[0_0_20px_rgba(224,168,0,0.35)]",
   },
   2: {
-    emoji: "🥈",
     ring: "border-[#9aa4ad]",
     glow: "bg-gradient-to-r from-[#f8fafc] to-[#e2e8f0]",
   },
   3: {
-    emoji: "🥉",
     ring: "border-[#c08457]",
     glow: "bg-gradient-to-r from-[#fdf4ed] to-[#f0d5b8]",
   },
@@ -54,9 +49,9 @@ export function HallOfFamePanel({ weeks }: HallOfFamePanelProps) {
   if (weeks.length === 0) {
     return (
       <div className="mt-4 rounded-bubble-xl border-2 border-dashed border-[#e0a800]/50 bg-[#fff8e1]/40 px-4 py-10 text-center">
-        <p className="text-3xl" aria-hidden>
-          🏆
-        </p>
+        <div className="flex justify-center" aria-hidden>
+          <RankArt kind="trophy" size="lg" className="h-12 w-12" />
+        </div>
         <p className="mt-2 font-display text-base font-bold text-foreground">
           {t("leaderboard.hofEmpty")}
         </p>
@@ -100,10 +95,18 @@ export function HallOfFamePanel({ weeks }: HallOfFamePanelProps) {
                   ].join(" ")}
                 >
                   <span
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black/10 text-xl"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center"
                     aria-label={`#${entry.rank}`}
                   >
-                    {style.emoji}
+                    {entry.rank === 1 ? (
+                      <RankArt kind="crown" size="lg" className="h-9 w-9" />
+                    ) : (
+                      <RankArt
+                        kind={medalKindForPlace(entry.rank)}
+                        size="lg"
+                        className="h-9 w-9"
+                      />
+                    )}
                   </span>
                   <AvatarImage
                     avatarKey={entry.avatarKey}

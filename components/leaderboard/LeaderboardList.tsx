@@ -17,6 +17,7 @@ import {
   weeklyChampionCoins,
 } from "@/lib/game/weeklyPrizes";
 import { ResourceIcon } from "@/components/common/ResourceIcon";
+import { RankArt, medalKindForPlace } from "@/components/leaderboard/RankArt";
 
 type LeaderboardListProps = {
   rows: LeaderboardRow[];
@@ -180,11 +181,13 @@ export function LeaderboardList({
             }}
             className="mb-3 flex w-full items-center justify-between gap-2 rounded-bubble border border-accent/40 bg-accent/10 px-3 py-2 text-start shadow-fantasy-sm transition-transform active:scale-[0.99]"
           >
-            <span className="font-display text-xs font-bold text-accent-deep">
-              🏆{" "}
-              {t("leaderboard.prizeBanner", {
-                n: toLocaleDigits(weeklyChampionCoins(), locale),
-              })}
+            <span className="inline-flex items-center gap-1.5 font-display text-xs font-bold text-accent-deep">
+              <RankArt kind="trophy" size="sm" className="h-5 w-5" />
+              <span>
+                {t("leaderboard.prizeBanner", {
+                  n: toLocaleDigits(weeklyChampionCoins(), locale),
+                })}
+              </span>
             </span>
             <span className="font-display text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               {t("leaderboard.prizeTap")}
@@ -245,15 +248,25 @@ export function LeaderboardList({
               key={tier.place}
               className="flex items-center justify-between gap-3 rounded-bubble border border-border bg-muted/40 px-3 py-2.5"
             >
-              <span className="font-display text-sm font-bold text-foreground">
-                {tier.place === 1 ? "🥇" : tier.place === 2 ? "🥈" : "🥉"}{" "}
+              <span className="inline-flex items-center gap-2 font-display text-sm font-bold text-foreground">
+                <RankArt
+                  kind={medalKindForPlace(tier.place)}
+                  size="md"
+                  className="h-6 w-6"
+                />
                 {t("leaderboard.prizePlace", {
                   n: toLocaleDigits(tier.place, locale),
                 })}
               </span>
-              <span className="text-end font-display text-xs font-bold text-muted-foreground">
-                💰 {toLocaleDigits(tier.coins, locale)}
-                <br />⭐ {toLocaleDigits(tier.xp, locale)} XP
+              <span className="flex flex-col items-end gap-0.5 font-display text-xs font-bold text-muted-foreground">
+                <span className="inline-flex items-center gap-1">
+                  <ResourceIcon kind="coin" size="sm" />
+                  {toLocaleDigits(tier.coins, locale)}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <ResourceIcon kind="xp" size="sm" className="h-3.5 w-3.5" />
+                  {toLocaleDigits(tier.xp, locale)}
+                </span>
               </span>
             </li>
           ))}

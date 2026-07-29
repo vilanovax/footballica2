@@ -6,16 +6,15 @@ import type { LeaderboardRow } from "@/actions/getLeaderboard";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { formatNumber, toLocaleDigits } from "@/lib/i18n/format";
 import { ResourceIcon } from "@/components/common/ResourceIcon";
+import { RankArt, medalKindForPlace } from "@/components/leaderboard/RankArt";
 
 type LeaderboardPodiumProps = {
   rows: LeaderboardRow[];
 };
 
-// Per-place theming: medal, avatar ring/fill, pedestal gradient + height.
 const PLACES: Record<
   number,
   {
-    medal: string;
     ring: string;
     avatarBg: string;
     bar: string;
@@ -24,7 +23,6 @@ const PLACES: Record<
   }
 > = {
   1: {
-    medal: "🥇",
     ring: "border-[#e0a800]",
     avatarBg: "bg-[#fff3c4]",
     bar: "bg-gradient-to-b from-[#ffe07a] to-[#e0a800]",
@@ -32,7 +30,6 @@ const PLACES: Record<
     avatarSize: "h-20 w-20 text-4xl",
   },
   2: {
-    medal: "🥈",
     ring: "border-[#9aa4ad]",
     avatarBg: "bg-[#f1f4f7]",
     bar: "bg-gradient-to-b from-[#e6ecf1] to-[#9aa4ad]",
@@ -40,7 +37,6 @@ const PLACES: Record<
     avatarSize: "h-16 w-16 text-3xl",
   },
   3: {
-    medal: "🥉",
     ring: "border-[#c08457]",
     avatarBg: "bg-[#f7e2d0]",
     bar: "bg-gradient-to-b from-[#f0d3bd] to-[#c08457]",
@@ -49,7 +45,6 @@ const PLACES: Record<
   },
 };
 
-// Render order places the winner in the middle regardless of text direction.
 const RENDER_ORDER = [2, 1, 3] as const;
 
 export function LeaderboardPodium({ rows }: LeaderboardPodiumProps) {
@@ -78,17 +73,20 @@ export function LeaderboardPodium({ rows }: LeaderboardPodiumProps) {
             className="flex flex-1 flex-col items-center"
           >
             {isChampion && (
-              <motion.span
-                className="mb-0.5 text-2xl"
+              <motion.div
+                className="mb-0.5"
                 animate={{ y: [0, -4, 0], rotate: [0, -6, 6, 0] }}
-                transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
+                transition={{
+                  repeat: Infinity,
+                  duration: 2.4,
+                  ease: "easeInOut",
+                }}
                 aria-hidden
               >
-                👑
-              </motion.span>
+                <RankArt kind="crown" size="lg" className="h-8 w-8" />
+              </motion.div>
             )}
 
-            {/* Avatar medallion */}
             <div className="relative">
               <motion.div
                 className={[
@@ -111,14 +109,17 @@ export function LeaderboardPodium({ rows }: LeaderboardPodiumProps) {
                 />
               </motion.div>
               <span
-                className="absolute -bottom-1 flex h-6 w-6 items-center justify-center rounded-full bg-background text-sm shadow-fantasy-sm inset-inline-end-0"
+                className="absolute -bottom-1.5 flex h-7 w-7 items-center justify-center inset-inline-end-[-2px]"
                 aria-label={`#${rank}`}
               >
-                {place.medal}
+                <RankArt
+                  kind={medalKindForPlace(rank)}
+                  size="md"
+                  className="h-7 w-7"
+                />
               </span>
             </div>
 
-            {/* Name + XP */}
             <p className="mt-2 w-full truncate text-center font-display text-xs font-bold text-foreground">
               {row.clubName}
             </p>
@@ -127,7 +128,6 @@ export function LeaderboardPodium({ rows }: LeaderboardPodiumProps) {
               {formatNumber(row.weeklyXp, locale)}
             </p>
 
-            {/* Pedestal */}
             <div
               className={[
                 "mt-2 flex w-full items-start justify-center rounded-t-bubble pt-2 font-display text-2xl font-black text-black/70 shadow-fantasy",
