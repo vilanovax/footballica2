@@ -5,6 +5,7 @@ import { AvatarImage } from "@/components/common/AvatarImage";
 import type { HallOfFameWeek } from "@/actions/getHallOfFame";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { formatNumber, toLocaleDigits } from "@/lib/i18n/format";
+import { ResourceIcon } from "@/components/common/ResourceIcon";
 
 type HallOfFamePanelProps = {
   weeks: HallOfFameWeek[];
@@ -124,11 +125,9 @@ export function HallOfFamePanel({ weeks }: HallOfFamePanelProps) {
                     )}
                   </div>
                   <div className="shrink-0 text-end">
-                    <p className="font-display text-lg font-extrabold leading-none text-black/90">
+                    <p className="inline-flex items-center gap-1 font-display text-lg font-extrabold leading-none text-black/90">
+                      <ResourceIcon kind="xp" size="sm" className="h-4 w-4" />
                       {formatNumber(entry.xp, locale)}
-                    </p>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-black/45">
-                      {t("result.xp")}
                     </p>
                   </div>
                 </li>

@@ -10,6 +10,7 @@ import { toLocaleDigits } from "@/lib/i18n/format";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
 import { ResourceIcon } from "@/components/common/ResourceIcon";
+import { UpgradeIcon } from "@/components/club-hub/UpgradeIcon";
 
 type UpgradeCardProps = {
   def: UpgradeDef;
@@ -86,8 +87,8 @@ export function UpgradeCard({
           locked ? "pointer-events-none opacity-40" : "",
         ].join(" ")}
       >
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-bubble bg-muted text-2xl">
-          {def.icon}
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-bubble bg-muted">
+          <UpgradeIcon upgradeKey={def.key} size="md" />
         </div>
 
         <div className="min-w-0 flex-1">
@@ -121,27 +122,45 @@ export function UpgradeCard({
             e.stopPropagation();
             onUpgrade();
           }}
-          whileTap={disabled ? undefined : { y: 4 }}
-          className={[
-            "flex min-h-touch min-w-[5.5rem] flex-col items-center justify-center rounded-bubble px-3 py-2 font-display text-sm font-bold transition-all",
+          whileTap={disabled || isMax ? undefined : { y: 4 }}
+          aria-label={
             isMax
-              ? "bg-muted text-muted-foreground"
+              ? t("upgrades.max")
+              : `${t("upgrades.upgrade")} ${toLocaleDigits(cost ?? 0, locale)}`
+          }
+          className={[
+            "flex min-h-touch min-w-[5.5rem] flex-col items-center justify-center gap-0.5 font-display text-sm font-bold transition-all",
+            isMax
+              ? "bg-transparent px-0 py-0"
               : canAfford
-                ? "bg-primary text-primary-foreground shadow-btn-3d active:shadow-btn-3d-press"
-                : "bg-muted text-muted-foreground opacity-50",
+                ? "rounded-bubble bg-primary/15 px-2.5 py-1.5 shadow-fantasy-sm active:scale-[0.97]"
+                : "rounded-bubble bg-muted/60 px-2.5 py-1.5 opacity-55",
           ].join(" ")}
         >
           {isMax ? (
-            <span>{t("upgrades.max")}</span>
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src="/icons/max.png"
+              alt={t("upgrades.max")}
+              draggable={false}
+              className="h-9 w-auto object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)]"
+            />
           ) : pending ? (
             <span>…</span>
           ) : (
             <>
-              <span>{t("upgrades.upgrade")}</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/icons/upgrade.png"
+                alt=""
+                aria-hidden
+                draggable={false}
+                className="h-9 w-auto object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)]"
+              />
               <span
                 className={[
-                  "flex items-center gap-1 text-xs",
-                  canAfford ? "opacity-90" : "font-bold text-destructive",
+                  "inline-flex items-center gap-1 font-display text-xs font-black tabular-nums",
+                  canAfford ? "text-accent-deep" : "text-destructive",
                 ].join(" ")}
               >
                 <ResourceIcon kind="coin" size="sm" />
@@ -155,10 +174,13 @@ export function UpgradeCard({
       <BottomSheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        title={`${def.icon} ${t(`upgrades.${def.key}.name`)}`}
+        title={t(`upgrades.${def.key}.name`)}
         subtitle={`${t("stadium.lvl")} ${toLocaleDigits(level, locale)}`}
         closeLabel={t("common.close")}
       >
+        <div className="mb-3 flex justify-center">
+          <UpgradeIcon upgradeKey={def.key} size="lg" className="h-14 w-14!" />
+        </div>
         <p className="font-body text-sm font-semibold leading-relaxed text-muted-foreground">
           {t(`upgrades.${def.key}.desc`)}
         </p>

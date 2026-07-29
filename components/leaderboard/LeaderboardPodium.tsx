@@ -5,6 +5,7 @@ import { AvatarImage } from "@/components/common/AvatarImage";
 import type { LeaderboardRow } from "@/actions/getLeaderboard";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { formatNumber, toLocaleDigits } from "@/lib/i18n/format";
+import { ResourceIcon } from "@/components/common/ResourceIcon";
 
 type LeaderboardPodiumProps = {
   rows: LeaderboardRow[];
@@ -121,7 +122,8 @@ export function LeaderboardPodium({ rows }: LeaderboardPodiumProps) {
             <p className="mt-2 w-full truncate text-center font-display text-xs font-bold text-foreground">
               {row.clubName}
             </p>
-            <p className="font-display text-sm font-extrabold leading-none text-primary">
+            <p className="inline-flex items-center gap-1 font-display text-sm font-extrabold leading-none text-primary">
+              <ResourceIcon kind="xp" size="sm" className="h-4 w-4" />
               {formatNumber(row.weeklyXp, locale)}
             </p>
 

@@ -141,43 +141,34 @@ export function StatusBar({
 
   return (
     <>
-      <div className="grid grid-cols-2 items-start gap-2">
+      {/* Resource strip — icons + numbers only, no colored app pills */}
+      <div className="flex items-start justify-between gap-3 px-0.5">
         <motion.div
           id="coin-balance-target"
           animate={pulse ? { scale: [1, 1.12, 1] } : { scale: 1 }}
           transition={{ duration: 0.5 }}
-          className={[
-            "relative flex min-h-11 items-center justify-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3.5 py-2 shadow-fantasy-sm",
-            pulse ? "ring-2 ring-accent" : "",
-          ].join(" ")}
+          className="relative flex min-h-11 items-center gap-1.5"
         >
-          <ResourceIcon kind="coin" size="md" />
-          <span className="font-display text-base font-bold tabular-nums text-accent-deep">
+          <ResourceIcon kind="coin" size="lg" />
+          <span className="font-display text-lg font-black tabular-nums text-accent-deep drop-shadow-sm">
             {toLocaleDigits(coins, locale)}
           </span>
           <Link
             href="/shop?tab=coins"
             aria-label={t("status.buyCoins")}
             onClick={() => playSound("click")}
-            className="absolute -end-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full"
+            className="ms-0.5 flex h-7 w-7 items-center justify-center"
           >
-            <PlusChip className="bg-accent text-accent-foreground shadow-fantasy-sm ring-2 ring-surface" />
+            <PlusChip className="bg-accent text-accent-foreground shadow-fantasy-sm" />
           </Link>
         </motion.div>
 
-        <div className="flex flex-col items-center gap-1">
-          <div
-            className={[
-              "relative flex min-h-11 w-full items-center justify-center gap-2 rounded-full border px-3.5 py-2 shadow-fantasy-sm transition-colors",
-              staminaLow
-                ? "border-destructive/40 bg-destructive/10"
-                : "border-primary/30 bg-primary/10",
-            ].join(" ")}
-          >
-            <ResourceIcon kind="energy" size="md" />
+        <div className="flex flex-col items-end gap-0.5">
+          <div className="relative flex min-h-11 items-center gap-1.5">
+            <ResourceIcon kind="energy" size="lg" />
             <span
               className={[
-                "font-display text-base font-bold tabular-nums",
+                "font-display text-lg font-black tabular-nums drop-shadow-sm",
                 staminaLow ? "text-destructive" : "text-primary",
               ].join(" ")}
             >
@@ -188,20 +179,19 @@ export function StatusBar({
               type="button"
               aria-label={t("status.refillStamina")}
               onClick={openRefill}
-              className="absolute -end-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full"
+              className="ms-0.5 flex h-7 w-7 items-center justify-center"
             >
               <PlusChip
-                className={[
-                  "shadow-fantasy-sm ring-2 ring-surface",
+                className={
                   staminaFull
-                    ? "bg-muted text-muted-foreground"
-                    : "bg-primary text-primary-foreground",
-                ].join(" ")}
+                    ? "bg-muted text-muted-foreground shadow-fantasy-sm"
+                    : "bg-primary text-primary-foreground shadow-fantasy-sm"
+                }
               />
             </button>
           </div>
           {regenerating && (
-            <span className="font-display text-[11px] font-bold text-muted-foreground tabular-nums">
+            <span className="pe-1 font-display text-[11px] font-bold tabular-nums text-muted-foreground">
               {t("status.plusOneIn", {
                 time: toLocaleDigits(formatMMSS(remainingMs), locale),
               })}

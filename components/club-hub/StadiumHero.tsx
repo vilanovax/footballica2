@@ -214,6 +214,7 @@ export function StadiumHero({
           {/* Training ground — left sideline */}
           <FacilityBadge
             emoji={trainEmoji === "cone" ? "🚧" : trainEmoji}
+            iconSrc="/icons/training.png"
             label={t("stadium.badgeTraining", {
               n: toLocaleDigits(trainingGroundLevel, locale),
             })}
@@ -225,6 +226,7 @@ export function StadiumHero({
           {/* Medical bay — right sideline */}
           <FacilityBadge
             emoji={medEmoji}
+            iconSrc="/icons/medical.png"
             label={t("stadium.badgeMedical", {
               n: toLocaleDigits(regenMinutes, locale),
             })}
@@ -312,12 +314,14 @@ export function StadiumHero({
 
 function FacilityBadge({
   emoji,
+  iconSrc,
   label,
   side,
   level,
   pulse,
 }: {
   emoji: string;
+  iconSrc?: string;
   label: string;
   side: "start" | "end";
   level: number;
@@ -349,7 +353,22 @@ function FacilityBadge({
       }
       aria-hidden
     >
-      <span className={grown ? "text-base" : "text-sm opacity-70"}>{emoji}</span>
+      {iconSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={iconSrc}
+          alt=""
+          draggable={false}
+          className={[
+            "object-contain",
+            grown ? "h-5 w-5" : "h-4 w-4 opacity-70",
+          ].join(" ")}
+        />
+      ) : (
+        <span className={grown ? "text-base" : "text-sm opacity-70"}>
+          {emoji}
+        </span>
+      )}
       <span
         className={[
           "font-display text-[9px] font-extrabold leading-none",

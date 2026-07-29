@@ -19,6 +19,7 @@ import {
   type ClubColorKey,
 } from "@/lib/onboarding/clubColors";
 import { AvatarImage } from "@/components/common/AvatarImage";
+import { ResourceIcon } from "@/components/common/ResourceIcon";
 import { ProfileEditModal } from "./ProfileEditModal";
 import { FlagPickerModal } from "./FlagPickerModal";
 import {
@@ -427,8 +428,8 @@ export function PlayerProfile({
 
         {/* Gaming XP resource bar — level already on avatar medal */}
         <div className="relative mt-4">
-          <div className="mb-1.5 flex items-center justify-end">
-            <span className="font-display text-xs font-semibold tabular-nums text-white/55">
+          <div className="mb-1.5 flex items-center justify-end gap-1">
+            <span className="inline-flex items-center gap-1 font-display text-xs font-semibold tabular-nums text-white/55">
               {locale === "fa" ? (
                 t("profile.xpOf", {
                   cur: toLocaleDigits(level.currentLevelXp, locale),
@@ -439,9 +440,9 @@ export function PlayerProfile({
                   cur={level.currentLevelXp}
                   next={level.nextLevelXp}
                   locale={locale}
-                  suffix="XP"
                 />
               )}
+              <ResourceIcon kind="xp" size="sm" className="h-4 w-4" />
             </span>
           </div>
           <div className="relative h-4 w-full overflow-hidden rounded-full border border-white/15 bg-black/50 shadow-[inset_0_2px_6px_rgba(0,0,0,0.55)]">
@@ -457,12 +458,17 @@ export function PlayerProfile({
               />
             </motion.div>
           </div>
-          <p className="mt-2 font-display text-[11px] font-bold text-amber-200/90">
-            {atMaxLevel
-              ? t("profile.xpMaxLevel")
-              : t("profile.xpToNext", {
+          <p className="mt-2 inline-flex items-center gap-1 font-display text-[11px] font-bold text-amber-200/90">
+            {atMaxLevel ? (
+              t("profile.xpMaxLevel")
+            ) : (
+              <>
+                <ResourceIcon kind="xp" size="sm" className="h-3.5 w-3.5" />
+                {t("profile.xpToNext", {
                   n: toLocaleDigits(xpRemaining, locale),
                 })}
+              </>
+            )}
           </p>
         </div>
       </motion.header>
@@ -1157,14 +1163,14 @@ function TrophyInspectSheet({
               <div className="mt-2 flex flex-wrap gap-2">
                 {a.reward.coins > 0 && (
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/50 bg-white px-3 py-1.5 font-display text-sm font-bold text-amber-900 shadow-sm">
-                    <span aria-hidden>🪙</span>
+                    <ResourceIcon kind="coin" size="sm" />
                     {toLocaleDigits(a.reward.coins, locale)}
                   </span>
                 )}
                 {a.reward.xp > 0 && (
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-300/50 bg-white px-3 py-1.5 font-display text-sm font-bold text-sky-900 shadow-sm">
-                    <span aria-hidden>⭐</span>
-                    {toLocaleDigits(a.reward.xp, locale)} XP
+                    <ResourceIcon kind="xp" size="sm" />
+                    {toLocaleDigits(a.reward.xp, locale)}
                   </span>
                 )}
               </div>

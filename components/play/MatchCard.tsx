@@ -119,10 +119,13 @@ export function MatchCard({
           {modeId === "survival" ? (
             <>
               <Chip>
-                {t("play.chipPerCorrect", {
-                  coins: toLocaleDigits(economy.perCorrectCoins ?? 0, locale),
-                  xp: toLocaleDigits(economy.perCorrectXp ?? 0, locale),
-                })}
+                <span className="inline-flex items-center gap-1">
+                  <ResourceIcon kind="coin" size="sm" />
+                  {toLocaleDigits(economy.perCorrectCoins ?? 0, locale)}
+                  <span aria-hidden>/</span>
+                  <ResourceIcon kind="xp" size="sm" />
+                  {toLocaleDigits(economy.perCorrectXp ?? 0, locale)}
+                </span>
               </Chip>
               <Chip>
                 {t("play.chipRecord", {
@@ -140,18 +143,22 @@ export function MatchCard({
             </>
           ) : (
             <Chip>
-              <ResourceIcon kind="coin" size="sm" className="me-1" />
-              {t("play.chipReward", {
-                coins: toLocaleDigits(economy.approxCoins, locale),
-                xp: toLocaleDigits(economy.approxXp, locale),
-              })}
+              <span className="inline-flex items-center gap-1">
+                <ResourceIcon kind="coin" size="sm" />~
+                {toLocaleDigits(economy.approxCoins, locale)}
+                <span aria-hidden>+</span>
+                <ResourceIcon kind="xp" size="sm" />
+                {toLocaleDigits(economy.approxXp, locale)}
+              </span>
             </Chip>
           )}
           {modeId === "duel" && economy.duelWinWeeklyXp != null && (
             <Chip>
-              {t("play.chipWeeklyXp", {
-                n: toLocaleDigits(economy.duelWinWeeklyXp, locale),
-              })}
+              <span className="inline-flex items-center gap-1">
+                <ResourceIcon kind="xp" size="sm" />+
+                {toLocaleDigits(economy.duelWinWeeklyXp, locale)}{" "}
+                {t("play.info.weeklyXp")}
+              </span>
             </Chip>
           )}
         </div>
@@ -286,29 +293,39 @@ function ModeInfoBody({
           value={t("play.info.rewardLine", {
             coins: n(economy.approxCoins),
           })}
-          sub={t("play.info.xpLine", { xp: n(economy.approxXp) })}
+          sub={
+            <span className="inline-flex items-center gap-0.5">
+              <ResourceIcon kind="xp" size="sm" className="h-3.5 w-3.5" />
+              {t("play.info.xpLine", { xp: n(economy.approxXp) })}
+            </span>
+          }
         />
       </div>
 
       {isSurvival && (
-        <p className="text-center font-body text-[11px] font-semibold leading-snug text-muted-foreground">
-          {t("play.info.perCorrectShort", {
-            coins: n(economy.perCorrectCoins ?? 0),
-            xp: n(economy.perCorrectXp ?? 0),
-          })}
-          {" · "}
-          {t("play.info.clearBonusShort", {
-            coins: n(economy.clearedCoinBonus ?? 0),
-            xp: n(economy.clearedXpBonus ?? 0),
-          })}
+        <p className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 text-center font-body text-[11px] font-semibold leading-snug text-muted-foreground">
+          <span className="inline-flex items-center gap-0.5">
+            <ResourceIcon kind="coin" size="sm" className="h-3.5 w-3.5" />
+            {n(economy.perCorrectCoins ?? 0)}
+            <span aria-hidden>/</span>
+            <ResourceIcon kind="xp" size="sm" className="h-3.5 w-3.5" />
+            {n(economy.perCorrectXp ?? 0)}
+          </span>
+          <span aria-hidden>·</span>
+          <span className="inline-flex items-center gap-0.5">
+            <ResourceIcon kind="coin" size="sm" className="h-3.5 w-3.5" />
+            {n(economy.clearedCoinBonus ?? 0)}
+            <span aria-hidden>/</span>
+            <ResourceIcon kind="xp" size="sm" className="h-3.5 w-3.5" />
+            {n(economy.clearedXpBonus ?? 0)}
+          </span>
         </p>
       )}
 
       {modeId === "duel" && economy.duelWinWeeklyXp != null && (
-        <p className="text-center font-display text-[11px] font-bold text-muted-foreground">
-          {t("play.chipWeeklyXp", {
-            n: n(economy.duelWinWeeklyXp),
-          })}
+        <p className="inline-flex w-full items-center justify-center gap-1 font-display text-[11px] font-bold text-muted-foreground">
+          <ResourceIcon kind="xp" size="sm" className="h-3.5 w-3.5" />+
+          {n(economy.duelWinWeeklyXp)} {t("play.info.weeklyXp")}
         </p>
       )}
     </div>
@@ -324,7 +341,7 @@ function StatTile({
   label: string;
   icon: ReactNode;
   value: string;
-  sub?: string;
+  sub?: ReactNode;
 }) {
   return (
     <div className="flex flex-col items-center gap-1.5 rounded-2xl border border-border bg-muted/35 px-2 py-3 text-center shadow-fantasy-sm">

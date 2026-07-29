@@ -16,6 +16,7 @@ import {
   WEEKLY_PRIZE_TIERS,
   weeklyChampionCoins,
 } from "@/lib/game/weeklyPrizes";
+import { ResourceIcon } from "@/components/common/ResourceIcon";
 
 type LeaderboardListProps = {
   rows: LeaderboardRow[];
@@ -276,7 +277,6 @@ function LeaderboardRowItem({
 }) {
   const { t, locale } = useTranslation();
   const unplayed = row.playState === "unplayed";
-  const zeroPlayed = row.playState === "playedZero";
 
   return (
     <motion.div
@@ -322,28 +322,35 @@ function LeaderboardRowItem({
             </span>
           )}
         </div>
-        <p className="truncate font-body text-[11px] font-semibold text-muted-foreground">
-          {unplayed
-            ? t("leaderboard.notPlayed")
-            : zeroPlayed
-              ? t("leaderboard.playedZero", {
+        <p className="flex min-w-0 items-center gap-1 truncate font-body text-[11px] font-semibold text-muted-foreground">
+          {unplayed ? (
+            t("leaderboard.notPlayed")
+          ) : (
+            <>
+              <ResourceIcon kind="xp" size="sm" className="h-3.5 w-3.5 shrink-0" />
+              <span className="tabular-nums">
+                {toLocaleDigits(row.weeklyXp, locale)}
+              </span>
+              <span aria-hidden>·</span>
+              <span className="truncate">
+                {t("leaderboard.rowMatches", {
                   n: toLocaleDigits(row.matchesPlayed, locale),
-                })
-              : t("leaderboard.rowStats", {
-                  points: toLocaleDigits(row.weeklyXp, locale),
-                  matches: toLocaleDigits(row.matchesPlayed, locale),
                 })}
+              </span>
+            </>
+          )}
         </p>
       </div>
 
       <div className="shrink-0 text-end">
         <p
           className={[
-            "font-display font-extrabold leading-none",
+            "inline-flex items-center gap-1 font-display font-extrabold leading-none",
             compact ? "text-base" : "text-lg",
             unplayed ? "text-muted-foreground" : "text-primary",
           ].join(" ")}
         >
+          <ResourceIcon kind="xp" size="sm" className="h-4 w-4" />
           {formatNumber(row.weeklyXp, locale)}
         </p>
         <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">

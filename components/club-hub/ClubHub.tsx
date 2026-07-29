@@ -3,7 +3,6 @@
 import { useState, useTransition, useEffect, useRef } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { Settings } from "lucide-react";
 import { upgradeClub } from "@/actions/upgradeClub";
 import {
   claimDailyNews,
@@ -24,6 +23,7 @@ import {
   DEFAULT_CLUB_COLOR_KEY,
 } from "@/lib/onboarding/clubColors";
 import { AvatarImage } from "@/components/common/AvatarImage";
+import { HubIcon } from "@/components/common/HubIcon";
 import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -205,8 +205,8 @@ export function ClubHub({
         className="pointer-events-none absolute inset-x-0 top-0 h-36"
         style={clubAccentWashStyle(colorKey)}
       />
-      <header className="relative flex items-center justify-between pt-2">
-        <div className="flex items-center gap-3">
+      <header className="relative flex items-center justify-between gap-2 pt-2">
+        <div className="flex min-w-0 items-center gap-3">
           <Link
             href="/profile"
             aria-label={t("profile.eyebrow")}
@@ -219,21 +219,13 @@ export function ClubHub({
               className="h-14 w-14 rounded-full shadow-fantasy"
             />
           </Link>
-          <div>
-            <p className="font-display text-sm font-semibold uppercase tracking-widest text-primary">
-              {t("club.hubEyebrow")}
-            </p>
-            <h1 className="font-display text-2xl font-bold leading-tight text-foreground">
-              {club.name}
-            </h1>
-            <p className="font-display text-xs font-semibold text-muted-foreground">
-              {t("club.yourStadium")}
-            </p>
-          </div>
+          <h1 className="truncate font-display text-xl font-black leading-tight text-foreground sm:text-2xl">
+            {club.name}
+          </h1>
         </div>
 
-        {/* Utility tray: Settings always; Shop / News / Missions after FTUE. */}
-        <div className="flex items-center gap-1 rounded-bubble border border-border bg-surface/90 p-1 shadow-fantasy-sm">
+        {/* Free-floating game utilities — no tray chrome */}
+        <div className="flex shrink-0 items-center gap-0.5">
           {ftueComplete && (
             <>
               <motion.button
@@ -244,12 +236,12 @@ export function ClubHub({
                   setMissionsOpen(true);
                 }}
                 aria-label={t("missions.openDrawer")}
-                className="relative flex h-9 w-9 items-center justify-center rounded-bubble text-lg"
-                whileTap={{ scale: 0.92 }}
+                className="relative flex h-11 w-11 items-center justify-center"
+                whileTap={{ scale: 0.9 }}
               >
-                <span aria-hidden>🎯</span>
+                <HubIcon kind="mission" size="md" />
                 {missionReadyCount > 0 && (
-                  <span className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-secondary px-1 font-display text-[10px] font-bold text-secondary-foreground ring-2 ring-surface">
+                  <span className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-secondary px-1 font-display text-[10px] font-bold text-secondary-foreground shadow-fantasy-sm">
                     {toLocaleDigits(Math.min(missionReadyCount, 9), locale)}
                     {missionReadyCount > 9 ? "+" : ""}
                   </span>
@@ -259,9 +251,10 @@ export function ClubHub({
               <Link
                 href="/shop"
                 aria-label={t("shop.title")}
-                className="flex h-9 w-9 items-center justify-center rounded-bubble text-lg"
+                onClick={() => playSound("click")}
+                className="flex h-11 w-11 items-center justify-center active:scale-90"
               >
-                <span aria-hidden>🛒</span>
+                <HubIcon kind="shop" size="md" />
               </Link>
 
               <motion.button
@@ -270,14 +263,14 @@ export function ClubHub({
                 disabled={newsPending}
                 aria-label={t("club.dailyNews")}
                 className={[
-                  "relative flex h-9 w-9 items-center justify-center rounded-bubble text-lg",
-                  canClaimNews ? "" : "opacity-60",
+                  "relative flex h-11 w-11 items-center justify-center",
+                  canClaimNews ? "" : "opacity-55",
                 ].join(" ")}
-                whileTap={{ scale: 0.92 }}
+                whileTap={{ scale: 0.9 }}
               >
-                <span aria-hidden>{canClaimNews ? "📬" : "📭"}</span>
+                <HubIcon kind="news" size="md" />
                 {canClaimNews && (
-                  <span className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 font-display text-[10px] font-bold text-accent-foreground ring-2 ring-surface">
+                  <span className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 font-display text-[10px] font-bold text-accent-foreground shadow-fantasy-sm">
                     {toLocaleDigits(1, locale)}
                   </span>
                 )}
@@ -288,9 +281,10 @@ export function ClubHub({
           <Link
             href="/settings"
             aria-label={t("nav.settings")}
-            className="flex h-9 w-9 items-center justify-center rounded-bubble text-muted-foreground transition-colors hover:text-foreground"
+            onClick={() => playSound("click")}
+            className="flex h-11 w-11 items-center justify-center active:scale-90"
           >
-            <Settings className="h-5 w-5" strokeWidth={2.25} />
+            <HubIcon kind="settings" size="md" />
           </Link>
         </div>
       </header>

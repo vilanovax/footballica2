@@ -8,6 +8,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
+import { ResourceIcon } from "@/components/common/ResourceIcon";
 
 const TIER_GLOW: Record<BadgeTier, string> = {
   bronze: "from-amber-200 via-amber-300 to-amber-500 shadow-amber-400/40",
@@ -166,13 +167,14 @@ export function BadgeUnlockPopup({ badges, onClose }: BadgeUnlockPopupProps) {
                       <div className="mt-2 flex flex-wrap items-center gap-1.5">
                         {badge.coins > 0 && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 font-display text-xs font-black text-amber-700 ring-1 ring-amber-200/80">
-                            <span aria-hidden>🪙</span>+
+                            <ResourceIcon kind="coin" size="sm" />+
                             {toLocaleDigits(badge.coins, locale)}
                           </span>
                         )}
                         {badge.xp > 0 && (
-                          <span className="inline-flex items-center rounded-full bg-emerald-500 px-2 py-0.5 font-display text-[11px] font-black text-white shadow-sm">
-                            XP +{toLocaleDigits(badge.xp, locale)}
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2 py-0.5 font-display text-[11px] font-black text-white shadow-sm">
+                            <ResourceIcon kind="xp" size="sm" className="brightness-110" />+
+                            {toLocaleDigits(badge.xp, locale)}
                           </span>
                         )}
                       </div>

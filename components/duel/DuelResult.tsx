@@ -184,7 +184,7 @@ export function DuelResult({ duel, missions: initialMissions }: DuelResultProps)
                   key: "weekly",
                   emoji: "📅",
                   title: t("result.weeklyXpBonus"),
-                  subtitle: `+${toLocaleDigits(weeklyXp, locale)} XP`,
+                  subtitle: `+${toLocaleDigits(weeklyXp, locale)}`,
                 },
               ]
             : [],

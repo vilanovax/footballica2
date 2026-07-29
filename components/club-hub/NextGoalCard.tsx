@@ -10,6 +10,7 @@ import {
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { ResourceIcon } from "@/components/common/ResourceIcon";
+import { UpgradeIcon } from "@/components/club-hub/UpgradeIcon";
 
 type NextGoalCardProps = {
   milestoneInput: MilestoneInput;
@@ -42,16 +43,18 @@ export function NextGoalCard({
   if (goal.affordable) {
     return (
       <div className="rounded-bubble-lg border-2 border-primary bg-primary/10 px-4 py-3 shadow-fantasy">
-        <p className="font-display text-xs font-bold uppercase tracking-widest text-primary">
-          {t("club.nextGoalReady")}
-        </p>
-        <p className="mt-1 font-display text-base font-bold text-foreground">
-          {goal.icon} {t("club.nextGoalBuy", { name })}
-        </p>
-        <p className="mt-0.5 flex items-center gap-1.5 font-body text-xs font-semibold text-muted-foreground">
-          <ResourceIcon kind="coin" size="sm" />
-          {toLocaleDigits(goal.cost, locale)}
-        </p>
+        <div className="flex items-center gap-2.5">
+          <UpgradeIcon upgradeKey={goal.key} size="lg" />
+          <div className="min-w-0 flex-1 text-start">
+            <p className="font-display text-base font-bold text-foreground">
+              {t("club.nextGoalBuy", { name })}
+            </p>
+            <p className="mt-0.5 flex items-center gap-1.5 font-body text-xs font-semibold text-muted-foreground">
+              <ResourceIcon kind="coin" size="sm" />
+              {toLocaleDigits(goal.cost, locale)}
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
