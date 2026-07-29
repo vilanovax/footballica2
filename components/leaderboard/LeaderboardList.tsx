@@ -335,23 +335,12 @@ function LeaderboardRowItem({
             </span>
           )}
         </div>
-        <p className="flex min-w-0 items-center gap-1 truncate font-body text-[11px] font-semibold text-muted-foreground">
-          {unplayed ? (
-            t("leaderboard.notPlayed")
-          ) : (
-            <>
-              <ResourceIcon kind="xp" size="sm" className="h-3.5 w-3.5 shrink-0" />
-              <span className="tabular-nums">
-                {toLocaleDigits(row.weeklyXp, locale)}
-              </span>
-              <span aria-hidden>·</span>
-              <span className="truncate">
-                {t("leaderboard.rowMatches", {
-                  n: toLocaleDigits(row.matchesPlayed, locale),
-                })}
-              </span>
-            </>
-          )}
+        <p className="truncate font-body text-[11px] font-semibold text-muted-foreground">
+          {unplayed
+            ? t("leaderboard.notPlayed")
+            : t("leaderboard.rowMatches", {
+                n: toLocaleDigits(row.matchesPlayed, locale),
+              })}
         </p>
       </div>
 
@@ -365,9 +354,6 @@ function LeaderboardRowItem({
         >
           <ResourceIcon kind="xp" size="sm" className="h-4 w-4" />
           {formatNumber(row.weeklyXp, locale)}
-        </p>
-        <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-          {t("leaderboard.weeklyXp")}
         </p>
       </div>
     </motion.div>

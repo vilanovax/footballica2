@@ -4,6 +4,7 @@
 const en = {
   common: {
     backToClub: "Back to Club",
+    back: "← Back",
     ok: "OK",
     close: "Close",
     nice: "Nice!",

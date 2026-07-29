@@ -5,6 +5,7 @@ import type { Dictionary } from "./en";
 const fa: Dictionary = {
   common: {
     backToClub: "بازگشت به باشگاه",
+    back: "← برگشت",
     ok: "باشه",
     close: "بستن",
     nice: "عالی!",

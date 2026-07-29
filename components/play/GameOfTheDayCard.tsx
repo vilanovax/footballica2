@@ -43,17 +43,19 @@ export function GameOfTheDayCard({ mystery }: Props) {
       </h2>
       <article className="relative overflow-hidden rounded-3xl border border-amber-400/40 bg-linear-to-br from-amber-500/15 via-surface to-primary/10 p-4 shadow-fantasy">
         <div className="flex items-start gap-3">
-          <div
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-400/20 text-2xl shadow-fantasy-sm"
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/icons/mystery.png"
+            alt=""
             aria-hidden
-          >
-            🕵️
-          </div>
+            draggable={false}
+            className="h-14 w-14 shrink-0 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.2)]"
+          />
           <div className="min-w-0 flex-1">
-            <p className="font-display text-lg font-bold text-foreground">
+            <p className="font-display text-lg font-black text-foreground">
               {t("play.mysteryTitle")}
             </p>
-            <p className="mt-0.5 font-body text-sm font-semibold text-muted-foreground">
+            <p className="mt-0.5 font-body text-sm font-bold text-foreground/75">
               {blurb}
             </p>
             <p className="mt-1 font-display text-[11px] font-bold text-amber-700 dark:text-amber-300">

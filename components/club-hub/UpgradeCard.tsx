@@ -159,11 +159,10 @@ export function UpgradeCard({
               />
               <span
                 className={[
-                  "inline-flex items-center gap-1 font-display text-xs font-black tabular-nums",
+                  "font-display text-xs font-black tabular-nums",
                   canAfford ? "text-accent-deep" : "text-destructive",
                 ].join(" ")}
               >
-                <ResourceIcon kind="coin" size="sm" />
                 {toLocaleDigits(cost, locale)}
               </span>
             </>
