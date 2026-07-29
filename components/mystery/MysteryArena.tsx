@@ -142,39 +142,74 @@ export function MysteryArena({ initial }: Props) {
 
   return (
     <section className="flex flex-1 flex-col gap-3">
-      {/* ── Compact hero ─────────────────────────────────────── */}
+      {/* ── Game board hero ──────────────────────────────────── */}
       <motion.header
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-bubble-lg bg-linear-to-br from-secondary/35 via-primary/12 to-accent/20 px-3.5 pb-3.5 pt-2.5 shadow-fantasy-lg"
+        className="relative overflow-hidden rounded-bubble-lg bg-linear-to-br from-secondary/40 via-[#1a3a4a]/08 to-accent/25 px-3 pb-4 pt-2 shadow-fantasy-lg"
       >
         <div
           aria-hidden
-          className="pointer-events-none absolute -end-10 -top-12 h-36 w-36 rounded-full bg-secondary/35 blur-3xl"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(255,200,80,0.18),_transparent_55%)]"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -end-10 -top-14 h-40 w-40 rounded-full bg-secondary/30 blur-3xl"
         />
 
-        <div className="relative flex justify-end">
-          <Link
-            href="/play"
-            onClick={() => playSound("click")}
-            aria-label={t("common.back")}
-            className="flex h-11 w-11 items-center justify-center active:scale-95"
+        {/* Floating chrome — close + free stats (no boxes) */}
+        <Link
+          href="/play"
+          onClick={() => playSound("click")}
+          aria-label={t("common.back")}
+          className="absolute end-2 top-2 z-20 flex h-11 w-11 items-center justify-center active:scale-90"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/icons/close.png"
+            alt=""
+            draggable={false}
+            className="h-10 w-10 object-contain drop-shadow-[0_3px_6px_rgba(0,0,0,0.3)]"
+          />
+        </Link>
+
+        <div className="absolute end-3 top-14 z-20 flex flex-col items-end gap-2">
+          <span
+            className="inline-flex items-center gap-1 font-display text-lg font-black tabular-nums text-foreground drop-shadow-[0_1px_2px_rgba(255,255,255,0.8)]"
+            title={t("mystery.guessesLabel")}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/icons/back.png"
+              src="/icons/guesses.png"
               alt=""
+              aria-hidden
               draggable={false}
-              className="h-9 w-9 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)]"
+              className="h-8 w-8 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.25)]"
             />
-          </Link>
+            {toLocaleDigits(mystery.guessCount, locale)}/
+            {toLocaleDigits(mystery.maxGuesses, locale)}
+          </span>
+          <span
+            className="inline-flex items-center gap-1 font-display text-lg font-black tabular-nums text-accent-deep drop-shadow-[0_1px_2px_rgba(255,255,255,0.8)]"
+            title={t("mystery.streakLabel")}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/streak.png"
+              alt=""
+              aria-hidden
+              draggable={false}
+              className="h-8 w-8 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.25)]"
+            />
+            {toLocaleDigits(mystery.mysteryStreak, locale)}
+          </span>
         </div>
 
-        <div className="relative mt-1 flex items-center gap-3">
+        {/* Center stage — mystery portrait + title */}
+        <div className="relative z-10 mt-1 flex flex-col items-center px-14 text-center">
           <motion.div
-            animate={{ y: [0, -3, 0] }}
+            animate={{ y: [0, -4, 0] }}
             transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
-            className="shrink-0"
             aria-hidden
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -182,72 +217,44 @@ export function MysteryArena({ initial }: Props) {
               src="/icons/mystery.png"
               alt=""
               draggable={false}
-              className="h-14 w-14 object-contain drop-shadow-[0_3px_8px_rgba(0,0,0,0.22)]"
+              className="h-24 w-24 object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.28)]"
             />
           </motion.div>
-          <div className="min-w-0 flex-1 text-start">
-            <h1 className="font-display text-xl font-black leading-tight text-foreground">
-              {t("mystery.title")}
-            </h1>
-            <p className="mt-0.5 font-display text-xs font-bold text-foreground/75">
-              {t("mystery.subtitle")}
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-col items-end gap-1.5">
-            <span
-              className="inline-flex items-center gap-1.5 rounded-full bg-surface/90 px-2.5 py-1 font-display text-sm font-black tabular-nums text-primary shadow-fantasy-sm"
-              title={t("mystery.guessesLabel")}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/icons/guesses.png"
-                alt=""
-                aria-hidden
-                draggable={false}
-                className="h-6 w-6 object-contain"
-              />
-              {toLocaleDigits(mystery.guessCount, locale)}/
-              {toLocaleDigits(mystery.maxGuesses, locale)}
-            </span>
-            <span
-              className="inline-flex items-center gap-1.5 rounded-full bg-accent/25 px-2.5 py-1 font-display text-sm font-black tabular-nums text-accent-deep shadow-fantasy-sm"
-              title={t("mystery.streakLabel")}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/icons/streak.png"
-                alt=""
-                aria-hidden
-                draggable={false}
-                className="h-6 w-6 object-contain"
-              />
-              {toLocaleDigits(mystery.mysteryStreak, locale)}
-            </span>
-          </div>
+          <h1 className="mt-1.5 font-display text-2xl font-black leading-tight text-foreground drop-shadow-sm">
+            {t("mystery.title")}
+          </h1>
+          <p className="mt-0.5 font-display text-sm font-bold text-foreground/70">
+            {t("mystery.subtitle")}
+          </p>
         </div>
 
         {!done && (
           <div
-            className="relative mt-3 flex items-center justify-center gap-2"
+            className="relative z-10 mt-3.5 flex items-center justify-center gap-2.5"
             aria-label={`${toLocaleDigits(remaining, locale)} ${t("mystery.guessesLabel")}`}
           >
             {Array.from({ length: mystery.maxGuesses }).map((_, i) => {
               const g = mystery.guesses[i];
               const next = i === mystery.guessCount;
-              let tone = "bg-muted-foreground/20";
-              if (g?.isCorrect) tone = "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.55)]";
-              else if (g) tone = "bg-secondary shadow-[0_0_8px_rgba(255,90,54,0.4)]";
-              else if (next) tone = "bg-primary ring-2 ring-primary/45";
+              let tone = "h-3.5 w-3.5 bg-muted-foreground/25";
+              if (g?.isCorrect)
+                tone =
+                  "h-4 w-4 bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.6)]";
+              else if (g)
+                tone =
+                  "h-3.5 w-3.5 bg-secondary shadow-[0_0_8px_rgba(255,90,54,0.45)]";
+              else if (next)
+                tone = "h-4 w-4 bg-primary ring-[3px] ring-primary/35";
               return (
                 <motion.span
                   key={i}
-                  animate={next ? { scale: [1, 1.18, 1] } : undefined}
+                  animate={next ? { scale: [1, 1.2, 1] } : undefined}
                   transition={
                     next
                       ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
                       : undefined
                   }
-                  className={["h-3 w-3 rounded-full", tone].join(" ")}
+                  className={["rounded-full", tone].join(" ")}
                 />
               );
             })}

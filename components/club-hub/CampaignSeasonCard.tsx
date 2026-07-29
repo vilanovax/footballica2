@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { Lock, Play } from "lucide-react";
 import type { CampaignSeasonView } from "@/lib/game/campaignSeason";
 import { campaignSeasonActive } from "@/lib/game/campaignSeason";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -53,10 +54,16 @@ export function CampaignSeasonCard({ season, onOpenMissions }: Props) {
       >
         <div className="flex items-start gap-3">
           <span
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-secondary/25 text-2xl shadow-fantasy-sm ring-1 ring-secondary/30"
+            className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-secondary/25 shadow-fantasy-sm ring-1 ring-secondary/30"
             aria-hidden
           >
-            🏟️
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/stadium.png"
+              alt=""
+              draggable={false}
+              className="h-10 w-10 object-contain"
+            />
           </span>
           <div className="min-w-0 flex-1">
             <p className="font-display text-[11px] font-bold uppercase tracking-widest text-secondary">
@@ -74,8 +81,24 @@ export function CampaignSeasonCard({ season, onOpenMissions }: Props) {
               ) : null}
             </p>
           </div>
-          <span className="shrink-0 rounded-full bg-primary/15 px-2.5 py-1 font-display text-xs font-extrabold text-primary">
-            {t("campaign.openPath")}
+          {/* Open missions — icon CTA, no ambiguous text */}
+          <span
+            className={[
+              "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-fantasy-sm ring-1 transition-transform",
+              rewardReady
+                ? "bg-accent/30 ring-accent/50"
+                : "bg-primary/15 ring-primary/30",
+            ].join(" ")}
+            aria-label={t("campaign.openPath")}
+            title={t("campaign.openPath")}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/hub-mission.png"
+              alt=""
+              draggable={false}
+              className="h-9 w-9 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)]"
+            />
           </span>
         </div>
 
@@ -114,16 +137,24 @@ export function CampaignSeasonCard({ season, onOpenMissions }: Props) {
           <ul className="flex flex-col gap-1.5">
             {season.chapters.slice(0, 3).map((ch, i) => {
               const title = locale === "fa" ? ch.titleFa : ch.titleEn;
+              const statusLabel = ch.conquered
+                ? t("campaign.chapterDone")
+                : ch.unlocked
+                  ? t("campaign.chapterPlay")
+                  : t("campaign.chapterLocked");
               return (
                 <li key={ch.id}>
                   <Link
                     href={`/play/survival?challenge=${encodeURIComponent(ch.id)}`}
                     onClick={() => playSound("click")}
+                    aria-label={`${title} — ${statusLabel}`}
                     className={[
                       "flex min-h-11 items-center gap-2.5 rounded-2xl border px-2.5 py-2 transition-colors",
                       ch.conquered
                         ? "border-emerald-500/35 bg-emerald-500/10"
-                        : "border-border/70 bg-surface/80 hover:bg-muted/50",
+                        : ch.unlocked
+                          ? "border-primary/35 bg-primary/8 hover:bg-primary/12"
+                          : "border-border/70 bg-muted/40 opacity-80",
                     ].join(" ")}
                   >
                     <span
@@ -137,12 +168,28 @@ export function CampaignSeasonCard({ season, onOpenMissions }: Props) {
                     <span className="min-w-0 flex-1 truncate font-display text-sm font-bold text-foreground">
                       {title}
                     </span>
-                    <span className="shrink-0 font-display text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground">
-                      {ch.conquered
-                        ? t("campaign.chapterDone")
-                        : ch.unlocked
-                          ? t("campaign.chapterPlay")
-                          : t("campaign.chapterLocked")}
+                    <span
+                      className="flex h-9 w-9 shrink-0 items-center justify-center"
+                      aria-hidden
+                      title={statusLabel}
+                    >
+                      {ch.conquered ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src="/icons/done.png"
+                          alt=""
+                          draggable={false}
+                          className="h-8 w-8 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)]"
+                        />
+                      ) : ch.unlocked ? (
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-fantasy-sm">
+                          <Play className="h-4 w-4 fill-current ms-0.5" />
+                        </span>
+                      ) : (
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground ring-1 ring-border">
+                          <Lock className="h-3.5 w-3.5" />
+                        </span>
+                      )}
                     </span>
                   </Link>
                 </li>

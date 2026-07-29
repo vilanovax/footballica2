@@ -129,12 +129,9 @@ export function UpgradeCard({
               : `${t("upgrades.upgrade")} ${toLocaleDigits(cost ?? 0, locale)}`
           }
           className={[
-            "flex min-h-touch min-w-[5.5rem] flex-col items-center justify-center gap-0.5 font-display text-sm font-bold transition-all",
-            isMax
-              ? "bg-transparent px-0 py-0"
-              : canAfford
-                ? "rounded-bubble bg-primary/15 px-2.5 py-1.5 shadow-fantasy-sm active:scale-[0.97]"
-                : "rounded-bubble bg-muted/60 px-2.5 py-1.5 opacity-55",
+            "flex min-h-touch items-center justify-center font-display font-bold transition-all active:scale-[0.97]",
+            isMax ? "px-0 py-0" : "gap-1.5 px-1 py-1",
+            !isMax && !canAfford ? "opacity-55" : "",
           ].join(" ")}
         >
           {isMax ? (
@@ -148,7 +145,15 @@ export function UpgradeCard({
           ) : pending ? (
             <span>…</span>
           ) : (
-            <>
+            <span dir="ltr" className="inline-flex items-center gap-1.5">
+              <span
+                className={[
+                  "font-display text-sm font-black tabular-nums",
+                  canAfford ? "text-accent-deep" : "text-destructive",
+                ].join(" ")}
+              >
+                {toLocaleDigits(cost, locale)}
+              </span>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/icons/upgrade.png"
@@ -157,15 +162,7 @@ export function UpgradeCard({
                 draggable={false}
                 className="h-9 w-auto object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)]"
               />
-              <span
-                className={[
-                  "font-display text-xs font-black tabular-nums",
-                  canAfford ? "text-accent-deep" : "text-destructive",
-                ].join(" ")}
-              >
-                {toLocaleDigits(cost, locale)}
-              </span>
-            </>
+            </span>
           )}
         </motion.button>
       </motion.div>

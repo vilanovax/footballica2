@@ -2,6 +2,8 @@
 
 import type { CareerPathPayload, HigherLowerPayload } from "@/lib/quiz/formats";
 import type { QuizQuestionType } from "@/lib/quiz/types";
+import { CareerPathPrompt } from "./CareerPathPrompt";
+import { ImagePrompt } from "./ImagePrompt";
 import { RevealImage } from "./RevealImage";
 
 type Props = {
@@ -36,60 +38,22 @@ export function FormatPrompt({
 
   if (type === "IMAGE") {
     if (!mediaUrl) return null;
-    return (
-      <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-muted/40">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={mediaUrl}
-          alt=""
-          className="mx-auto max-h-48 w-full object-contain"
-        />
-      </div>
-    );
+    return <ImagePrompt src={mediaUrl} />;
   }
 
   if (type === "CAREER_PATH" && careerPath?.steps?.length) {
-    return (
-      <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
-        {careerPath.steps.map((step, i) => (
-          <div key={`${step.name}-${i}`} className="flex items-center gap-1.5">
-            <div className="flex min-w-[4.5rem] max-w-[7rem] flex-col items-center gap-1 rounded-2xl border border-border bg-muted/50 px-2 py-2 shadow-fantasy-sm">
-              {step.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={step.logoUrl}
-                  alt=""
-                  className="h-8 w-8 object-contain"
-                />
-              ) : (
-                <span className="text-lg" aria-hidden>
-                  🏟️
-                </span>
-              )}
-              <span className="line-clamp-2 text-center font-display text-[10px] font-bold leading-tight text-foreground">
-                {step.name}
-              </span>
-            </div>
-            {i < careerPath.steps.length - 1 && (
-              <span className="font-display text-sm font-black text-muted-foreground">
-                →
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
-    );
+    return <CareerPathPrompt careerPath={careerPath} />;
   }
 
   if (type === "HIGHER_LOWER" && higherLower) {
     return (
       <div className="mt-3 space-y-2">
-        <p className="text-center font-display text-xs font-bold uppercase tracking-wide text-primary">
+        <p className="text-center font-display text-xs font-bold uppercase tracking-wide text-accent">
           {higherLower.metricLabel}
         </p>
         <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-2">
           <EntityCard entity={higherLower.left} />
-          <div className="flex items-center justify-center font-display text-lg font-black text-muted-foreground">
+          <div className="flex items-center justify-center font-display text-sm font-black text-accent">
             VS
           </div>
           <EntityCard entity={higherLower.right} />
@@ -107,20 +71,21 @@ function EntityCard({
   entity: { name: string; imageUrl?: string | null };
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-1.5 rounded-2xl border border-border bg-muted/45 px-2 py-3 text-center shadow-fantasy-sm">
+    <div className="flex flex-col items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-linear-to-b from-[#243044] to-[#141b27] px-2 py-3 text-center shadow-[0_4px_14px_rgba(0,0,0,0.3)]">
       {entity.imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={entity.imageUrl}
           alt=""
-          className="h-12 w-12 rounded-full object-cover"
+          draggable={false}
+          className="h-12 w-12 rounded-full object-cover ring-1 ring-white/15"
         />
       ) : (
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface text-xl shadow-fantasy-sm">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-xl ring-1 ring-primary/30">
           ⚽
         </span>
       )}
-      <span className="line-clamp-2 font-display text-xs font-extrabold leading-tight text-foreground">
+      <span className="line-clamp-2 font-display text-xs font-extrabold leading-tight text-white/95">
         {entity.name}
       </span>
     </div>

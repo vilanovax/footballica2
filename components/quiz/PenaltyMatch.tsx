@@ -23,6 +23,7 @@ import { MatchResult } from "./MatchResult";
 import { GoalBurst } from "./GoalBurst";
 import { MissedPopup } from "./MissedPopup";
 import { ReportModal } from "./ReportModal";
+import { FormatDevToggle } from "./FormatDevToggle";
 
 /** Auto-advance delay after a scored goal (miss waits for Continue tap). */
 const GOAL_REVEAL_MS = 1500;
@@ -201,6 +202,7 @@ export function PenaltyMatch({
 
   return (
     <section className="relative flex flex-1 flex-col">
+      <FormatDevToggle />
       <div
         className={[
           "flex flex-1 flex-col gap-5",

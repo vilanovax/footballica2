@@ -22,6 +22,7 @@ import { HelperDock } from "./HelperDock";
 import { MatchResult } from "./MatchResult";
 import { GoalBurst } from "./GoalBurst";
 import { ReportModal } from "./ReportModal";
+import { FormatDevToggle } from "./FormatDevToggle";
 
 /**
  * Rapid-fire pause after each answer BEFORE auto-advancing. Unlike Penalty
@@ -201,6 +202,7 @@ export function QuickMatch({
 
   return (
     <section className="relative flex flex-1 flex-col">
+      <FormatDevToggle />
       <div
         className={["flex flex-1 flex-col gap-5", shake ? "animate-screen-shake" : ""].join(" ")}
         onAnimationEnd={() => setShake(false)}

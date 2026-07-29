@@ -30,6 +30,67 @@ import {
   spawnFlyingCoinsToHeader,
   type FlyingBurst,
 } from "@/components/ui/FlyingCoins";
+import { ResourceIcon } from "@/components/common/ResourceIcon";
+
+function GiftIcon({ className }: { className?: string }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/icons/gift.png"
+      alt=""
+      aria-hidden
+      draggable={false}
+      className={["object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.22)]", className ?? "h-7 w-7"].join(" ")}
+    />
+  );
+}
+
+function ClaimIcon({ className }: { className?: string }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/icons/claim.png"
+      alt=""
+      aria-hidden
+      draggable={false}
+      className={["object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.22)]", className ?? "h-7 w-7"].join(" ")}
+    />
+  );
+}
+
+function RewardPills({
+  coins,
+  xp,
+  dimmed,
+}: {
+  coins: number;
+  xp: number;
+  dimmed?: boolean;
+}) {
+  const { locale } = useTranslation();
+  if (coins <= 0 && xp <= 0) return null;
+  return (
+    <span
+      className={[
+        "inline-flex items-center gap-1.5 font-display text-[11px] font-black tabular-nums",
+        dimmed ? "text-muted-foreground line-through opacity-50" : "text-foreground",
+      ].join(" ")}
+    >
+      {coins > 0 && (
+        <span className="inline-flex items-center gap-0.5 text-accent-deep">
+          +{toLocaleDigits(coins, locale)}
+          <ResourceIcon kind="coin" size="sm" className="h-4 w-4" />
+        </span>
+      )}
+      {xp > 0 && (
+        <span className="inline-flex items-center gap-0.5 text-primary">
+          +{toLocaleDigits(xp, locale)}
+          <ResourceIcon kind="xp" size="sm" className="h-4 w-4" />
+        </span>
+      )}
+    </span>
+  );
+}
 
 export type MissionBoardData = EvaluateMissionsResult;
 
@@ -308,17 +369,19 @@ export function MissionBoard({
                     "flex shrink-0 items-center justify-center rounded-full font-display text-xs font-black",
                     compact ? "h-7 w-7" : "h-8 w-8",
                     claimed
-                      ? "bg-muted text-muted-foreground"
+                      ? "bg-transparent"
                       : claimable
-                        ? "bg-accent text-accent-foreground"
+                        ? "bg-accent/20"
                         : "bg-secondary/15 text-secondary",
                   ].join(" ")}
                 >
-                  {claimed
-                    ? "✓"
-                    : claimable
-                      ? "🎁"
-                      : toLocaleDigits(i + 1, locale)}
+                  {claimed ? (
+                    <ClaimIcon className="h-6 w-6" />
+                  ) : claimable ? (
+                    <GiftIcon className="h-6 w-6" />
+                  ) : (
+                    toLocaleDigits(i + 1, locale)
+                  )}
                 </span>
 
                 <div className="min-w-0 flex-1">
@@ -333,21 +396,12 @@ export function MissionBoard({
                       {title}
                     </p>
                     <span
-                      className={[
-                        "shrink-0 font-display text-[11px] font-bold tabular-nums",
-                        claimable
-                          ? "text-accent-deep"
-                          : claimed
-                            ? "text-muted-foreground"
-                            : "text-muted-foreground",
-                      ].join(" ")}
+                      className="shrink-0 font-display text-[11px] font-bold tabular-nums text-muted-foreground"
                       aria-hidden={claimable || claimed}
                     >
-                      {claimed
-                        ? "✓"
-                        : claimable
-                          ? "🎁"
-                          : `${toLocaleDigits(m.progress, locale)}/${toLocaleDigits(m.targetValue, locale)}`}
+                      {claimed || claimable
+                        ? null
+                        : `${toLocaleDigits(m.progress, locale)}/${toLocaleDigits(m.targetValue, locale)}`}
                     </span>
                   </div>
 
@@ -377,19 +431,11 @@ export function MissionBoard({
                   </div>
 
                   <div className="mt-1.5 flex items-center justify-between gap-2">
-                    {(m.rewardCoins > 0 || m.rewardXp > 0) && (
-                      <p
-                        className={[
-                          "font-display text-[10px] font-bold text-muted-foreground",
-                          claimed ? "line-through opacity-50" : "",
-                        ].join(" ")}
-                      >
-                        {t("missions.missionRewardCompact", {
-                          coins: toLocaleDigits(m.rewardCoins, locale),
-                          xp: toLocaleDigits(m.rewardXp, locale),
-                        })}
-                      </p>
-                    )}
+                    <RewardPills
+                      coins={m.rewardCoins}
+                      xp={m.rewardXp}
+                      dimmed={claimed}
+                    />
 
                     {!m.isCompleted && (
                       <Link
@@ -405,25 +451,34 @@ export function MissionBoard({
                         type="button"
                         disabled={busy || pending}
                         onClick={(e) => handleDripClaim(m.missionId, e)}
-                        animate={{ scale: [1, 1.06, 1] }}
+                        aria-label={
+                          busy ? t("missions.claiming") : t("missions.claimDrip")
+                        }
+                        animate={{ scale: [1, 1.08, 1] }}
                         transition={{
                           repeat: Infinity,
                           duration: 1.05,
                           ease: "easeInOut",
                         }}
                         whileTap={{ scale: 0.94 }}
-                        className="ms-auto inline-flex min-h-9 items-center gap-1 rounded-full border-2 border-accent bg-accent px-3 font-display text-[12px] font-black text-accent-foreground shadow-[0_0_16px_hsl(var(--accent)/0.45)] disabled:opacity-60"
+                        className="ms-auto inline-flex h-11 w-11 items-center justify-center rounded-full bg-accent/25 shadow-[0_0_16px_hsl(var(--accent)/0.4)] ring-2 ring-accent/50 disabled:opacity-60"
                       >
-                        <span aria-hidden>🎁</span>
-                        {busy
-                          ? t("missions.claiming")
-                          : t("missions.claimDrip")}
+                        {busy ? (
+                          <span className="font-display text-xs font-black text-accent-deep">
+                            …
+                          </span>
+                        ) : (
+                          <ClaimIcon className="h-8 w-8" />
+                        )}
                       </motion.button>
                     )}
 
                     {claimed && (
-                      <span className="ms-auto inline-flex min-h-8 items-center rounded-full px-2 font-display text-[11px] font-bold text-muted-foreground">
-                        ✓
+                      <span
+                        className="ms-auto inline-flex h-9 w-9 items-center justify-center"
+                        aria-label={t("missions.claimed")}
+                      >
+                        <ClaimIcon className="h-7 w-7 opacity-80" />
                       </span>
                     )}
                   </div>
@@ -463,17 +518,19 @@ export function MissionBoard({
               initial={{ scale: 0.45, rotate: -16 }}
               animate={{ scale: 1.1, rotate: 0 }}
               transition={{ type: "spring", stiffness: 280, damping: 14 }}
-              className="text-5xl"
               aria-hidden
             >
-              🎁
+              <GiftIcon className="h-16 w-16" />
             </motion.span>
-            <p className="mt-2 font-display text-lg font-black text-foreground">
-              {t("missions.chestClaimed", {
-                coins: toLocaleDigits(celebrate.coins, locale),
-                xp: toLocaleDigits(celebrate.xp, locale),
-              })}
-            </p>
+            <div className="mt-2 flex flex-col items-center gap-1.5">
+              <p className="font-display text-lg font-black text-foreground">
+                {t("missions.chestClaimed", {
+                  coins: toLocaleDigits(celebrate.coins, locale),
+                  xp: toLocaleDigits(celebrate.xp, locale),
+                })}
+              </p>
+              <RewardPills coins={celebrate.coins} xp={celebrate.xp} />
+            </div>
             {celebrate.next != null && (
               <p className="mt-1 font-display text-sm font-bold text-secondary">
                 {t("missions.nextBatch", {
@@ -560,14 +617,19 @@ function ChestButton({
         }
         className={[
           "relative flex items-center justify-center rounded-bubble-lg border-2 shadow-fantasy",
-          compact ? "h-14 w-14 text-3xl" : "h-16 w-16 text-3xl",
+          compact ? "h-14 w-14" : "h-16 w-16",
           ready
             ? "border-accent bg-accent/30 shadow-[0_0_28px_hsl(var(--accent)/0.55)] ring-2 ring-accent/40"
             : "border-border bg-muted/50",
         ].join(" ")}
         aria-label={t("missions.claimChest")}
       >
-        <span aria-hidden>{ready ? "🎁" : "📦"}</span>
+        <GiftIcon
+          className={[
+            compact ? "h-10 w-10" : "h-12 w-12",
+            ready ? "" : "opacity-45 grayscale",
+          ].join(" ")}
+        />
         {!ready && (
           <span
             aria-hidden
@@ -592,12 +654,9 @@ function ChestButton({
             })}
       </p>
       {!ready && (
-        <p className="mt-0.5 max-w-16 text-center font-display text-[8px] font-semibold text-muted-foreground/80">
-          {t("missions.chestHint", {
-            coins: toLocaleDigits(coins, locale),
-            xp: toLocaleDigits(xp, locale),
-          })}
-        </p>
+        <div className="mt-0.5">
+          <RewardPills coins={coins} xp={xp} dimmed />
+        </div>
       )}
     </div>
   );

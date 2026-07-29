@@ -545,8 +545,22 @@ export function MissionDrawer({
                     ease: "easeInOut",
                   }}
                   className="btn-fantasy btn-fantasy-accent flex min-h-12 w-full items-center justify-center gap-2 font-display text-base font-bold disabled:opacity-60"
+                  aria-label={
+                    claimingAll
+                      ? t("missions.claiming")
+                      : claimableTotal > 1
+                        ? t("missions.drawerClaimAll")
+                        : t("missions.drawerClaimReward")
+                  }
                 >
-                  <span aria-hidden>🎁</span>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/icons/claim.png"
+                    alt=""
+                    aria-hidden
+                    draggable={false}
+                    className="h-9 w-auto object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)]"
+                  />
                   {claimingAll
                     ? t("missions.claiming")
                     : claimableTotal > 1

@@ -31,20 +31,6 @@ function formatMMSS(ms: number): string {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
-function PlusChip({ className }: { className?: string }) {
-  return (
-    <span
-      aria-hidden
-      className={[
-        "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-black leading-none",
-        className ?? "bg-accent text-accent-foreground",
-      ].join(" ")}
-    >
-      +
-    </span>
-  );
-}
-
 /** Consumables only — coins + stamina. Fans live on the Stadium hero. */
 export function StatusBar({
   coins,
@@ -141,30 +127,33 @@ export function StatusBar({
 
   return (
     <>
-      {/* Resource strip — icons + numbers only, no colored app pills */}
+      {/* Resource strip — icon + number are the tap targets (no + chips) */}
       <div className="flex items-start justify-between gap-3 px-0.5">
         <motion.div
           id="coin-balance-target"
           animate={pulse ? { scale: [1, 1.12, 1] } : { scale: 1 }}
           transition={{ duration: 0.5 }}
-          className="relative flex min-h-11 items-center gap-1.5"
         >
-          <ResourceIcon kind="coin" size="lg" />
-          <span className="font-display text-lg font-black tabular-nums text-accent-deep drop-shadow-sm">
-            {toLocaleDigits(coins, locale)}
-          </span>
           <Link
             href="/shop?tab=coins"
             aria-label={t("status.buyCoins")}
             onClick={() => playSound("click")}
-            className="ms-0.5 flex h-7 w-7 items-center justify-center"
+            className="relative flex min-h-11 items-center gap-1.5 active:scale-95"
           >
-            <PlusChip className="bg-accent text-accent-foreground shadow-fantasy-sm" />
+            <ResourceIcon kind="coin" size="lg" />
+            <span className="font-display text-lg font-black tabular-nums text-accent-deep drop-shadow-sm">
+              {toLocaleDigits(coins, locale)}
+            </span>
           </Link>
         </motion.div>
 
         <div className="flex flex-col items-end gap-0.5">
-          <div className="relative flex min-h-11 items-center gap-1.5">
+          <button
+            type="button"
+            aria-label={t("status.refillStamina")}
+            onClick={openRefill}
+            className="relative flex min-h-11 items-center gap-1.5 active:scale-95"
+          >
             <ResourceIcon kind="energy" size="lg" />
             <span
               className={[
@@ -175,21 +164,7 @@ export function StatusBar({
               {toLocaleDigits(localStamina, locale)}/
               {toLocaleDigits(maxStamina, locale)}
             </span>
-            <button
-              type="button"
-              aria-label={t("status.refillStamina")}
-              onClick={openRefill}
-              className="ms-0.5 flex h-7 w-7 items-center justify-center"
-            >
-              <PlusChip
-                className={
-                  staminaFull
-                    ? "bg-muted text-muted-foreground shadow-fantasy-sm"
-                    : "bg-primary text-primary-foreground shadow-fantasy-sm"
-                }
-              />
-            </button>
-          </div>
+          </button>
           {regenerating && (
             <span className="pe-1 font-display text-[11px] font-bold tabular-nums text-muted-foreground">
               {t("status.plusOneIn", {

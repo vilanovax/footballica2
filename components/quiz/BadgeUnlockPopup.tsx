@@ -136,8 +136,10 @@ export function BadgeUnlockPopup({ badges, onClose }: BadgeUnlockPopupProps) {
                       delay: 0.2 + i * 0.1,
                     }}
                     className={[
-                      "relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-linear-to-b shadow-lg ring-[3px] ring-white",
-                      TIER_GLOW[badge.tier],
+                      "relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full shadow-lg",
+                      badge.imageUrl
+                        ? "bg-transparent"
+                        : `bg-linear-to-b ring-[3px] ring-white ${TIER_GLOW[badge.tier]}`,
                     ].join(" ")}
                   >
                     {badge.imageUrl ? (
@@ -145,7 +147,7 @@ export function BadgeUnlockPopup({ badges, onClose }: BadgeUnlockPopupProps) {
                       <img
                         src={badge.imageUrl}
                         alt=""
-                        className="h-full w-full object-cover"
+                        className="h-full w-full object-contain drop-shadow-[0_3px_6px_rgba(0,0,0,0.25)]"
                       />
                     ) : (
                       <span className="text-3xl drop-shadow-sm" aria-hidden>

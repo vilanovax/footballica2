@@ -14,6 +14,8 @@ import { requireUserClub } from "@/lib/player/current";
 import { prisma } from "@/lib/prisma";
 import { isRecordChallengeLive } from "@/lib/game/recordChallenge";
 import { isCategoryAllowedForChallenge } from "@/lib/game/challengeCategories";
+import { injectFormatMocks } from "@/lib/dev/formatMocks";
+import { resolveForceFormat } from "@/lib/dev/resolveForceFormat";
 
 export type SurvivalBatchResult =
   | {
@@ -94,7 +96,20 @@ export async function drawSurvivalBatch(input: {
   );
 
   // Progressive tiered draw (replaces pure random shuffle).
-  const questions = await getCategoryQuestions(categoryId, limit, seen);
+  let questions = await getCategoryQuestions(categoryId, limit, seen);
+  const force = await resolveForceFormat();
+  if (force) {
+    if (questions.length === 0) {
+      const mocks = injectFormatMocks([], force);
+      questions = Array.from({ length: limit }, (_, i) => {
+        const m = mocks[i % mocks.length]!;
+        return { ...m, id: `${m.id}-surv-${i}` };
+      });
+    } else {
+      questions = injectFormatMocks(questions, force);
+    }
+  }
+
   const seenPlusBatch = [...seen, ...questions.map((q) => q.id)];
   const remainingAfter = await countCategoryQuestionsRemaining(
     categoryId,
@@ -105,7 +120,7 @@ export async function drawSurvivalBatch(input: {
     ok: true,
     questions,
     remainingAfter,
-    bankExhausted: questions.length === 0,
+    bankExhausted: questions.length === 0 && !force,
   };
 }
 

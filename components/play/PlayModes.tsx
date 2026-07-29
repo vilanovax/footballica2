@@ -3,6 +3,7 @@
 import type { DuelSnapshot } from "@/lib/duel/snapshot";
 import type { DuelInboxItem } from "@/actions/duel/getInboxCount";
 import type { DailyMysterySnapshot } from "@/actions/mystery/getDailyMystery";
+import type { DailyGridSnapshot } from "@/actions/grid/getDailyGrid";
 import type { PlayModeEconomy } from "@/lib/play/modeEconomy";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
@@ -23,6 +24,8 @@ type PlayModesProps = {
   liveChallengeCount?: number;
   /** Rotating daily slot (Mysterious Player). */
   mystery?: DailyMysterySnapshot | null;
+  /** Rotating daily slot (Football Grid — ADR 002). */
+  grid?: DailyGridSnapshot | null;
 };
 
 /**
@@ -40,6 +43,7 @@ export function PlayModes({
   modes,
   liveChallengeCount = 0,
   mystery = null,
+  grid = null,
 }: PlayModesProps) {
   const { t, locale } = useTranslation();
   const staminaLow = stamina <= 1;
@@ -86,7 +90,7 @@ export function PlayModes({
         variant="play"
       />
 
-      <GameOfTheDayCard mystery={mystery} />
+      <GameOfTheDayCard mystery={mystery} grid={grid} />
 
       <div className="flex flex-col gap-3">
         <h2 className="font-display text-xs font-bold uppercase tracking-widest text-muted-foreground">

@@ -67,6 +67,13 @@ enum DailyMysteryAttemptStatus {
   FAILED
 }
 
+/// Football Grid daily attempt (ADR 002) — same terminal states as Mystery.
+enum DailyGridAttemptStatus {
+  IN_PROGRESS
+  SOLVED
+  FAILED
+}
+
 enum QuestionStatus {
   DRAFT
   IN_REVIEW
@@ -264,6 +271,12 @@ model Club {
   /// Day-anchor of the last mystery solve that advanced mysteryStreak.
   lastMysteryDate      DateTime?
 
+  // ── Football Grid daily streak (ADR 002 — isolated from mystery streak) ──
+  gridStreak        Int       @default(0)
+  longestGridStreak Int       @default(0)
+  gridSolves        Int       @default(0)
+  lastGridDate      DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -278,6 +291,7 @@ model Club {
   challengeAccess ClubChallengeAccess[]
   challengeRuns   ClubChallengeRun[]
   mysteryAttempts DailyMysteryAttempt[]
+  gridAttempts    DailyGridAttempt[]
 
   @@index([fans])
   @@index([coins])
@@ -923,6 +937,63 @@ model DailyMysteryAttempt {
   shareCode String?
 
   solvedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clubId, puzzleId])
+  @@index([clubId, status])
+  @@index([puzzleId])
+  @@index([solvedAt])
+}
+
+// ─── Daily Football Grid (3×3 Immortal-style) — ADR 002 ───────────────────────
+// Isolated ledger — does NOT write Match rows.
+
+/// One 3×3 grid published per Tehran calendar day.
+model DailyGridPuzzle {
+  id String @id @default(cuid())
+
+  /// Tehran calendar day key, e.g. "2026-07-29". Unique — one grid per day.
+  dateKey String @unique
+
+  /// Three row axes: [{ id, labelEn, labelFa, rule }].
+  rowsJson Json
+  /// Three column axes: same shape as rowsJson.
+  colsJson Json
+
+  /// Optional Live-Ops knobs: maxMistakes (default 9).
+  config Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attempts DailyGridAttempt[]
+}
+
+/// One attempt per club per grid puzzle.
+model DailyGridAttempt {
+  id String @id @default(cuid())
+
+  clubId String
+  club   Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  puzzleId String
+  puzzle   DailyGridPuzzle @relation(fields: [puzzleId], references: [id], onDelete: Cascade)
+
+  status DailyGridAttemptStatus @default(IN_PROGRESS)
+
+  /// Wrong guesses that did not fill a cell.
+  mistakeCount Int @default(0)
+
+  /// Filled cells: { "r,c": { playerId, nameEn, nameFa } }.
+  cellsJson Json @default("{}")
+
+  /// Wrong guess log (optional analytics): [{ playerId, row, col, at }].
+  guessesJson Json @default("[]")
+
+  shareCode String?
+  solvedAt  DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -106,7 +106,14 @@ export function MissionProgressBanner({
           onClick={() => playSound("click")}
           className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-accent/90 px-3 py-2.5 font-display text-sm font-extrabold text-accent-foreground shadow-fantasy-sm transition-transform active:scale-[0.98]"
         >
-          <span aria-hidden>🎁</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/icons/gift.png"
+            alt=""
+            aria-hidden
+            draggable={false}
+            className="h-7 w-7 object-contain"
+          />
           {t("missions.chestReadyBadge")}
           <span className="font-bold opacity-90">→ {t("missions.openDrawer")}</span>
         </Link>

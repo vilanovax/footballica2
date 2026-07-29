@@ -23,6 +23,7 @@ import { ExplanationFact } from "@/components/quiz/ExplanationFact";
 import { GoalBurst } from "@/components/quiz/GoalBurst";
 import { ReportModal } from "@/components/quiz/ReportModal";
 import { SurvivalResult } from "@/components/survival/SurvivalResult";
+import { FormatDevToggle } from "@/components/quiz/FormatDevToggle";
 
 const REVEAL_MS = 900;
 
@@ -232,6 +233,7 @@ export function SurvivalMatch({
 
   return (
     <section className="relative flex flex-1 flex-col">
+      <FormatDevToggle />
       <div
         className={[
           "flex flex-1 flex-col gap-5",

@@ -43,10 +43,14 @@ export function QuestionCard({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -24, scale: 0.96 }}
       transition={{ type: "spring", stiffness: 260, damping: 22 }}
-      className="relative rounded-bubble-lg border border-border bg-surface p-5 shadow-fantasy-lg"
+      className="relative overflow-hidden rounded-bubble-lg border border-white/10 bg-linear-to-b from-[#1c2738] to-[#121820] p-5 shadow-[0_12px_32px_rgba(0,0,0,0.35)]"
     >
-      <div className="flex items-start justify-between gap-3">
-        <span className="inline-block rounded-full bg-muted px-3 py-1 font-display text-xs font-bold uppercase tracking-wider text-muted-foreground">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -end-8 -top-10 h-28 w-28 rounded-full bg-primary/15 blur-2xl"
+      />
+      <div className="relative flex items-start justify-between gap-3">
+        <span className="inline-block rounded-full bg-white/10 px-3 py-1 font-display text-xs font-bold uppercase tracking-wider text-white/70">
           {category}
         </span>
         <button
@@ -54,22 +58,24 @@ export function QuestionCard({
           aria-label={t("report.flag")}
           title={t("report.flag")}
           onClick={onReport}
-          className="-me-1 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:bg-muted hover:text-destructive"
+          className="-me-1 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/45 transition-colors hover:bg-white/10 hover:text-destructive"
         >
           <Flag className="h-4 w-4" strokeWidth={2.25} />
         </button>
       </div>
-      <p className="mt-3 font-display text-xl font-bold leading-snug text-surface-foreground">
+      <p className="relative mt-3 font-display text-xl font-bold leading-snug text-white">
         {text}
       </p>
-      <FormatPrompt
-        type={type}
-        mediaUrl={mediaUrl}
-        careerPath={careerPath}
-        higherLower={higherLower}
-        cleared={imageCleared}
-        resetKey={questionId}
-      />
+      <div className="relative">
+        <FormatPrompt
+          type={type}
+          mediaUrl={mediaUrl}
+          careerPath={careerPath}
+          higherLower={higherLower}
+          cleared={imageCleared}
+          resetKey={questionId}
+        />
+      </div>
     </motion.div>
   );
 }

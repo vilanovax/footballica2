@@ -6,6 +6,7 @@ import { getGameConfig } from "@/lib/game/gameConfig";
 import { getPlayModeEconomy } from "@/lib/play/modeEconomy";
 import { listRecordChallenges } from "@/actions/challenge/recordChallenge";
 import { getDailyMystery } from "@/actions/mystery/getDailyMystery";
+import { getDailyGrid } from "@/actions/grid/getDailyGrid";
 import { prisma } from "@/lib/prisma";
 import { PlayModes } from "@/components/play/PlayModes";
 
@@ -19,7 +20,7 @@ export default async function PlayPage() {
   const club = await getClubSnapshot();
   if (!club) redirect("/onboarding");
 
-  const [res, inbox, config, bestAgg, challengeRes, mysteryRes] =
+  const [res, inbox, config, bestAgg, challengeRes, mysteryRes, gridRes] =
     await Promise.all([
       getMyDuels(),
       getDuelInbox(),
@@ -32,6 +33,7 @@ export default async function PlayPage() {
         : Promise.resolve({ _max: { maxSurvivalScore: null } }),
       listRecordChallenges(),
       getDailyMystery(),
+      getDailyGrid(),
     ]);
 
   const recentDuels = res.ok ? res.history : [];
@@ -52,6 +54,7 @@ export default async function PlayPage() {
       modes={modes}
       liveChallengeCount={liveChallengeCount}
       mystery={mysteryRes.ok ? mysteryRes.mystery : null}
+      grid={gridRes.ok ? gridRes.grid : null}
     />
   );
 }

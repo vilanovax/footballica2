@@ -1,6 +1,8 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { injectFormatMocks } from "@/lib/dev/formatMocks";
+import { resolveForceFormat } from "@/lib/dev/resolveForceFormat";
 import {
   FORMAT_BIAS_EVERY_N,
   formatBiasQuota,
@@ -112,5 +114,20 @@ export async function getMatchQuestions(options?: {
   }
 
   // Don't always put the format kick first — shuffle final hand.
-  return shuffle(picked);
+  const hand = shuffle(picked);
+  const force = await resolveForceFormat();
+  if (!force) return hand;
+
+  // Empty bank: still return mock formats so UI polish works without content.
+  if (hand.length === 0) {
+    const mocks = injectFormatMocks([], force);
+    const out: QuizQuestion[] = [];
+    for (let i = 0; i < count; i++) {
+      const m = mocks[i % mocks.length]!;
+      out.push({ ...m, id: `${m.id}-${i}` });
+    }
+    return out;
+  }
+
+  return injectFormatMocks(hand, force);
 }
