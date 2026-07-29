@@ -15,6 +15,7 @@ import {
   Medal,
   ContactRound,
   Search,
+  Grid3x3,
 } from "lucide-react";
 
 const LINKS = [
@@ -23,6 +24,7 @@ const LINKS = [
   { href: "/admin/categories", label: "Categories", icon: Layers, exact: false },
   { href: "/admin/players", label: "Players", icon: ContactRound, exact: false },
   { href: "/admin/mystery", label: "Mystery Day", icon: Search, exact: false },
+  { href: "/admin/grid", label: "Grid Day", icon: Grid3x3, exact: false },
   { href: "/admin/missions", label: "Missions", icon: Target, exact: false },
   { href: "/admin/challenges", label: "Challenges", icon: Trophy, exact: false },
   { href: "/admin/badges", label: "Badges", icon: Medal, exact: false },

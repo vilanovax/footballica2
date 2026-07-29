@@ -38,11 +38,29 @@ type FormState = {
   targetScore: string;
   rewardBadgeSlug: string;
   rewardBadgeEmoji: string;
+  themeKey: string;
+  preferredTypes: string[];
+  formatBiasEveryN: string;
   categoryIds: string[];
   isActive: boolean;
   startsAt: string;
   expiresAt: string;
 };
+
+const FORMAT_TYPES = [
+  "IMAGE",
+  "CAREER_PATH",
+  "HIGHER_LOWER",
+  "REVEAL_IMAGE",
+] as const;
+
+const THEME_OPTIONS = [
+  { value: "", label: "None (plain challenge)" },
+  { value: "logo", label: "Logo Week" },
+  { value: "stadium", label: "Stadium Week" },
+  { value: "career", label: "Career Path Week" },
+  { value: "formats", label: "Format Festival" },
+] as const;
 
 const EMPTY: FormState = {
   slug: "",
@@ -54,6 +72,9 @@ const EMPTY: FormState = {
   targetScore: "20",
   rewardBadgeSlug: "",
   rewardBadgeEmoji: "🏆",
+  themeKey: "",
+  preferredTypes: [],
+  formatBiasEveryN: "",
   categoryIds: [],
   isActive: true,
   startsAt: "",
@@ -91,6 +112,10 @@ function challengeToForm(c: AdminRecordChallenge): FormState {
     targetScore: String(c.targetScore),
     rewardBadgeSlug: c.rewardBadgeSlug ?? "",
     rewardBadgeEmoji: c.rewardBadgeEmoji ?? "🏆",
+    themeKey: c.themeKey ?? "",
+    preferredTypes: [...c.preferredTypes],
+    formatBiasEveryN:
+      c.formatBiasEveryN != null ? String(c.formatBiasEveryN) : "",
     categoryIds: [...c.categoryIds],
     isActive: c.isActive,
     startsAt: toDatetimeLocal(c.startsAt),
@@ -159,6 +184,8 @@ export function ChallengesPanel({
   function handleSave(form: FormState, onDone?: () => void) {
     startTransition(async () => {
       const slug = form.slug.trim().toLowerCase();
+      const biasRaw = form.formatBiasEveryN.trim();
+      const biasN = biasRaw ? Number(biasRaw) : null;
       const res = await upsertAdminRecordChallenge({
         id: form.id,
         slug,
@@ -171,6 +198,19 @@ export function ChallengesPanel({
         rewardBadgeSlug:
           form.rewardBadgeSlug.trim() || slugToBadgeSlug(slug) || null,
         rewardBadgeEmoji: form.rewardBadgeEmoji.trim() || "🏆",
+        themeKey: (form.themeKey || null) as
+          | "logo"
+          | "stadium"
+          | "career"
+          | "formats"
+          | null,
+        preferredTypes: form.preferredTypes.filter((t) =>
+          (FORMAT_TYPES as readonly string[]).includes(t),
+        ) as Array<
+          "IMAGE" | "CAREER_PATH" | "HIGHER_LOWER" | "REVEAL_IMAGE"
+        >,
+        formatBiasEveryN:
+          biasN != null && Number.isFinite(biasN) ? Math.round(biasN) : null,
         categoryIds: form.categoryIds,
         isActive: form.isActive,
         startsAt: fromDatetimeLocal(form.startsAt),
@@ -662,6 +702,76 @@ function ChallengeEditorCard({
                 placeholder="blue_crown"
                 className="font-mono text-sm"
               />
+            </Field>
+          </Section>
+
+          {/* Theme week (Phase C) */}
+          <Section
+            title="Theme week"
+            tip="Biases Survival draws inside this challenge toward visual formats. Empty preferred types → use the theme preset."
+          >
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field>
+                <FieldLabel tip="Preset sets default preferred types + denser bias (~1/2).">
+                  Theme
+                </FieldLabel>
+                <select
+                  className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
+                  value={form.themeKey}
+                  onChange={(e) => setField("themeKey", e.target.value)}
+                >
+                  {THEME_OPTIONS.map((o) => (
+                    <option key={o.value || "none"} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field>
+                <FieldLabel tip="Leave blank for theme default (usually 2). Global default is 5.">
+                  Format bias every N
+                </FieldLabel>
+                <Input
+                  type="number"
+                  min={1}
+                  max={20}
+                  placeholder="auto"
+                  value={form.formatBiasEveryN}
+                  onChange={(e) => setField("formatBiasEveryN", e.target.value)}
+                />
+              </Field>
+            </div>
+            <Field>
+              <FieldLabel tip="Override which formats get priority. Leave empty to use the theme preset.">
+                Preferred formats
+              </FieldLabel>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {FORMAT_TYPES.map((t) => {
+                  const on = form.preferredTypes.includes(t);
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() =>
+                        setField(
+                          "preferredTypes",
+                          on
+                            ? form.preferredTypes.filter((x) => x !== t)
+                            : [...form.preferredTypes, t],
+                        )
+                      }
+                      className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                        on
+                          ? "border-emerald-500 bg-emerald-50 text-emerald-800"
+                          : "border-slate-200 bg-white text-slate-600"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  );
+                })}
+              </div>
             </Field>
           </Section>
 

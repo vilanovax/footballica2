@@ -204,18 +204,63 @@ export function SurvivalMatch({
   const question = queue[0];
   if (!question) {
     return (
-      <section className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
+      <section className="relative flex flex-1 flex-col items-center justify-center overflow-hidden px-6 text-center">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-linear-to-b from-destructive/12 via-transparent to-primary/10"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute start-1/2 top-[28%] h-44 w-44 -translate-x-1/2 rounded-full bg-destructive/20 blur-3xl"
+        />
+
         <motion.div
-          animate={{ scale: [1, 1.12, 1] }}
-          transition={{ repeat: Infinity, duration: 0.8 }}
-          className="text-5xl"
+          className="relative"
+          animate={{ scale: [1, 1.08, 1], y: [0, -6, 0] }}
+          transition={{
+            repeat: Infinity,
+            duration: 1.1,
+            ease: "easeInOut",
+          }}
           aria-hidden
         >
-          ❤️
+          <motion.div
+            className="absolute inset-0 rounded-full bg-destructive/25 blur-xl"
+            animate={{ opacity: [0.35, 0.7, 0.35], scale: [0.9, 1.15, 0.9] }}
+            transition={{ repeat: Infinity, duration: 1.1, ease: "easeInOut" }}
+          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/icons/heart.png"
+            alt=""
+            draggable={false}
+            className="relative h-28 w-28 object-contain drop-shadow-[0_6px_18px_rgba(220,38,38,0.35)]"
+          />
         </motion.div>
-        <p className="font-display text-lg font-bold text-muted-foreground">
+
+        <motion.p
+          className="relative mt-5 font-display text-xl font-black text-foreground"
+          animate={{ opacity: [0.55, 1, 0.55] }}
+          transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
+        >
           {t("survival.loadingBatch")}
-        </p>
+        </motion.p>
+
+        <div className="relative mt-4 flex items-center gap-2" aria-hidden>
+          {[0, 1, 2].map((i) => (
+            <motion.span
+              key={i}
+              className="h-2.5 w-2.5 rounded-full bg-destructive"
+              animate={{ opacity: [0.25, 1, 0.25], scale: [0.85, 1.15, 0.85] }}
+              transition={{
+                repeat: Infinity,
+                duration: 0.9,
+                delay: i * 0.18,
+                ease: "easeInOut",
+              }}
+            />
+          ))}
+        </div>
       </section>
     );
   }
@@ -264,12 +309,19 @@ export function SurvivalMatch({
                   animate={
                     i < lives
                       ? { scale: 1, opacity: 1 }
-                      : { scale: 0.75, opacity: 0.25 }
+                      : { scale: 0.75, opacity: 0.28 }
                   }
                   transition={{ type: "spring", stiffness: 400, damping: 20 }}
                   aria-hidden
+                  className="inline-flex"
                 >
-                  ❤️
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/icons/heart.png"
+                    alt=""
+                    draggable={false}
+                    className="h-5 w-5 object-contain"
+                  />
                 </motion.span>
               ))}
             </span>

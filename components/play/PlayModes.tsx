@@ -11,6 +11,7 @@ import { RecentDuelHistory } from "@/components/duel/RecentDuelHistory";
 import { DuelInboxBanner } from "@/components/duel/DuelInboxBanner";
 import { MatchCard } from "@/components/play/MatchCard";
 import { GameOfTheDayCard } from "@/components/play/GameOfTheDayCard";
+import { ResourceIcon } from "@/components/common/ResourceIcon";
 
 type PlayModesProps = {
   recentDuels?: DuelSnapshot[];
@@ -60,27 +61,22 @@ export function PlayModes({
           </h1>
         </div>
         <div
-          className={[
-            "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 shadow-fantasy-sm",
-            staminaLow
-              ? "border-destructive/40 bg-destructive/10"
-              : "border-primary/30 bg-primary/10",
-          ].join(" ")}
+          className="flex shrink-0 items-center gap-1"
           aria-label={t("play.staminaBalance", {
             cur: toLocaleDigits(stamina, locale),
             max: toLocaleDigits(maxStamina, locale),
           })}
         >
-          <span aria-hidden>⚡</span>
           <span
             className={[
-              "font-display text-sm font-bold tabular-nums",
+              "font-display text-base font-black tabular-nums",
               staminaLow ? "text-destructive" : "text-primary",
             ].join(" ")}
           >
             {toLocaleDigits(stamina, locale)}/
             {toLocaleDigits(maxStamina, locale)}
           </span>
+          <ResourceIcon kind="energy" size="md" className="h-8 w-8" />
         </div>
       </header>
 

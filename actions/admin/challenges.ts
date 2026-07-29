@@ -19,6 +19,15 @@ const ChallengeSchema = z.object({
   targetScore: z.number().int().min(1).max(10_000),
   rewardBadgeSlug: z.string().max(64).nullable().optional(),
   rewardBadgeEmoji: z.string().max(8).nullable().optional(),
+  themeKey: z
+    .enum(["logo", "stadium", "career", "formats"])
+    .nullable()
+    .optional(),
+  preferredTypes: z
+    .array(z.enum(["IMAGE", "CAREER_PATH", "HIGHER_LOWER", "REVEAL_IMAGE"]))
+    .max(4)
+    .default([]),
+  formatBiasEveryN: z.number().int().min(1).max(20).nullable().optional(),
   /** Empty = any public eligible category. */
   categoryIds: z.array(z.string().min(1)).max(40).default([]),
   isActive: z.boolean(),
@@ -37,6 +46,9 @@ export type AdminRecordChallenge = {
   targetScore: number;
   rewardBadgeSlug: string | null;
   rewardBadgeEmoji: string | null;
+  themeKey: string | null;
+  preferredTypes: string[];
+  formatBiasEveryN: number | null;
   categoryIds: string[];
   categoryLabels: string[];
   isActive: boolean;
@@ -111,6 +123,11 @@ export async function listAdminRecordChallenges(): Promise<
     targetScore: r.targetScore,
     rewardBadgeSlug: r.rewardBadgeSlug,
     rewardBadgeEmoji: r.rewardBadgeEmoji,
+    themeKey: r.themeKey,
+    preferredTypes: Array.isArray(r.preferredTypes)
+      ? (r.preferredTypes as string[]).filter((t) => typeof t === "string")
+      : [],
+    formatBiasEveryN: r.formatBiasEveryN,
     categoryIds: r.categories.map((l) => l.categoryId),
     categoryLabels: r.categories.map((l) => l.category.nameEn),
     isActive: r.isActive,
@@ -174,6 +191,9 @@ export async function upsertAdminRecordChallenge(
           targetScore: data.targetScore,
           rewardBadgeSlug: data.rewardBadgeSlug || null,
           rewardBadgeEmoji: data.rewardBadgeEmoji || "🏆",
+          themeKey: data.themeKey ?? null,
+          preferredTypes: data.preferredTypes,
+          formatBiasEveryN: data.formatBiasEveryN ?? null,
           isActive: data.isActive,
           startsAt,
           expiresAt,
@@ -196,6 +216,9 @@ export async function upsertAdminRecordChallenge(
         targetScore: data.targetScore,
         rewardBadgeSlug: data.rewardBadgeSlug || null,
         rewardBadgeEmoji: data.rewardBadgeEmoji || "🏆",
+        themeKey: data.themeKey ?? null,
+        preferredTypes: data.preferredTypes,
+        formatBiasEveryN: data.formatBiasEveryN ?? null,
         isActive: data.isActive,
         startsAt,
         expiresAt,

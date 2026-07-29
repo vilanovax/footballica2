@@ -63,16 +63,25 @@ export function SurvivalResult({
 
   if (save.status === "saving") {
     return (
-      <section className="flex flex-1 flex-col items-center justify-center gap-6 text-center">
+      <section className="relative flex flex-1 flex-col items-center justify-center overflow-hidden px-6 text-center">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-linear-to-b from-destructive/10 via-transparent to-primary/8"
+        />
         <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ repeat: Infinity, duration: 0.9, ease: "linear" }}
-          className="text-6xl"
+          animate={{ scale: [1, 1.08, 1], y: [0, -5, 0] }}
+          transition={{ repeat: Infinity, duration: 1.05, ease: "easeInOut" }}
           aria-hidden
         >
-          ❤️
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/icons/heart.png"
+            alt=""
+            draggable={false}
+            className="h-24 w-24 object-contain drop-shadow-[0_6px_16px_rgba(220,38,38,0.3)]"
+          />
         </motion.div>
-        <h1 className="font-display text-2xl font-bold text-foreground">
+        <h1 className="relative mt-4 font-display text-2xl font-black text-foreground">
           {t("result.saving")}
         </h1>
       </section>
@@ -193,19 +202,22 @@ export function SurvivalResult({
     {
       key: "score",
       label: `${t("survival.score")} ${toLocaleDigits(data.rewards.score, locale)}`,
-      tone: "accent" as const,
+      iconSrc: "/icons/trophy.png",
+      bare: true,
     },
     data.rewards.bestCombo >= 2
       ? {
           key: "combo",
-          label: `⚡ ×${toLocaleDigits(data.rewards.bestCombo, locale)}`,
-          tone: "secondary" as const,
+          label: `×${toLocaleDigits(data.rewards.bestCombo, locale)}`,
+          iconSrc: "/icons/energy.png",
+          bare: true,
         }
       : null,
   ].filter(Boolean) as Array<{
     key: string;
     label: string;
-    tone: "accent" | "secondary";
+    iconSrc: string;
+    bare: boolean;
   }>;
 
   const streakNote = data.streak.extended
@@ -220,6 +232,7 @@ export function SurvivalResult({
     <PostMatchSummary
       outcome={{
         emoji: cleared ? "🏆" : "💔",
+        heroSrc: cleared ? "/icons/trophy.png" : "/icons/broken-heart.png",
         title: cleared
           ? t("survival.clearedTitle")
           : t("survival.eliminatedTitle"),

@@ -1,18 +1,18 @@
 /**
  * Live-Ops content seed:
- * - PUBLISHED CAREER_PATH + HIGHER_LOWER questions (idempotent by contentHash)
+ * - PUBLISHED visual format questions (idempotent by contentHash)
  * - Mystery puzzles for today (Tehran) + next N days
  *
  * Run: npm run seed:liveops-formats
+ *
+ * Note: do not import lib/* modules that pull in `server-only` (e.g. mystery/jobs).
  */
 import "dotenv/config";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { Prisma, PrismaClient } from "../generated/prisma/client";
+import { PrismaClient } from "../generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { buildLocalizedContent, computeContentHash } from "../lib/admin/content";
 import { MYSTERY_MAX_GUESSES } from "../lib/mystery/types";
 import { SEED_FOOTBALL_PLAYERS } from "../lib/mystery/seedCatalog";
+import { syncLiveopsFormatPack } from "../lib/admin/liveopsFormatPack";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
@@ -30,7 +30,12 @@ function tehranDayKey(date: Date = new Date()): string {
   return dayKeyFormatter.format(date);
 }
 
-/** Hand-picked rotation so nearby days don’t feel random/duplicate. */
+function addTehranDays(fromKey: string, offset: number): string {
+  const base = new Date(`${fromKey}T12:00:00+03:30`);
+  base.setTime(base.getTime() + offset * 86_400_000);
+  return tehranDayKey(base);
+}
+
 const MYSTERY_ROTATION = [
   "messi",
   "ronaldo",
@@ -45,130 +50,6 @@ const MYSTERY_ROTATION = [
   "vinicius",
   "yamal",
 ] as const;
-
-type LocaleBlob = {
-  text: string;
-  options: string[];
-  careerPath?: { steps: { name: string; logoUrl?: string | null }[] };
-  higherLower?: {
-    left: { name: string; imageUrl?: string | null };
-    right: { name: string; imageUrl?: string | null };
-    metricLabel: string;
-  };
-};
-
-type FormatSeedQuestion = {
-  type: "CAREER_PATH" | "HIGHER_LOWER" | "REVEAL_IMAGE";
-  categorySlug: string;
-  difficulty: "EASY" | "MEDIUM" | "HARD";
-  correctIndex: number;
-  source?: string;
-  isTemporal?: boolean;
-  mediaUrl?: string | null;
-  content: { en: LocaleBlob; fa: LocaleBlob };
-  explanation?: { en: string; fa: string } | null;
-};
-
-const CATEGORY_DEFS = [
-  { slug: "general", nameEn: "General", nameFa: "عمومی", icon: "⚽️" },
-  { slug: "world-cup", nameEn: "World Cup", nameFa: "جام جهانی", icon: "🏆" },
-  {
-    slug: "champions-league",
-    nameEn: "Champions League",
-    nameFa: "لیگ قهرمانان اروپا",
-    icon: "⭐️",
-  },
-  {
-    slug: "iranian-league",
-    nameEn: "Iranian Football",
-    nameFa: "فوتبال ایران",
-    icon: "🇮🇷",
-  },
-] as const;
-
-function addTehranDays(fromKey: string, offset: number): string {
-  const base = new Date(`${fromKey}T12:00:00+03:30`);
-  base.setTime(base.getTime() + offset * 86_400_000);
-  return tehranDayKey(base);
-}
-
-async function ensureCategories() {
-  const map = new Map<string, { id: string; nameEn: string; nameFa: string }>();
-  for (const def of CATEGORY_DEFS) {
-    const c = await prisma.category.upsert({
-      where: { slug: def.slug },
-      update: { nameEn: def.nameEn, nameFa: def.nameFa, icon: def.icon },
-      create: { ...def, isActive: true },
-      select: { id: true, slug: true, nameEn: true, nameFa: true },
-    });
-    map.set(c.slug, c);
-  }
-  return map;
-}
-
-async function upsertFormatQuestion(
-  q: FormatSeedQuestion,
-  category: { id: string; nameEn: string; nameFa: string },
-) {
-  const contentHash = computeContentHash(q.content);
-  const localized = buildLocalizedContent(
-    q.content,
-    category,
-  ) as Prisma.InputJsonValue;
-
-  const explanation =
-    q.explanation &&
-    (q.explanation.en.trim() || q.explanation.fa.trim())
-      ? {
-          en: q.explanation.en.trim(),
-          fa: q.explanation.fa.trim(),
-        }
-      : null;
-
-  const shared = {
-    type: q.type,
-    status: "PUBLISHED" as const,
-    content: localized,
-    correctIndex: q.correctIndex,
-    difficulty: q.difficulty,
-    source: q.source ?? "LIVEOPS_FORMATS_V1",
-    isTemporal: q.isTemporal ?? false,
-    categoryId: category.id,
-    mediaUrl: q.type === "REVEAL_IMAGE" ? (q.mediaUrl ?? null) : null,
-    explanation: (explanation ??
-      Prisma.DbNull) as Prisma.InputJsonValue | typeof Prisma.DbNull,
-  };
-
-  await prisma.question.upsert({
-    where: { contentHash },
-    update: shared,
-    create: {
-      ...shared,
-      contentHash,
-      eloRating: 1500,
-      timesServed: 0,
-      timesCorrect: 0,
-    },
-  });
-}
-
-async function seedFormatQuestions() {
-  const categories = await ensureCategories();
-  const file = join(process.cwd(), "prisma", "seeds", "format-questions.json");
-  const rows = JSON.parse(readFileSync(file, "utf8")) as FormatSeedQuestion[];
-
-  let n = 0;
-  for (const q of rows) {
-    const category = categories.get(q.categorySlug);
-    if (!category) {
-      console.warn(`Skip — unknown category "${q.categorySlug}"`);
-      continue;
-    }
-    await upsertFormatQuestion(q, category);
-    n++;
-  }
-  return n;
-}
 
 async function ensurePlayerCatalog() {
   await prisma.footballPlayer.createMany({
@@ -227,10 +108,11 @@ async function seedMysterySchedule() {
 }
 
 async function main() {
-  const questions = await seedFormatQuestions();
+  const formatStats = await syncLiveopsFormatPack(prisma);
   const puzzles = await seedMysterySchedule();
 
-  const [career, higher, reveal, mysteryTotal] = await Promise.all([
+  const [image, career, higher, reveal, mysteryTotal] = await Promise.all([
+    prisma.question.count({ where: { type: "IMAGE", status: "PUBLISHED" } }),
     prisma.question.count({
       where: { type: "CAREER_PATH", status: "PUBLISHED" },
     }),
@@ -243,9 +125,10 @@ async function main() {
     prisma.dailyMysteryPuzzle.count(),
   ]);
 
-  console.log(`Format questions upserted: ${questions}`);
+  console.log(`Format questions upserted: ${formatStats.upserted}`);
+  console.log(`  by type: ${JSON.stringify(formatStats.byType)}`);
   console.log(
-    `Published bank — CAREER_PATH: ${career}, HIGHER_LOWER: ${higher}, REVEAL_IMAGE: ${reveal}`,
+    `Published bank — IMAGE: ${image}, CAREER_PATH: ${career}, HIGHER_LOWER: ${higher}, REVEAL_IMAGE: ${reveal}`,
   );
   console.log(`Mystery schedule (${DAYS_AHEAD} days from Tehran today):`);
   for (const p of puzzles) {

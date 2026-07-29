@@ -522,6 +522,13 @@ model RecordChallenge {
   rewardBadgeSlug  String?
   rewardBadgeEmoji String? @default("🏆")
 
+  /// Live-Ops theme week key (logo / stadium / career / formats). Null = plain RC.
+  themeKey String?
+  /// Preferred QuestionType list for Survival draws inside this challenge, e.g. ["IMAGE","REVEAL_IMAGE"].
+  preferredTypes Json?
+  /// Format bias density (1 = always prefer format, 5 = default ~1/5). Null = global default.
+  formatBiasEveryN Int?
+
   isActive  Boolean   @default(true)
   startsAt  DateTime  @default(now())
   expiresAt DateTime?

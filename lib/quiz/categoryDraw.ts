@@ -7,6 +7,8 @@ import {
   formatBiasQuota,
   isLiveOpsFormatType,
   shouldPreferFormatPick,
+  type FormatBiasOptions,
+  resolvePreferredFormatTypes,
 } from "@/lib/quiz/formatBias";
 import { dbQuestionToQuiz } from "@/lib/quiz/questionMapper";
 import type { QuizQuestion } from "@/lib/quiz/types";
@@ -24,8 +26,6 @@ function pickFromPool<T extends { eloRating: number }>(
 ): T | null {
   if (pool.length === 0) return null;
   if (tier === "HARD") {
-    // Prefer questions players miss most (lowest elo first), with light shuffle
-    // among the hardest third so runs aren't identical.
     const sorted = [...pool].sort((a, b) => a.eloRating - b.eloRating);
     const cut = Math.max(1, Math.ceil(sorted.length / 3));
     const hardSlice = sorted.slice(0, cut);
@@ -39,13 +39,15 @@ function pickTiered(
   preferred: SurvivalDifficultyTier,
   used: Set<string>,
   formatOnly: boolean,
+  bias: FormatBiasOptions,
 ): Question | null {
+  const preferredTypes = resolvePreferredFormatTypes(bias.preferredTypes);
   const order = survivalTierFallbackOrder(preferred);
   for (const tier of order) {
     const pool = pools[tier].filter(
       (q) =>
         !used.has(q.id) &&
-        (!formatOnly || isLiveOpsFormatType(q.type)),
+        (!formatOnly || isLiveOpsFormatType(q.type, preferredTypes)),
     );
     const next = pickFromPool(pool, tier);
     if (next) return next;
@@ -61,17 +63,22 @@ function ensureFormatQuota(
   picked: Question[],
   pools: Record<QuestionDifficulty, Question[]>,
   used: Set<string>,
+  bias: FormatBiasOptions,
 ): Question[] {
+  const everyN = bias.everyN ?? FORMAT_BIAS_EVERY_N;
+  const preferredTypes = resolvePreferredFormatTypes(bias.preferredTypes);
   const quota = Math.min(
-    formatBiasQuota(picked.length, FORMAT_BIAS_EVERY_N),
+    formatBiasQuota(picked.length, everyN),
     [...pools.EASY, ...pools.MEDIUM, ...pools.HARD].filter((q) =>
-      isLiveOpsFormatType(q.type),
+      isLiveOpsFormatType(q.type, preferredTypes),
     ).length,
   );
   if (quota <= 0) return picked;
 
   const out = [...picked];
-  let formatCount = out.filter((q) => isLiveOpsFormatType(q.type)).length;
+  let formatCount = out.filter((q) =>
+    isLiveOpsFormatType(q.type, preferredTypes),
+  ).length;
 
   while (formatCount < quota) {
     const format = pickTiered(
@@ -79,13 +86,13 @@ function ensureFormatQuota(
       survivalTierForProgress(out.length),
       used,
       true,
+      bias,
     );
     if (!format) break;
 
-    // Replace the last non-format pick so earlier progressive tiers stay intact.
     let swapAt = -1;
     for (let i = out.length - 1; i >= 0; i--) {
-      if (!isLiveOpsFormatType(out[i]!.type)) {
+      if (!isLiveOpsFormatType(out[i]!.type, preferredTypes)) {
         swapAt = i;
         break;
       }
@@ -169,8 +176,9 @@ export async function getCategoryQuestions(
   categoryId: string,
   limit: number,
   excludeIds: string[] = [],
+  bias: FormatBiasOptions = {},
 ): Promise<QuizQuestion[]> {
-  return getCategoryQuestionsProgressive(categoryId, limit, excludeIds);
+  return getCategoryQuestionsProgressive(categoryId, limit, excludeIds, bias);
 }
 
 /**
@@ -181,10 +189,12 @@ export async function getCategoryQuestionsProgressive(
   categoryId: string,
   limit: number,
   excludeIds: string[] = [],
+  bias: FormatBiasOptions = {},
 ): Promise<QuizQuestion[]> {
   const take = Math.max(1, limit);
   const exclude = new Set(excludeIds.filter(Boolean));
   let progress = exclude.size;
+  const everyN = bias.everyN ?? FORMAT_BIAS_EVERY_N;
 
   const rows = await prisma.question.findMany({
     where: {
@@ -210,12 +220,11 @@ export async function getCategoryQuestionsProgressive(
     const preferred = survivalTierForProgress(progress);
     let next: Question | null = null;
 
-    // Soft Live-Ops bias: ~1/N picks try a format row in-tier first.
-    if (shouldPreferFormatPick()) {
-      next = pickTiered(pools, preferred, used, true);
+    if (shouldPreferFormatPick(Math.random, everyN)) {
+      next = pickTiered(pools, preferred, used, true, bias);
     }
     if (!next) {
-      next = pickTiered(pools, preferred, used, false);
+      next = pickTiered(pools, preferred, used, false, bias);
     }
 
     if (!next) break;
@@ -224,7 +233,7 @@ export async function getCategoryQuestionsProgressive(
     progress += 1;
   }
 
-  const biased = ensureFormatQuota(picked, pools, used);
+  const biased = ensureFormatQuota(picked, pools, used, bias);
   return biased.map(dbQuestionToQuiz);
 }
 

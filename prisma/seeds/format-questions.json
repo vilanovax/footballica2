@@ -16,22 +16,43 @@
         ],
         "careerPath": {
           "steps": [
-            { "name": "Newell's Old Boys" },
-            { "name": "Barcelona" },
-            { "name": "PSG" },
-            { "name": "Inter Miami" }
+            {
+              "name": "Newell's Old Boys"
+            },
+            {
+              "name": "Barcelona"
+            },
+            {
+              "name": "PSG"
+            },
+            {
+              "name": "Inter Miami"
+            }
           ]
         }
       },
       "fa": {
         "text": "این مسیر باشگاهی مال کیست؟",
-        "options": ["لیونل مسی", "نیمار", "لوئیس سوارز", "کریستیانو رونالدو"],
+        "options": [
+          "لیونل مسی",
+          "نیمار",
+          "لوئیس سوارز",
+          "کریستیانو رونالدو"
+        ],
         "careerPath": {
           "steps": [
-            { "name": "نیولز اولد بویز" },
-            { "name": "بارسلونا" },
-            { "name": "پاری‌سن‌ژرمن" },
-            { "name": "اینتر میامی" }
+            {
+              "name": "نیولز اولد بویز"
+            },
+            {
+              "name": "بارسلونا"
+            },
+            {
+              "name": "پاری‌سن‌ژرمن"
+            },
+            {
+              "name": "اینتر میامی"
+            }
           ]
         }
       }
@@ -58,10 +79,18 @@
         ],
         "careerPath": {
           "steps": [
-            { "name": "Sporting CP" },
-            { "name": "Manchester United" },
-            { "name": "Real Madrid" },
-            { "name": "Juventus" }
+            {
+              "name": "Sporting CP"
+            },
+            {
+              "name": "Manchester United"
+            },
+            {
+              "name": "Real Madrid"
+            },
+            {
+              "name": "Juventus"
+            }
           ]
         }
       },
@@ -75,10 +104,18 @@
         ],
         "careerPath": {
           "steps": [
-            { "name": "اسپورتینگ" },
-            { "name": "منچستریونایتد" },
-            { "name": "رئال مادرید" },
-            { "name": "یوونتوس" }
+            {
+              "name": "اسپورتینگ"
+            },
+            {
+              "name": "منچستریونایتد"
+            },
+            {
+              "name": "رئال مادرید"
+            },
+            {
+              "name": "یوونتوس"
+            }
           ]
         }
       }
@@ -105,10 +142,18 @@
         ],
         "careerPath": {
           "steps": [
-            { "name": "Persepolis" },
-            { "name": "Rio Ave" },
-            { "name": "Porto" },
-            { "name": "Inter" }
+            {
+              "name": "Persepolis"
+            },
+            {
+              "name": "Rio Ave"
+            },
+            {
+              "name": "Porto"
+            },
+            {
+              "name": "Inter"
+            }
           ]
         }
       },
@@ -122,10 +167,18 @@
         ],
         "careerPath": {
           "steps": [
-            { "name": "پرسپولیس" },
-            { "name": "ریوآوه" },
-            { "name": "پورتو" },
-            { "name": "اینتر" }
+            {
+              "name": "پرسپولیس"
+            },
+            {
+              "name": "ریوآوه"
+            },
+            {
+              "name": "پورتو"
+            },
+            {
+              "name": "اینتر"
+            }
           ]
         }
       }
@@ -152,10 +205,18 @@
         ],
         "careerPath": {
           "steps": [
-            { "name": "Basel" },
-            { "name": "Chelsea" },
-            { "name": "Roma" },
-            { "name": "Liverpool" }
+            {
+              "name": "Basel"
+            },
+            {
+              "name": "Chelsea"
+            },
+            {
+              "name": "Roma"
+            },
+            {
+              "name": "Liverpool"
+            }
           ]
         }
       },
@@ -169,10 +230,18 @@
         ],
         "careerPath": {
           "steps": [
-            { "name": "بازل" },
-            { "name": "چلسی" },
-            { "name": "رم" },
-            { "name": "لیورپول" }
+            {
+              "name": "بازل"
+            },
+            {
+              "name": "چلسی"
+            },
+            {
+              "name": "رم"
+            },
+            {
+              "name": "لیورپول"
+            }
           ]
         }
       }
@@ -192,19 +261,37 @@
     "content": {
       "en": {
         "text": "Who has more Ballon d'Or wins?",
-        "options": ["Lionel Messi", "Cristiano Ronaldo", "Equal", "Neither has any"],
+        "options": [
+          "Lionel Messi",
+          "Cristiano Ronaldo",
+          "Equal",
+          "Neither has any"
+        ],
         "higherLower": {
-          "left": { "name": "Lionel Messi" },
-          "right": { "name": "Cristiano Ronaldo" },
+          "left": {
+            "name": "Lionel Messi"
+          },
+          "right": {
+            "name": "Cristiano Ronaldo"
+          },
           "metricLabel": "Ballon d'Or titles"
         }
       },
       "fa": {
         "text": "چه کسی توپ طلای بیشتری برده؟",
-        "options": ["لیونل مسی", "کریستیانو رونالدو", "مساوی", "هیچ‌کدام"],
+        "options": [
+          "لیونل مسی",
+          "کریستیانو رونالدو",
+          "مساوی",
+          "هیچ‌کدام"
+        ],
         "higherLower": {
-          "left": { "name": "لیونل مسی" },
-          "right": { "name": "کریستیانو رونالدو" },
+          "left": {
+            "name": "لیونل مسی"
+          },
+          "right": {
+            "name": "کریستیانو رونالدو"
+          },
           "metricLabel": "تعداد توپ طلا"
         }
       }
@@ -230,8 +317,12 @@
           "Gerd Müller (1970)"
         ],
         "higherLower": {
-          "left": { "name": "Just Fontaine" },
-          "right": { "name": "Ronaldo Nazário" },
+          "left": {
+            "name": "Just Fontaine"
+          },
+          "right": {
+            "name": "Ronaldo Nazário"
+          },
           "metricLabel": "Goals in one World Cup"
         }
       },
@@ -244,8 +335,12 @@
           "گرد مولر (۱۹۷۰)"
         ],
         "higherLower": {
-          "left": { "name": "ژوست فونتن" },
-          "right": { "name": "رونالدو نازاریو" },
+          "left": {
+            "name": "ژوست فونتن"
+          },
+          "right": {
+            "name": "رونالدو نازاریو"
+          },
           "metricLabel": "گل در یک جام جهانی"
         }
       }
@@ -272,8 +367,12 @@
           "Neither has won UCL"
         ],
         "higherLower": {
-          "left": { "name": "Karim Benzema" },
-          "right": { "name": "Erling Haaland" },
+          "left": {
+            "name": "Karim Benzema"
+          },
+          "right": {
+            "name": "Erling Haaland"
+          },
           "metricLabel": "UCL titles (player)"
         }
       },
@@ -286,8 +385,12 @@
           "هیچ‌کدام قهرمان نشده"
         ],
         "higherLower": {
-          "left": { "name": "کریم بنزما" },
-          "right": { "name": "ارلینگ هالند" },
+          "left": {
+            "name": "کریم بنزما"
+          },
+          "right": {
+            "name": "ارلینگ هالند"
+          },
           "metricLabel": "قهرمانی UCL (بازیکن)"
         }
       }
@@ -314,8 +417,12 @@
           "Cannot tell"
         ],
         "higherLower": {
-          "left": { "name": "Alireza Jahanbakhsh" },
-          "right": { "name": "Lamine Yamal" },
+          "left": {
+            "name": "Alireza Jahanbakhsh"
+          },
+          "right": {
+            "name": "Lamine Yamal"
+          },
           "metricLabel": "Age"
         }
       },
@@ -328,8 +435,12 @@
           "نمی‌شود گفت"
         ],
         "higherLower": {
-          "left": { "name": "علیرضا جهانبخش" },
-          "right": { "name": "لامین یامال" },
+          "left": {
+            "name": "علیرضا جهانبخش"
+          },
+          "right": {
+            "name": "لامین یامال"
+          },
           "metricLabel": "سن"
         }
       }
@@ -358,7 +469,12 @@
       },
       "fa": {
         "text": "این بازیکن کیست؟ (عکس کم‌کم واضح می‌شود)",
-        "options": ["لیونل مسی", "نیمار", "لوئیس سوارز", "سرخیو آگوئرو"]
+        "options": [
+          "لیونل مسی",
+          "نیمار",
+          "لوئیس سوارز",
+          "سرخیو آگوئرو"
+        ]
       }
     },
     "explanation": {
@@ -385,12 +501,145 @@
       },
       "fa": {
         "text": "قبل از واضح شدن عکس حدس بزن.",
-        "options": ["کریم بنزما", "گرت بیل", "کریستیانو رونالدو", "رائول"]
+        "options": [
+          "کریم بنزما",
+          "گرت بیل",
+          "کریستیانو رونالدو",
+          "رائول"
+        ]
       }
     },
     "explanation": {
       "en": "Ronaldo’s silhouette and celebration style are hard to miss once focus returns.",
       "fa": "سیلوئت و استایل جشن گل رونالدو بعد از فوکوس سخت اشتباه گرفته می‌شود."
+    }
+  },
+  {
+    "type": "IMAGE",
+    "categorySlug": "general",
+    "difficulty": "EASY",
+    "correctIndex": 0,
+    "source": "LIVEOPS_FORMATS_V2",
+    "mediaUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Lionel-Messi-Argentina-2022-FIFA-World-Cup_%28cropped%29.jpg/440px-Lionel-Messi-Argentina-2022-FIFA-World-Cup_%28cropped%29.jpg",
+    "content": {
+      "en": {
+        "text": "Which player is shown lifting the World Cup?",
+        "options": [
+          "Lionel Messi",
+          "Neymar",
+          "Di María",
+          "Lautaro Martínez"
+        ]
+      },
+      "fa": {
+        "text": "بازیکن روی عکس که جام را بالا برده کیست؟",
+        "options": [
+          "لیونل مسی",
+          "نیمار",
+          "دی‌ماریا",
+          "لائوتارو مارتینز"
+        ]
+      }
+    },
+    "explanation": {
+      "en": "Messi captained Argentina to the 2022 World Cup in Qatar.",
+      "fa": "مسی کاپیتان آرژانتین قهرمان جام جهانی ۲۰۲۲ قطر بود."
+    }
+  },
+  {
+    "type": "IMAGE",
+    "categorySlug": "champions-league",
+    "difficulty": "MEDIUM",
+    "correctIndex": 2,
+    "source": "LIVEOPS_FORMATS_V2",
+    "mediaUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Cristiano_Ronaldo_2018.jpg/440px-Cristiano_Ronaldo_2018.jpg",
+    "content": {
+      "en": {
+        "text": "Name the player in this photo.",
+        "options": [
+          "Karim Benzema",
+          "Gareth Bale",
+          "Cristiano Ronaldo",
+          "Raúl"
+        ]
+      },
+      "fa": {
+        "text": "بازیکن این عکس کیست؟",
+        "options": [
+          "کریم بنزما",
+          "گرت بیل",
+          "کریستیانو رونالدو",
+          "رائول"
+        ]
+      }
+    },
+    "explanation": {
+      "en": "Ronaldo’s Real Madrid era produced five Champions League titles.",
+      "fa": "دوران رونالدو در رئال مادرید پنج قهرمانی لیگ قهرمانان داشت."
+    }
+  },
+  {
+    "type": "IMAGE",
+    "categorySlug": "world-cup",
+    "difficulty": "EASY",
+    "correctIndex": 1,
+    "source": "LIVEOPS_FORMATS_V2",
+    "mediaUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Kylian_Mbapp%C3%A9_2019.jpg/440px-Kylian_Mbapp%C3%A9_2019.jpg",
+    "content": {
+      "en": {
+        "text": "Who is this French forward?",
+        "options": [
+          "Antoine Griezmann",
+          "Kylian Mbappé",
+          "Ousmane Dembélé",
+          "Karim Benzema"
+        ]
+      },
+      "fa": {
+        "text": "این مهاجم فرانسوی کیست؟",
+        "options": [
+          "آنتوان گریزمان",
+          "کیلین امباپه",
+          "اوسمان دمبله",
+          "کریم بنزما"
+        ]
+      }
+    },
+    "explanation": {
+      "en": "Mbappé starred for France at the 2018 and 2022 World Cups.",
+      "fa": "امباپه در جام‌های جهانی ۲۰۱۸ و ۲۰۲۲ ستاره فرانسه بود."
+    }
+  },
+  {
+    "type": "IMAGE",
+    "categorySlug": "iranian-league",
+    "difficulty": "MEDIUM",
+    "correctIndex": 0,
+    "source": "LIVEOPS_FORMATS_V2",
+    "mediaUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Sardar_Azmoun_2019.jpg/440px-Sardar_Azmoun_2019.jpg",
+    "content": {
+      "en": {
+        "text": "Which Iranian striker is pictured?",
+        "options": [
+          "Sardar Azmoun",
+          "Mehdi Taremi",
+          "Alireza Jahanbakhsh",
+          "Karim Ansarifard"
+        ]
+      },
+      "fa": {
+        "text": "این مهاجم ایرانی کیست؟",
+        "options": [
+          "سردار آزمون",
+          "مهدی طارمی",
+          "علیرضا جهانبخش",
+          "کریم انصاری‌فرد"
+        ]
+      }
+    },
+    "explanation": {
+      "en": "Azmoun has been a long-time spearhead for Team Melli.",
+      "fa": "آزمون سال‌ها نوک حمله تیم ملی ایران بوده است."
     }
   }
 ]

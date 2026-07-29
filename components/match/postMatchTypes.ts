@@ -5,6 +5,8 @@ import type { BadgeTier } from "@/lib/game/achievements";
 /** Top-line win / clear / duel outcome. */
 export type PostMatchOutcome = {
   emoji: string;
+  /** Optional image hero (replaces emoji glyph when set). */
+  heroSrc?: string;
   title: string;
   subtitle?: string;
   hint?: string;
@@ -13,6 +15,10 @@ export type PostMatchOutcome = {
     key: string;
     label: string;
     tone?: "accent" | "secondary" | "muted";
+    /** Game icon path — shown beside the label. */
+    iconSrc?: string;
+    /** No pill/box — free-floating icon + label. */
+    bare?: boolean;
   }>;
   /** Mode-specific board (e.g. Duel scorecard body). */
   children?: ReactNode;

@@ -7,7 +7,10 @@ import {
   FORMAT_BIAS_EVERY_N,
   formatBiasQuota,
   isLiveOpsFormatType,
+  resolvePreferredFormatTypes,
 } from "@/lib/quiz/formatBias";
+import { resolveThemeBias } from "@/lib/game/liveOpsTheme";
+import { getGameConfig } from "@/lib/game/gameConfig";
 import { dbQuestionToQuiz } from "@/lib/quiz/questionMapper";
 import type { QuizQuestion, QuestionDifficulty } from "@/lib/quiz/types";
 
@@ -94,13 +97,29 @@ export async function getMatchQuestions(options?: {
     },
   });
 
+  const config = await getGameConfig();
+  const themeBias = resolveThemeBias({
+    themeKey: config.liveOps.themeKey,
+    preferredTypes: config.liveOps.preferredTypes,
+    formatBiasEveryN: config.liveOps.formatBiasEveryN,
+    fallbackEveryN: FORMAT_BIAS_EVERY_N,
+  });
+  const preferredTypes = resolvePreferredFormatTypes(
+    themeBias?.preferredTypes ?? null,
+  );
+  const everyN = themeBias?.everyN ?? FORMAT_BIAS_EVERY_N;
+
   const pool = shuffle(rows).map(dbQuestionToQuiz);
-  const formatPool = shuffle(pool.filter((q) => isLiveOpsFormatType(q.type)));
-  const textPool = shuffle(pool.filter((q) => !isLiveOpsFormatType(q.type)));
+  const formatPool = shuffle(
+    pool.filter((q) => isLiveOpsFormatType(q.type, preferredTypes)),
+  );
+  const textPool = shuffle(
+    pool.filter((q) => !isLiveOpsFormatType(q.type, preferredTypes)),
+  );
 
   const picked: QuizQuestion[] = [];
   const usedAnswers = new Set<string>();
-  const quota = Math.min(formatBiasQuota(count, FORMAT_BIAS_EVERY_N), formatPool.length);
+  const quota = Math.min(formatBiasQuota(count, everyN), formatPool.length);
 
   // 1) Reserve format slots first (so TEXT volume can't drown them).
   if (quota > 0) {

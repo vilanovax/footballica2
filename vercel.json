@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/mystery",
       "schedule": "30 20 * * *"
+    },
+    {
+      "path": "/api/cron/grid",
+      "schedule": "35 20 * * *"
     }
   ]
 }

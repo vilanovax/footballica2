@@ -183,6 +183,9 @@ export function PlayerProfile({
     mysteryStreak: profile.mysteryStreak,
     longestMysteryStreak: profile.longestMysteryStreak,
     mysterySolves: profile.mysterySolves,
+    gridStreak: profile.gridStreak,
+    longestGridStreak: profile.longestGridStreak,
+    gridSolves: profile.gridSolves,
   };
 
   const winHintKey =

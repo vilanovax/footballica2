@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -21,6 +22,7 @@ export type PlayChallengeCard = {
   targetScore: number;
   rewardBadgeSlug: string | null;
   rewardBadgeEmoji: string | null;
+  themeKey?: string | null;
   categoryIds: string[];
   expiresAt: Date | string | null;
   unlocked: boolean;
@@ -144,6 +146,11 @@ export function PremiumChallenges({
                         {t("play.challengeUnlockedBadge")}
                       </span>
                     ) : null}
+                    {c.themeKey ? (
+                      <span className="rounded-full bg-amber-500/25 px-2 py-0.5 font-display text-[10px] font-bold text-amber-900 dark:text-amber-100">
+                        {t("play.themeWeek")}
+                      </span>
+                    ) : null}
                   </div>
                   <p className="mt-0.5 font-display text-xs font-bold text-muted-foreground">
                     🎯 {toLocaleDigits(c.targetScore, locale)}
@@ -156,26 +163,41 @@ export function PremiumChallenges({
                 </div>
               </div>
 
-              {/* Visual economy chips — no invoice rows */}
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {!c.unlocked ? (
-                  <GameChip>🪙 {toLocaleDigits(c.unlockCostCoins, locale)}</GameChip>
-                ) : (
-                  <GameChip dim>🪙 ✓</GameChip>
-                )}
-                <GameChip highlight>
-                  {badge} {toLocaleDigits(c.targetScore, locale)}
-                </GameChip>
-                <GameChip>⚡ {toLocaleDigits(1, locale)}</GameChip>
+              {/* Bare meta icons — no chip boxes, all challenges */}
+              <div className="mt-3 flex flex-wrap items-center gap-3">
                 {expires ? (
-                  <GameChip dim>
-                    ⏳{" "}
-                    {expires.toLocaleDateString(
+                  <MetaStat
+                    icon="/icons/timer.png"
+                    label={expires.toLocaleDateString(
                       locale === "fa" ? "fa-IR" : "en-GB",
                       { month: "short", day: "numeric" },
                     )}
-                  </GameChip>
+                    tone="muted"
+                  />
                 ) : null}
+                <MetaStat
+                  icon="/icons/energy.png"
+                  label={toLocaleDigits(1, locale)}
+                />
+                <MetaStat
+                  icon="/icons/crown.png"
+                  label={toLocaleDigits(c.targetScore, locale)}
+                  tone="gold"
+                  glow
+                />
+                {!c.unlocked ? (
+                  <MetaStat
+                    icon="/icons/coin.png"
+                    label={toLocaleDigits(c.unlockCostCoins, locale)}
+                    tone="gold"
+                  />
+                ) : (
+                  <MetaStat
+                    icon="/icons/done.png"
+                    label="✓"
+                    tone={c.conquered ? "mint" : "muted"}
+                  />
+                )}
               </div>
 
               <div className="mt-3.5">
@@ -212,27 +234,41 @@ export function PremiumChallenges({
   );
 }
 
-function GameChip({
-  children,
-  highlight,
-  dim,
+function MetaStat({
+  icon,
+  label,
+  tone = "default",
+  glow,
 }: {
-  children: React.ReactNode;
-  highlight?: boolean;
-  dim?: boolean;
+  icon: string;
+  label: string;
+  tone?: "default" | "gold" | "mint" | "muted";
+  glow?: boolean;
 }) {
+  const text =
+    tone === "gold"
+      ? "text-amber-900"
+      : tone === "mint"
+        ? "text-emerald-700"
+        : tone === "muted"
+          ? "text-muted-foreground"
+          : "text-foreground";
+
   return (
     <span
-      className={[
-        "inline-flex min-h-8 items-center rounded-full px-2.5 py-1 font-display text-xs font-extrabold shadow-fantasy-sm",
-        highlight
-          ? "border border-amber-400/60 bg-amber-100 text-amber-950"
-          : dim
-            ? "border border-border/60 bg-muted/60 text-muted-foreground"
-            : "border border-border/80 bg-surface text-foreground",
-      ].join(" ")}
+      className={`inline-flex min-h-8 items-center gap-1 font-display text-xs font-extrabold tabular-nums ${text}`}
     >
-      {children}
+      <Image
+        src={icon}
+        alt=""
+        width={22}
+        height={22}
+        className={`h-[22px] w-[22px] object-contain drop-shadow-sm ${
+          glow ? "drop-shadow-[0_0_6px_rgba(251,191,36,0.45)]" : ""
+        }`}
+        aria-hidden
+      />
+      {label}
     </span>
   );
 }

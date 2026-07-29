@@ -44,11 +44,21 @@ function questionPreview(content: unknown): { en: string; fa: string } {
   };
 }
 
+const TYPE_VALUES = [
+  "TEXT",
+  "IMAGE",
+  "CAREER_PATH",
+  "HIGHER_LOWER",
+  "REVEAL_IMAGE",
+] as const;
+type QuestionType = (typeof TYPE_VALUES)[number];
+
 type SearchParams = {
   category?: string;
   tag?: string;
   q?: string;
   status?: string;
+  type?: string;
   sort?: string;
   dir?: string;
   page?: string;
@@ -77,6 +87,13 @@ function parseStatus(raw: string | undefined): QuestionStatus | undefined {
     : undefined;
 }
 
+function parseType(raw: string | undefined): QuestionType | undefined {
+  if (!raw) return undefined;
+  return TYPE_VALUES.includes(raw as QuestionType)
+    ? (raw as QuestionType)
+    : undefined;
+}
+
 export default async function AdminQuestionsPage({
   searchParams,
 }: {
@@ -85,6 +102,7 @@ export default async function AdminQuestionsPage({
   const sp = await searchParams;
   const { category, tag } = sp;
   const status = parseStatus(sp.status);
+  const type = parseType(sp.type);
   const q = sp.q?.trim() || "";
   const sort = sp.sort;
   const dir: "asc" | "desc" = sp.dir === "desc" ? "desc" : "asc";
@@ -94,6 +112,7 @@ export default async function AdminQuestionsPage({
     ...(category ? { categoryId: category } : {}),
     ...(tag ? { tags: { some: { id: tag } } } : {}),
     ...(status ? { status } : {}),
+    ...(type ? { type } : {}),
     ...(q
       ? {
           OR: [
@@ -138,7 +157,7 @@ export default async function AdminQuestionsPage({
     },
   });
 
-  const isFiltered = Boolean(category || tag || q || status);
+  const isFiltered = Boolean(category || tag || q || status || type);
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">
@@ -203,6 +222,7 @@ export default async function AdminQuestionsPage({
             category={category}
             tag={tag}
             status={status}
+            type={type}
           />
         </div>
       </div>

@@ -1,6 +1,8 @@
 import { Info } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { getLiveopsFormatsSnapshot } from "@/actions/admin/liveopsFormats";
 import { ImportExportPanel } from "@/components/admin/ImportExportPanel";
+import { LiveOpsFormatsPanel } from "@/components/admin/LiveOpsFormatsPanel";
 import {
   Card,
   CardContent,
@@ -12,15 +14,18 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function AdminSettingsPage() {
-  const categories = await prisma.category.findMany({
-    orderBy: { nameEn: "asc" },
-    select: {
-      id: true,
-      nameEn: true,
-      nameFa: true,
-      _count: { select: { questions: true } },
-    },
-  });
+  const [categories, liveops] = await Promise.all([
+    prisma.category.findMany({
+      orderBy: { nameEn: "asc" },
+      select: {
+        id: true,
+        nameEn: true,
+        nameFa: true,
+        _count: { select: { questions: true } },
+      },
+    }),
+    getLiveopsFormatsSnapshot(),
+  ]);
 
   const options = categories.map((c) => ({
     id: c.id,
@@ -37,6 +42,8 @@ export default async function AdminSettingsPage() {
           Backup, restore, and bulk-manage the question bank.
         </p>
       </div>
+
+      <LiveOpsFormatsPanel initial={liveops} />
 
       <ImportExportPanel categories={options} />
 

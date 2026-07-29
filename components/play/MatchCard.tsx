@@ -2,7 +2,6 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
-import { Info } from "lucide-react";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import type { PlayModeEconomy, PlayModeId } from "@/lib/play/modeEconomy";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -10,6 +9,27 @@ import { toLocaleDigits } from "@/lib/i18n/format";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
 import { ResourceIcon } from "@/components/common/ResourceIcon";
+
+function GameIcon({
+  src,
+  alt = "",
+  className = "h-7 w-7",
+}: {
+  src: string;
+  alt?: string;
+  className?: string;
+}) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={alt}
+      aria-hidden={alt ? undefined : true}
+      draggable={false}
+      className={`object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.18)] ${className}`}
+    />
+  );
+}
 
 export type MatchCardTone = "penalty" | "quick" | "survival" | "duel";
 
@@ -180,9 +200,9 @@ export function MatchCard({
             type="button"
             aria-label={t("play.modeInfo")}
             onClick={openInfo}
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-bubble border border-border bg-surface text-muted-foreground shadow-fantasy-sm transition-colors active:bg-muted active:text-foreground"
+            className="flex h-12 w-12 shrink-0 items-center justify-center active:scale-90"
           >
-            <Info className="h-5 w-5" strokeWidth={2.5} />
+            <GameIcon src="/icons/help.png" className="h-10 w-10" />
           </button>
         </div>
       </article>
@@ -281,9 +301,17 @@ function ModeInfoBody({
         <StatTile
           label={lengthLabel}
           icon={
-            <span className="text-xl" aria-hidden>
-              {isSurvival ? "❤️" : modeId === "duel" ? "⚔️" : "🎯"}
-            </span>
+            isSurvival ? (
+              <span className="text-xl" aria-hidden>
+                ❤️
+              </span>
+            ) : modeId === "duel" ? (
+              <span className="text-xl" aria-hidden>
+                ⚔️
+              </span>
+            ) : (
+              <GameIcon src="/icons/target.png" className="h-7 w-7" />
+            )
           }
           value={lengthValue}
         />

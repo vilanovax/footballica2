@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import { useForm, useFieldArray, type UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { AlertCircle, Plus, Trash2 } from "lucide-react";
+import { AlertCircle, Plus, Trash2, Upload } from "lucide-react";
 import {
   questionFormSchema,
   type QuestionFormValues,
 } from "@/lib/admin/questionSchema";
 import { createQuestion, updateQuestion } from "@/actions/admin/questions";
+import { uploadQuestionMedia } from "@/actions/admin/uploadQuestionMedia";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -273,17 +274,58 @@ export function QuestionForm({
                 name="mediaUrl"
                 render={({ field }) => (
                   <FormItem className="sm:col-span-2">
-                    <FormLabel>Media URL</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="https://example.com/image.png"
-                        {...field}
+                    <FormLabel>Media</FormLabel>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+                      <FormControl>
+                        <Input
+                          placeholder="https://… or /questions/…"
+                          {...field}
+                        />
+                      </FormControl>
+                      <label className="inline-flex h-9 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                        <Upload className="h-3.5 w-3.5" />
+                        Upload
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          className="sr-only"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            e.target.value = "";
+                            if (!file) return;
+                            startTransition(async () => {
+                              const fd = new FormData();
+                              fd.set("file", file);
+                              const res = await uploadQuestionMedia(fd);
+                              if (!res.ok) {
+                                toast.error(
+                                  res.error === "file_too_large"
+                                    ? "Max 2 MB."
+                                    : res.error === "unsupported_type"
+                                      ? "Use PNG, JPG, or WebP."
+                                      : "Upload failed.",
+                                );
+                                return;
+                              }
+                              field.onChange(res.url);
+                              toast.success("Media uploaded");
+                            });
+                          }}
+                        />
+                      </label>
+                    </div>
+                    {field.value ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={field.value}
+                        alt=""
+                        className="mt-2 h-28 w-auto max-w-full rounded-lg border border-slate-200 object-contain bg-slate-50"
                       />
-                    </FormControl>
+                    ) : null}
                     <FormDescription>
                       {type === "REVEAL_IMAGE"
                         ? "Starts heavily blurred and clears over ~10s; snaps sharp after answer."
-                        : "External image link shown with the prompt."}
+                        : "Shown with the prompt. Prefer hosted /questions/ uploads over hotlinks."}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

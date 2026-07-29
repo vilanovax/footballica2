@@ -131,21 +131,56 @@ function hasHigherLower(
 
 export type QuestionFormValues = z.infer<typeof questionFormSchema>;
 
-export const importQuestionSchema = z.object({
-  type: z
-    .enum(["TEXT", "IMAGE", "CAREER_PATH", "HIGHER_LOWER", "REVEAL_IMAGE"])
-    .default("TEXT"),
-  mediaUrl: z.string().nullish(),
-  difficulty: z.enum(["EASY", "MEDIUM", "HARD"]).default("EASY"),
-  correctIndex: z.number().int().min(0).max(3),
-  content: z.object({ en: localeContentSchema, fa: localeContentSchema }),
-  explanation: explanationSchema.nullish(),
-  tags: z.array(z.string().trim().min(1)).optional().default([]),
-  status: z.enum(QUESTION_STATUSES).default("PUBLISHED"),
-  isTemporal: z.boolean().default(false),
-  asOfDate: z.string().nullish(),
-  source: z.string().nullish(),
-});
+export const importQuestionSchema = z
+  .object({
+    type: z
+      .enum(["TEXT", "IMAGE", "CAREER_PATH", "HIGHER_LOWER", "REVEAL_IMAGE"])
+      .default("TEXT"),
+    mediaUrl: z.string().nullish(),
+    difficulty: z.enum(["EASY", "MEDIUM", "HARD"]).default("EASY"),
+    correctIndex: z.number().int().min(0).max(3),
+    content: z.object({ en: localeContentSchema, fa: localeContentSchema }),
+    explanation: explanationSchema.nullish(),
+    tags: z.array(z.string().trim().min(1)).optional().default([]),
+    status: z.enum(QUESTION_STATUSES).default("PUBLISHED"),
+    isTemporal: z.boolean().default(false),
+    asOfDate: z.string().nullish(),
+    source: z.string().nullish(),
+  })
+  .superRefine((d, ctx) => {
+    if (
+      (d.type === "IMAGE" || d.type === "REVEAL_IMAGE") &&
+      !d.mediaUrl?.trim()
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "mediaUrl required for IMAGE / REVEAL_IMAGE",
+        path: ["mediaUrl"],
+      });
+    }
+    if (
+      d.type === "CAREER_PATH" &&
+      (parseSteps(d.content.en.careerPath) < 2 ||
+        parseSteps(d.content.fa.careerPath) < 2)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "CAREER_PATH needs ≥2 steps in EN and FA",
+        path: ["content", "en", "careerPath"],
+      });
+    }
+    if (
+      d.type === "HIGHER_LOWER" &&
+      (!hasHigherLower(d.content.en.higherLower) ||
+        !hasHigherLower(d.content.fa.higherLower))
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "HIGHER_LOWER needs both entities + metric in EN and FA",
+        path: ["content", "en", "higherLower"],
+      });
+    }
+  });
 
 export const importPayloadSchema = z.union([
   z.object({ questions: z.array(importQuestionSchema).min(1) }),

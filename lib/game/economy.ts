@@ -102,6 +102,21 @@ export type GameConfig = {
     staminaCost: number;
     lives: number;
   };
+  /**
+   * Global theme week for classic Penalty / Quick / Survival draws (Phase C).
+   * RecordChallenge can override per-event via its own theme fields.
+   * `themeKey: null` disables the global theme.
+   */
+  liveOps: {
+    themeKey: string | null;
+    titleEn: string;
+    titleFa: string;
+    blurbEn: string;
+    blurbFa: string;
+    /** Empty = use theme preset types (or all formats if no key). */
+    preferredTypes: string[];
+    formatBiasEveryN: number;
+  };
 };
 
 export const DEFAULT_GAME_CONFIG: GameConfig = {
@@ -154,6 +169,15 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     staminaCost: 1,
     lives: 3,
   },
+  liveOps: {
+    themeKey: null,
+    titleEn: "",
+    titleFa: "",
+    blurbEn: "",
+    blurbFa: "",
+    preferredTypes: [],
+    formatBiasEveryN: 2,
+  },
 };
 
 /** Finite-number guard with fallback (rejects NaN/Infinity/non-numbers). */
@@ -176,7 +200,20 @@ export function mergeGameConfig(raw: unknown): GameConfig {
   const m = src.match ?? {};
   const d = src.duel ?? {};
   const s = src.survival ?? {};
+  const lo = (src.liveOps ?? {}) as Record<string, unknown>;
   const D = DEFAULT_GAME_CONFIG;
+
+  const themeKeyRaw = lo.themeKey;
+  const themeKey =
+    themeKeyRaw === null || themeKeyRaw === "" || themeKeyRaw === undefined
+      ? null
+      : typeof themeKeyRaw === "string"
+        ? themeKeyRaw.trim() || null
+        : null;
+
+  const preferredTypes = Array.isArray(lo.preferredTypes)
+    ? lo.preferredTypes.filter((t): t is string => typeof t === "string")
+    : [...D.liveOps.preferredTypes];
 
   return {
     rewards: {
@@ -269,6 +306,25 @@ export function mergeGameConfig(raw: unknown): GameConfig {
         Math.round(num(s.staminaCost, D.survival.staminaCost)),
       ),
       lives: Math.max(1, Math.round(num(s.lives, D.survival.lives))),
+    },
+    liveOps: {
+      themeKey,
+      titleEn:
+        typeof lo.titleEn === "string" ? lo.titleEn : D.liveOps.titleEn,
+      titleFa:
+        typeof lo.titleFa === "string" ? lo.titleFa : D.liveOps.titleFa,
+      blurbEn:
+        typeof lo.blurbEn === "string" ? lo.blurbEn : D.liveOps.blurbEn,
+      blurbFa:
+        typeof lo.blurbFa === "string" ? lo.blurbFa : D.liveOps.blurbFa,
+      preferredTypes,
+      formatBiasEveryN: Math.min(
+        20,
+        Math.max(
+          1,
+          Math.round(num(lo.formatBiasEveryN, D.liveOps.formatBiasEveryN)),
+        ),
+      ),
     },
   };
 }

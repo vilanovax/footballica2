@@ -16,6 +16,9 @@ import { isRecordChallengeLive } from "@/lib/game/recordChallenge";
 import { isCategoryAllowedForChallenge } from "@/lib/game/challengeCategories";
 import { injectFormatMocks } from "@/lib/dev/formatMocks";
 import { resolveForceFormat } from "@/lib/dev/resolveForceFormat";
+import { resolveThemeBias } from "@/lib/game/liveOpsTheme";
+import { getGameConfig } from "@/lib/game/gameConfig";
+import { FORMAT_BIAS_EVERY_N } from "@/lib/quiz/formatBias";
 
 export type SurvivalBatchResult =
   | {
@@ -55,6 +58,12 @@ export async function drawSurvivalBatch(input: {
       ? input.challengeId.trim()
       : null;
 
+  let challengeBias: {
+    themeKey: string | null;
+    preferredTypes: unknown;
+    formatBiasEveryN: number | null;
+  } | null = null;
+
   if (challengeId) {
     const challenge = await prisma.recordChallenge.findUnique({
       where: { id: challengeId },
@@ -62,6 +71,11 @@ export async function drawSurvivalBatch(input: {
     if (!challenge || !isRecordChallengeLive(challenge)) {
       return { ok: false, error: "challenge_not_live" };
     }
+    challengeBias = {
+      themeKey: challenge.themeKey,
+      preferredTypes: challenge.preferredTypes,
+      formatBiasEveryN: challenge.formatBiasEveryN,
+    };
     const allowed = await isCategoryAllowedForChallenge({
       categoryId,
       challengeId,
@@ -95,8 +109,34 @@ export async function drawSurvivalBatch(input: {
     Math.min(20, Math.floor(input.limit ?? SURVIVAL_BATCH_SIZE)),
   );
 
+  let bias = challengeBias
+    ? resolveThemeBias({
+        themeKey: challengeBias.themeKey,
+        preferredTypes: challengeBias.preferredTypes,
+        formatBiasEveryN: challengeBias.formatBiasEveryN,
+        fallbackEveryN: FORMAT_BIAS_EVERY_N,
+      })
+    : null;
+
+  if (!bias) {
+    const config = await getGameConfig();
+    bias = resolveThemeBias({
+      themeKey: config.liveOps.themeKey,
+      preferredTypes: config.liveOps.preferredTypes,
+      formatBiasEveryN: config.liveOps.formatBiasEveryN,
+      fallbackEveryN: FORMAT_BIAS_EVERY_N,
+    });
+  }
+
   // Progressive tiered draw (replaces pure random shuffle).
-  let questions = await getCategoryQuestions(categoryId, limit, seen);
+  let questions = await getCategoryQuestions(
+    categoryId,
+    limit,
+    seen,
+    bias
+      ? { preferredTypes: [...bias.preferredTypes], everyN: bias.everyN }
+      : {},
+  );
   const force = await resolveForceFormat();
   if (force) {
     if (questions.length === 0) {

@@ -6,6 +6,8 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import type { DailyGridSnapshot } from "@/actions/grid/getDailyGrid";
 import { submitGridGuess } from "@/actions/grid/submitGridGuess";
+import type { UnlockedBadge } from "@/actions/resolveMatch";
+import { BadgeUnlockPopup } from "@/components/quiz/BadgeUnlockPopup";
 import { cellKey } from "@/lib/grid/types";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
@@ -24,6 +26,7 @@ export function GridArena({ initial }: Props) {
   );
   const [query, setQuery] = useState("");
   const [pending, startTransition] = useTransition();
+  const [unlockedBadges, setUnlockedBadges] = useState<UnlockedBadge[]>([]);
 
   const done = grid.status === "SOLVED" || grid.status === "FAILED";
   const usedIds = useMemo(
@@ -79,6 +82,9 @@ export function GridArena({ initial }: Props) {
       }
       setGrid(res.grid);
       setQuery("");
+      if (res.unlockedBadges.length > 0) {
+        setUnlockedBadges(res.unlockedBadges);
+      }
       if (res.correct) {
         playSound("goal");
         haptic(HAPTIC.tap);
@@ -105,6 +111,13 @@ export function GridArena({ initial }: Props) {
 
   return (
     <section className="flex flex-1 flex-col gap-3">
+      {unlockedBadges.length > 0 && (
+        <BadgeUnlockPopup
+          badges={unlockedBadges}
+          onClose={() => setUnlockedBadges([])}
+        />
+      )}
+
       <header className="relative overflow-hidden rounded-bubble-lg bg-linear-to-br from-amber-500/25 via-primary/10 to-secondary/20 px-3.5 pb-3.5 pt-2.5 shadow-fantasy-lg">
         <div className="flex items-start justify-between gap-2">
           <div>

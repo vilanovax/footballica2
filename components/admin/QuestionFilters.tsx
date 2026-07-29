@@ -23,18 +23,28 @@ const STATUSES = [
   { value: "RETIRED", label: "Retired" },
 ] as const;
 
+const TYPES = [
+  { value: "TEXT", label: "Text" },
+  { value: "IMAGE", label: "Image" },
+  { value: "CAREER_PATH", label: "Career path" },
+  { value: "HIGHER_LOWER", label: "Higher / Lower" },
+  { value: "REVEAL_IMAGE", label: "Reveal image" },
+] as const;
+
 export function QuestionFilters({
   categories,
   tags,
   category,
   tag,
   status,
+  type,
 }: {
   categories: Option[];
   tags: Option[];
   category?: string;
   tag?: string;
   status?: string;
+  type?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -49,10 +59,32 @@ export function QuestionFilters({
     router.push(qs ? `${pathname}?${qs}` : pathname);
   }
 
-  const hasFilters = Boolean(category || tag || status);
+  const hasFilters = Boolean(category || tag || status || type);
 
   return (
     <div className="flex flex-wrap items-end gap-3">
+      <div className="min-w-[9.5rem]">
+        <FieldLabel
+          tipTitle="Format"
+          tip="TEXT is classic MCQ. IMAGE / REVEAL need media. CAREER_PATH and Higher/Lower use JSON payloads in content."
+        >
+          Format
+        </FieldLabel>
+        <Select value={type ?? ALL} onValueChange={(v) => setParam("type", v)}>
+          <SelectTrigger className="h-9 w-full bg-white">
+            <SelectValue placeholder="All formats" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>All formats</SelectItem>
+            {TYPES.map((t) => (
+              <SelectItem key={t.value} value={t.value}>
+                {t.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="min-w-[9.5rem]">
         <FieldLabel
           tipTitle="Status"
@@ -134,6 +166,7 @@ export function QuestionFilters({
             next.delete("category");
             next.delete("tag");
             next.delete("status");
+            next.delete("type");
             next.delete("page");
             const qs = next.toString();
             router.push(qs ? `${pathname}?${qs}` : pathname);

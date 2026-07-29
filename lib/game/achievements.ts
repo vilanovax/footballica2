@@ -38,6 +38,11 @@ export type PlayerStats = {
   longestMysteryStreak: number;
   /** Lifetime days solved (Mysterious Player). */
   mysterySolves: number;
+  /** Football Grid — consecutive solved Tehran days. */
+  gridStreak: number;
+  longestGridStreak: number;
+  /** Lifetime days solved (Football Grid). */
+  gridSolves: number;
 };
 
 export type AchievementContext = {
@@ -210,6 +215,47 @@ export const ACHIEVEMENTS: Achievement[] = [
     reward: { coins: 150, xp: 50 },
     check: ({ player }) => player.mysteryStreak >= 7,
     progress: (p) => toward(p.longestMysteryStreak, 7),
+  },
+
+  // ── Dedication (Football Grid daily — ADR 002) ───────────────────────────────
+  {
+    slug: "grid_debut",
+    category: "dedication",
+    tier: "bronze",
+    emoji: "🎯",
+    nameEn: "Grid Rookie",
+    nameFa: "تازه‌کار جدول",
+    descriptionEn: "Complete your first Football Grid of the day.",
+    descriptionFa: "اولین جدول فوتبال روز را کامل کن.",
+    reward: { coins: 25, xp: 10 },
+    check: ({ player }) => player.gridSolves >= 1,
+    progress: (p) => toward(p.gridSolves, 1),
+  },
+  {
+    slug: "grid_streak_3",
+    category: "dedication",
+    tier: "silver",
+    emoji: "🔥",
+    nameEn: "Grid Regular",
+    nameFa: "پای ثابت جدول",
+    descriptionEn: "Solve Football Grid 3 days in a row.",
+    descriptionFa: "۳ روز پشت سر هم جدول فوتبال را حل کن.",
+    reward: { coins: 60, xp: 20 },
+    check: ({ player }) => player.gridStreak >= 3,
+    progress: (p) => toward(p.longestGridStreak, 3),
+  },
+  {
+    slug: "grid_streak_7",
+    category: "dedication",
+    tier: "gold",
+    emoji: "🧩",
+    nameEn: "Grid Master",
+    nameFa: "استاد جدول",
+    descriptionEn: "Keep a 7-day Football Grid streak.",
+    descriptionFa: "استریک ۷ روزهٔ جدول فوتبال را حفظ کن.",
+    reward: { coins: 150, xp: 50 },
+    check: ({ player }) => player.gridStreak >= 7,
+    progress: (p) => toward(p.longestGridStreak, 7),
   },
 
   // ── Volume (lifetime milestones) ─────────────────────────────────────────────

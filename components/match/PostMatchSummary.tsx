@@ -110,10 +110,24 @@ export function PostMatchSummary({
             <motion.div
               animate={{ rotate: [0, -6, 6, 0], scale: [1, 1.08, 1] }}
               transition={{ duration: 0.55, delay: 0.05 }}
-              className="text-6xl"
+              className={
+                outcome.heroSrc
+                  ? "flex h-20 w-20 items-center justify-center"
+                  : "text-6xl"
+              }
               aria-hidden
             >
-              {outcome.emoji}
+              {outcome.heroSrc ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={outcome.heroSrc}
+                  alt=""
+                  draggable={false}
+                  className="h-20 w-20 object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.2)]"
+                />
+              ) : (
+                outcome.emoji
+              )}
             </motion.div>
             <div>
               <h1 className="font-display text-3xl font-bold text-foreground">
@@ -137,7 +151,7 @@ export function PostMatchSummary({
             </div>
 
             {outcome.chips && outcome.chips.length > 0 && (
-              <div className="flex flex-wrap items-center justify-center gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-4">
                 {outcome.chips.map((chip, i) => (
                   <motion.div
                     key={chip.key}
@@ -149,16 +163,30 @@ export function PostMatchSummary({
                       damping: 14,
                       delay: 0.2 + i * 0.06,
                     }}
-                    className={[
-                      "inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-display text-sm font-bold",
-                      chip.tone === "secondary"
-                        ? "bg-secondary/15 text-secondary"
-                        : chip.tone === "muted"
-                          ? "bg-muted text-muted-foreground"
-                          : "bg-accent/15 text-accent-deep",
-                    ].join(" ")}
+                    className={
+                      chip.bare
+                        ? "inline-flex items-center gap-1.5 font-display text-base font-black text-foreground"
+                        : [
+                            "inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-display text-sm font-bold",
+                            chip.tone === "secondary"
+                              ? "bg-secondary/15 text-secondary"
+                              : chip.tone === "muted"
+                                ? "bg-muted text-muted-foreground"
+                                : "bg-accent/15 text-accent-deep",
+                          ].join(" ")
+                    }
                   >
-                    {chip.label}
+                    {chip.iconSrc ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={chip.iconSrc}
+                        alt=""
+                        aria-hidden
+                        draggable={false}
+                        className="h-7 w-7 object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+                      />
+                    ) : null}
+                    <span className="tabular-nums">{chip.label}</span>
                   </motion.div>
                 ))}
               </div>

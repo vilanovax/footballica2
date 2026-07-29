@@ -58,5 +58,8 @@ export type ProfileSnapshot = {
   mysteryStreak: number;
   longestMysteryStreak: number;
   mysterySolves: number;
+  gridStreak: number;
+  longestGridStreak: number;
+  gridSolves: number;
   badges: { slug: string; unlockedAt: string }[];
 };

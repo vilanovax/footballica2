@@ -126,6 +126,7 @@ export type ListRecordChallengesResult =
         targetScore: number;
         rewardBadgeSlug: string | null;
         rewardBadgeEmoji: string | null;
+        themeKey: string | null;
         /** Assigned banks — empty = any public. length===1 → skip picker. */
         categoryIds: string[];
         expiresAt: Date | null;
@@ -176,6 +177,7 @@ export async function listRecordChallenges(): Promise<ListRecordChallengesResult
         targetScore: c.targetScore,
         rewardBadgeSlug: c.rewardBadgeSlug,
         rewardBadgeEmoji: c.rewardBadgeEmoji,
+        themeKey: c.themeKey,
         categoryIds: c.categories.map((l) => l.categoryId),
         expiresAt: c.expiresAt,
         unlocked: c.access.length > 0,
