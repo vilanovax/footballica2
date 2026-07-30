@@ -7,6 +7,7 @@ import {
   useState,
   useTransition,
 } from "react";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { getDuel } from "@/actions/duel/getDuel";
 import { selectDuelCategory } from "@/actions/duel/selectCategory";
@@ -330,6 +331,7 @@ export function DuelArena({
   if (phase.kind === "quiz") {
     return (
       <DuelQuiz
+        mode={phase.mode}
         title={
           phase.mode === "attack" ? t("duel.attackTitle") : t("duel.defendTitle")
         }
@@ -346,9 +348,14 @@ export function DuelArena({
   // Loading — keep it brief; offer a manual continue if something stalls.
   return (
     <section className="flex flex-1 flex-col items-center justify-center gap-4">
-      <div className="animate-bounce text-5xl" aria-hidden>
+      <motion.div
+        aria-hidden
+        className="text-5xl"
+        animate={{ y: [0, -10, 0], opacity: [0.75, 1, 0.75] }}
+        transition={{ duration: 1.1, repeat: Infinity, ease: [0.22, 1, 0.36, 1] }}
+      >
         ⚽️
-      </div>
+      </motion.div>
       <button
         type="button"
         disabled={pending}
