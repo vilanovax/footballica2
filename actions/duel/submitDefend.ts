@@ -15,10 +15,7 @@ import {
 import { gradeDuelAnswers } from "@/lib/duel/grade";
 import { assertNoDuelBoosters } from "@/lib/duel/fairPlay";
 import type { DuelAnswerSubmission } from "@/lib/duel/types";
-import {
-  pickDraftCategories,
-  usedCategoryIdsFromRounds,
-} from "@/lib/duel/draw";
+import { memoryRoundCreateData } from "@/lib/duel/createMemoryRound";
 import { tickDuelJobs } from "@/lib/duel/jobs";
 import { toDuelSnapshot, type DuelSnapshot } from "@/lib/duel/snapshot";
 import { duelSnapshotInclude } from "@/lib/duel/include";
@@ -217,18 +214,20 @@ export async function submitDuelDefend(
       });
 
       if (nextStatus === "B_ATTACKING" && duel.opponentId) {
-        // Round 2 draft must never include categories already locked this duel.
-        const exclude = usedCategoryIdsFromRounds(duel.rounds);
-        const draft = await pickDraftCategories(
-          config.duel.draftChoices,
-          exclude,
-        );
+        // v1: Round 2 is MEMORY — shared boardJson for attack + defend halves.
+        const memoryData = await memoryRoundCreateData({
+          duelId: duel.id,
+          attackerId: duel.opponentId,
+          pairCount: config.duel.memoryPairs,
+        });
         await tx.duelRound.create({
           data: {
             duelId: duel.id,
-            roundNumber: 2,
-            attackerId: duel.opponentId,
-            draftOptionIds: draft.map((c) => c.id),
+            roundNumber: memoryData.roundNumber,
+            roundType: memoryData.roundType,
+            attackerId: memoryData.attackerId,
+            draftOptionIds: memoryData.draftOptionIds,
+            boardJson: memoryData.boardJson,
           },
         });
 

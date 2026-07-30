@@ -23,6 +23,9 @@ import {
   tallyRoundWins,
 } from "@/lib/duel";
 import { creditDuelMissions } from "@/lib/game/missionEngine";
+import { memoryRoundCreateData } from "@/lib/duel/createMemoryRound";
+import { parseMemoryBoard } from "@/lib/duel/memoryBoard";
+import { fabricateBotMemoryLog } from "@/lib/duel/memoryBot";
 
 type DuelWithRounds = DuelMatch & { rounds: DuelRound[] };
 
@@ -129,12 +132,24 @@ async function playDefendTurn(
 ): Promise<boolean> {
   const roundNumber = duel.status === "A_DEFENDING" ? 2 : 1;
   const round = duel.rounds.find((r) => r.roundNumber === roundNumber);
-  if (!round?.questionIds || !Array.isArray(round.questionIds)) return false;
-  if (round.defenseSubmittedAt) return false;
+  if (!round || round.defenseSubmittedAt) return false;
 
-  const qIds = round.questionIds as string[];
-  const defenseLog = await fabricateBotAnswers(qIds, difficulty);
-  const defenseCorrect = countCorrect(defenseLog);
+  let defenseLog: unknown;
+  let defenseCorrect: number;
+
+  if (round.roundType === "MEMORY") {
+    const board = parseMemoryBoard(round.boardJson);
+    if (!board) return false;
+    const mem = fabricateBotMemoryLog(board, difficulty);
+    defenseLog = mem;
+    defenseCorrect = mem.pairsFound;
+  } else {
+    if (!round.questionIds || !Array.isArray(round.questionIds)) return false;
+    const qIds = round.questionIds as string[];
+    defenseLog = await fabricateBotAnswers(qIds, difficulty);
+    defenseCorrect = countCorrect(defenseLog as Awaited<ReturnType<typeof fabricateBotAnswers>>);
+  }
+
   const nextStatus = statusAfterDefendSubmit(roundNumber);
 
   const isChallenger = actorId === duel.challengerId;
@@ -144,14 +159,18 @@ async function playDefendTurn(
     duel.opponentCorrect + (!isChallenger ? defenseCorrect : 0);
 
   if (nextStatus === "B_ATTACKING") {
-    // Create empty round 2 shell — shadow will attack next loop iteration.
-    const used = usedCategoryIdsFromRounds(duel.rounds);
-    const draft = await pickDraftCategories(undefined, used);
+    // Create MEMORY round 2 shell — shadow will attack next loop iteration.
+    const config = await getGameConfig();
+    const memoryData = await memoryRoundCreateData({
+      duelId: duel.id,
+      attackerId: duel.opponentId!,
+      pairCount: config.duel.memoryPairs,
+    });
     await prisma.$transaction(async (tx) => {
       await tx.duelRound.update({
         where: { id: round.id },
         data: {
-          defenseAnswers: defenseLog,
+          defenseAnswers: defenseLog as object,
           defenseCorrect,
           defenseSubmittedAt: now,
         },
@@ -159,9 +178,11 @@ async function playDefendTurn(
       await tx.duelRound.create({
         data: {
           duelId: duel.id,
-          roundNumber: 2,
-          attackerId: duel.opponentId!,
-          draftOptionIds: draft.map((c) => c.id),
+          roundNumber: memoryData.roundNumber,
+          roundType: memoryData.roundType,
+          attackerId: memoryData.attackerId,
+          draftOptionIds: memoryData.draftOptionIds,
+          boardJson: memoryData.boardJson,
         },
       });
       await tx.duelMatch.update({
@@ -221,9 +242,10 @@ async function playDefendTurn(
     await tx.duelRound.update({
       where: { id: round.id },
       data: {
-        defenseAnswers: defenseLog,
+        defenseAnswers: defenseLog as object,
         defenseCorrect,
         defenseSubmittedAt: now,
+        defenseStartedAt: now,
       },
     });
     await tx.duelMatch.update({
@@ -260,7 +282,12 @@ async function playAttackTurn(
   actorId: string,
   difficulty: BotDifficulty,
   now: Date,
-  duelCfg: { questionsPerAttack: number; draftChoices: number; turnHours: number },
+  duelCfg: {
+    questionsPerAttack: number;
+    draftChoices: number;
+    turnHours: number;
+    memoryPairs: number;
+  },
 ): Promise<boolean> {
   const roundNumber = duel.status === "A_ATTACKING" ? 1 : 2;
   let round = duel.rounds.find((r) => r.roundNumber === roundNumber);
@@ -272,6 +299,7 @@ async function playAttackTurn(
       data: {
         duelId: duel.id,
         roundNumber: 1,
+        roundType: "QUIZ",
         attackerId: duel.challengerId,
         draftOptionIds: draft.map((c) => c.id),
       },
@@ -279,6 +307,65 @@ async function playAttackTurn(
   }
   if (!round) return false;
   if (round.attackSubmittedAt) return false;
+
+  // Round 2 MEMORY attack
+  if (round.roundType === "MEMORY" || roundNumber === 2) {
+    let board = parseMemoryBoard(round.boardJson);
+    if (!board) {
+      const memoryData = await memoryRoundCreateData({
+        duelId: duel.id,
+        attackerId: actorId,
+        pairCount: duelCfg.memoryPairs,
+      });
+      board = memoryData.board;
+      await prisma.duelRound.update({
+        where: { id: round.id },
+        data: {
+          roundType: "MEMORY",
+          boardJson: memoryData.boardJson,
+          draftOptionIds: [],
+        },
+      });
+    }
+    const mem = fabricateBotMemoryLog(board, difficulty);
+    const attackCorrect = mem.pairsFound;
+    const nextStatus = statusAfterAttackSubmit(roundNumber);
+    const isChallenger = actorId === duel.challengerId;
+    const challengerCorrect =
+      duel.challengerCorrect + (isChallenger ? attackCorrect : 0);
+    const opponentCorrect =
+      duel.opponentCorrect + (!isChallenger ? attackCorrect : 0);
+    const turnUserId =
+      nextStatus === "WAITING_B" ? duel.opponentId : duel.challengerId;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.duelRound.update({
+        where: { id: round!.id },
+        data: {
+          roundType: "MEMORY",
+          attackAnswers: mem,
+          attackCorrect,
+          attackSubmittedAt: now,
+          attackStartedAt: now,
+          attackerId: actorId,
+        },
+      });
+      await tx.duelMatch.update({
+        where: { id: duel.id },
+        data: {
+          status: nextStatus,
+          turnUserId,
+          turnDeadlineAt: new Date(
+            now.getTime() + duelCfg.turnHours * 60 * 60 * 1000,
+          ),
+          botPlayAt: null,
+          challengerCorrect,
+          opponentCorrect,
+        },
+      });
+    });
+    return true;
+  }
 
   const used = usedCategoryIdsFromRounds(
     duel.rounds.filter((r) => r.id !== round!.id),

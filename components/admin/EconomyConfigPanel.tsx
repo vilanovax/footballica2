@@ -21,7 +21,6 @@ import {
 import { updateGameConfig } from "@/actions/admin/config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AdminHelpTip } from "@/components/admin/AdminHelpTip";
 import { LiveOpsThemesPanel } from "@/components/admin/LiveOpsThemesPanel";
@@ -72,74 +71,42 @@ const TABS: {
   label: string;
   icon: LucideIcon;
   blurb: string;
-  /** Longer always-visible guide for admins. */
-  guide: string[];
 }[] = [
   {
     id: "live",
     label: "Live Ops",
     icon: Zap,
-    blurb: "Theme weeks + day-to-day levers for events and inflation.",
-    guide: [
-      "Theme week biases IMAGE / CAREER_PATH draws in Survival, Match, and Duel — not a new Play mode.",
-      "Use coin quick actions for weekend boosts or emergency nerfs.",
-      "After any change (theme or rates), press Save once — one JSON payload for everything.",
-    ],
+    blurb: "Theme week + event coin levers",
   },
   {
     id: "match",
     label: "Match",
     icon: Target,
-    blurb: "Penalty & Quick Match win/loss rewards.",
-    guide: [
-      "Paid when a solo Penalty or Quick Match settles (not Survival).",
-      "Win = more than half of kicks correct. Perfect = every kick correct.",
-      "Combo multiplier scales XP and coins up when the player chains goals.",
-    ],
+    blurb: "Penalty & Quick rewards",
   },
   {
     id: "survival",
     label: "Survival",
     icon: Heart,
-    blurb: "Endless 3-lives runs and premium challenge economy.",
-    guide: [
-      "Payout = (correct answers × rates) + clear-bank bonus if the question bank empties.",
-      "Stamina is charged on settle (end of run), not at kickoff.",
-      "Weekly XP for the leaderboard uses score ÷ divisor (minimum 1 XP).",
-    ],
+    blurb: "Per-correct rates & lives",
   },
   {
     id: "duel",
     label: "Duel",
     icon: Swords,
-    blurb: "Async Draft Duel pacing and weekly league points.",
-    guide: [
-      "Win weekly XP goes to the leaderboard — keep it small vs Survival grind.",
-      "Turn hours + timeout action: AUTO_FORFEIT or SHADOW_BOT when a human AFKs.",
-      "Matchmaking ms is how long we wait for a human before assigning a bot.",
-    ],
+    blurb: "Pacing, timeout, Memory",
   },
   {
     id: "gotd",
-    label: "Game of the Day",
+    label: "GotD",
     icon: CalendarDays,
-    blurb: "بازی امروز — Mystery (odd) / Grid (even) Tehran-day rewards.",
-    guide: [
-      "Paid on SOLVED only — direct Club.coins + User.xp (no wallet ledger).",
-      "FAILED hard-resets the GotD streak to 0; streak multiplies base coins.",
-      "Perfect clear = Mystery 1-guess or Grid 0 mistakes → flat coin bonus.",
-    ],
+    blurb: "Mystery / Grid payouts",
   },
   {
     id: "advanced",
     label: "Advanced",
     icon: Settings2,
-    blurb: "Coin sinks, in-match helpers, and match length.",
-    guide: [
-      "Helpers remove coins during a quiz — higher prices slow inflation.",
-      "Shop boosters / stamina refill are sinks when players buy with soft coins.",
-      "Match size changes how long Penalty / Quick / Tutorial feel — change carefully.",
-    ],
+    blurb: "Helpers, shop sinks, match length",
   },
 ];
 
@@ -362,6 +329,27 @@ const DUEL_FIELDS: FieldDef[] = [
     tip: "Minimum 5000 ms.",
     min: 5000,
   },
+  {
+    key: "duel.memoryPairs",
+    label: "Memory pairs",
+    description: "Pairs on the shared Memory board (round 2).",
+    tip: "v1 locked 2–8; default 8 → 4×4.",
+    min: 2,
+  },
+  {
+    key: "duel.memoryTurnMs",
+    label: "Memory turn (ms)",
+    description: "Server clock for each Memory half.",
+    tip: "Default 20000.",
+    min: 5000,
+  },
+  {
+    key: "duel.memoryRevealMs",
+    label: "Memory reveal (ms)",
+    description: "Client flip-reveal duration hint.",
+    tip: "UX only; server may ignore.",
+    min: 500,
+  },
 ];
 
 const GOTD_FIELDS: FieldDef[] = [
@@ -556,47 +544,23 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
   }
 
   return (
-    <div className="space-y-5 pb-24">
-      {/* Snapshot strip */}
-      <div className="flex flex-wrap gap-2">
-        <Snap
-          label="Survival 🪙"
-          value={draft.survival.coinsPerCorrect}
-          hint="/correct"
-        />
-        <Snap
-          label="Survival XP"
-          value={draft.survival.xpPerCorrect}
-          hint="/correct"
-        />
-        <Snap
-          label="Match win"
-          value={draft.rewards.coinsPerWin}
-          hint="coins"
-        />
-        <Snap
-          label="Duel week"
-          value={draft.duel.winWeeklyXp}
-          hint="XP"
-        />
-        <Snap
-          label="GotD Mystery"
-          value={draft.gotd.mysteryWinCoins}
-          hint="coins"
-        />
-        <Snap
-          label="GotD Grid"
-          value={draft.gotd.gridWinCoins}
-          hint="coins"
-        />
+    <div className="space-y-4 pb-24">
+      {/* Compact snapshot */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Snap label="Surv 🪙" value={draft.survival.coinsPerCorrect} />
+        <Snap label="Surv XP" value={draft.survival.xpPerCorrect} />
+        <Snap label="Match win" value={draft.rewards.coinsPerWin} />
+        <Snap label="Duel XP" value={draft.duel.winWeeklyXp} />
+        <Snap label="Mystery" value={draft.gotd.mysteryWinCoins} />
+        <Snap label="Grid" value={draft.gotd.gridWinCoins} />
         {dirty ? (
-          <Badge className="self-center bg-amber-100 text-amber-900 hover:bg-amber-100">
+          <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100">
             Unsaved
           </Badge>
         ) : (
           <Badge
             variant="secondary"
-            className="self-center bg-emerald-50 text-emerald-800"
+            className="bg-emerald-50 text-emerald-800"
           >
             Live
           </Badge>
@@ -619,7 +583,7 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
               aria-selected={active}
               onClick={() => setTab(id)}
               className={[
-                "flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors",
                 active
                   ? "bg-white text-slate-900 shadow-sm"
                   : "text-slate-500 hover:text-slate-800",
@@ -632,125 +596,81 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
         })}
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-base font-semibold text-slate-900">
-          {activeTab.label}
-        </h2>
-        <p className="mt-1 text-sm text-slate-600">{activeTab.blurb}</p>
-        <ul className="mt-3 space-y-1.5 border-t border-slate-100 pt-3">
-          {activeTab.guide.map((line) => (
-            <li
-              key={line}
-              className="flex gap-2 text-xs leading-relaxed text-slate-500"
-            >
-              <span
-                className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-slate-400"
-                aria-hidden
-              />
-              <span>{line}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <p className="px-0.5 text-xs text-slate-500">
+        <span className="font-semibold text-slate-700">{activeTab.label}</span>
+        {" · "}
+        {activeTab.blurb}
+      </p>
 
-      {/* Live Ops: theme week (primary) + coin quick actions */}
       {tab === "live" ? (
         <>
           <LiveOpsThemesPanel
             config={draft}
             onChange={(next) => setDraft(mergeGameConfig(next))}
           />
-          <Card className="border-amber-200/80 bg-amber-50/40">
-            <CardContent className="space-y-3 pt-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-amber-900/80">
-                  Quick Survival coins
-                </p>
-                <p className="mt-1 text-xs leading-relaxed text-amber-950/70">
-                  Instantly sets <strong>Survival coins / correct</strong> from
-                  the system default (5). Use <strong>2× weekend</strong> for
-                  events, <strong>½×</strong> if wallets are bloated. Still
-                  press <strong>Save</strong> to go live.
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="bg-white"
-                  onClick={() => quickSurvivalCoins(0.5)}
-                >
-                  ½×
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="bg-white"
-                  onClick={() => quickSurvivalCoins(1)}
-                >
-                  Default
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="border-amber-300 bg-white font-semibold text-amber-950"
-                  onClick={() => quickSurvivalCoins(2)}
-                >
-                  2× weekend
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2.5">
+            <span className="text-xs font-semibold text-amber-900">
+              Survival coins
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 bg-white"
+              onClick={() => quickSurvivalCoins(0.5)}
+            >
+              ½×
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 bg-white"
+              onClick={() => quickSurvivalCoins(1)}
+            >
+              Default
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 border-amber-300 bg-white font-semibold text-amber-950"
+              onClick={() => quickSurvivalCoins(2)}
+            >
+              2× weekend
+            </Button>
+            <span className="text-[11px] text-amber-900/60">then Save</span>
+          </div>
         </>
       ) : null}
 
       {tab === "duel" ? (
-        <Card className="border-violet-200/80 bg-violet-50/40">
-          <CardContent className="space-y-3 pt-4">
-            <div>
-              <p className="flex items-center gap-1 text-sm font-semibold text-slate-800">
-                Turn timeout action
-                <AdminHelpTip text="When a human misses their turnHours deadline. Shadow Bot fabricates their answers so the active player can finish; the AFK only sees a timeout loss." />
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-slate-600" dir="rtl">
-                انتخاب رفتار سیستم هنگام پایان زمان حریف: فورفیت مستقیم یا
-                جایگزینی پنهان با بات (Shadow Bot)
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-slate-500">
-                AUTO_FORFEIT ends immediately. SHADOW_BOT keeps the illusion for
-                the waiting player.
-              </p>
-            </div>
-            <select
-              className="flex h-10 w-full max-w-md rounded-md border border-slate-200 bg-white px-3 text-sm"
-              value={draft.duel.timeoutAction}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (v !== "AUTO_FORFEIT" && v !== "SHADOW_BOT") return;
-                setDraft((prev) => ({
-                  ...prev,
-                  duel: { ...prev.duel, timeoutAction: v },
-                }));
-              }}
-            >
-              <option value="SHADOW_BOT">
-                SHADOW_BOT — جایگزینی پنهان با بات
-              </option>
-              <option value="AUTO_FORFEIT">
-                AUTO_FORFEIT — فورفیت مستقیم
-              </option>
-            </select>
-          </CardContent>
-        </Card>
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-violet-200 bg-violet-50/40 px-3 py-2.5">
+          <span className="flex items-center gap-1 text-xs font-semibold text-slate-800">
+            Timeout
+            <AdminHelpTip text="AFK past turnHours: SHADOW_BOT fabricates answers; AUTO_FORFEIT ends the match." />
+          </span>
+          <select
+            className="flex h-9 min-w-[14rem] flex-1 rounded-md border border-slate-200 bg-white px-2.5 text-sm"
+            value={draft.duel.timeoutAction}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v !== "AUTO_FORFEIT" && v !== "SHADOW_BOT") return;
+              setDraft((prev) => ({
+                ...prev,
+                duel: { ...prev.duel, timeoutAction: v },
+              }));
+            }}
+          >
+            <option value="SHADOW_BOT">SHADOW_BOT</option>
+            <option value="AUTO_FORFEIT">AUTO_FORFEIT</option>
+          </select>
+        </div>
       ) : null}
 
-      {/* Fields */}
       <div
         className={[
-          "grid gap-3",
+          "grid gap-2.5",
           tab === "live" || tab === "survival" || tab === "gotd"
             ? "sm:grid-cols-2"
             : "sm:grid-cols-2 lg:grid-cols-3",
@@ -760,19 +680,16 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
           <label
             key={field.key}
             className={[
-              "flex flex-col gap-2 rounded-xl border bg-white p-3.5 shadow-sm transition-shadow focus-within:ring-2 focus-within:ring-slate-300",
-              field.featured
-                ? "border-slate-300 sm:col-span-1"
-                : "border-slate-200",
+              "flex flex-col gap-1.5 rounded-xl border bg-white px-3 py-2.5 shadow-sm transition-shadow focus-within:ring-2 focus-within:ring-slate-300",
+              field.featured ? "border-slate-300" : "border-slate-200",
             ].join(" ")}
           >
-            <span className="flex items-center gap-1 text-sm font-semibold text-slate-800">
-              {field.label}
-              <AdminHelpTip text={field.tip} />
+            <span className="flex items-center justify-between gap-1 text-xs font-semibold text-slate-800">
+              <span className="min-w-0 truncate">{field.label}</span>
+              <AdminHelpTip
+                text={`${field.description} ${field.tip}`.trim()}
+              />
             </span>
-            <p className="text-[11px] leading-snug text-slate-500">
-              {field.description}
-            </p>
             <Input
               type="number"
               min={field.min ?? 0}
@@ -780,7 +697,7 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
               value={getPath(draft, field.key)}
               onChange={(e) => onFieldChange(field.key, e.target.value)}
               className={[
-                "h-11 font-mono text-base tabular-nums",
+                "h-10 font-mono text-sm tabular-nums",
                 field.featured ? "font-semibold" : "",
               ].join(" ")}
             />
@@ -788,13 +705,10 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
         ))}
       </div>
 
-      {/* Sticky save bar */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:start-60">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:start-60">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-slate-500">
-            {dirty
-              ? "You have unsaved changes. Save to push live."
-              : "All changes are live. No redeploy needed."}
+            {dirty ? "Unsaved changes" : "Live · no redeploy"}
           </p>
           <div className="flex gap-2">
             <Button
@@ -812,7 +726,7 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
               size="sm"
               disabled={pending || !dirty}
               onClick={save}
-              className="min-w-28"
+              className="min-w-24"
             >
               <Save className="mr-1.5 h-3.5 w-3.5" />
               {pending ? "Saving…" : "Save"}
@@ -824,22 +738,13 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
   );
 }
 
-function Snap({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: number;
-  hint: string;
-}) {
+function Snap({ label, value }: { label: string; value: number }) {
   return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs shadow-sm">
+    <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] shadow-sm">
       <span className="font-medium text-slate-500">{label}</span>
-      <span className="font-mono text-sm font-bold tabular-nums text-slate-900">
+      <span className="font-mono text-xs font-bold tabular-nums text-slate-900">
         {value}
       </span>
-      <span className="text-slate-400">{hint}</span>
     </div>
   );
 }

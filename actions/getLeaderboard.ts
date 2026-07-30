@@ -8,6 +8,7 @@ import {
   ensureWeeklyLeagueReset,
   tehranWeekDaysRemaining,
 } from "@/lib/game/weeklyLeague";
+import { displayClubName } from "@/lib/leaderboard/displayName";
 
 const TOP_N = 50;
 const MIN_USERS_FOR_UI = 10;
@@ -46,30 +47,25 @@ const AVATAR_KEYS: AvatarKey[] = [
   "COSMIC_COACH",
 ];
 
-const MOCK_PREFIX = [
-  "Real",
-  "Athletic",
-  "Inter",
-  "Dynamo",
-  "Sporting",
-  "Royal",
-  "United",
-  "Galactic",
-];
-const MOCK_SUFFIX = [
-  "Lions",
-  "Falcons",
-  "Rovers",
-  "Titans",
-  "Wanderers",
-  "Kings",
-  "Comets",
-  "Wolves",
-];
-
-function pick<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * (arr.length))];
-}
+/** Unique clean club labels for cold-start seed (no timestamp clutter). */
+const MOCK_CLUBS = [
+  "Night Lions",
+  "Blue Falcons",
+  "Iron Rovers",
+  "Golden Titans",
+  "Swift Wanderers",
+  "Royal Kings",
+  "Cosmic Comets",
+  "Shadow Wolves",
+  "Emerald United",
+  "Crimson Dynamo",
+  "Silver Athletic",
+  "Phoenix Sporting",
+  "Thunder Inter",
+  "Oasis Real",
+  "Harbor Galaxy",
+  "Desert Strikers",
+] as const;
 
 function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -77,16 +73,18 @@ function randomInt(min: number, max: number): number {
 
 async function seedMockUsers(count: number): Promise<void> {
   const stamp = Date.now();
-  const rows = Array.from({ length: count }).map((_, i) => {
-    const avatar = pick(AVATAR_KEYS);
-    const clubName = `${pick(MOCK_PREFIX)} ${pick(MOCK_SUFFIX)} ${stamp}-${i}`;
+  const n = Math.min(count, MOCK_CLUBS.length);
+  const rows = Array.from({ length: n }).map((_, i) => {
+    const avatar = AVATAR_KEYS[i % AVATAR_KEYS.length]!;
+    const clubName = MOCK_CLUBS[i]!;
     return {
       email: `mock_${stamp}_${i}@footballica.local`,
       displayName: clubName,
       avatar,
       weeklyXp: randomInt(50, 2000),
       matchesPlayed: randomInt(1, 20),
-      nameNormalized: normalizeClubName(clubName),
+      // Unique key; display name stays human-readable.
+      nameNormalized: normalizeClubName(`${clubName} seed ${stamp} ${i}`),
     };
   });
 
@@ -158,7 +156,7 @@ function toRow(
   return {
     rank,
     userId: u.id,
-    clubName: u.club?.name ?? u.displayName ?? "Unknown Club",
+    clubName: displayClubName(u.club?.name ?? u.displayName ?? "Unknown Club"),
     avatarKey: toAvatarKey(u.club?.avatar ?? u.managerAvatar),
     weeklyXp: u.weeklyXp,
     matchesPlayed: u.club?.matchesPlayed ?? 0,

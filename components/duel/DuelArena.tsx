@@ -16,8 +16,15 @@ import {
   beginDuelDefend,
   submitDuelDefend,
 } from "@/actions/duel/submitDefend";
+import { beginMemoryTurn } from "@/actions/duel/beginMemoryTurn";
+import { submitMemoryAttack } from "@/actions/duel/submitMemoryAttack";
+import { submitMemoryDefend } from "@/actions/duel/submitMemoryDefend";
 import type { DuelSnapshot } from "@/lib/duel/snapshot";
 import type { DuelCategoryOption, DuelAnswerSubmission } from "@/lib/duel/types";
+import type {
+  MemoryAttemptSubmission,
+  MemoryBoardJson,
+} from "@/lib/duel/memoryTypes";
 import type { QuizQuestion } from "@/lib/quiz/types";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { playSound } from "@/lib/audio/SoundManager";
@@ -25,6 +32,7 @@ import { DraftPicker } from "./DraftPicker";
 import { DuelQuiz } from "./DuelQuiz";
 import { DuelWaiting } from "./DuelWaiting";
 import { DuelResult } from "./DuelResult";
+import { MemoryBoard } from "./MemoryBoard";
 import { MATCHING_MIN_MS } from "./MatchingSearch";
 import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
 
@@ -32,6 +40,9 @@ type DuelArenaProps = {
   duelId: string;
   initialDuel: DuelSnapshot;
   initialQuestions: QuizQuestion[] | null;
+  initialMemoryBoard?: MemoryBoardJson | null;
+  initialMemoryEndsAt?: string | null;
+  initialMemoryRevealMs?: number | null;
   yourAvatar?: string | null;
   yourName?: string | null;
 };
@@ -40,13 +51,30 @@ type Phase =
   | { kind: "matching" }
   | { kind: "draft"; options: DuelCategoryOption[] }
   | { kind: "quiz"; mode: "attack" | "defend"; questions: QuizQuestion[] }
+  | {
+      kind: "memory";
+      mode: "attack" | "defend";
+      board: MemoryBoardJson;
+      endsAt: string;
+      revealMs: number;
+    }
   | { kind: "wait" }
   | { kind: "result" }
   | { kind: "loading" };
 
+function activeRound(duel: DuelSnapshot) {
+  if (duel.turn.roundNumber == null) return null;
+  return duel.rounds.find((r) => r.roundNumber === duel.turn.roundNumber) ?? null;
+}
+
 function derivePhase(
   duel: DuelSnapshot,
   questions: QuizQuestion[] | null,
+  memory: {
+    board: MemoryBoardJson | null;
+    endsAt: string | null;
+    revealMs: number;
+  },
 ): Phase {
   if (
     duel.status === "COMPLETED" ||
@@ -64,6 +92,9 @@ function derivePhase(
 
   if (waitingForThem) return { kind: "wait" };
 
+  const round = activeRound(duel);
+  const isMemory = round?.roundType === "MEMORY";
+
   const needsDefend =
     (duel.status === "WAITING_A" && duel.youAre === "challenger") ||
     (duel.status === "WAITING_B" && duel.youAre === "opponent") ||
@@ -71,6 +102,18 @@ function derivePhase(
     duel.status === "B_DEFENDING";
 
   if (needsDefend) {
+    if (isMemory) {
+      if (memory.board && memory.endsAt) {
+        return {
+          kind: "memory",
+          mode: "defend",
+          board: memory.board,
+          endsAt: memory.endsAt,
+          revealMs: memory.revealMs,
+        };
+      }
+      return { kind: "loading" };
+    }
     if (questions && questions.length > 0) {
       return { kind: "quiz", mode: "defend", questions };
     }
@@ -83,6 +126,18 @@ function derivePhase(
       (duel.youAre === "challenger" && duel.status === "A_ATTACKING") ||
       (duel.youAre === "opponent" && duel.status === "B_ATTACKING"))
   ) {
+    if (isMemory) {
+      if (memory.board && memory.endsAt) {
+        return {
+          kind: "memory",
+          mode: "attack",
+          board: memory.board,
+          endsAt: memory.endsAt,
+          revealMs: memory.revealMs,
+        };
+      }
+      return { kind: "loading" };
+    }
     if (questions && questions.length > 0) {
       return { kind: "quiz", mode: "attack", questions };
     }
@@ -99,6 +154,9 @@ export function DuelArena({
   duelId,
   initialDuel,
   initialQuestions,
+  initialMemoryBoard = null,
+  initialMemoryEndsAt = null,
+  initialMemoryRevealMs = 2000,
   yourAvatar,
   yourName,
 }: DuelArenaProps) {
@@ -107,12 +165,25 @@ export function DuelArena({
   const [questions, setQuestions] = useState<QuizQuestion[] | null>(
     initialQuestions,
   );
+  const [memoryBoard, setMemoryBoard] = useState<MemoryBoardJson | null>(
+    initialMemoryBoard,
+  );
+  const [memoryEndsAt, setMemoryEndsAt] = useState<string | null>(
+    initialMemoryEndsAt,
+  );
+  const [memoryRevealMs, setMemoryRevealMs] = useState(
+    initialMemoryRevealMs ?? 2000,
+  );
   const [phase, setPhase] = useState<Phase>(() =>
-    derivePhase(initialDuel, initialQuestions),
+    derivePhase(initialDuel, initialQuestions, {
+      board: initialMemoryBoard,
+      endsAt: initialMemoryEndsAt,
+      revealMs: initialMemoryRevealMs ?? 2000,
+    }),
   );
   const [pending, startTransition] = useTransition();
-  /** Tracks in-flight defend bootstrap; reset on cancel so Strict Mode can retry. */
   const beginDefendInFlight = useRef(false);
+  const beginMemoryInFlight = useRef(false);
   const matchingStartedAt = useRef<number | null>(
     initialDuel.status === "MATCHING" ? performance.now() : null,
   );
@@ -122,11 +193,29 @@ export function DuelArena({
   const pendingAfterMatch = useRef<{
     duel: DuelSnapshot;
     questions: QuizQuestion[] | null;
+    memoryBoard: MemoryBoardJson | null;
+    memoryEndsAt: string | null;
+    memoryRevealMs: number;
   } | null>(null);
 
   const applyDuelState = useCallback(
-    (next: DuelSnapshot, nextQuestions: QuizQuestion[] | null) => {
-      const nextPhase = derivePhase(next, nextQuestions);
+    (
+      next: DuelSnapshot,
+      nextQuestions: QuizQuestion[] | null,
+      nextMemory?: {
+        board?: MemoryBoardJson | null;
+        endsAt?: string | null;
+        revealMs?: number | null;
+      },
+    ) => {
+      const board = nextMemory?.board ?? memoryBoard;
+      const endsAt = nextMemory?.endsAt ?? memoryEndsAt;
+      const revealMs = nextMemory?.revealMs ?? memoryRevealMs;
+      const nextPhase = derivePhase(next, nextQuestions, {
+        board,
+        endsAt,
+        revealMs,
+      });
 
       if (next.status === "MATCHING" && matchingStartedAt.current == null) {
         matchingStartedAt.current = performance.now();
@@ -139,9 +228,20 @@ export function DuelArena({
       ) {
         const elapsed = performance.now() - matchingStartedAt.current;
         if (elapsed < MATCHING_MIN_MS) {
-          pendingAfterMatch.current = { duel: next, questions: nextQuestions };
+          pendingAfterMatch.current = {
+            duel: next,
+            questions: nextQuestions,
+            memoryBoard: board,
+            memoryEndsAt: endsAt,
+            memoryRevealMs: revealMs,
+          };
           setDuel(next);
           setQuestions(nextQuestions);
+          if (nextMemory?.board !== undefined) setMemoryBoard(nextMemory.board);
+          if (nextMemory?.endsAt !== undefined)
+            setMemoryEndsAt(nextMemory.endsAt);
+          if (nextMemory?.revealMs != null)
+            setMemoryRevealMs(nextMemory.revealMs);
           setMatchFoundHold(true);
           return;
         }
@@ -149,11 +249,14 @@ export function DuelArena({
 
       setDuel(next);
       setQuestions(nextQuestions);
+      if (nextMemory?.board !== undefined) setMemoryBoard(nextMemory.board);
+      if (nextMemory?.endsAt !== undefined) setMemoryEndsAt(nextMemory.endsAt);
+      if (nextMemory?.revealMs != null) setMemoryRevealMs(nextMemory.revealMs);
       setPhase(nextPhase);
       setMatchFoundHold(false);
       pendingAfterMatch.current = null;
     },
-    [phase.kind],
+    [phase.kind, memoryBoard, memoryEndsAt, memoryRevealMs],
   );
 
   const refresh = useCallback(async () => {
@@ -162,7 +265,11 @@ export function DuelArena({
       toast.error(t("duel.errGeneric"));
       return;
     }
-    applyDuelState(res.duel, res.questions);
+    applyDuelState(res.duel, res.questions, {
+      board: res.memoryBoard ?? null,
+      endsAt: res.memoryEndsAt ?? null,
+      revealMs: res.memoryRevealMs ?? 2000,
+    });
   }, [duelId, t, applyDuelState]);
 
   useEffect(() => {
@@ -177,17 +284,28 @@ export function DuelArena({
       if (!held) return;
       setDuel(held.duel);
       setQuestions(held.questions);
-      setPhase(derivePhase(held.duel, held.questions));
+      setMemoryBoard(held.memoryBoard);
+      setMemoryEndsAt(held.memoryEndsAt);
+      setMemoryRevealMs(held.memoryRevealMs);
+      setPhase(
+        derivePhase(held.duel, held.questions, {
+          board: held.memoryBoard,
+          endsAt: held.memoryEndsAt,
+          revealMs: held.memoryRevealMs,
+        }),
+      );
       setMatchFoundHold(false);
       pendingAfterMatch.current = null;
       playSound("whistle");
-      // Short hold only — long delays left draft buttons under a stuck matching layer.
     }, remaining + 280);
     return () => window.clearTimeout(id);
   }, [matchFoundHold]);
 
-  // Client fallback if SSR didn't already open the defend turn.
+  // QUIZ defend bootstrap
   useEffect(() => {
+    const round = activeRound(duel);
+    if (round?.roundType === "MEMORY") return;
+
     const needsBegin =
       (duel.status === "WAITING_A" && duel.youAre === "challenger") ||
       (duel.status === "WAITING_B" && duel.youAre === "opponent") ||
@@ -209,7 +327,6 @@ export function DuelArena({
       }
       if (!res.ok) {
         beginDefendInFlight.current = false;
-        // Retry once via getDuel (also auto-opens defend).
         void refresh();
         return;
       }
@@ -224,9 +341,71 @@ export function DuelArena({
       cancelled = true;
       beginDefendInFlight.current = false;
     };
-  }, [duel.status, duel.youAre, duelId, questions, refresh]);
+  }, [duel.status, duel.youAre, duelId, questions, refresh, duel.turn.roundNumber, duel.rounds]);
 
-  // Attack turn stuck without draft — re-fetch once.
+  // MEMORY bootstrap (attack or defend)
+  useEffect(() => {
+    const round = activeRound(duel);
+    if (round?.roundType !== "MEMORY") return;
+    if (memoryBoard && memoryEndsAt) return;
+    if (beginMemoryInFlight.current) return;
+
+    const yourAttack =
+      (duel.status === "B_ATTACKING" && duel.youAre === "opponent") ||
+      (duel.status === "A_ATTACKING" && duel.youAre === "challenger");
+    const yourDefend =
+      (duel.status === "WAITING_A" && duel.youAre === "challenger") ||
+      (duel.status === "WAITING_B" && duel.youAre === "opponent") ||
+      ((duel.status === "A_DEFENDING" || duel.status === "B_DEFENDING") &&
+        duel.canAct);
+
+    if (!yourAttack && !yourDefend) return;
+
+    beginMemoryInFlight.current = true;
+    let cancelled = false;
+
+    startTransition(async () => {
+      const res = await beginMemoryTurn(duelId);
+      if (cancelled) {
+        beginMemoryInFlight.current = false;
+        return;
+      }
+      if (!res.ok) {
+        beginMemoryInFlight.current = false;
+        void refresh();
+        return;
+      }
+      setDuel(res.duel);
+      setMemoryBoard(res.board);
+      setMemoryEndsAt(res.endsAt);
+      setMemoryRevealMs(res.revealMs);
+      setPhase({
+        kind: "memory",
+        mode: res.mode,
+        board: res.board,
+        endsAt: res.endsAt,
+        revealMs: res.revealMs,
+      });
+      beginMemoryInFlight.current = false;
+      playSound("whistle");
+    });
+
+    return () => {
+      cancelled = true;
+      beginMemoryInFlight.current = false;
+    };
+  }, [
+    duel.status,
+    duel.youAre,
+    duel.canAct,
+    duelId,
+    memoryBoard,
+    memoryEndsAt,
+    refresh,
+    duel.turn.roundNumber,
+    duel.rounds,
+  ]);
+
   useEffect(() => {
     if (phase.kind !== "loading") return;
     const attackTurn =
@@ -277,7 +456,9 @@ export function DuelArena({
       }
       setDuel(res.duel);
       setQuestions(null);
-      setPhase(derivePhase(res.duel, null));
+      setMemoryBoard(null);
+      setMemoryEndsAt(null);
+      setPhase(derivePhase(res.duel, null, { board: null, endsAt: null, revealMs: memoryRevealMs }));
     });
   }
 
@@ -291,7 +472,49 @@ export function DuelArena({
       setDuel(res.duel);
       setQuestions(null);
       if (res.missions) setMissionFeedback(res.missions);
-      setPhase(derivePhase(res.duel, null));
+      // Round 2 MEMORY shell may already be on the snapshot.
+      const r2 = res.duel.rounds.find((r) => r.roundNumber === 2);
+      const board = r2?.board ?? null;
+      setMemoryBoard(board);
+      setMemoryEndsAt(null);
+      setPhase(
+        derivePhase(res.duel, null, {
+          board,
+          endsAt: null,
+          revealMs: memoryRevealMs,
+        }),
+      );
+      if (res.duel.status === "COMPLETED") playSound("whistle");
+    });
+  }
+
+  function handleMemoryDone(attempt: MemoryAttemptSubmission) {
+    startTransition(async () => {
+      const isAttack = phase.kind === "memory" && phase.mode === "attack";
+      const res = isAttack
+        ? await submitMemoryAttack(duelId, attempt)
+        : await submitMemoryDefend(duelId, attempt);
+      if (!res.ok) {
+        if (res.error === "turn_expired") {
+          toast.error(t("duel.memory.errExpired"));
+        } else {
+          toast.error(t("duel.errGeneric"));
+        }
+        void refresh();
+        return;
+      }
+      setDuel(res.duel);
+      setQuestions(null);
+      setMemoryBoard(null);
+      setMemoryEndsAt(null);
+      if ("missions" in res && res.missions) setMissionFeedback(res.missions);
+      setPhase(
+        derivePhase(res.duel, null, {
+          board: null,
+          endsAt: null,
+          revealMs: memoryRevealMs,
+        }),
+      );
       if (res.duel.status === "COMPLETED") playSound("whistle");
     });
   }
@@ -328,6 +551,19 @@ export function DuelArena({
     );
   }
 
+  if (phase.kind === "memory") {
+    return (
+      <MemoryBoard
+        mode={phase.mode}
+        board={phase.board}
+        endsAt={phase.endsAt}
+        revealMs={phase.revealMs}
+        pending={pending}
+        onComplete={handleMemoryDone}
+      />
+    );
+  }
+
   if (phase.kind === "quiz") {
     return (
       <DuelQuiz
@@ -345,7 +581,6 @@ export function DuelArena({
     );
   }
 
-  // Loading — keep it brief; offer a manual continue if something stalls.
   return (
     <section className="flex flex-1 flex-col items-center justify-center gap-4">
       <motion.div

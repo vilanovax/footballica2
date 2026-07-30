@@ -1,6 +1,18 @@
-import type { DuelMatch, DuelRound, Category, User } from "@/generated/prisma/client";
+import type {
+  DuelMatch,
+  DuelRound,
+  DuelRoundType,
+  Category,
+  User,
+} from "@/generated/prisma/client";
 import { describeTurn, isDuelTerminal, type DuelTurnView } from "@/lib/duel";
 import type { DuelAnswerLogEntry, DuelCategoryOption } from "@/lib/duel/types";
+import {
+  isMemoryAttemptLog,
+  parseMemoryBoard,
+  MEMORY_SUBMIT_GRACE_MS,
+  type MemoryBoardJson,
+} from "@/lib/duel/memoryTypes";
 
 export type DuelPartySnapshot = {
   id: string;
@@ -16,20 +28,26 @@ export type DuelPartySnapshot = {
 export type DuelRoundSnapshot = {
   roundNumber: number;
   attackerId: string;
+  roundType: DuelRoundType;
   categoryId: string | null;
   categoryNameEn: string | null;
   categoryNameFa: string | null;
   draftOptionIds: string[];
   questionIds: string[] | null;
-  /** Length of the attack question set (0 if not locked yet). */
+  /** Length of the attack question set (0 if not locked yet). MEMORY = pairCount. */
   questionCount: number;
+  /** Shared MEMORY board (null for QUIZ). Safe for client play. */
+  board: MemoryBoardJson | null;
   attackCorrect: number;
   defenseCorrect: number;
   attackSubmitted: boolean;
   defenseSubmitted: boolean;
-  /** Per-question correctness for the attacker (null if not submitted). */
+  /** ISO when MEMORY clock started for attack / defend half. */
+  attackStartedAt: string | null;
+  defenseStartedAt: string | null;
+  /** Per-question (or per-pair) correctness for the attacker (null if not submitted). */
   attackResults: boolean[] | null;
-  /** Per-question correctness for the defender (null if not submitted). */
+  /** Per-question (or per-pair) correctness for the defender (null if not submitted). */
   defenseResults: boolean[] | null;
 };
 
@@ -70,6 +88,10 @@ type UserWithClub = User & {
 };
 
 function parseAnswerResults(raw: unknown): boolean[] | null {
+  if (isMemoryAttemptLog(raw)) {
+    const total = Math.max(raw.pairCount, raw.pairsFound);
+    return Array.from({ length: total }, (_, i) => i < raw.pairsFound);
+  }
   if (!Array.isArray(raw) || raw.length === 0) return null;
   return raw.map((entry) => {
     const e = entry as Partial<DuelAnswerLogEntry>;
@@ -150,24 +172,40 @@ export function toDuelSnapshot(
         const questionIds = Array.isArray(r.questionIds)
           ? (r.questionIds as string[])
           : null;
+        const board =
+          r.roundType === "MEMORY" ? parseMemoryBoard(r.boardJson) : null;
+        const isMemory = r.roundType === "MEMORY";
         return {
           roundNumber: r.roundNumber,
           attackerId: r.attackerId,
+          roundType: r.roundType,
           categoryId: r.categoryId,
-          categoryNameEn: r.category?.nameEn ?? null,
-          categoryNameFa: r.category?.nameFa ?? null,
+          categoryNameEn: isMemory
+            ? "Memory Pairs"
+            : (r.category?.nameEn ?? null),
+          categoryNameFa: isMemory
+            ? "حافظه جفت‌ها"
+            : (r.category?.nameFa ?? null),
           draftOptionIds: Array.isArray(r.draftOptionIds)
             ? (r.draftOptionIds as string[])
             : [],
           questionIds,
-          questionCount: questionIds?.length ?? 0,
+          questionCount: isMemory
+            ? (board?.pairCount ?? 0)
+            : (questionIds?.length ?? 0),
+          board,
           attackCorrect: r.attackCorrect,
           defenseCorrect: r.defenseCorrect,
           attackSubmitted: Boolean(r.attackSubmittedAt),
           defenseSubmitted: Boolean(r.defenseSubmittedAt),
+          attackStartedAt: r.attackStartedAt?.toISOString() ?? null,
+          defenseStartedAt: r.defenseStartedAt?.toISOString() ?? null,
           attackResults: parseAnswerResults(r.attackAnswers),
           defenseResults: parseAnswerResults(r.defenseAnswers),
         };
       }),
   };
 }
+
+/** Re-export grace for clients that mirror server deadline math. */
+export { MEMORY_SUBMIT_GRACE_MS };

@@ -1,15 +1,7 @@
-import { Info } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getLiveopsFormatsSnapshot } from "@/actions/admin/liveopsFormats";
 import { ImportExportPanel } from "@/components/admin/ImportExportPanel";
 import { LiveOpsFormatsPanel } from "@/components/admin/LiveOpsFormatsPanel";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
 
@@ -39,43 +31,14 @@ export default async function AdminSettingsPage() {
       <div>
         <h1 className="text-xl font-semibold text-slate-900">Settings</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Backup, restore, and bulk-manage the question bank.
+          Sync format packs, backup the bank, and import questions with
+          preview, edit, and confirm.
         </p>
       </div>
 
       <LiveOpsFormatsPanel initial={liveops} />
 
       <ImportExportPanel categories={options} />
-
-      <Card className="border-slate-200 bg-slate-50/60">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <Info className="h-4 w-4" />
-            JSON format
-          </CardTitle>
-          <CardDescription>
-            Import accepts either a bare array of questions or a{" "}
-            <code className="rounded bg-slate-200 px-1">
-              {"{ questions: [...] }"}
-            </code>{" "}
-            wrapper (exactly what &ldquo;Backup&rdquo; produces). Each question:
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <pre className="overflow-x-auto rounded-lg bg-slate-900 p-4 text-xs leading-relaxed text-slate-100">
-            {`{
-  "type": "TEXT",
-  "difficulty": "EASY",
-  "correctIndex": 1,
-  "content": {
-    "en": { "text": "…", "options": ["A", "B", "C", "D"] },
-    "fa": { "text": "…", "options": ["الف", "ب", "ج", "د"] }
-  },
-  "tags": ["nostalgia"]
-}`}
-          </pre>
-        </CardContent>
-      </Card>
     </div>
   );
 }

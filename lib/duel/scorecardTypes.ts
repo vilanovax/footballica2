@@ -20,11 +20,14 @@ export type ScorecardPlayer = {
   isBot?: boolean;
 };
 
+export type ScorecardRoundType = "QUIZ" | "MEMORY";
+
 export type ScorecardRound = {
   roundNumber: number;
+  roundType?: ScorecardRoundType;
   categoryNameEn: string;
   categoryNameFa: string;
-  /** Length = questions in the round (v1: 5). null = unanswered slot. */
+  /** Length = questions / pairs in the round. null = unanswered slot. */
   youAnswers: ScorecardAnswer[];
   themAnswers: ScorecardAnswer[];
   /** True when the rival hasn't played this round yet. */

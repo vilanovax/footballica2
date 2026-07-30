@@ -90,6 +90,12 @@ export type GameConfig = {
     winWeeklyXp: number;
     /** Stamina spent when opening a duel. */
     staminaCost: number;
+    /** MEMORY round: number of pairs on the shared board (v1: 8 → 4×4). */
+    memoryPairs: number;
+    /** MEMORY half clock (ms) — server-authoritative from attack/defense start. */
+    memoryTurnMs: number;
+    /** Client flip-reveal duration hint (ms); server may ignore. */
+    memoryRevealMs: number;
   };
   /**
    * Survival Mode soft economy — Live-Ops tunable (weekend 2× coins, etc.).
@@ -180,6 +186,9 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     matchmakingMs: 15_000,
     winWeeklyXp: 3,
     staminaCost: 1,
+    memoryPairs: 8,
+    memoryTurnMs: 20_000,
+    memoryRevealMs: 2_000,
   },
   survival: {
     coinsPerCorrect: 5,
@@ -305,6 +314,18 @@ export function mergeGameConfig(raw: unknown): GameConfig {
       ),
       winWeeklyXp: Math.max(0, Math.round(num(d.winWeeklyXp, D.duel.winWeeklyXp))),
       staminaCost: Math.max(0, Math.round(num(d.staminaCost, D.duel.staminaCost))),
+      memoryPairs: Math.max(
+        2,
+        Math.min(8, Math.round(num(d.memoryPairs, D.duel.memoryPairs))),
+      ),
+      memoryTurnMs: Math.max(
+        5_000,
+        Math.min(60_000, Math.round(num(d.memoryTurnMs, D.duel.memoryTurnMs))),
+      ),
+      memoryRevealMs: Math.max(
+        500,
+        Math.min(5_000, Math.round(num(d.memoryRevealMs, D.duel.memoryRevealMs))),
+      ),
     },
     survival: {
       coinsPerCorrect: Math.max(

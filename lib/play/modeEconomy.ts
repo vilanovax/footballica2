@@ -78,7 +78,9 @@ export function getPlayModeEconomy(config: GameConfig): Record<
       staminaCost: config.duel.staminaCost,
       approxCoins: r.coinsPerWin,
       approxXp: r.baseXp * config.duel.questionsPerAttack,
-      questionCount: config.duel.questionsPerAttack * config.duel.rounds,
+      // R1 quiz shots + R2 memory pairs (pairs count as goals on the scoreboard).
+      questionCount:
+        config.duel.questionsPerAttack + config.duel.memoryPairs,
       duelWinWeeklyXp: config.duel.winWeeklyXp,
     },
   };

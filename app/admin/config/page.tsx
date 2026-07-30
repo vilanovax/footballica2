@@ -7,26 +7,16 @@ export default async function AdminGameConfigPage() {
   const config = await getGameConfig();
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">
-          Game Config & Economy
-        </h1>
-        <p className="mt-1 max-w-2xl text-sm leading-relaxed text-slate-500">
-          Command center for global game parameters — theme weeks, duel timeout
-          behavior, Survival rates, soft currency, and{" "}
-          <strong className="font-semibold text-slate-700">
-            Game of the Day
-          </strong>{" "}
-          (Mystery / Grid) economy. Start on{" "}
-          <strong className="font-semibold text-slate-700">Live Ops</strong> for
-          events; open Match / Survival / Duel / GotD for deeper balance. One
-          Save writes the full GameConfig JSON (no redeploy).
-        </p>
-        <p className="mt-1 text-sm text-slate-500" dir="rtl">
-          تنظیمات بازی و اقتصاد — تم هفته، دوئل، بقا، سکه‌ها و اقتصاد بازی امروز
-          در یک داشبورد.
-        </p>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-900">
+            Game Config
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Live rates & theme week · one Save, no redeploy
+          </p>
+        </div>
       </div>
 
       <EconomyConfigPanel initialConfig={config} />

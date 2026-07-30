@@ -39,3 +39,9 @@ export { assertNoDuelBoosters } from "@/lib/duel/fairPlay";
 
 export type { DuelCategoryOption } from "@/lib/duel/types";
 export type { DuelSnapshot, DuelRoundSnapshot } from "@/lib/duel/snapshot";
+export type {
+  MemoryAttemptLog,
+  MemoryAttemptSubmission,
+  MemoryBoardJson,
+} from "@/lib/duel/memoryTypes";
+export { parseMemoryBoard, isMemoryAttemptLog } from "@/lib/duel/memoryTypes";

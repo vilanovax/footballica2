@@ -26,6 +26,9 @@ export default async function DuelDetailPage({ params }: DuelDetailPageProps) {
       duelId={res.duel.id}
       initialDuel={res.duel}
       initialQuestions={res.questions}
+      initialMemoryBoard={res.memoryBoard ?? null}
+      initialMemoryEndsAt={res.memoryEndsAt ?? null}
+      initialMemoryRevealMs={res.memoryRevealMs ?? null}
       yourAvatar={club?.avatar}
       yourName={club?.name}
     />

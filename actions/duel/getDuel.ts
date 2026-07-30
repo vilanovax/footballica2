@@ -17,13 +17,19 @@ import { dbQuestionToQuiz } from "@/lib/quiz/questionMapper";
 import type { QuizQuestion } from "@/lib/quiz/types";
 import { describeTurn } from "@/lib/duel";
 import { beginDuelDefend } from "@/actions/duel/submitDefend";
+import { beginMemoryTurn } from "@/actions/duel/beginMemoryTurn";
+import type { MemoryBoardJson } from "@/lib/duel/memoryTypes";
 
 export type GetDuelResult =
   | {
       ok: true;
       duel: DuelSnapshot;
-      /** Questions for the active turn when already locked / defending. */
+      /** Questions for the active QUIZ turn when already locked / defending. */
       questions: QuizQuestion[] | null;
+      /** MEMORY board when the active turn is a memory half. */
+      memoryBoard?: MemoryBoardJson | null;
+      memoryEndsAt?: string | null;
+      memoryRevealMs?: number | null;
     }
   | { ok: false; error: "not_authenticated" | "not_found" | "forbidden" | "server_error" };
 
@@ -64,31 +70,95 @@ export async function getDuel(duelId: string): Promise<GetDuelResult> {
       duel.challengerId === user.id || duel.opponentId === user.id;
     if (!isParty) return { ok: false, error: "forbidden" };
 
-    // Auto-claim defend so "Your turn" opens the quiz immediately.
+    // Auto-claim defend so "Your turn" opens the quiz / memory immediately.
     const shouldOpenDefend =
       (duel.status === "WAITING_A" && duel.challengerId === user.id) ||
       (duel.status === "WAITING_B" && duel.opponentId === user.id) ||
       ((duel.status === "A_DEFENDING" || duel.status === "B_DEFENDING") &&
         duel.turnUserId === user.id);
 
+    const turnPreview = describeTurn(duel.status);
+    const previewRound =
+      turnPreview.roundNumber != null
+        ? duel.rounds.find((r) => r.roundNumber === turnPreview.roundNumber)
+        : null;
+
     if (
       (duel.status === "WAITING_A" && duel.challengerId === user.id) ||
       (duel.status === "WAITING_B" && duel.opponentId === user.id)
     ) {
-      const opened = await beginDuelDefend(duelId);
+      if (previewRound?.roundType === "MEMORY") {
+        const opened = await beginMemoryTurn(loadId);
+        if (opened.ok) {
+          return {
+            ok: true,
+            duel: opened.duel,
+            questions: null,
+            memoryBoard: opened.board,
+            memoryEndsAt: opened.endsAt,
+            memoryRevealMs: opened.revealMs,
+          };
+        }
+      } else {
+        const opened = await beginDuelDefend(loadId);
+        if (opened.ok) {
+          return {
+            ok: true,
+            duel: opened.duel,
+            questions: opened.questions,
+          };
+        }
+      }
+      // Fall through to a plain snapshot if claim raced / failed.
+      duel = await prisma.duelMatch.findUnique({
+        where: { id: loadId },
+        include: duelSnapshotInclude,
+      });
+      if (!duel) return { ok: false, error: "not_found" };
+    }
+
+    // MEMORY attack: stamp clock when the attacker opens the duel.
+    const turnAfter = describeTurn(duel.status);
+    const activeAfter =
+      turnAfter.roundNumber != null
+        ? duel.rounds.find((r) => r.roundNumber === turnAfter.roundNumber)
+        : null;
+    if (
+      activeAfter?.roundType === "MEMORY" &&
+      turnAfter.kind === "attack" &&
+      duel.turnUserId === user.id &&
+      !activeAfter.attackSubmittedAt
+    ) {
+      const opened = await beginMemoryTurn(loadId);
       if (opened.ok) {
         return {
           ok: true,
           duel: opened.duel,
-          questions: opened.questions,
+          questions: null,
+          memoryBoard: opened.board,
+          memoryEndsAt: opened.endsAt,
+          memoryRevealMs: opened.revealMs,
         };
       }
-      // Fall through to a plain snapshot if claim raced / failed.
-      duel = await prisma.duelMatch.findUnique({
-        where: { id: duelId },
-        include: duelSnapshotInclude,
-      });
-      if (!duel) return { ok: false, error: "not_found" };
+    }
+
+    if (
+      activeAfter?.roundType === "MEMORY" &&
+      (turnAfter.kind === "defend" || shouldOpenDefend) &&
+      duel.turnUserId === user.id &&
+      !activeAfter.defenseSubmittedAt
+    ) {
+      const opened = await beginMemoryTurn(loadId);
+      if (opened.ok) {
+        return {
+          ok: true,
+          duel: opened.duel,
+          questions: null,
+          memoryBoard: opened.board,
+          memoryEndsAt: opened.endsAt,
+          memoryRevealMs: opened.revealMs,
+        };
+      }
     }
 
     const cats = await listDuelEligibleCategories();
@@ -101,12 +171,13 @@ export async function getDuel(duelId: string): Promise<GetDuelResult> {
       ? (activeRound!.draftOptionIds as string[])
       : [];
     const draftOptions =
-      turn.kind === "attack"
+      turn.kind === "attack" && activeRound?.roundType !== "MEMORY"
         ? cats.filter((c) => draftIds.includes(c.id))
         : undefined;
 
     let questions: QuizQuestion[] | null = null;
     if (
+      activeRound?.roundType !== "MEMORY" &&
       activeRound?.questionIds &&
       Array.isArray(activeRound.questionIds) &&
       (turn.kind === "attack" || turn.kind === "defend" || shouldOpenDefend)
@@ -126,6 +197,10 @@ export async function getDuel(duelId: string): Promise<GetDuelResult> {
       ok: true,
       duel: toDuelSnapshot(duel, user.id, draftOptions),
       questions,
+      memoryBoard:
+        activeRound?.roundType === "MEMORY"
+          ? ((activeRound.boardJson as MemoryBoardJson | null) ?? null)
+          : null,
     };
   } catch (err) {
     console.error("getDuel failed", err);

@@ -80,6 +80,7 @@ function mapRound(
   if (!round) {
     return {
       roundNumber,
+      roundType: roundNumber === 2 ? "MEMORY" : "QUIZ",
       categoryNameEn: "",
       categoryNameFa: "",
       youAnswers: padAnswers(null, DEFAULT_SLOTS),
@@ -89,7 +90,10 @@ function mapRound(
   }
 
   const { you, them } = sidesForRound(duel, round);
-  const slots = Math.max(round.questionCount, DEFAULT_SLOTS);
+  const isMemory = round.roundType === "MEMORY";
+  const slots = isMemory
+    ? Math.max(round.questionCount, 8)
+    : Math.max(round.questionCount, DEFAULT_SLOTS);
   const youId = viewerId(duel);
   const youAttack = youId != null && round.attackerId === youId;
 
@@ -99,8 +103,9 @@ function mapRound(
 
   return {
     roundNumber,
-    categoryNameEn: round.categoryNameEn ?? "",
-    categoryNameFa: round.categoryNameFa ?? "",
+    roundType: isMemory ? "MEMORY" : "QUIZ",
+    categoryNameEn: round.categoryNameEn ?? (isMemory ? "Memory Pairs" : ""),
+    categoryNameFa: round.categoryNameFa ?? (isMemory ? "حافظه جفت‌ها" : ""),
     youAnswers: padAnswers(you, slots),
     themAnswers: padAnswers(them, slots),
     waitingOnThem,

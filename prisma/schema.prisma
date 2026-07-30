@@ -120,6 +120,12 @@ enum BotDifficulty {
   HARD
 }
 
+/// Per-round format inside a Draft Duel (v1: R1 QUIZ, R2 MEMORY).
+enum DuelRoundType {
+  QUIZ
+  MEMORY
+}
+
 /// Campaign = long-running LiveOps ladder. Daily = Tehran calendar day reset.
 enum MissionBatchKind {
   CAMPAIGN
@@ -764,19 +770,32 @@ model DuelRound {
   roundNumber Int
   attackerId  String
 
-  /// The 3 category ids offered in the draft UI.
+  /// QUIZ = draft + MCQ; MEMORY = shared flip board (same boardJson both halves).
+  roundType DuelRoundType @default(QUIZ)
+
+  /// The 3 category ids offered in the draft UI (empty [] for MEMORY).
   draftOptionIds Json
   categoryId     String?
   category       Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
-  /// Locked question ids for this attack (length = GameConfig.duel.questionsPerAttack).
+  /// Locked question ids for QUIZ attack (length = GameConfig.duel.questionsPerAttack).
   questionIds Json?
 
-  /// Answer logs: [{ questionId, selectedIndex, correct, ms }]
+  /// MEMORY: deterministic 4×4 layout shared by attack + defend halves.
+  /// Shape: { seed, pairCount, cards: [{ id, pairKey, face, … }] } — see lib/duel/memoryTypes.ts
+  boardJson Json?
+
+  /// Answer logs:
+  /// QUIZ: [{ questionId, selectedIndex, correct, ms }]
+  /// MEMORY: MemoryAttemptLog (pairsFound + verified matches) — see memoryTypes.ts
   attackAnswers  Json?
   defenseAnswers Json?
   attackCorrect  Int   @default(0)
   defenseCorrect Int   @default(0)
+
+  /// When the actor opened the half (MEMORY 20s clock starts here; QUIZ unused).
+  attackStartedAt  DateTime?
+  defenseStartedAt DateTime?
 
   attackSubmittedAt  DateTime?
   defenseSubmittedAt DateTime?
@@ -787,6 +806,7 @@ model DuelRound {
   @@unique([duelId, roundNumber])
   @@index([duelId])
   @@index([attackerId])
+  @@index([roundType])
 }
 
 // ─── LiveOps Missions (admin-managed batches of 3) ────────────────────────────

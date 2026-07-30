@@ -5,14 +5,10 @@ import type { BotDifficulty, Prisma } from "@/generated/prisma/client";
 import { getGameConfig } from "@/lib/game/gameConfig";
 import { normalizeClubName } from "@/lib/auth/blacklist";
 import { botAccuracy } from "@/lib/bots/difficulty";
-import {
-  drawCategoryQuestions,
-  pickDraftCategories,
-  usedCategoryIdsFromRounds,
-} from "@/lib/duel/draw";
-import { gradeDuelAnswers } from "@/lib/duel/grade";
 import { countCorrect } from "@/lib/duel";
 import type { DuelAnswerLogEntry } from "@/lib/duel/types";
+import { memoryRoundCreateData } from "@/lib/duel/createMemoryRound";
+import { fabricateBotMemoryLog } from "@/lib/duel/memoryBot";
 
 export const BOT_EMAIL = "bot@footballica.local";
 const BOT_CLUB_NAME = "Bot United";
@@ -182,30 +178,17 @@ export async function runBotTurnIfDue(duelId: string, now = new Date()): Promise
   const defenseLog = await fabricateBotAnswers(qIds, difficulty);
   const defenseCorrect = countCorrect(defenseLog);
 
-  // ── Attack round 2 ────────────────────────────────────────────────────────
-  const usedCategoryIds = usedCategoryIdsFromRounds(duel.rounds);
-  const draft = await pickDraftCategories(config.duel.draftChoices, usedCategoryIds);
-  const chosen = draft[Math.floor(Math.random() * draft.length)]!;
-  const attackQs = await drawCategoryQuestions(chosen.id, config.duel.questionsPerAttack);
-  const attackIds = attackQs.map((q) => q.id);
-  const attackLog = await fabricateBotAnswers(attackIds, difficulty);
-  // Re-grade via authoritative path (same as humans).
-  const gradedAttack = await gradeDuelAnswers(
-    attackIds,
-    attackLog.map((a) => ({
-      questionId: a.questionId,
-      selectedIndex: a.selectedIndex,
-      ms: a.ms,
-    })),
-  );
-  const attackCorrect = countCorrect(gradedAttack);
+  // ── Attack round 2 (MEMORY) ───────────────────────────────────────────────
+  const memoryData = await memoryRoundCreateData({
+    duelId: duel.id,
+    attackerId: duel.opponentId!,
+    pairCount: config.duel.memoryPairs,
+  });
+  const board = memoryData.board;
+  const memoryAttack = fabricateBotMemoryLog(board, difficulty);
+  const attackCorrect = memoryAttack.pairsFound;
 
-  const challengerCorrect = duel.challengerCorrect + 0; // unchanged here
-  // opponentCorrect so far was 0; add defense of r1 + attack of r2
-  // After A attacked, challengerCorrect was set. opponent had 0.
-  // After B defends r1: opponentCorrect += defenseCorrect
-  // After B attacks r2: opponentCorrect += attackCorrect
-  // challenger still needs to defend r2 later.
+  const challengerCorrect = duel.challengerCorrect + 0;
   const opponentCorrect =
     duel.opponentCorrect + defenseCorrect + attackCorrect;
 
@@ -222,14 +205,15 @@ export async function runBotTurnIfDue(duelId: string, now = new Date()): Promise
     await tx.duelRound.create({
       data: {
         duelId: duel.id,
-        roundNumber: 2,
-        attackerId: duel.opponentId!,
-        draftOptionIds: draft.map((c) => c.id),
-        categoryId: chosen.id,
-        questionIds: attackIds,
-        attackAnswers: gradedAttack,
+        roundNumber: memoryData.roundNumber,
+        roundType: memoryData.roundType,
+        attackerId: memoryData.attackerId,
+        draftOptionIds: memoryData.draftOptionIds,
+        boardJson: memoryData.boardJson,
+        attackAnswers: memoryAttack,
         attackCorrect,
         attackSubmittedAt: now,
+        attackStartedAt: now,
       },
     });
 
