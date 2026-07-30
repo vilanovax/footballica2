@@ -8,14 +8,18 @@ import { ADMIN_COOKIE, isValidAdminToken } from "@/lib/admin/auth";
 import { tehranDayKey } from "@/lib/game/dailyMissions";
 import { ensureFootballPlayerCatalog } from "@/lib/mystery/players";
 import { parseGridAxes } from "@/lib/grid/parse";
-import { maxMistakesFromConfig, buildAutoGridAxes } from "@/lib/grid/puzzle";
+import {
+  buildAutoGridAxes,
+  loadGridPlayers,
+  maxMistakesFromConfig,
+} from "@/lib/grid/puzzle";
 import {
   computeGridSolvability,
   type CellSolvability,
 } from "@/lib/grid/solvability";
-import { makeAxis } from "@/lib/grid/rules";
+import { careerClubs, makeAxis } from "@/lib/grid/rules";
 import type { GridAxis, GridRuleKind } from "@/lib/grid/types";
-import { GRID_MAX_MISTAKES, GRID_SIZE } from "@/lib/grid/types";
+import { GRID_MAX_MISTAKES, GRID_SIZE, isGridRuleKind } from "@/lib/grid/types";
 
 export type AdminGridAxisInput = {
   kind: GridRuleKind;
@@ -56,13 +60,7 @@ function axesFromInput(inputs: AdminGridAxisInput[], prefix: "r" | "c"): GridAxi
     if (!raw) return null;
     const kind = raw.kind;
     const value = typeof raw.value === "string" ? raw.value.trim() : "";
-    if (
-      (kind !== "league" &&
-        kind !== "position" &&
-        kind !== "nationalityCode" &&
-        kind !== "club") ||
-      !value
-    ) {
+    if (!isGridRuleKind(kind) || !value) {
       return null;
     }
     const labelEn =
@@ -84,16 +82,7 @@ function axesFromInput(inputs: AdminGridAxisInput[], prefix: "r" | "c"): GridAxi
 }
 
 async function loadPlayers() {
-  return prisma.footballPlayer.findMany({
-    where: { isActive: true },
-    select: {
-      slug: true,
-      league: true,
-      position: true,
-      nationalityCode: true,
-      club: true,
-    },
-  });
+  return loadGridPlayers(prisma);
 }
 
 function serialize(
@@ -138,13 +127,20 @@ export async function listAdminGridPuzzles(): Promise<{
     positions: string[];
     nationalityCodes: string[];
     clubs: string[];
+    trophies: string[];
   };
 }> {
   if (!(await assertAdmin())) {
     return {
       todayKey: tehranDayKey(),
       puzzles: [],
-      ruleOptions: { leagues: [], positions: [], nationalityCodes: [], clubs: [] },
+      ruleOptions: {
+        leagues: [],
+        positions: [],
+        nationalityCodes: [],
+        clubs: [],
+        trophies: [],
+      },
     };
   }
 
@@ -178,7 +174,8 @@ export async function listAdminGridPuzzles(): Promise<{
       leagues: uniq(players.map((p) => p.league)),
       positions: uniq(players.map((p) => p.position)),
       nationalityCodes: uniq(players.map((p) => p.nationalityCode)),
-      clubs: uniq(players.map((p) => p.club)),
+      clubs: uniq(players.flatMap((p) => careerClubs(p))),
+      trophies: uniq(players.flatMap((p) => p.trophies)),
     },
     puzzles: puzzles
       .map((p) => serialize(p, solvedMap.get(p.id) ?? 0, todayKey, players))

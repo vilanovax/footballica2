@@ -21,6 +21,29 @@ export function parseMysteryGuesses(raw: unknown): MysteryGuessRecord[] {
       club: (row.club as MysteryGuessRecord["club"]) ?? "wrong",
       age: (row.age as MysteryGuessRecord["age"]) ?? "higher",
       shirtNumber: (row.shirtNumber as MysteryGuessRecord["shirtNumber"]) ?? "higher",
+      nationalityValue:
+        typeof row.nationalityValue === "string"
+          ? row.nationalityValue
+          : undefined,
+      positionValue:
+        row.positionValue === "GK" ||
+        row.positionValue === "DEF" ||
+        row.positionValue === "MID" ||
+        row.positionValue === "FWD"
+          ? row.positionValue
+          : undefined,
+      leagueValue:
+        typeof row.leagueValue === "string" ? row.leagueValue : undefined,
+      clubValue: typeof row.clubValue === "string" ? row.clubValue : undefined,
+      ageValue:
+        typeof row.ageValue === "number" && Number.isFinite(row.ageValue)
+          ? row.ageValue
+          : undefined,
+      shirtNumberValue:
+        typeof row.shirtNumberValue === "number" &&
+        Number.isFinite(row.shirtNumberValue)
+          ? row.shirtNumberValue
+          : undefined,
       isCorrect: Boolean(row.isCorrect),
       at: typeof row.at === "string" ? row.at : new Date(0).toISOString(),
     });

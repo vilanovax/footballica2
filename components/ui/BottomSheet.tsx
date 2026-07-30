@@ -13,6 +13,8 @@ type BottomSheetProps = {
   children: React.ReactNode;
   /** Accessible label for the close control. */
   closeLabel?: string;
+  /** `dark` = Locker Room / immersive game sheets. */
+  tone?: "default" | "dark";
 };
 
 /**
@@ -26,7 +28,9 @@ export function BottomSheet({
   subtitle,
   children,
   closeLabel = "Close",
+  tone = "default",
 }: BottomSheetProps) {
+  const dark = tone === "dark";
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -65,22 +69,43 @@ export function BottomSheet({
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: "40%", opacity: 0 }}
             transition={{ type: "spring", stiffness: 380, damping: 32 }}
-            className="relative z-10 flex max-h-[min(85dvh,40rem)] w-full max-w-mobile flex-col rounded-t-bubble-xl border border-border bg-surface shadow-fantasy-lg sm:rounded-bubble-xl"
+            className={[
+              "relative z-10 flex max-h-[min(85dvh,40rem)] w-full max-w-mobile flex-col rounded-t-bubble-xl shadow-fantasy-lg sm:rounded-bubble-xl",
+              dark
+                ? "border border-white/10 bg-[#121a22] text-white"
+                : "border border-border bg-surface",
+            ].join(" ")}
           >
-            <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 pb-3 pt-4">
+            <div
+              className={[
+                "flex shrink-0 items-start justify-between gap-3 px-5 pb-3 pt-4",
+                dark ? "border-b border-white/10" : "border-b border-border",
+              ].join(" ")}
+            >
               <div className="min-w-0 flex-1 text-start">
                 <div
                   aria-hidden
-                  className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/30 sm:hidden"
+                  className={[
+                    "mx-auto mb-3 h-1 w-10 rounded-full sm:hidden",
+                    dark ? "bg-white/25" : "bg-muted-foreground/30",
+                  ].join(" ")}
                 />
                 <h2
                   id="bottom-sheet-title"
-                  className="font-display text-lg font-bold text-foreground"
+                  className={[
+                    "font-display text-lg font-bold",
+                    dark ? "text-white" : "text-foreground",
+                  ].join(" ")}
                 >
                   {title}
                 </h2>
                 {subtitle && (
-                  <p className="mt-0.5 font-body text-xs font-semibold text-muted-foreground">
+                  <p
+                    className={[
+                      "mt-0.5 font-body text-xs font-semibold",
+                      dark ? "text-white/55" : "text-muted-foreground",
+                    ].join(" ")}
+                  >
                     {subtitle}
                   </p>
                 )}
@@ -89,7 +114,12 @@ export function BottomSheet({
                 type="button"
                 aria-label={closeLabel}
                 onClick={onClose}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground transition-transform active:scale-95"
+                className={[
+                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95",
+                  dark
+                    ? "bg-white/10 text-white/80 ring-1 ring-white/15 hover:bg-white/15"
+                    : "bg-muted text-muted-foreground",
+                ].join(" ")}
               >
                 <X className="h-5 w-5" strokeWidth={2.5} />
               </button>

@@ -51,6 +51,12 @@ export function evaluateMysteryGuess(
     club: attrExact(guessed.club, target.club),
     age: compareNum(guessed.age, target.age),
     shirtNumber: compareNum(guessed.shirtNumber, target.shirtNumber),
+    nationalityValue: guessed.nationality,
+    positionValue: guessed.position,
+    leagueValue: guessed.league,
+    clubValue: guessed.club,
+    ageValue: guessed.age,
+    shirtNumberValue: guessed.shirtNumber,
     isCorrect: guessed.id === target.id,
     at: at.toISOString(),
   };

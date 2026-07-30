@@ -37,13 +37,15 @@ type RuleOptions = {
   positions: string[];
   nationalityCodes: string[];
   clubs: string[];
+  trophies: string[];
 };
 
 const KINDS: { value: GridRuleKind; label: string }[] = [
+  { value: "club", label: "Club (career)" },
+  { value: "trophy", label: "Trophy" },
   { value: "league", label: "League" },
   { value: "position", label: "Position" },
   { value: "nationalityCode", label: "Nation" },
-  { value: "club", label: "Club" },
 ];
 
 function emptyAxes(kind: GridRuleKind, values: string[]): AdminGridAxisInput[] {
@@ -63,6 +65,8 @@ function valuesForKind(kind: GridRuleKind, opts: RuleOptions): string[] {
       return opts.nationalityCodes;
     case "club":
       return opts.clubs;
+    case "trophy":
+      return opts.trophies;
   }
 }
 
@@ -151,10 +155,14 @@ export function GridPuzzlesPanel({
   const [dateKey, setDateKey] = useState(todayKey);
   const [maxMistakes, setMaxMistakes] = useState(GRID_MAX_MISTAKES);
   const [rows, setRows] = useState<AdminGridAxisInput[]>(() =>
-    emptyAxes("league", ruleOptions.leagues),
+    ruleOptions.clubs.length >= 3
+      ? emptyAxes("club", ruleOptions.clubs)
+      : emptyAxes("league", ruleOptions.leagues),
   );
   const [cols, setCols] = useState<AdminGridAxisInput[]>(() =>
-    emptyAxes("position", ["FWD", "MID", "DEF"]),
+    ruleOptions.clubs.length >= 6
+      ? emptyAxes("club", ruleOptions.clubs.slice(3))
+      : emptyAxes("position", ["FWD", "MID", "DEF"]),
   );
   const [preview, setPreview] = useState<{
     solvable: boolean;

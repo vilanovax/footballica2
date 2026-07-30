@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
@@ -20,6 +20,8 @@ import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { MysteryShareCard } from "@/components/mystery/MysteryShareCard";
 import { BadgeUnlockPopup } from "@/components/quiz/BadgeUnlockPopup";
 import { BottomSheet } from "@/components/ui/BottomSheet";
+
+const MYSTERY_MOOD = "#0a0f14";
 
 type Props = {
   initial: DailyMysterySnapshot;
@@ -77,6 +79,35 @@ export function MysteryArena({ initial }: Props) {
   const [pending, startTransition] = useTransition();
   const [unlockedBadges, setUnlockedBadges] = useState<UnlockedBadge[]>([]);
   const [howOpen, setHowOpen] = useState(false);
+
+  // Match browser chrome / status bar to the dark arena (undo Day Match cream).
+  useEffect(() => {
+    const metas = Array.from(
+      document.querySelectorAll('meta[name="theme-color"]'),
+    ) as HTMLMetaElement[];
+    const prev = metas.map((m) => m.getAttribute("content"));
+    if (metas.length === 0) {
+      const meta = document.createElement("meta");
+      meta.name = "theme-color";
+      meta.content = MYSTERY_MOOD;
+      document.head.appendChild(meta);
+      return () => {
+        meta.remove();
+      };
+    }
+    for (const m of metas) m.setAttribute("content", MYSTERY_MOOD);
+    document.documentElement.style.backgroundColor = MYSTERY_MOOD;
+    document.body.style.backgroundColor = MYSTERY_MOOD;
+    document.body.style.backgroundImage = "none";
+    return () => {
+      metas.forEach((m, i) => {
+        if (prev[i] != null) m.setAttribute("content", prev[i]!);
+      });
+      document.documentElement.style.backgroundColor = "";
+      document.body.style.backgroundColor = "";
+      document.body.style.backgroundImage = "";
+    };
+  }, []);
 
   const done = mystery.status === "SOLVED" || mystery.status === "FAILED";
   const remaining = Math.max(0, mystery.maxGuesses - mystery.guessCount);
@@ -156,12 +187,13 @@ export function MysteryArena({ initial }: Props) {
     locale === "fa" ? mystery.answer?.nameFa : mystery.answer?.nameEn;
 
   return (
-    <section className="relative -mx-4 flex min-h-0 flex-1 flex-col gap-3 bg-linear-to-b from-[#0c1218] via-[#111a22] to-[#0a0f14] px-4 pb-2 text-white">
-      {/* Atmosphere */}
+    <section className="relative flex min-h-dvh flex-1 flex-col gap-3 bg-linear-to-b from-[#0c1218] via-[#111a22] to-[#0a0f14] px-4 pb-2 text-white">
+      {/* Atmosphere — full viewport including status / home-indicator bands */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 overflow-hidden"
       >
+        <div className="absolute inset-0 bg-[#0a0f14]" />
         <div className="absolute -end-16 top-0 h-56 w-56 rounded-full bg-amber-500/10 blur-3xl" />
         <div className="absolute -start-20 top-40 h-48 w-48 rounded-full bg-emerald-500/10 blur-3xl" />
       </div>
@@ -170,7 +202,7 @@ export function MysteryArena({ initial }: Props) {
       <motion.header
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative z-10 flex items-center justify-between gap-2 pt-[max(0.25rem,env(safe-area-inset-top))]"
+        className="relative z-10 flex items-center justify-between gap-2 pt-[max(0.75rem,env(safe-area-inset-top))]"
       >
         <div className="flex min-w-0 items-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -364,7 +396,6 @@ export function MysteryArena({ initial }: Props) {
                 key={`empty-${i}`}
                 index={i}
                 isNext={i === mystery.guessCount}
-                labels={attrLabels}
               />
             );
           })}
@@ -383,7 +414,7 @@ export function MysteryArena({ initial }: Props) {
       {!done && (
         <div
           aria-hidden
-          className="h-[calc(10.5rem+theme(spacing.nav)+env(safe-area-inset-bottom,0px))] shrink-0"
+          className="h-[calc(11rem+env(safe-area-inset-bottom,0px))] shrink-0"
         />
       )}
 
@@ -391,9 +422,9 @@ export function MysteryArena({ initial }: Props) {
         <motion.footer
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-mobile px-3 pb-[calc(theme(spacing.nav)+env(safe-area-inset-bottom,0px))] pt-2"
+          className="pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-mobile bg-linear-to-t from-[#0a0f14] via-[#0a0f14] to-transparent px-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pt-3"
         >
-          <div className="pointer-events-auto rounded-t-bubble-lg border border-white/10 bg-[#121a22]/96 px-2 pt-2.5 shadow-[0_-12px_32px_rgba(0,0,0,0.45)] backdrop-blur-md">
+          <div className="pointer-events-auto rounded-t-bubble-lg border border-white/10 bg-[#121a22] px-2 pt-2.5 shadow-[0_-12px_32px_rgba(0,0,0,0.45)]">
             <p className="mb-1.5 text-center font-display text-[11px] font-bold text-white/55">
               {selectedLabel ? `✓ ${selectedLabel}` : t("mystery.pickHint")}
             </p>
@@ -447,10 +478,10 @@ export function MysteryArena({ initial }: Props) {
               whileTap={!selectedId || pending ? undefined : { y: 3 }}
               onClick={onGuess}
               className={[
-                "btn-fantasy mt-2 mb-1 w-full min-h-touch justify-center",
+                "mt-2 mb-1 flex w-full min-h-touch items-center justify-center rounded-2xl font-display text-base font-extrabold transition-colors",
                 selectedId && !pending
-                  ? "btn-fantasy-primary"
-                  : "bg-white/10 text-white/40 opacity-70",
+                  ? "btn-fantasy btn-fantasy-primary"
+                  : "border border-white/25 bg-white/12 text-white/70",
               ].join(" ")}
             >
               {pending ? "…" : t("mystery.guess")}
@@ -495,11 +526,9 @@ function LegendChip({
 function EmptyGuessRow({
   index,
   isNext,
-  labels,
 }: {
   index: number;
   isNext: boolean;
-  labels: string[];
 }) {
   const { locale } = useTranslation();
   return (
@@ -507,31 +536,27 @@ function EmptyGuessRow({
       className={[
         "rounded-2xl p-2 ring-1 transition-colors",
         isNext
-          ? "bg-white/[0.06] ring-white/25"
-          : "bg-white/[0.03] ring-white/10",
+          ? "bg-white/6 ring-white/25"
+          : "bg-white/3 ring-white/10",
       ].join(" ")}
     >
-      <p className="mb-1.5 flex items-center gap-2 font-display text-xs font-bold text-white/30">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[10px] font-black text-white/45">
+      <p className="mb-1.5 flex items-center gap-2 font-display text-xs font-bold text-white/35">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[10px] font-black text-white/50">
           {toLocaleDigits(index + 1, locale)}
         </span>
-        <span>{isNext ? "…" : "—"}</span>
       </p>
       <div className="grid grid-cols-3 gap-1.5">
-        {ATTR_KEYS.map((key, i) => (
+        {ATTR_KEYS.map((key) => (
           <div
             key={key}
             className={[
-              "flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5",
+              "flex min-h-12 items-center justify-center rounded-xl",
               isNext
-                ? "bg-white/[0.07] ring-1 ring-dashed ring-white/20"
-                : "bg-black/25 ring-1 ring-white/8",
+                ? "bg-white/8 ring-1 ring-dashed ring-white/25"
+                : "bg-black/30 ring-1 ring-white/12",
             ].join(" ")}
           >
-            <span className="font-display text-[9px] font-extrabold uppercase tracking-wide text-white/25">
-              {labels[i]}
-            </span>
-            <span className="h-2 w-2 rounded-full bg-white/15" aria-hidden />
+            <span className="h-1.5 w-1.5 rounded-full bg-white/25" aria-hidden />
           </div>
         ))}
       </div>
@@ -550,15 +575,45 @@ function GuessRow({
   const name = locale === "fa" ? guess.nameFa : guess.nameEn;
   const cells: {
     key: string;
-    label: string;
+    value: string;
     v: AttributeVerdict | CompareVerdict;
   }[] = [
-    { key: "n", label: t("mystery.colNation"), v: guess.nationality },
-    { key: "p", label: t("mystery.colPos"), v: guess.position },
-    { key: "l", label: t("mystery.colLeague"), v: guess.league },
-    { key: "c", label: t("mystery.colClub"), v: guess.club },
-    { key: "a", label: t("mystery.colAge"), v: guess.age },
-    { key: "s", label: t("mystery.colShirt"), v: guess.shirtNumber },
+    {
+      key: "n",
+      value: guess.nationalityValue ?? t("mystery.colNation"),
+      v: guess.nationality,
+    },
+    {
+      key: "p",
+      value: guess.positionValue ?? t("mystery.colPos"),
+      v: guess.position,
+    },
+    {
+      key: "l",
+      value: guess.leagueValue ?? t("mystery.colLeague"),
+      v: guess.league,
+    },
+    {
+      key: "c",
+      value: guess.clubValue ?? t("mystery.colClub"),
+      v: guess.club,
+    },
+    {
+      key: "a",
+      value:
+        guess.ageValue != null
+          ? toLocaleDigits(guess.ageValue, locale)
+          : t("mystery.colAge"),
+      v: guess.age,
+    },
+    {
+      key: "s",
+      value:
+        guess.shirtNumberValue != null
+          ? toLocaleDigits(guess.shirtNumberValue, locale)
+          : t("mystery.colShirt"),
+      v: guess.shirtNumber,
+    },
   ];
 
   return (
@@ -575,7 +630,7 @@ function GuessRow({
         "rounded-2xl p-2.5 shadow-lg ring-1",
         guess.isCorrect
           ? "bg-emerald-500/15 ring-emerald-400/45"
-          : "bg-white/[0.06] ring-white/12",
+          : "bg-white/6 ring-white/12",
       ].join(" ")}
     >
       <p className="mb-2 flex items-center gap-2 font-display text-sm font-extrabold text-white">
@@ -604,10 +659,10 @@ function GuessRow({
                 style.tile,
               ].join(" ")}
             >
-              <span className="font-display text-[11px] font-extrabold leading-none tracking-wide text-white/95">
-                {c.label}
+              <span className="line-clamp-2 font-display text-[11px] font-extrabold leading-tight tracking-wide text-white">
+                {c.value}
               </span>
-              <span className="font-display text-lg font-black leading-none drop-shadow-sm">
+              <span className="font-display text-sm font-black leading-none text-white/95 drop-shadow-sm">
                 {style.glyph}
               </span>
             </div>

@@ -523,9 +523,9 @@ model RecordChallenge {
   rewardBadgeEmoji String? @default("🏆")
 
   /// Live-Ops theme week key (logo / stadium / career / formats). Null = plain RC.
-  themeKey String?
+  themeKey         String?
   /// Preferred QuestionType list for Survival draws inside this challenge, e.g. ["IMAGE","REVEAL_IMAGE"].
-  preferredTypes Json?
+  preferredTypes   Json?
   /// Format bias density (1 = always prefer format, 5 = default ~1/5). Null = global default.
   formatBiasEveryN Int?
 
@@ -710,12 +710,12 @@ model QuestionReport {
 model DuelMatch {
   id String @id @default(cuid())
 
-  challengerId  String
-  challenger    User    @relation("DuelChallenger", fields: [challengerId], references: [id], onDelete: Cascade)
+  challengerId    String
+  challenger      User    @relation("DuelChallenger", fields: [challengerId], references: [id], onDelete: Cascade)
   /// Null while MATCHING; set when a human/bot is assigned.
-  opponentId    String?
-  opponent      User?   @relation("DuelOpponent", fields: [opponentId], references: [id], onDelete: SetNull)
-  isBotOpponent Boolean @default(false)
+  opponentId      String?
+  opponent        User?   @relation("DuelOpponent", fields: [opponentId], references: [id], onDelete: SetNull)
+  isBotOpponent   Boolean @default(false)
   /// Human timed out; remaining turns are fabricated (Shadow Bot). Keep names.
   shadowBotActive Boolean @default(false)
   /// User id who went AFK (sees "lost due to timeout"; never told a bot played).
@@ -879,16 +879,21 @@ model FootballPlayer {
   /// Stable slug, e.g. "messi" — also used as Mystery guess id.
   slug String @id
 
-  nameEn String
-  nameFa String
+  nameEn          String
+  nameFa          String
   nationality     String
   nationalityCode String
   /// GK | DEF | MID | FWD
-  position    String
-  league      String
-  club        String
-  age         Int
-  shirtNumber Int
+  position        String
+  league          String
+  club            String
+  age             Int
+  shirtNumber     Int
+
+  /// Career clubs (names or stable IDs) for Immortal-style Grid intersections.
+  pastClubs Json @default("[]")
+  /// Major trophies / achievements, e.g. ["World Cup", "UCL"].
+  trophies  Json @default("[]")
 
   /// Inactive players are hidden from guess pickers and auto-picks.
   isActive Boolean @default(true)

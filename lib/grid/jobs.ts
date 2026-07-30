@@ -3,8 +3,7 @@ import "server-only";
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import { tehranDayKey } from "@/lib/game/dailyMissions";
 import { addTehranDayKeys } from "@/lib/mystery/jobs";
-import { ensureFootballPlayerCatalog } from "@/lib/mystery/players";
-import { buildAutoGridAxes } from "./puzzle";
+import { buildAutoGridAxes, loadGridPlayers } from "./puzzle";
 import { GRID_MAX_MISTAKES } from "./types";
 
 type Db = PrismaClient | Prisma.TransactionClient;
@@ -41,17 +40,7 @@ export async function ensureGridSchedule(
   );
   const todayKey = tehranDayKey(now);
 
-  await ensureFootballPlayerCatalog(db);
-  const players = await db.footballPlayer.findMany({
-    where: { isActive: true },
-    select: {
-      slug: true,
-      league: true,
-      position: true,
-      nationalityCode: true,
-      club: true,
-    },
-  });
+  const players = await loadGridPlayers(db);
 
   const skipped: string[] = [];
   const created: string[] = [];

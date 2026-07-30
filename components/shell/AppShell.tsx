@@ -26,21 +26,60 @@ export function AppShell({ children }: AppShellProps) {
   const bareChrome =
     pathname === "/login" || pathname?.startsWith("/onboarding");
 
+  // Focused match / daily puzzle arenas — hide tab bar for immersion.
+  // Exit via in-arena close (X); Play hub keeps the nav.
+  const immersivePlay = isImmersivePlayRoute(pathname);
+  const fullBleedMood = isFullBleedMoodRoute(pathname);
+  const hideNav = bareChrome || immersivePlay;
+
   return (
-    <div className="relative mx-auto flex min-h-dvh w-full max-w-mobile flex-col overflow-x-hidden">
+    <div
+      className={[
+        "relative mx-auto flex min-h-dvh w-full max-w-mobile flex-col overflow-x-hidden",
+        // Mystery paints edge-to-edge dark — kill Day Match cream behind safe areas.
+        fullBleedMood ? "bg-[#0a0f14]" : "",
+      ].join(" ")}
+    >
       <main
         className={[
-          "flex flex-1 flex-col px-4 pt-[max(1rem,env(safe-area-inset-top))]",
-          // Extra clearance for floating Play FAB + iOS home indicator.
-          bareChrome
-            ? "pb-8"
-            : "pb-[calc(7.75rem+env(safe-area-inset-bottom,0px))]",
+          "flex flex-1 flex-col",
+          fullBleedMood
+            ? "px-0 pt-0 pb-0"
+            : [
+                "px-4 pt-[max(1rem,env(safe-area-inset-top))]",
+                // Extra clearance for floating Play FAB + iOS home indicator.
+                hideNav
+                  ? immersivePlay
+                    ? "pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]"
+                    : "pb-8"
+                  : "pb-[calc(7.75rem+env(safe-area-inset-bottom,0px))]",
+              ].join(" "),
         ].join(" ")}
       >
         {children}
       </main>
-      {!bareChrome && <BottomNav />}
+      {!hideNav && <BottomNav />}
       <Toaster position="top-center" />
     </div>
   );
+}
+
+/** Active arenas where chrome would break immersion. */
+function isImmersivePlayRoute(pathname: string | null | undefined): boolean {
+  if (!pathname) return false;
+  if (pathname.startsWith("/play/mystery")) return true;
+  if (pathname.startsWith("/play/grid")) return true;
+  if (pathname.startsWith("/play/penalty")) return true;
+  if (pathname.startsWith("/play/quick")) return true;
+  // Duel detail only — lobby keeps nav.
+  if (/^\/play\/duel\/[^/]+/.test(pathname)) return true;
+  return false;
+}
+
+/** Arenas that own the full viewport mood (no shell inset / cream bleed). */
+function isFullBleedMoodRoute(pathname: string | null | undefined): boolean {
+  if (!pathname) return false;
+  if (pathname.startsWith("/play/mystery")) return true;
+  if (pathname.startsWith("/play/grid")) return true;
+  return false;
 }

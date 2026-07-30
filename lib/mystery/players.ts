@@ -118,9 +118,28 @@ export type FootballPlayerAdminRow = {
   club: string;
   age: number;
   shirtNumber: number;
+  pastClubs: string[];
+  trophies: string[];
   isActive: boolean;
   updatedAt: string;
 };
+
+/** Coerce Prisma Json (pastClubs / trophies) into a clean string[]. */
+export function asStringTagList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of value) {
+    if (typeof item !== "string") continue;
+    const tag = item.trim();
+    if (!tag) continue;
+    const key = tag.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(tag);
+  }
+  return out;
+}
 
 export function serializeAdminPlayer(row: FootballPlayer): FootballPlayerAdminRow {
   return {
@@ -134,6 +153,8 @@ export function serializeAdminPlayer(row: FootballPlayer): FootballPlayerAdminRo
     club: row.club,
     age: row.age,
     shirtNumber: row.shirtNumber,
+    pastClubs: asStringTagList(row.pastClubs),
+    trophies: asStringTagList(row.trophies),
     isActive: row.isActive,
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -150,6 +171,8 @@ export type PlayerWriteInput = {
   club: string;
   age: number;
   shirtNumber: number;
+  pastClubs: string[];
+  trophies: string[];
   isActive: boolean;
 };
 
@@ -185,6 +208,11 @@ export function normalizePlayerInput(
   if (age < 15 || age > 55) return { error: "age_invalid" };
   if (shirtNumber < 0 || shirtNumber > 99) return { error: "shirt_invalid" };
 
+  const pastClubs = asStringTagList(input.pastClubs);
+  const trophies = asStringTagList(input.trophies);
+  if (pastClubs.length > 40) return { error: "past_clubs_limit" };
+  if (trophies.length > 40) return { error: "trophies_limit" };
+
   return {
     slug,
     nameEn,
@@ -196,6 +224,8 @@ export function normalizePlayerInput(
     club,
     age,
     shirtNumber,
+    pastClubs,
+    trophies,
     isActive: Boolean(input.isActive),
   };
 }

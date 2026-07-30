@@ -3,7 +3,27 @@
 export const GRID_SIZE = 3;
 export const GRID_MAX_MISTAKES = 9;
 
-export type GridRuleKind = "league" | "position" | "nationalityCode" | "club";
+/**
+ * Axis rule kinds.
+ * - `club` = career: current club OR pastClubs (Immortal-style)
+ * - `trophy` = major achievement tag on FootballPlayer.trophies
+ */
+export const GRID_RULE_KINDS = [
+  "league",
+  "position",
+  "nationalityCode",
+  "club",
+  "trophy",
+] as const;
+
+export type GridRuleKind = (typeof GRID_RULE_KINDS)[number];
+
+export function isGridRuleKind(value: unknown): value is GridRuleKind {
+  return (
+    typeof value === "string" &&
+    (GRID_RULE_KINDS as readonly string[]).includes(value)
+  );
+}
 
 export type GridAxisRule = {
   kind: GridRuleKind;

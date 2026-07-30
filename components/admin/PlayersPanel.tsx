@@ -8,9 +8,12 @@ import {
   Plus,
   Power,
   Search,
+  Sparkles,
   UserRound,
 } from "lucide-react";
 import {
+  listAdminPlayers,
+  seedGridPlayersCatalog,
   setFootballPlayerActive,
   upsertFootballPlayer,
 } from "@/actions/admin/players";
@@ -18,6 +21,7 @@ import type {
   FootballPlayerAdminRow,
   PlayerWriteInput,
 } from "@/lib/mystery/players";
+import { TagInput } from "@/components/admin/TagInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -64,6 +68,8 @@ const EMPTY: PlayerWriteInput = {
   club: "",
   age: 28,
   shirtNumber: 10,
+  pastClubs: [],
+  trophies: [],
   isActive: true,
 };
 
@@ -91,6 +97,10 @@ function errorMessage(code: string): string {
       return "Age must be between 15 and 55.";
     case "shirt_invalid":
       return "Shirt number must be 0–99.";
+    case "past_clubs_limit":
+      return "Too many past clubs (max 40).";
+    case "trophies_limit":
+      return "Too many trophies (max 40).";
     case "unauthorized":
       return "Admin session expired.";
     default:
@@ -158,6 +168,8 @@ export function PlayersPanel({
       club: p.club,
       age: p.age,
       shirtNumber: p.shirtNumber,
+      pastClubs: p.pastClubs ?? [],
+      trophies: p.trophies ?? [],
       isActive: p.isActive,
     });
     setOpen(true);
@@ -178,6 +190,20 @@ export function PlayersPanel({
       });
       toast.success(editingSlug ? "Player updated" : "Player created");
       setOpen(false);
+      router.refresh();
+    });
+  }
+
+  function seedGridPack() {
+    startTransition(async () => {
+      const res = await seedGridPlayersCatalog();
+      if (!res.ok) {
+        toast.error(errorMessage(res.error));
+        return;
+      }
+      const next = await listAdminPlayers();
+      setPlayers(next);
+      toast.success(`Seeded ${res.upserted} Grid players`);
       router.refresh();
     });
   }
@@ -241,6 +267,17 @@ export function PlayersPanel({
             ))}
           </SelectContent>
         </Select>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={seedGridPack}
+          disabled={pending}
+          className="h-9 gap-1.5"
+          title="Upsert Özil, Ronaldo, Messi… with career + trophies"
+        >
+          <Sparkles className="h-4 w-4" />
+          Seed Grid pack
+        </Button>
         <Button type="button" onClick={openCreate} className="h-9 gap-1.5">
           <Plus className="h-4 w-4" />
           Add
@@ -548,6 +585,34 @@ export function PlayersPanel({
                   />
                 </Field>
               </div>
+            </section>
+
+            <section className="space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                Career & trophies (Grid)
+              </p>
+              <Field label="Past clubs">
+                <TagInput
+                  value={form.pastClubs}
+                  onChange={(pastClubs) =>
+                    setForm((f) => ({ ...f, pastClubs }))
+                  }
+                  disabled={pending}
+                  placeholder="e.g. Real Madrid → Enter"
+                  hint="Clubs the player has played for (incl. current). Used for Immortal intersections."
+                />
+              </Field>
+              <Field label="Trophies">
+                <TagInput
+                  value={form.trophies}
+                  onChange={(trophies) =>
+                    setForm((f) => ({ ...f, trophies }))
+                  }
+                  disabled={pending}
+                  placeholder="e.g. UCL → Enter"
+                  hint="Major achievements as short labels (World Cup, UCL, Ballon d'Or…)."
+                />
+              </Field>
             </section>
 
             <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">

@@ -36,9 +36,9 @@ export default async function AdminGridPage() {
       <AdminHowItWorks
         title="Daily routine"
         steps={[
-          "Keep Players catalog filled (league, position, nation, club).",
-          "Auto-fill or set 3 row + 3 column axes, then Preview.",
-          "Save only when all 9 cells are green — live on /play/grid.",
+          "Fill Players with pastClubs + trophies (Seed Grid pack), then career Club axes work Immortal-style.",
+          "Auto-fill prefers club×club / trophy×club; or set axes manually and Preview.",
+          "Save only when all 9 cells are green — live on /play/grid (even GotD days).",
         ]}
       />
 

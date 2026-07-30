@@ -1,13 +1,16 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import { X } from "lucide-react";
 import { toast } from "sonner";
 import type { DailyGridSnapshot } from "@/actions/grid/getDailyGrid";
 import { submitGridGuess } from "@/actions/grid/submitGridGuess";
 import type { UnlockedBadge } from "@/actions/resolveMatch";
 import { BadgeUnlockPopup } from "@/components/quiz/BadgeUnlockPopup";
+import { BottomSheet } from "@/components/ui/BottomSheet";
+import { buildGridShareCode } from "@/lib/grid/share";
 import { cellKey } from "@/lib/grid/types";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
@@ -18,6 +21,13 @@ type Props = {
   initial: DailyGridSnapshot;
 };
 
+const GRID_MOOD = "#0a0f14";
+
+/** Optional photo path convention — shown when asset exists in /public. */
+function playerPhotoSrc(playerId: string): string {
+  return `/players/${playerId}.png`;
+}
+
 export function GridArena({ initial }: Props) {
   const { t, locale } = useTranslation();
   const [grid, setGrid] = useState(initial);
@@ -27,8 +37,53 @@ export function GridArena({ initial }: Props) {
   const [query, setQuery] = useState("");
   const [pending, startTransition] = useTransition();
   const [unlockedBadges, setUnlockedBadges] = useState<UnlockedBadge[]>([]);
+  const [photoOk, setPhotoOk] = useState<Record<string, boolean>>({});
+  /** Cell key currently shaking / crimson-flashing (temporary — not locked). */
+  const [missCellKey, setMissCellKey] = useState<string | null>(null);
+  const [livesPulse, setLivesPulse] = useState(false);
+  const [showGameOver, setShowGameOver] = useState(
+    initial.status === "FAILED",
+  );
+
+  // Match browser chrome to dark Locker Room (undo Day Match cream).
+  useEffect(() => {
+    const metas = Array.from(
+      document.querySelectorAll('meta[name="theme-color"]'),
+    ) as HTMLMetaElement[];
+    const prev = metas.map((m) => m.getAttribute("content"));
+    if (metas.length === 0) {
+      const meta = document.createElement("meta");
+      meta.name = "theme-color";
+      meta.content = GRID_MOOD;
+      document.head.appendChild(meta);
+      document.documentElement.style.backgroundColor = GRID_MOOD;
+      document.body.style.backgroundColor = GRID_MOOD;
+      document.body.style.backgroundImage = "none";
+      return () => {
+        meta.remove();
+        document.documentElement.style.backgroundColor = "";
+        document.body.style.backgroundColor = "";
+        document.body.style.backgroundImage = "";
+      };
+    }
+    for (const m of metas) m.setAttribute("content", GRID_MOOD);
+    document.documentElement.style.backgroundColor = GRID_MOOD;
+    document.body.style.backgroundColor = GRID_MOOD;
+    document.body.style.backgroundImage = "none";
+    return () => {
+      metas.forEach((m, i) => {
+        if (prev[i] != null) m.setAttribute("content", prev[i]!);
+      });
+      document.documentElement.style.backgroundColor = "";
+      document.body.style.backgroundColor = "";
+      document.body.style.backgroundImage = "";
+    };
+  }, []);
 
   const done = grid.status === "SOLVED" || grid.status === "FAILED";
+  const livesLeft = Math.max(0, grid.maxMistakes - grid.mistakeCount);
+  const boardShare = grid.shareCode || buildGridShareCode(grid.cells);
+
   const usedIds = useMemo(
     () =>
       new Set(
@@ -64,19 +119,41 @@ export function GridArena({ initial }: Props) {
       : grid.cols[selected.col]?.labelEn
     : null;
 
+  const sheetSubtitle =
+    selectedRowLabel && selectedColLabel
+      ? `${selectedRowLabel} × ${selectedColLabel}`
+      : undefined;
+
+  function flashMiss(row: number, col: number) {
+    const key = cellKey(row, col);
+    setMissCellKey(key);
+    setLivesPulse(true);
+    window.setTimeout(() => setMissCellKey(null), 560);
+    window.setTimeout(() => setLivesPulse(false), 480);
+  }
+
   function onCell(row: number, col: number) {
     if (done || pending) return;
     if (grid.cells[cellKey(row, col)]) return;
     playSound("click");
+    setQuery("");
     setSelected({ row, col });
+  }
+
+  function closePicker() {
+    playSound("click");
+    setSelected(null);
+    setQuery("");
   }
 
   function onPick(playerId: string) {
     if (!selected || pending || done) return;
+    const attemptRow = selected.row;
+    const attemptCol = selected.col;
     startTransition(async () => {
       const res = await submitGridGuess({
-        row: selected.row,
-        col: selected.col,
+        row: attemptRow,
+        col: attemptCol,
         playerId,
       });
       if (!res.ok) {
@@ -100,14 +177,39 @@ export function GridArena({ initial }: Props) {
         haptic(HAPTIC.tap);
         setSelected(null);
       } else {
+        // Close sheet so the cell shake/crimson flash is visible on the board.
+        setSelected(null);
+        flashMiss(attemptRow, attemptCol);
         playSound("miss");
         haptic(HAPTIC.miss);
+        if (res.grid.status === "FAILED") {
+          window.setTimeout(() => setShowGameOver(true), 420);
+        }
       }
     });
   }
 
+  async function copyShare() {
+    try {
+      await navigator.clipboard.writeText(boardShare);
+      toast.success(t("grid.shared"));
+      playSound("click");
+    } catch {
+      toast.error(t("grid.errGeneric"));
+    }
+  }
+
   return (
-    <section className="flex min-h-0 flex-1 flex-col gap-3">
+    <section className="relative flex min-h-dvh flex-1 flex-col gap-4 bg-linear-to-b from-[#0c1218] via-[#111a22] to-[#0a0f14] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-white">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+      >
+        <div className="absolute inset-0 bg-[#0a0f14]" />
+        <div className="absolute -end-16 top-0 h-56 w-56 rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="absolute -start-20 top-48 h-48 w-48 rounded-full bg-sky-500/10 blur-3xl" />
+      </div>
+
       {unlockedBadges.length > 0 && (
         <BadgeUnlockPopup
           badges={unlockedBadges}
@@ -115,56 +217,96 @@ export function GridArena({ initial }: Props) {
         />
       )}
 
-      <header className="relative flex shrink-0 items-center justify-between gap-2 pt-0.5">
-        <div className="min-w-0 flex items-center gap-3">
-          <h1 className="font-display text-xl font-black text-foreground">
+      <header className="relative z-10 flex shrink-0 items-center justify-between gap-2 pt-[max(0.75rem,env(safe-area-inset-top))]">
+        <div className="min-w-0 flex flex-1 items-center gap-2.5">
+          <h1 className="truncate font-display text-xl font-black text-white">
             {t("grid.title")}
           </h1>
-          <div className="flex items-center gap-2.5 font-display text-sm font-black tabular-nums">
-            <span className="text-primary">
+          <div className="flex items-center gap-2 font-display text-sm font-black tabular-nums">
+            <span
+              className="text-emerald-300"
+              title={`${toLocaleDigits(grid.filled, locale)}/${toLocaleDigits(grid.totalCells, locale)}`}
+            >
               {toLocaleDigits(grid.filled, locale)}/
               {toLocaleDigits(grid.totalCells, locale)}
             </span>
-            <span className="text-destructive">
-              {toLocaleDigits(grid.mistakeCount, locale)}/
-              {toLocaleDigits(grid.maxMistakes, locale)}
-            </span>
-            <span className="text-accent-deep">
+            <span className="text-amber-300">
               🔥 {toLocaleDigits(grid.gridStreak, locale)}
             </span>
           </div>
         </div>
+
+        {/* Lives — Immortal-style remaining chances */}
+        <motion.div
+          key={livesLeft}
+          aria-label={t("grid.livesLabel")}
+          className={[
+            "me-1 flex shrink-0 items-center gap-1 rounded-full bg-rose-500/15 px-2.5 py-1 ring-1 ring-rose-400/35",
+            livesPulse ? "animate-lives-pulse" : "",
+            livesLeft <= 2 && !done ? "ring-rose-400/70" : "",
+          ].join(" ")}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={
+              livesLeft === 0
+                ? "/icons/broken-heart.png"
+                : "/icons/heart.png"
+            }
+            alt=""
+            draggable={false}
+            className="h-5 w-5 object-contain"
+          />
+          <span
+            className={[
+              "font-display text-sm font-black tabular-nums",
+              livesLeft <= 2 ? "text-rose-300" : "text-rose-100",
+            ].join(" ")}
+          >
+            {t("grid.livesLeft", {
+              cur: toLocaleDigits(livesLeft, locale),
+              max: toLocaleDigits(grid.maxMistakes, locale),
+            })}
+          </span>
+        </motion.div>
+
         <Link
           href="/play"
           onClick={() => playSound("click")}
           aria-label={t("common.back")}
-          className="flex h-11 w-11 shrink-0 items-center justify-center active:scale-90"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white/70 ring-1 ring-white/15 transition-colors hover:bg-white/10 hover:text-white active:scale-90"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/icons/close.png"
-            alt=""
-            draggable={false}
-            className="h-9 w-9 object-contain"
-          />
+          <X className="h-5 w-5" strokeWidth={2.25} />
         </Link>
       </header>
 
-      {done && (
-        <div className="shrink-0 rounded-bubble-lg bg-surface p-4 text-center shadow-fantasy ring-1 ring-border/60">
-          <p className="font-display text-lg font-black text-foreground">
-            {grid.status === "SOLVED" ? t("grid.solved") : t("grid.failed")}
+      {grid.status === "SOLVED" && (
+        <div className="relative z-10 shrink-0 rounded-bubble-lg border border-emerald-400/30 bg-emerald-500/10 p-4 text-center shadow-[0_12px_32px_rgba(0,0,0,0.35)]">
+          <p className="font-display text-lg font-black text-emerald-200">
+            {t("grid.solved")}
           </p>
-          {grid.shareCode ? (
-            <pre className="mt-2 font-display text-sm leading-relaxed">
-              {grid.shareCode}
+          {boardShare ? (
+            <pre className="mt-2 font-display text-sm leading-relaxed text-white/80">
+              {boardShare}
             </pre>
           ) : null}
+          <button
+            type="button"
+            onClick={copyShare}
+            className="mt-3 min-h-11 rounded-2xl bg-white/10 px-4 font-display text-sm font-bold text-white ring-1 ring-white/15"
+          >
+            {t("grid.share")}
+          </button>
         </div>
       )}
 
-      {/* Grid board */}
-      <div className="shrink-0 overflow-x-auto rounded-bubble-lg bg-linear-to-b from-[#1c2738] to-[#121820] p-2 shadow-fantasy ring-1 ring-white/10">
+      {/* 3×3 board — central focus */}
+      <div
+        className={[
+          "relative z-10 mx-auto w-full max-w-md shrink-0 overflow-x-auto rounded-bubble-lg bg-linear-to-b from-[#1c2738] to-[#121820] p-2.5 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/10 transition-opacity",
+          grid.status === "FAILED" && showGameOver ? "opacity-40" : "",
+        ].join(" ")}
+      >
         <div
           className="grid gap-1.5"
           style={{
@@ -182,7 +324,7 @@ export function GridArena({ initial }: Props) {
           ))}
           {grid.rows.map((r, ri) => (
             <div key={r.id} className="contents">
-              <div className="flex min-h-16 items-center justify-center rounded-xl bg-white/5 px-1 text-center font-display text-[10px] font-extrabold leading-tight text-sky-100">
+              <div className="flex min-h-19 items-center justify-center rounded-xl bg-white/5 px-1 text-center font-display text-[10px] font-extrabold leading-tight text-sky-100">
                 {locale === "fa" ? r.labelFa : r.labelEn}
               </div>
               {grid.cols.map((_, ci) => {
@@ -190,6 +332,16 @@ export function GridArena({ initial }: Props) {
                 const filled = grid.cells[key];
                 const active =
                   selected?.row === ri && selected?.col === ci && !filled;
+                const isMiss = missCellKey === key;
+                const name = filled
+                  ? locale === "fa"
+                    ? filled.nameFa
+                    : filled.nameEn
+                  : "";
+                const photoState = filled
+                  ? photoOk[filled.playerId]
+                  : undefined;
+
                 return (
                   <motion.button
                     key={key}
@@ -198,21 +350,65 @@ export function GridArena({ initial }: Props) {
                     onClick={() => onCell(ri, ci)}
                     whileTap={filled || done ? undefined : { scale: 0.96 }}
                     className={[
-                      "flex min-h-16 flex-col items-center justify-center rounded-xl px-1 py-1.5 text-center ring-1 transition-colors",
+                      "relative flex min-h-19 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl px-1 py-1.5 text-center transition-colors",
+                      isMiss ? "animate-grid-cell-miss z-10" : "",
                       filled
-                        ? "bg-emerald-600/35 ring-emerald-400/40"
+                        ? "bg-emerald-500/20 ring-2 ring-emerald-400/55 shadow-[0_0_18px_rgba(52,211,153,0.35)]"
                         : active
-                          ? "bg-primary/35 ring-primary"
-                          : "bg-black/25 ring-white/10 hover:bg-white/10",
+                          ? "bg-white/12 ring-2 ring-emerald-400/70"
+                          : "bg-black/30 ring-1 ring-white/10 hover:bg-white/10",
                     ].join(" ")}
                   >
                     {filled ? (
-                      <span className="font-display text-[11px] font-black leading-snug text-white">
-                        {locale === "fa" ? filled.nameFa : filled.nameEn}
+                      <>
+                        {photoState === true ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={playerPhotoSrc(filled.playerId)}
+                            alt=""
+                            draggable={false}
+                            className="h-8 w-8 rounded-full object-cover ring-1 ring-emerald-300/50"
+                          />
+                        ) : (
+                          <span
+                            aria-hidden
+                            className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/35 font-display text-xs font-black text-emerald-50 ring-1 ring-emerald-300/45"
+                          >
+                            {name.trim().slice(0, 1)}
+                          </span>
+                        )}
+                        {photoState == null ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={playerPhotoSrc(filled.playerId)}
+                            alt=""
+                            aria-hidden
+                            className="pointer-events-none absolute h-0 w-0 opacity-0"
+                            onLoad={() =>
+                              setPhotoOk((m) => ({
+                                ...m,
+                                [filled.playerId]: true,
+                              }))
+                            }
+                            onError={() =>
+                              setPhotoOk((m) => ({
+                                ...m,
+                                [filled.playerId]: false,
+                              }))
+                            }
+                          />
+                        ) : null}
+                        <span className="line-clamp-2 font-display text-[10px] font-black leading-tight text-white">
+                          {name}
+                        </span>
+                      </>
+                    ) : isMiss ? (
+                      <span className="font-display text-lg font-black text-rose-200">
+                        ✕
                       </span>
                     ) : (
-                      <span className="font-display text-lg font-black text-white/25">
-                        +
+                      <span className="font-display text-base font-black text-white/20">
+                        ·
                       </span>
                     )}
                   </motion.button>
@@ -223,142 +419,132 @@ export function GridArena({ initial }: Props) {
         </div>
       </div>
 
-      {!done && selected && (
-        <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 380, damping: 28 }}
-          className="relative flex min-h-64 flex-1 flex-col overflow-hidden rounded-bubble-lg bg-linear-to-b from-[#1a2f24] via-[#15261c] to-[#0f1612] p-3 shadow-[0_12px_32px_rgba(16,40,24,0.45)] ring-1 ring-emerald-400/30"
-        >
-          {/* Pitch stripe atmosphere */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 opacity-[0.07]"
-            style={{
-              backgroundImage:
-                "repeating-linear-gradient(90deg, transparent 0 18px, #fff 18px 19px)",
-            }}
+      <BottomSheet
+        open={Boolean(selected) && !done}
+        onClose={closePicker}
+        title={t("grid.pickPlayer")}
+        subtitle={sheetSubtitle}
+        closeLabel={t("common.back")}
+        tone="dark"
+      >
+        <div className="flex flex-col gap-3">
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t("grid.searchPlaceholder")}
+            autoFocus
+            className="min-h-12 w-full rounded-2xl bg-white/8 px-3.5 font-display text-sm font-bold text-white outline-none ring-1 ring-white/15 placeholder:text-white/35 focus:ring-2 focus:ring-emerald-400/45"
           />
 
-          {/* Target HUD — selected cell axes */}
-          <div className="relative mb-2.5 flex items-center gap-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/icons/target.png"
-              alt=""
-              draggable={false}
-              className="h-9 w-9 shrink-0 object-contain drop-shadow-[0_0_8px_rgba(52,211,153,0.55)]"
-            />
-            <div className="min-w-0 flex-1">
-              <p className="font-display text-[10px] font-extrabold uppercase tracking-[0.14em] text-emerald-300/85">
-                {t("grid.pickPlayer")}
-              </p>
-              <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                <span className="inline-flex max-w-[46%] truncate rounded-full bg-sky-400/20 px-2.5 py-0.5 font-display text-[11px] font-black text-sky-100 ring-1 ring-sky-300/35">
-                  {selectedRowLabel}
-                </span>
-                <span className="font-display text-xs font-black text-emerald-300/70">
-                  ×
-                </span>
-                <span className="inline-flex max-w-[46%] truncate rounded-full bg-amber-400/20 px-2.5 py-0.5 font-display text-[11px] font-black text-amber-100 ring-1 ring-amber-300/35">
-                  {selectedColLabel}
-                </span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                playSound("click");
-                setSelected(null);
-                setQuery("");
-              }}
-              aria-label={t("common.back")}
-              className="flex h-11 w-11 shrink-0 items-center justify-center active:scale-90"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/icons/close.png"
-                alt=""
-                draggable={false}
-                className="h-8 w-8 object-contain"
-              />
-            </button>
-          </div>
-
-          <div className="relative">
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t("grid.searchPlaceholder")}
-              autoFocus
-              className="min-h-12 w-full rounded-2xl bg-black/35 px-3.5 font-display text-sm font-bold text-white outline-none ring-1 ring-white/15 placeholder:text-white/40 focus:ring-2 focus:ring-emerald-400/50"
-            />
-          </div>
-
-          <ul className="relative mt-2.5 min-h-0 flex-1 space-y-1.5 overflow-y-auto overscroll-contain pe-0.5 [-webkit-overflow-scrolling:touch]">
+          <ul className="max-h-[min(48dvh,22rem)] space-y-1.5 overflow-y-auto overscroll-contain pe-0.5 [-webkit-overflow-scrolling:touch]">
             {filtered.length === 0 ? (
-              <li className="flex h-full min-h-24 items-center justify-center px-3 text-center font-display text-sm font-bold text-white/45">
+              <li className="flex min-h-24 items-center justify-center px-3 text-center font-display text-sm font-bold text-white/40">
                 …
               </li>
             ) : (
-              filtered.map((o, i) => (
-                <motion.li
-                  key={o.id}
-                  initial={{ opacity: 0, x: 8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: Math.min(i * 0.02, 0.2) }}
-                >
-                  <motion.button
-                    type="button"
-                    disabled={pending}
-                    whileTap={pending ? undefined : { scale: 0.97 }}
-                    onClick={() => onPick(o.id)}
-                    className="group flex w-full min-h-14 items-center gap-3 rounded-2xl bg-white/6 px-3 py-2.5 text-start ring-1 ring-white/10 transition-colors hover:bg-emerald-400/15 hover:ring-emerald-300/40 active:bg-emerald-400/25 disabled:opacity-60"
-                  >
-                    <span
-                      aria-hidden
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-emerald-500/40 to-lime-600/20 font-display text-sm font-black text-emerald-100 shadow-[inset_0_-2px_0_rgba(0,0,0,0.25)] ring-1 ring-emerald-300/30"
+              filtered.map((o) => {
+                const label = locale === "fa" ? o.nameFa : o.nameEn;
+                return (
+                  <li key={o.id}>
+                    <motion.button
+                      type="button"
+                      disabled={pending}
+                      whileTap={pending ? undefined : { scale: 0.97 }}
+                      onClick={() => onPick(o.id)}
+                      className="group flex w-full min-h-14 items-center gap-3 rounded-2xl bg-white/6 px-3 py-2.5 text-start ring-1 ring-white/10 transition-colors hover:bg-white/12 hover:ring-white/25 active:bg-emerald-500/20 disabled:opacity-60"
                     >
-                      {(locale === "fa" ? o.nameFa : o.nameEn)
-                        .trim()
-                        .slice(0, 1)}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-display text-sm font-black text-white">
-                        {locale === "fa" ? o.nameFa : o.nameEn}
+                      <span
+                        aria-hidden
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 font-display text-sm font-black text-white/90 ring-1 ring-white/15"
+                      >
+                        {label.trim().slice(0, 1)}
                       </span>
-                      <span className="mt-0.5 inline-flex max-w-full truncate rounded-full bg-black/30 px-2 py-0.5 font-display text-[10px] font-bold text-white/60 ring-1 ring-white/10">
-                        {o.club}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-display text-sm font-black text-white">
+                          {label}
+                        </span>
+                        <span className="mt-0.5 block truncate font-display text-[11px] font-bold text-white/45">
+                          {o.club}
+                        </span>
                       </span>
-                    </span>
-                    <span
-                      aria-hidden
-                      className="font-display text-lg font-black text-emerald-300/50 transition-colors group-hover:text-emerald-300"
-                    >
-                      ›
-                    </span>
-                  </motion.button>
-                </motion.li>
-              ))
+                    </motion.button>
+                  </li>
+                );
+              })
             )}
           </ul>
-        </motion.div>
-      )}
-
-      {!done && !selected && (
-        <div className="flex flex-1 flex-col items-center justify-center rounded-bubble-lg bg-linear-to-b from-primary/10 to-transparent px-4 py-6 text-center">
-          <span
-            aria-hidden
-            className="mb-2 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/20 font-display text-3xl font-black text-primary shadow-fantasy-sm ring-1 ring-primary/30"
-          >
-            +
-          </span>
-          <p className="font-display text-sm font-extrabold text-foreground/80">
-            {t("grid.tapCell")}
-          </p>
         </div>
-      )}
+      </BottomSheet>
+
+      {/* FAILED — polished game-over overlay */}
+      <AnimatePresence>
+        {showGameOver && grid.status === "FAILED" && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <button
+              type="button"
+              aria-label={t("common.back")}
+              className="absolute inset-0 bg-black/70 backdrop-blur-[6px]"
+              onClick={() => setShowGameOver(false)}
+            />
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="grid-game-over-title"
+              initial={{ y: 40, opacity: 0.9, scale: 0.98 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 24, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 380, damping: 30 }}
+              className="relative z-10 mx-4 mb-[max(1rem,env(safe-area-inset-bottom))] w-full max-w-sm overflow-hidden rounded-bubble-xl border border-rose-400/25 bg-[#141c24] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.55)] sm:mb-0"
+            >
+              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/20 ring-1 ring-rose-400/40">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/icons/broken-heart.png"
+                  alt=""
+                  draggable={false}
+                  className="h-8 w-8 object-contain"
+                />
+              </div>
+              <h2
+                id="grid-game-over-title"
+                className="text-center font-display text-xl font-black text-white"
+              >
+                {t("grid.gameOverTitle")}
+              </h2>
+              <p className="mt-1.5 text-center font-display text-sm font-bold text-white/55">
+                {t("grid.gameOverBody", {
+                  n: toLocaleDigits(grid.maxMistakes, locale),
+                })}
+              </p>
+              <pre className="mt-4 rounded-2xl bg-black/35 px-3 py-3 text-center font-display text-base leading-relaxed text-white/85 ring-1 ring-white/10">
+                {boardShare}
+              </pre>
+              <div className="mt-4 flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={copyShare}
+                  className="flex min-h-touch w-full items-center justify-center rounded-2xl bg-white/10 font-display text-base font-extrabold text-white ring-1 ring-white/15"
+                >
+                  {t("grid.share")}
+                </button>
+                <Link
+                  href="/play"
+                  onClick={() => playSound("click")}
+                  className="flex min-h-touch w-full items-center justify-center rounded-2xl bg-rose-500/90 font-display text-base font-extrabold text-white shadow-[0_6px_0_0_rgba(136,19,55,0.9)]"
+                >
+                  {t("grid.backPlay")}
+                </Link>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

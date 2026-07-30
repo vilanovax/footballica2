@@ -29,12 +29,23 @@ export type MysteryGuessRecord = {
   playerId: string;
   nameEn: string;
   nameFa: string;
+  /** Verdicts (share grid / evaluate). */
   nationality: AttributeVerdict;
   position: AttributeVerdict;
   league: AttributeVerdict;
   club: AttributeVerdict;
   age: CompareVerdict;
   shirtNumber: CompareVerdict;
+  /**
+   * Guessed player's attribute values — shown inside colored tiles so the
+   * player can cross-reference for the next guess. Optional for legacy rows.
+   */
+  nationalityValue?: string;
+  positionValue?: MysteryPosition;
+  leagueValue?: string;
+  clubValue?: string;
+  ageValue?: number;
+  shirtNumberValue?: number;
   isCorrect: boolean;
   at: string; // ISO
 };

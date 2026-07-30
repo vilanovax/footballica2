@@ -11,9 +11,14 @@ import {
   type FootballPlayerAdminRow,
   type PlayerWriteInput,
 } from "@/lib/mystery/players";
+import { upsertGridSeedPlayers } from "@/lib/grid/seedGridPlayers";
 
 export type PlayerActionResult =
   | { ok: true; player?: FootballPlayerAdminRow }
+  | { ok: false; error: string };
+
+export type SeedGridPlayersResult =
+  | { ok: true; upserted: number; slugs: string[] }
   | { ok: false; error: string };
 
 async function assertAdmin(): Promise<boolean> {
@@ -51,6 +56,8 @@ export async function upsertFootballPlayer(
         club: normalized.club,
         age: normalized.age,
         shirtNumber: normalized.shirtNumber,
+        pastClubs: normalized.pastClubs,
+        trophies: normalized.trophies,
         isActive: normalized.isActive,
       },
       update: {
@@ -63,15 +70,34 @@ export async function upsertFootballPlayer(
         club: normalized.club,
         age: normalized.age,
         shirtNumber: normalized.shirtNumber,
+        pastClubs: normalized.pastClubs,
+        trophies: normalized.trophies,
         isActive: normalized.isActive,
       },
     });
     revalidatePath("/admin/players");
     revalidatePath("/admin/mystery");
+    revalidatePath("/admin/grid");
     revalidatePath("/play/mystery");
+    revalidatePath("/play/grid");
     return { ok: true, player: serializeAdminPlayer(row) };
   } catch (err) {
     console.error("[upsertFootballPlayer]", err);
+    return { ok: false, error: "unknown" };
+  }
+}
+
+/** Admin one-click: upsert iconic Grid career/trophy pack. */
+export async function seedGridPlayersCatalog(): Promise<SeedGridPlayersResult> {
+  if (!(await assertAdmin())) return { ok: false, error: "unauthorized" };
+  try {
+    const result = await upsertGridSeedPlayers(prisma);
+    revalidatePath("/admin/players");
+    revalidatePath("/admin/grid");
+    revalidatePath("/play/grid");
+    return { ok: true, ...result };
+  } catch (err) {
+    console.error("[seedGridPlayersCatalog]", err);
     return { ok: false, error: "unknown" };
   }
 }

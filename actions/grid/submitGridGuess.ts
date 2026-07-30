@@ -13,7 +13,7 @@ import {
   parseGridAxes,
   parseGuessesJson,
 } from "@/lib/grid/parse";
-import { playerMatchesCell } from "@/lib/grid/rules";
+import { playerMatchesCell, toGridPlayerAttrs } from "@/lib/grid/rules";
 import { buildGridShareCode } from "@/lib/grid/share";
 import { computeGridStreakUpdate } from "@/lib/grid/streak";
 import { cellKey, GRID_SIZE } from "@/lib/grid/types";
@@ -118,12 +118,7 @@ export async function submitGridGuess(input: {
 
     const maxMistakes = maxMistakesFromConfig(puzzle.config);
     const matches = playerMatchesCell(
-      {
-        league: player.league,
-        position: player.position,
-        nationalityCode: player.nationalityCode,
-        club: player.club,
-      },
+      toGridPlayerAttrs(player),
       rows[row]!,
       cols[col]!,
     );

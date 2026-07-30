@@ -1,5 +1,5 @@
 import type { GridAxis, GridCellsMap, GridWrongGuess } from "./types";
-import { GRID_SIZE } from "./types";
+import { GRID_SIZE, isGridRuleKind } from "./types";
 
 export function parseGridAxes(raw: unknown): GridAxis[] | null {
   if (!Array.isArray(raw) || raw.length !== GRID_SIZE) return null;
@@ -17,21 +17,14 @@ export function parseGridAxes(raw: unknown): GridAxis[] | null {
     const r = rule as Record<string, unknown>;
     const kind = r.kind;
     const value = r.value;
-    if (
-      (kind !== "league" &&
-        kind !== "position" &&
-        kind !== "nationalityCode" &&
-        kind !== "club") ||
-      typeof value !== "string" ||
-      !value
-    ) {
+    if (!isGridRuleKind(kind) || typeof value !== "string" || !value.trim()) {
       return null;
     }
     out.push({
       id,
       labelEn,
       labelFa,
-      rule: { kind, value },
+      rule: { kind, value: value.trim() },
     });
   }
   return out;
