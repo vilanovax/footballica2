@@ -59,6 +59,10 @@ export async function submitDuelAttack(
       },
     });
     if (!duel) return { ok: false, error: "not_found" };
+    // Shadow Bot takeover: AFK human must not act again.
+    if (duel.timeoutUserId === user.id) {
+      return { ok: false, error: "not_your_turn" };
+    }
 
     if (
       !canUserAct({

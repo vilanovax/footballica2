@@ -86,6 +86,9 @@ export async function beginDuelDefend(
       include: duelSnapshotInclude,
     });
     if (!duel) return { ok: false, error: "not_found" };
+    if (duel.timeoutUserId === user.id) {
+      return { ok: false, error: "not_your_turn" };
+    }
 
     let status = duel.status;
     const startDefend = statusWhenStartingDefend(status);
@@ -161,6 +164,9 @@ export async function submitDuelDefend(
       },
     });
     if (!duel) return { ok: false, error: "not_found" };
+    if (duel.timeoutUserId === user.id) {
+      return { ok: false, error: "not_your_turn" };
+    }
 
     if (
       !canUserAct({

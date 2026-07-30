@@ -3,6 +3,7 @@
 // (preview + UI), guaranteeing they never disagree. Tune balancing here.
 
 import type { KickLog } from "@/lib/quiz/types";
+import { normalizeThemeKey } from "@/lib/game/liveOpsTheme";
 
 // ─── Dynamic game config (Live-Ops tunable) ──────────────────────────────────
 // The shape persisted (partially) in the DB `GameConfig` singleton. All match
@@ -69,8 +70,14 @@ export type GameConfig = {
     rounds: number;
     /** Categories offered in the draft picker. */
     draftChoices: number;
-    /** Hours the opponent has to take their turn before EXPIRED. */
+    /** Hours the opponent has to take their turn before timeout handling. */
     turnHours: number;
+    /**
+     * When a human turn deadline expires:
+     * - AUTO_FORFEIT — AFK loses immediately; active player wins.
+     * - SHADOW_BOT — fabricate AFK answers; active player finishes the match.
+     */
+    timeoutAction: "AUTO_FORFEIT" | "SHADOW_BOT";
     /** Simulated bot delay window (ms). */
     botDelayMinMs: number;
     botDelayMaxMs: number;
@@ -152,6 +159,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     rounds: 2,
     draftChoices: 3,
     turnHours: 24,
+    timeoutAction: "SHADOW_BOT",
     botDelayMinMs: 2 * 60 * 1000,
     botDelayMaxMs: 10 * 60 * 1000,
     /** Visual search window before bot fallback (min 5s enforced in merge). */
@@ -176,7 +184,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     blurbEn: "",
     blurbFa: "",
     preferredTypes: [],
-    formatBiasEveryN: 2,
+    formatBiasEveryN: 1,
   },
 };
 
@@ -203,13 +211,8 @@ export function mergeGameConfig(raw: unknown): GameConfig {
   const lo = (src.liveOps ?? {}) as Record<string, unknown>;
   const D = DEFAULT_GAME_CONFIG;
 
-  const themeKeyRaw = lo.themeKey;
-  const themeKey =
-    themeKeyRaw === null || themeKeyRaw === "" || themeKeyRaw === undefined
-      ? null
-      : typeof themeKeyRaw === "string"
-        ? themeKeyRaw.trim() || null
-        : null;
+  // Normalize LOGO_WEEK / logo / aliases → short key (or null = NONE).
+  const themeKey = normalizeThemeKey(lo.themeKey);
 
   const preferredTypes = Array.isArray(lo.preferredTypes)
     ? lo.preferredTypes.filter((t): t is string => typeof t === "string")
@@ -261,6 +264,10 @@ export function mergeGameConfig(raw: unknown): GameConfig {
         Math.round(num(d.draftChoices, D.duel.draftChoices)),
       ),
       turnHours: Math.max(1, Math.round(num(d.turnHours, D.duel.turnHours))),
+      timeoutAction:
+        d.timeoutAction === "AUTO_FORFEIT" || d.timeoutAction === "SHADOW_BOT"
+          ? d.timeoutAction
+          : D.duel.timeoutAction,
       botDelayMinMs: Math.max(
         0,
         Math.round(num(d.botDelayMinMs, D.duel.botDelayMinMs)),

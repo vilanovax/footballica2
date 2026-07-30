@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AdminHelpTip } from "@/components/admin/AdminHelpTip";
+import { LiveOpsThemesPanel } from "@/components/admin/LiveOpsThemesPanel";
 
 type EconomyConfigPanelProps = {
   initialConfig: GameConfig;
@@ -77,11 +78,11 @@ const TABS: {
     id: "live",
     label: "Live Ops",
     icon: Zap,
-    blurb: "Day-to-day levers for events and inflation control.",
+    blurb: "Theme weeks + day-to-day levers for events and inflation.",
     guide: [
-      "Use this tab for weekend boosts or emergency nerfs — you rarely need the others.",
-      "Raising Survival coins too high floods wallets and cheapens premium unlocks & IAP.",
-      "After any quick preset (½× / 2×), you must press Save before players see it.",
+      "Theme week biases IMAGE / CAREER_PATH draws in Survival, Match, and Duel — not a new Play mode.",
+      "Use coin quick actions for weekend boosts or emergency nerfs.",
+      "After any change (theme or rates), press Save once — one JSON payload for everything.",
     ],
   },
   {
@@ -113,7 +114,7 @@ const TABS: {
     blurb: "Async Draft Duel pacing and weekly league points.",
     guide: [
       "Win weekly XP goes to the leaderboard — keep it small vs Survival grind.",
-      "Turn hours control how long an opponent has before the duel expires.",
+      "Turn hours + timeout action: AUTO_FORFEIT or SHADOW_BOT when a human AFKs.",
       "Matchmaking ms is how long we wait for a human before assigning a bot.",
     ],
   },
@@ -321,8 +322,8 @@ const DUEL_FIELDS: FieldDef[] = [
     key: "duel.turnHours",
     label: "Turn hours",
     description:
-      "Hours the opponent has to take their turn before the duel expires.",
-    tip: "Cron walks over expired turns.",
+      "Hours before timeout handling (forfeit or Shadow Bot).",
+    tip: "Lazy-evaluated on inbox fetch + cron.",
     min: 1,
   },
   {
@@ -519,7 +520,7 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
       <div
         className="flex gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1 [scrollbar-width:none]"
         role="tablist"
-        aria-label="Economy sections"
+        aria-label="Game Config sections"
       >
         {TABS.map(({ id, label, icon: Icon }) => {
           const active = tab === id;
@@ -565,50 +566,96 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
         </ul>
       </div>
 
-      {/* Live Ops quick actions */}
+      {/* Live Ops: theme week (primary) + coin quick actions */}
       {tab === "live" ? (
-        <Card className="border-amber-200/80 bg-amber-50/40">
+        <>
+          <LiveOpsThemesPanel
+            config={draft}
+            onChange={(next) => setDraft(mergeGameConfig(next))}
+          />
+          <Card className="border-amber-200/80 bg-amber-50/40">
+            <CardContent className="space-y-3 pt-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-900/80">
+                  Quick Survival coins
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-amber-950/70">
+                  Instantly sets <strong>Survival coins / correct</strong> from
+                  the system default (5). Use <strong>2× weekend</strong> for
+                  events, <strong>½×</strong> if wallets are bloated. Still
+                  press <strong>Save</strong> to go live.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="bg-white"
+                  onClick={() => quickSurvivalCoins(0.5)}
+                >
+                  ½×
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="bg-white"
+                  onClick={() => quickSurvivalCoins(1)}
+                >
+                  Default
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="border-amber-300 bg-white font-semibold text-amber-950"
+                  onClick={() => quickSurvivalCoins(2)}
+                >
+                  2× weekend
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      ) : null}
+
+      {tab === "duel" ? (
+        <Card className="border-violet-200/80 bg-violet-50/40">
           <CardContent className="space-y-3 pt-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-amber-900/80">
-                Quick Survival coins
+              <p className="flex items-center gap-1 text-sm font-semibold text-slate-800">
+                Turn timeout action
+                <AdminHelpTip text="When a human misses their turnHours deadline. Shadow Bot fabricates their answers so the active player can finish; the AFK only sees a timeout loss." />
               </p>
-              <p className="mt-1 text-xs leading-relaxed text-amber-950/70">
-                Instantly sets <strong>Survival coins / correct</strong> from the
-                system default (5). Use <strong>2× weekend</strong> for events,{" "}
-                <strong>½×</strong> if wallets are bloated. Still press{" "}
-                <strong>Save</strong> to go live.
+              <p className="mt-1 text-xs leading-relaxed text-slate-600" dir="rtl">
+                انتخاب رفتار سیستم هنگام پایان زمان حریف: فورفیت مستقیم یا
+                جایگزینی پنهان با بات (Shadow Bot)
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                AUTO_FORFEIT ends immediately. SHADOW_BOT keeps the illusion for
+                the waiting player.
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="bg-white"
-                onClick={() => quickSurvivalCoins(0.5)}
-              >
-                ½×
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="bg-white"
-                onClick={() => quickSurvivalCoins(1)}
-              >
-                Default
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="border-amber-300 bg-white font-semibold text-amber-950"
-                onClick={() => quickSurvivalCoins(2)}
-              >
-                2× weekend
-              </Button>
-            </div>
+            <select
+              className="flex h-10 w-full max-w-md rounded-md border border-slate-200 bg-white px-3 text-sm"
+              value={draft.duel.timeoutAction}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v !== "AUTO_FORFEIT" && v !== "SHADOW_BOT") return;
+                setDraft((prev) => ({
+                  ...prev,
+                  duel: { ...prev.duel, timeoutAction: v },
+                }));
+              }}
+            >
+              <option value="SHADOW_BOT">
+                SHADOW_BOT — جایگزینی پنهان با بات
+              </option>
+              <option value="AUTO_FORFEIT">
+                AUTO_FORFEIT — فورفیت مستقیم
+              </option>
+            </select>
           </CardContent>
         </Card>
       ) : null}

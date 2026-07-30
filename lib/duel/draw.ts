@@ -1,6 +1,8 @@
 import "server-only";
 
 import { getGameConfig } from "@/lib/game/gameConfig";
+import { resolveThemeBias } from "@/lib/game/liveOpsTheme";
+import { FORMAT_BIAS_EVERY_N } from "@/lib/quiz/formatBias";
 import type { DuelCategoryOption } from "@/lib/duel/types";
 import {
   getCategoryQuestions,
@@ -56,14 +58,30 @@ export async function pickDraftCategories(
   return arr.slice(0, take);
 }
 
-/** Draw `count` PUBLISHED questions from a category (no semantic dedupe for duel v1). */
+/**
+ * Draw `count` PUBLISHED questions from a category.
+ * Respects global Live-Ops theme bias (LOGO_WEEK → IMAGE/REVEAL_IMAGE, etc.).
+ */
 export async function drawCategoryQuestions(
   categoryId: string,
   count?: number,
 ): Promise<QuizQuestion[]> {
   const config = await getGameConfig();
   const need = count ?? config.duel.questionsPerAttack;
-  const questions = await getCategoryQuestions(categoryId, need, []);
+  const bias = resolveThemeBias({
+    themeKey: config.liveOps.themeKey,
+    preferredTypes: config.liveOps.preferredTypes,
+    formatBiasEveryN: config.liveOps.formatBiasEveryN,
+    fallbackEveryN: FORMAT_BIAS_EVERY_N,
+  });
+  const questions = await getCategoryQuestions(
+    categoryId,
+    need,
+    [],
+    bias
+      ? { preferredTypes: [...bias.preferredTypes], everyN: bias.everyN }
+      : {},
+  );
   if (questions.length < need) {
     throw new Error("not_enough_questions");
   }

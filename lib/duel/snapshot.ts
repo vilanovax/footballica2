@@ -37,6 +37,9 @@ export type DuelSnapshot = {
   id: string;
   status: DuelMatch["status"];
   isBotOpponent: boolean;
+  shadowBotActive: boolean;
+  /** Set when this viewer (or anyone) timed out — AFK sees timeout loss copy. */
+  timeoutUserId: string | null;
   challengerId: string;
   opponentId: string | null;
   challengerCorrect: number;
@@ -50,6 +53,8 @@ export type DuelSnapshot = {
   turn: DuelTurnView;
   /** True when the viewing user may submit an action now. */
   canAct: boolean;
+  /** Viewer was the AFK who timed out (hide shadow-bot illusion). */
+  youTimedOut: boolean;
   youAre: "challenger" | "opponent" | "spectator";
   rounds: DuelRoundSnapshot[];
   /** Draft categories for the active attack round (when picking). */
@@ -101,8 +106,17 @@ export function toDuelSnapshot(
         ? "opponent"
         : "spectator";
 
+  const timeoutUserId =
+    "timeoutUserId" in duel && typeof duel.timeoutUserId === "string"
+      ? duel.timeoutUserId
+      : null;
+  const shadowBotActive = Boolean(
+    "shadowBotActive" in duel && duel.shadowBotActive,
+  );
+  const youTimedOut = timeoutUserId === viewerId;
   const canAct =
     !isDuelTerminal(duel.status) &&
+    !youTimedOut &&
     duel.turnUserId === viewerId &&
     (turn.kind === "attack" || turn.kind === "defend");
 
@@ -110,6 +124,8 @@ export function toDuelSnapshot(
     id: duel.id,
     status: duel.status,
     isBotOpponent: duel.isBotOpponent,
+    shadowBotActive,
+    timeoutUserId,
     challengerId: duel.challengerId,
     opponentId: duel.opponentId,
     challengerCorrect: duel.challengerCorrect,
@@ -122,6 +138,7 @@ export function toDuelSnapshot(
     createdAt: duel.createdAt.toISOString(),
     turn,
     canAct,
+    youTimedOut,
     youAre,
     draftOptions,
     challenger: partyFromUser(duel.challenger),

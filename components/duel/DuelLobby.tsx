@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
@@ -14,7 +14,6 @@ import type { Locale } from "@/lib/i18n/config";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
 import { AvatarImage } from "@/components/common/AvatarImage";
-import { RecentDuelHistory } from "@/components/duel/RecentDuelHistory";
 import { duelViewerOutcome } from "@/lib/duel/history";
 import { viewerMatchScore } from "@/lib/duel/matchScore";
 import { isDuelTerminal } from "@/lib/duel/types";
@@ -44,14 +43,6 @@ function statusLabel(d: DuelSnapshot, t: (k: string) => string): string {
     return t("duel.yourTurn");
   }
   return t("duel.waiting");
-}
-
-function isUrgent(d: DuelSnapshot): boolean {
-  return (
-    d.canAct ||
-    (d.status === "WAITING_A" && d.youAre === "challenger") ||
-    (d.status === "WAITING_B" && d.youAre === "opponent")
-  );
 }
 
 export function DuelLobby({
@@ -87,15 +78,16 @@ export function DuelLobby({
     });
   }
 
-  const ordered = [
-    ...yourTurn,
-    ...duels.filter(
-      (d) =>
-        !isDuelTerminal(d.status) && !yourTurn.some((y) => y.id === d.id),
-    ),
-  ];
-  const activeCount = ordered.length;
-  const turnCount = yourTurn.length;
+  const yourTurnList = yourTurn.filter((d) => !isDuelTerminal(d.status));
+  const waitingList = duels.filter(
+    (d) =>
+      !isDuelTerminal(d.status) &&
+      !d.canAct &&
+      !yourTurnList.some((y) => y.id === d.id),
+  );
+  const finishedList = history;
+  const turnCount = yourTurnList.length;
+  const activeCount = yourTurnList.length + waitingList.length;
 
   return (
     <section className="relative flex flex-1 flex-col gap-5 overflow-hidden">
@@ -241,52 +233,137 @@ export function DuelLobby({
         </div>
       </motion.div>
 
-      {/* Live fixtures */}
-      <div className="relative z-10 flex flex-col gap-3 pb-4">
-        <div className="flex items-center justify-between px-0.5">
-          <h2 className="font-display text-sm font-bold uppercase tracking-widest text-muted-foreground">
-            {t("duel.lobbyFixtures")}
-          </h2>
-          {turnCount > 0 && (
-            <span className="rounded-full bg-secondary px-2.5 py-0.5 font-display text-[11px] font-bold text-secondary-foreground">
-              {t("duel.lobbyNeedsYou", {
-                n: toLocaleDigits(turnCount, locale),
-              })}
-            </span>
+      {/* Inbox dashboard — 3 buckets */}
+      <div className="relative z-10 flex flex-col gap-5 pb-4">
+        {yourTurnList.length === 0 &&
+          waitingList.length === 0 &&
+          finishedList.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="rounded-bubble-lg border-2 border-dashed border-border/80 bg-surface/60 px-4 py-10 text-center"
+            >
+              <span className="text-4xl" aria-hidden>
+                🏟️
+              </span>
+              <p className="mt-3 font-display text-sm font-bold text-muted-foreground">
+                {t("duel.empty")}
+              </p>
+            </motion.div>
           )}
-        </div>
 
-        {ordered.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="rounded-bubble-lg border-2 border-dashed border-border/80 bg-surface/60 px-4 py-10 text-center"
-          >
-            <span className="text-4xl" aria-hidden>
-              🏟️
-            </span>
-            <p className="mt-3 font-display text-sm font-bold text-muted-foreground">
-              {t("duel.empty")}
+        {/* 1. Your turn */}
+        <InboxSection
+          title={t("duel.inboxYourTurn")}
+          badge={
+            turnCount > 0
+              ? toLocaleDigits(turnCount, locale)
+              : undefined
+          }
+          hot
+        >
+          {yourTurnList.length === 0 ? (
+            <p className="px-1 font-display text-xs font-bold text-muted-foreground">
+              {t("duel.inboxYourTurnEmpty")}
             </p>
-          </motion.div>
-        )}
+          ) : (
+            yourTurnList.map((d, i) => (
+              <FixtureCard
+                key={d.id}
+                duel={d}
+                index={i}
+                locale={locale}
+                badge={statusLabel(d, t)}
+                urgent
+                ctaLabel={t("duel.inboxPlayCta")}
+                vsLabel={d.isBotOpponent ? t("duel.vsBot") : t("duel.vsRival")}
+                youLabel={t("duel.you")}
+              />
+            ))
+          )}
+        </InboxSection>
 
-        {ordered.map((d, i) => (
-          <FixtureCard
-            key={d.id}
-            duel={d}
-            index={i}
-            locale={locale}
-            badge={statusLabel(d, t)}
-            urgent={isUrgent(d)}
-            vsLabel={d.isBotOpponent ? t("duel.vsBot") : t("duel.vsRival")}
-            youLabel={t("duel.you")}
-          />
-        ))}
+        {/* 2. Waiting */}
+        {waitingList.length > 0 ? (
+          <InboxSection title={t("duel.inboxWaiting")} muted>
+            {waitingList.map((d, i) => (
+              <FixtureCard
+                key={d.id}
+                duel={d}
+                index={i}
+                locale={locale}
+                badge={statusLabel(d, t)}
+                urgent={false}
+                muted
+                vsLabel={d.isBotOpponent ? t("duel.vsBot") : t("duel.vsRival")}
+                youLabel={t("duel.you")}
+              />
+            ))}
+          </InboxSection>
+        ) : null}
 
-        <RecentDuelHistory history={history} variant="lobby" />
+        {/* 3. Finished */}
+        <InboxSection title={t("duel.inboxFinished")}>
+          {finishedList.length === 0 ? (
+            <p className="px-1 font-display text-xs font-bold text-muted-foreground">
+              {t("duel.inboxFinishedEmpty")}
+            </p>
+          ) : (
+            finishedList.map((d, i) => (
+              <FixtureCard
+                key={d.id}
+                duel={d}
+                index={i}
+                locale={locale}
+                badge={
+                  d.youTimedOut
+                    ? t("duel.expiredLose")
+                    : statusLabel(d, t)
+                }
+                urgent={false}
+                vsLabel={d.isBotOpponent ? t("duel.vsBot") : t("duel.vsRival")}
+                youLabel={t("duel.you")}
+              />
+            ))
+          )}
+        </InboxSection>
       </div>
     </section>
+  );
+}
+
+function InboxSection({
+  title,
+  badge,
+  hot,
+  muted,
+  children,
+}: {
+  title: string;
+  badge?: string;
+  hot?: boolean;
+  muted?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className={muted ? "opacity-75" : undefined}>
+      <div className="mb-2 flex items-center justify-between gap-2 px-0.5">
+        <h2
+          className={[
+            "font-display text-sm font-bold uppercase tracking-widest",
+            hot ? "text-secondary" : "text-muted-foreground",
+          ].join(" ")}
+        >
+          {title}
+        </h2>
+        {badge ? (
+          <span className="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full bg-secondary px-2 font-display text-[11px] font-black text-secondary-foreground shadow-[0_0_12px_hsl(var(--secondary)/0.65)]">
+            {badge}
+          </span>
+        ) : null}
+      </div>
+      <div className="flex flex-col gap-2.5">{children}</div>
+    </div>
   );
 }
 
@@ -363,6 +440,8 @@ function FixtureCard({
   locale,
   badge,
   urgent,
+  muted,
+  ctaLabel,
   vsLabel,
   youLabel,
 }: {
@@ -371,6 +450,8 @@ function FixtureCard({
   locale: Locale;
   badge: string;
   urgent: boolean;
+  muted?: boolean;
+  ctaLabel?: string;
   vsLabel: string;
   youLabel: string;
 }) {
@@ -397,10 +478,12 @@ function FixtureCard({
         className={[
           "group relative flex items-center gap-3 overflow-hidden rounded-bubble-xl border-2 p-3.5 shadow-fantasy transition-transform active:scale-[0.98]",
           urgent
-            ? "border-secondary bg-gradient-to-br from-secondary/15 via-surface to-surface"
-            : finished
-              ? "border-border/70 bg-muted/40 opacity-80"
-              : "border-border bg-surface",
+            ? "border-secondary bg-gradient-to-br from-secondary/25 via-surface to-amber-500/10 shadow-[0_0_24px_hsl(var(--secondary)/0.35)]"
+            : muted
+              ? "border-border/50 bg-muted/30"
+              : finished
+                ? "border-border/70 bg-muted/40"
+                : "border-border bg-surface",
         ].join(" ")}
       >
         {urgent && (
@@ -416,9 +499,9 @@ function FixtureCard({
           <AvatarImage
             avatarKey={themParty?.avatar}
             className="h-14 w-14 rounded-full ring-2 ring-border"
-            muted={!themParty?.avatar || themLost}
+            muted={!themParty?.avatar || themLost || muted}
           />
-          {d.isBotOpponent && (
+          {d.isBotOpponent && !d.shadowBotActive && (
             <span className="absolute -bottom-1 -end-1 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-xs shadow-sm ring-2 ring-surface">
               🤖
             </span>
@@ -442,6 +525,11 @@ function FixtureCard({
               {youParty?.name ? ` · ${youParty.name}` : ""}
             </span>
           </div>
+          {urgent && ctaLabel ? (
+            <span className="mt-2 inline-flex min-h-9 items-center justify-center rounded-full bg-secondary px-3 font-display text-xs font-black text-secondary-foreground shadow-[0_0_14px_hsl(var(--secondary)/0.7)]">
+              ▶ {ctaLabel}
+            </span>
+          ) : null}
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-1.5">

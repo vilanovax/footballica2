@@ -27,6 +27,8 @@ type PlayModesProps = {
   mystery?: DailyMysterySnapshot | null;
   /** Rotating daily slot (Football Grid — ADR 002). */
   grid?: DailyGridSnapshot | null;
+  /** ISO — next Tehran midnight when GotD kind rotates. */
+  gotdRotatesAt?: string | null;
 };
 
 /**
@@ -45,6 +47,7 @@ export function PlayModes({
   liveChallengeCount = 0,
   mystery = null,
   grid = null,
+  gotdRotatesAt = null,
 }: PlayModesProps) {
   const { t, locale } = useTranslation();
   const staminaLow = stamina <= 1;
@@ -86,7 +89,11 @@ export function PlayModes({
         variant="play"
       />
 
-      <GameOfTheDayCard mystery={mystery} grid={grid} />
+      <GameOfTheDayCard
+        mystery={mystery}
+        grid={grid}
+        rotatesAt={gotdRotatesAt}
+      />
 
       <div className="flex flex-col gap-3">
         <h2 className="font-display text-xs font-bold uppercase tracking-widest text-muted-foreground">

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { normalizeThemeKey } from "@/lib/game/liveOpsTheme";
 
 const ChallengeSchema = z.object({
   id: z.string().optional(),
@@ -20,9 +21,13 @@ const ChallengeSchema = z.object({
   rewardBadgeSlug: z.string().max(64).nullable().optional(),
   rewardBadgeEmoji: z.string().max(8).nullable().optional(),
   themeKey: z
-    .enum(["logo", "stadium", "career", "formats"])
+    .string()
     .nullable()
-    .optional(),
+    .optional()
+    .transform((v) => {
+      if (v == null || v === "") return null;
+      return normalizeThemeKey(v);
+    }),
   preferredTypes: z
     .array(z.enum(["IMAGE", "CAREER_PATH", "HIGHER_LOWER", "REVEAL_IMAGE"]))
     .max(4)

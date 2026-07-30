@@ -1,11 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { Sparkles } from "lucide-react";
 import { mergeGameConfig, type GameConfig } from "@/lib/game/economy";
-import { updateGameConfig } from "@/actions/admin/config";
 import {
   LIVEOPS_THEME_KEYS,
   THEME_PRESETS,
@@ -29,78 +25,67 @@ const FORMAT_TYPES = [
   "REVEAL_IMAGE",
 ] as const;
 
+type LiveOpsThemesPanelProps = {
+  /** Controlled GameConfig draft (parent owns Save via updateGameConfig). */
+  config: GameConfig;
+  onChange: (next: GameConfig) => void;
+};
+
+/**
+ * Global Live-Ops theme week editor — embedded in Game Config command center.
+ * Persistence is owned by the parent (EconomyConfigPanel sticky Save).
+ */
 export function LiveOpsThemesPanel({
-  initialConfig,
-}: {
-  initialConfig: GameConfig;
-}) {
-  const router = useRouter();
-  const [config, setConfig] = useState(initialConfig);
-  const [pending, startTransition] = useTransition();
+  config,
+  onChange,
+}: LiveOpsThemesPanelProps) {
   const lo = config.liveOps;
 
-  function applyPreset(key: LiveOpsThemeKey | "") {
-    if (!key) {
-      setConfig((c) =>
-        mergeGameConfig({
-          ...c,
-          liveOps: {
-            ...c.liveOps,
-            themeKey: null,
-            titleEn: "",
-            titleFa: "",
-            blurbEn: "",
-            blurbFa: "",
-            preferredTypes: [],
-          },
-        }),
-      );
-      return;
-    }
-    const preset = THEME_PRESETS[key];
-    setConfig((c) =>
+  function patchLiveOps(patch: Partial<GameConfig["liveOps"]>) {
+    onChange(
       mergeGameConfig({
-        ...c,
-        liveOps: {
-          ...c.liveOps,
-          themeKey: key,
-          titleEn: preset.labelEn,
-          titleFa: preset.labelFa,
-          blurbEn: `More ${preset.preferredTypes.join(" / ")} questions this week.`,
-          blurbFa: `این هفته سوال‌های ${preset.labelFa} بیشتر می‌بینی.`,
-          preferredTypes: [...preset.preferredTypes],
-          formatBiasEveryN: preset.formatBiasEveryN,
-        },
+        ...config,
+        liveOps: { ...config.liveOps, ...patch },
       }),
     );
   }
 
-  function save() {
-    startTransition(async () => {
-      const res = await updateGameConfig(config);
-      if (!res.ok) {
-        toast.error("Could not save theme.");
-        return;
-      }
-      toast.success(
-        config.liveOps.themeKey
-          ? `Global theme: ${config.liveOps.themeKey}`
-          : "Global theme cleared",
-      );
-      router.refresh();
+  function applyPreset(key: LiveOpsThemeKey | "") {
+    if (!key) {
+      patchLiveOps({
+        themeKey: null,
+        titleEn: "",
+        titleFa: "",
+        blurbEn: "",
+        blurbFa: "",
+        preferredTypes: [],
+      });
+      return;
+    }
+    const preset = THEME_PRESETS[key];
+    patchLiveOps({
+      themeKey: key,
+      titleEn: preset.labelEn,
+      titleFa: preset.labelFa,
+      blurbEn: `More ${preset.preferredTypes.join(" / ")} questions this week.`,
+      blurbFa: `این هفته سوال‌های ${preset.labelFa} بیشتر می‌بینی.`,
+      preferredTypes: [...preset.preferredTypes],
+      formatBiasEveryN: preset.formatBiasEveryN,
     });
   }
 
   return (
-    <Card className="border-slate-200">
+    <Card className="border-amber-200/80 bg-amber-50/30">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-sm">
           <Sparkles className="h-4 w-4 text-amber-500" />
           Global theme week
         </CardTitle>
         <CardDescription>
-          Biases Penalty / Quick / classic Survival toward visual formats.
-          RecordChallenge themes override this inside a premium event.
+          Bias Engine for formats inside existing modes (not a new Play card).
+          LOGO_WEEK / STADIUM_WEEK → IMAGE + REVEAL_IMAGE (heavy). CAREER_WEEK →
+          CAREER_PATH. Challenge themes override this inside a premium Survival
+          event. Press <strong>Save</strong> below to go live.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -113,10 +98,10 @@ export function LiveOpsThemesPanel({
               applyPreset(e.target.value as LiveOpsThemeKey | "")
             }
           >
-            <option value="">Off</option>
+            <option value="">NONE (off)</option>
             {LIVEOPS_THEME_KEYS.map((k) => (
               <option key={k} value={k}>
-                {THEME_PRESETS[k].labelEn}
+                {THEME_PRESETS[k].id} — {THEME_PRESETS[k].labelEn}
               </option>
             ))}
           </select>
@@ -127,28 +112,14 @@ export function LiveOpsThemesPanel({
             <Label className="text-xs">Title EN</Label>
             <Input
               value={lo.titleEn}
-              onChange={(e) =>
-                setConfig((c) =>
-                  mergeGameConfig({
-                    ...c,
-                    liveOps: { ...c.liveOps, titleEn: e.target.value },
-                  }),
-                )
-              }
+              onChange={(e) => patchLiveOps({ titleEn: e.target.value })}
             />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Title FA</Label>
             <Input
               value={lo.titleFa}
-              onChange={(e) =>
-                setConfig((c) =>
-                  mergeGameConfig({
-                    ...c,
-                    liveOps: { ...c.liveOps, titleFa: e.target.value },
-                  }),
-                )
-              }
+              onChange={(e) => patchLiveOps({ titleFa: e.target.value })}
               dir="rtl"
             />
           </div>
@@ -156,28 +127,14 @@ export function LiveOpsThemesPanel({
             <Label className="text-xs">Blurb EN</Label>
             <Input
               value={lo.blurbEn}
-              onChange={(e) =>
-                setConfig((c) =>
-                  mergeGameConfig({
-                    ...c,
-                    liveOps: { ...c.liveOps, blurbEn: e.target.value },
-                  }),
-                )
-              }
+              onChange={(e) => patchLiveOps({ blurbEn: e.target.value })}
             />
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <Label className="text-xs">Blurb FA</Label>
             <Input
               value={lo.blurbFa}
-              onChange={(e) =>
-                setConfig((c) =>
-                  mergeGameConfig({
-                    ...c,
-                    liveOps: { ...c.liveOps, blurbFa: e.target.value },
-                  }),
-                )
-              }
+              onChange={(e) => patchLiveOps({ blurbFa: e.target.value })}
               dir="rtl"
             />
           </div>
@@ -189,15 +146,9 @@ export function LiveOpsThemesPanel({
               max={20}
               value={lo.formatBiasEveryN}
               onChange={(e) =>
-                setConfig((c) =>
-                  mergeGameConfig({
-                    ...c,
-                    liveOps: {
-                      ...c.liveOps,
-                      formatBiasEveryN: Number(e.target.value) || 2,
-                    },
-                  }),
-                )
+                patchLiveOps({
+                  formatBiasEveryN: Number(e.target.value) || 2,
+                })
               }
             />
           </div>
@@ -214,17 +165,11 @@ export function LiveOpsThemesPanel({
                   type="button"
                   aria-pressed={on}
                   onClick={() =>
-                    setConfig((c) =>
-                      mergeGameConfig({
-                        ...c,
-                        liveOps: {
-                          ...c.liveOps,
-                          preferredTypes: on
-                            ? c.liveOps.preferredTypes.filter((x) => x !== t)
-                            : [...c.liveOps.preferredTypes, t],
-                        },
-                      }),
-                    )
+                    patchLiveOps({
+                      preferredTypes: on
+                        ? lo.preferredTypes.filter((x) => x !== t)
+                        : [...lo.preferredTypes, t],
+                    })
                   }
                   className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
                     on
@@ -240,16 +185,12 @@ export function LiveOpsThemesPanel({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button type="button" disabled={pending} onClick={save}>
-            {pending ? "Saving…" : "Save global theme"}
-          </Button>
           <Button
             type="button"
             variant="outline"
-            disabled={pending}
             onClick={() => applyPreset("")}
           >
-            Clear
+            Clear theme
           </Button>
         </div>
       </CardContent>

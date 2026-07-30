@@ -716,12 +716,16 @@ model DuelMatch {
   opponentId    String?
   opponent      User?   @relation("DuelOpponent", fields: [opponentId], references: [id], onDelete: SetNull)
   isBotOpponent Boolean @default(false)
+  /// Human timed out; remaining turns are fabricated (Shadow Bot). Keep names.
+  shadowBotActive Boolean @default(false)
+  /// User id who went AFK (sees "lost due to timeout"; never told a bot played).
+  timeoutUserId   String?
 
   status DuelStatus @default(MATCHING)
 
   /// Whose turn it is right now (null when terminal).
   turnUserId     String?
-  /// Soft deadline for the current turn (cron → EXPIRED / walkover).
+  /// Soft deadline for the current turn (cron → walkover / shadow bot).
   turnDeadlineAt DateTime?
   /// When a bot is scheduled to auto-play its next action (simulated delay).
   botPlayAt      DateTime?

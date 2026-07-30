@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "DuelMatch" ADD COLUMN IF NOT EXISTS "shadowBotActive" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "DuelMatch" ADD COLUMN IF NOT EXISTS "timeoutUserId" TEXT;

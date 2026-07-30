@@ -55,11 +55,11 @@ const FORMAT_TYPES = [
 ] as const;
 
 const THEME_OPTIONS = [
-  { value: "", label: "None (plain challenge)" },
-  { value: "logo", label: "Logo Week" },
-  { value: "stadium", label: "Stadium Week" },
-  { value: "career", label: "Career Path Week" },
-  { value: "formats", label: "Format Festival" },
+  { value: "", label: "NONE (plain challenge)" },
+  { value: "logo", label: "LOGO_WEEK" },
+  { value: "stadium", label: "STADIUM_WEEK" },
+  { value: "career", label: "CAREER_WEEK" },
+  { value: "formats", label: "FORMATS_WEEK" },
 ] as const;
 
 const EMPTY: FormState = {

@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { getGameConfig } from "@/lib/game/gameConfig";
 import { isDuelTerminal } from "@/lib/duel/types";
 import { creditDuelMissions } from "@/lib/game/missionEngine";
+import { runBotTurnIfDue } from "@/lib/duel/bot";
+import { runShadowBotTakeover } from "@/lib/duel/shadowBot";
 
 const EXPIREABLE_STATUSES = [
   "A_ATTACKING",
@@ -15,13 +17,55 @@ const EXPIREABLE_STATUSES = [
 ] as const;
 
 /**
- * Walkover forfeit: the player who owned the turn (`turnUserId`) timed out.
- * Status → FORFEIT (EXPIRED is reserved for cancelled MATCHING / absorb).
- * Awards weekly XP like a normal win.
+ * Lazy turn timeout. Behavior from GameConfig.duel.timeoutAction:
+ * - AUTO_FORFEIT — AFK loses; active player wins immediately.
+ * - SHADOW_BOT — fabricate AFK turns; active player finishes normally.
  */
 export async function expireDuelIfDue(
   duelId: string,
   now = new Date(),
+): Promise<boolean> {
+  const config = await getGameConfig();
+
+  const duel = await prisma.duelMatch.findUnique({ where: { id: duelId } });
+  if (!duel) return false;
+  if (isDuelTerminal(duel.status)) return false;
+  if (!duel.turnDeadlineAt || duel.turnDeadlineAt > now) return false;
+  if (duel.status === "MATCHING") return false;
+  if (
+    !EXPIREABLE_STATUSES.includes(
+      duel.status as (typeof EXPIREABLE_STATUSES)[number],
+    )
+  ) {
+    return false;
+  }
+
+  // Pure bot opponent still scheduled — let bot runner handle it.
+  if (duel.isBotOpponent && !duel.shadowBotActive) {
+    if (duel.botPlayAt && duel.botPlayAt > now) return false;
+    const botOk = await runBotTurnIfDue(duelId, now);
+    if (botOk) return true;
+    // Fall through to forfeit if bot couldn't play.
+  }
+
+  const timedOutId = duel.turnUserId;
+  if (!timedOutId) return false;
+
+  // Already shadow-controlled AFK still somehow overdue — keep fabricating.
+  if (
+    config.duel.timeoutAction === "SHADOW_BOT" ||
+    duel.shadowBotActive
+  ) {
+    return runShadowBotTakeover(duelId, timedOutId, now);
+  }
+
+  return autoForfeitDuel(duelId, timedOutId, now);
+}
+
+async function autoForfeitDuel(
+  duelId: string,
+  timedOutId: string,
+  now: Date,
 ): Promise<boolean> {
   const config = await getGameConfig();
 
@@ -32,27 +76,10 @@ export async function expireDuelIfDue(
       if (isDuelTerminal(duel.status)) return false;
       if (!duel.turnDeadlineAt || duel.turnDeadlineAt > now) return false;
 
-      // MATCHING timeouts are handled by matchmaking fallback (bot / cancel).
-      if (duel.status === "MATCHING") return false;
-      if (
-        !EXPIREABLE_STATUSES.includes(
-          duel.status as (typeof EXPIREABLE_STATUSES)[number],
-        )
-      ) {
-        return false;
-      }
-
-      // Bot still scheduled to play — don't forfeit early (misconfigured
-      // turnHours < botDelay could otherwise walkover a waiting bot).
-      if (duel.isBotOpponent && duel.botPlayAt && duel.botPlayAt > now) {
-        return false;
-      }
-
-      const timedOutId = duel.turnUserId;
       let winnerId: string | null = null;
-      if (timedOutId && duel.challengerId === timedOutId) {
+      if (duel.challengerId === timedOutId) {
         winnerId = duel.opponentId;
-      } else if (timedOutId && duel.opponentId === timedOutId) {
+      } else if (duel.opponentId === timedOutId) {
         winnerId = duel.challengerId;
       }
 
@@ -75,6 +102,8 @@ export async function expireDuelIfDue(
           finishedAt: now,
           winnerId,
           weeklyXpAwarded,
+          timeoutUserId: timedOutId,
+          shadowBotActive: false,
         },
       });
       return true;
@@ -107,7 +136,7 @@ export async function expireDuelIfDue(
     });
 }
 
-/** Batch-forfeit overdue human turns (cron / opportunistic). */
+/** Batch-process overdue human turns (cron / opportunistic inbox fetch). */
 export async function processExpiredDuels(limit = 80): Promise<number> {
   const now = new Date();
   const due = await prisma.duelMatch.findMany({

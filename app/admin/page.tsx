@@ -432,12 +432,12 @@ export default async function AdminDashboardPage() {
 
       {/* Economy snapshot */}
       <Panel
-        title="Economy (live rates)"
+        title="Game Config (live rates)"
         icon={Coins}
-        action={{ label: "Tune", href: "/admin/config" }}
+        action={{ label: "Open", href: "/admin/config" }}
       >
         <p className="mb-3 text-xs text-muted-foreground">
-          From GameConfig — change anytime on the Economy page without a
+          From GameConfig — change anytime on Game Config without a
           redeploy. Watch Survival coins if wallets inflate.
         </p>
         <div className="flex flex-wrap gap-2">
@@ -858,7 +858,7 @@ export default async function AdminDashboardPage() {
 
       {/* Quick links */}
       <div className="flex flex-wrap gap-2">
-        <QuickLink href="/admin/config" label="Economy" icon={Coins} />
+        <QuickLink href="/admin/config" label="Game Config" icon={Coins} />
         <QuickLink href="/admin/challenges" label="Challenges" icon={Trophy} />
         <QuickLink href="/admin/missions" label="Missions" icon={Target} />
         <QuickLink href="/admin/users" label="Users & Bots" icon={Users} />

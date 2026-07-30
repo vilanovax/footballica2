@@ -109,12 +109,13 @@ export async function drawSurvivalBatch(input: {
     Math.min(20, Math.floor(input.limit ?? SURVIVAL_BATCH_SIZE)),
   );
 
+  // Bias Engine: challenge theme wins; else global Live-Ops (LOGO_WEEK etc.).
   let bias = challengeBias
     ? resolveThemeBias({
         themeKey: challengeBias.themeKey,
         preferredTypes: challengeBias.preferredTypes,
         formatBiasEveryN: challengeBias.formatBiasEveryN,
-        fallbackEveryN: FORMAT_BIAS_EVERY_N,
+        fallbackEveryN: 1,
       })
     : null;
 
@@ -128,7 +129,7 @@ export async function drawSurvivalBatch(input: {
     });
   }
 
-  // Progressive tiered draw (replaces pure random shuffle).
+  // Progressive tiered draw — theme weeks push IMAGE / REVEAL_IMAGE / CAREER_PATH.
   let questions = await getCategoryQuestions(
     categoryId,
     limit,

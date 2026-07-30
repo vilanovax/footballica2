@@ -7,6 +7,7 @@ import { getPlayModeEconomy } from "@/lib/play/modeEconomy";
 import { listRecordChallenges } from "@/actions/challenge/recordChallenge";
 import { getDailyMystery } from "@/actions/mystery/getDailyMystery";
 import { getDailyGrid } from "@/actions/grid/getDailyGrid";
+import { gameOfTheDayRotation } from "@/lib/grid/gotd";
 import { prisma } from "@/lib/prisma";
 import { PlayModes } from "@/components/play/PlayModes";
 
@@ -42,6 +43,7 @@ export default async function PlayPage() {
   const liveChallengeCount = challengeRes.ok
     ? challengeRes.challenges.length
     : 0;
+  const { rotatesAt } = gameOfTheDayRotation();
 
   return (
     <PlayModes
@@ -55,6 +57,7 @@ export default async function PlayPage() {
       liveChallengeCount={liveChallengeCount}
       mystery={mysteryRes.ok ? mysteryRes.mystery : null}
       grid={gridRes.ok ? gridRes.grid : null}
+      gotdRotatesAt={rotatesAt.toISOString()}
     />
   );
 }

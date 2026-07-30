@@ -2,7 +2,8 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
+import { X } from "lucide-react";
 import { toast } from "sonner";
 import type { DailyMysterySnapshot } from "@/actions/mystery/getDailyMystery";
 import { submitMysteryGuess } from "@/actions/mystery/submitGuess";
@@ -18,38 +19,41 @@ import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { MysteryShareCard } from "@/components/mystery/MysteryShareCard";
 import { BadgeUnlockPopup } from "@/components/quiz/BadgeUnlockPopup";
+import { BottomSheet } from "@/components/ui/BottomSheet";
 
 type Props = {
   initial: DailyMysterySnapshot;
 };
 
-/** Solid Wordle-style tiles — high contrast on light/dark surfaces. */
+const ATTR_KEYS = ["n", "p", "l", "c", "a", "s"] as const;
+
+/** Solid Wordle-style tiles — pop hard on dark Game UI. */
 function verdictStyle(v: AttributeVerdict | CompareVerdict): {
   tile: string;
   glyph: string;
 } {
   if (v === "correct")
     return {
-      tile: "bg-emerald-600 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.18)]",
+      tile: "bg-emerald-500 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.28)] ring-1 ring-emerald-300/40",
       glyph: "✓",
     };
   if (v === "close")
     return {
-      tile: "bg-amber-500 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.18)]",
+      tile: "bg-amber-500 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.28)] ring-1 ring-amber-200/40",
       glyph: "~",
     };
   if (v === "higher")
     return {
-      tile: "bg-sky-600 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.18)]",
+      tile: "bg-sky-500 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.28)] ring-1 ring-sky-300/40",
       glyph: "▲",
     };
   if (v === "lower")
     return {
-      tile: "bg-sky-600 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.18)]",
+      tile: "bg-sky-500 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.28)] ring-1 ring-sky-300/40",
       glyph: "▼",
     };
   return {
-    tile: "bg-rose-600 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.18)]",
+    tile: "bg-rose-600 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.28)] ring-1 ring-rose-300/35",
     glyph: "✕",
   };
 }
@@ -72,7 +76,7 @@ export function MysteryArena({ initial }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [unlockedBadges, setUnlockedBadges] = useState<UnlockedBadge[]>([]);
-  const [howOpen, setHowOpen] = useState(mystery.guesses.length === 0);
+  const [howOpen, setHowOpen] = useState(false);
 
   const done = mystery.status === "SOLVED" || mystery.status === "FAILED";
   const remaining = Math.max(0, mystery.maxGuesses - mystery.guessCount);
@@ -103,6 +107,18 @@ export function MysteryArena({ initial }: Props) {
     return locale === "fa" ? o.nameFa : o.nameEn;
   }, [selectedId, mystery.options, locale]);
 
+  const attrLabels = useMemo(
+    () => [
+      t("mystery.colNation"),
+      t("mystery.colPos"),
+      t("mystery.colLeague"),
+      t("mystery.colClub"),
+      t("mystery.colAge"),
+      t("mystery.colShirt"),
+    ],
+    [t],
+  );
+
   function onGuess() {
     if (!selectedId || pending || done) return;
     startTransition(async () => {
@@ -119,7 +135,6 @@ export function MysteryArena({ initial }: Props) {
       setMystery(res.mystery);
       setSelectedId(null);
       setQuery("");
-      setHowOpen(false);
       if (res.unlockedBadges.length > 0) {
         setUnlockedBadges(res.unlockedBadges);
       }
@@ -141,206 +156,154 @@ export function MysteryArena({ initial }: Props) {
     locale === "fa" ? mystery.answer?.nameFa : mystery.answer?.nameEn;
 
   return (
-    <section className="flex flex-1 flex-col gap-3">
-      {/* ── Game board hero ──────────────────────────────────── */}
+    <section className="relative -mx-4 flex min-h-0 flex-1 flex-col gap-3 bg-linear-to-b from-[#0c1218] via-[#111a22] to-[#0a0f14] px-4 pb-2 text-white">
+      {/* Atmosphere */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+      >
+        <div className="absolute -end-16 top-0 h-56 w-56 rounded-full bg-amber-500/10 blur-3xl" />
+        <div className="absolute -start-20 top-40 h-48 w-48 rounded-full bg-emerald-500/10 blur-3xl" />
+      </div>
+
+      {/* ── Compact header ───────────────────────────────────── */}
       <motion.header
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-bubble-lg bg-linear-to-br from-secondary/40 via-[#1a3a4a]/08 to-accent/25 px-3 pb-4 pt-2 shadow-fantasy-lg"
+        className="relative z-10 flex items-center justify-between gap-2 pt-[max(0.25rem,env(safe-area-inset-top))]"
       >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(255,200,80,0.18),_transparent_55%)]"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -end-10 -top-14 h-40 w-40 rounded-full bg-secondary/30 blur-3xl"
-        />
-
-        {/* Floating chrome — close + free stats (no boxes) */}
-        <Link
-          href="/play"
-          onClick={() => playSound("click")}
-          aria-label={t("common.back")}
-          className="absolute end-2 top-2 z-20 flex h-11 w-11 items-center justify-center active:scale-90"
-        >
+        <div className="flex min-w-0 items-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/icons/close.png"
+            src="/icons/mystery.png"
             alt=""
             draggable={false}
-            className="h-10 w-10 object-contain drop-shadow-[0_3px_6px_rgba(0,0,0,0.3)]"
+            className="h-11 w-11 shrink-0 object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.45)]"
           />
-        </Link>
+          <div className="min-w-0">
+            <h1 className="truncate font-display text-lg font-black leading-tight text-white">
+              {t("mystery.title")}
+            </h1>
+            <p className="truncate font-display text-[11px] font-bold text-white/55">
+              {t("mystery.subtitle")}
+            </p>
+          </div>
+        </div>
 
-        <div className="absolute end-3 top-14 z-20 flex flex-col items-end gap-2">
-          <span
-            className="inline-flex items-center gap-1 font-display text-lg font-black tabular-nums text-foreground drop-shadow-[0_1px_2px_rgba(255,255,255,0.8)]"
-            title={t("mystery.guessesLabel")}
-          >
+        <div className="flex shrink-0 items-center gap-1">
+          <span className="me-1 inline-flex items-center gap-1 font-display text-sm font-black tabular-nums text-white/90">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/icons/guesses.png"
               alt=""
               aria-hidden
               draggable={false}
-              className="h-8 w-8 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.25)]"
+              className="h-6 w-6 object-contain"
             />
             {toLocaleDigits(mystery.guessCount, locale)}/
             {toLocaleDigits(mystery.maxGuesses, locale)}
           </span>
-          <span
-            className="inline-flex items-center gap-1 font-display text-lg font-black tabular-nums text-accent-deep drop-shadow-[0_1px_2px_rgba(255,255,255,0.8)]"
-            title={t("mystery.streakLabel")}
-          >
+          <span className="me-0.5 inline-flex items-center gap-0.5 font-display text-sm font-black tabular-nums text-amber-300">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/icons/streak.png"
               alt=""
               aria-hidden
               draggable={false}
-              className="h-8 w-8 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.25)]"
+              className="h-6 w-6 object-contain"
             />
             {toLocaleDigits(mystery.mysteryStreak, locale)}
           </span>
-        </div>
 
-        {/* Center stage — mystery portrait + title */}
-        <div className="relative z-10 mt-1 flex flex-col items-center px-14 text-center">
-          <motion.div
-            animate={{ y: [0, -4, 0] }}
-            transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
-            aria-hidden
+          <button
+            type="button"
+            onClick={() => {
+              playSound("click");
+              setHowOpen(true);
+            }}
+            aria-label={t("mystery.howToTitle")}
+            className="flex h-11 w-11 items-center justify-center rounded-full text-white/70 ring-1 ring-white/15 transition-colors hover:bg-white/10 hover:text-white active:scale-90"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/icons/mystery.png"
-              alt=""
-              draggable={false}
-              className="h-24 w-24 object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.28)]"
-            />
-          </motion.div>
-          <h1 className="mt-1.5 font-display text-2xl font-black leading-tight text-foreground drop-shadow-sm">
-            {t("mystery.title")}
-          </h1>
-          <p className="mt-0.5 font-display text-sm font-bold text-foreground/70">
-            {t("mystery.subtitle")}
-          </p>
-        </div>
+            <span className="font-display text-lg font-black">?</span>
+          </button>
 
-        {!done && (
-          <div
-            className="relative z-10 mt-3.5 flex items-center justify-center gap-2.5"
-            aria-label={`${toLocaleDigits(remaining, locale)} ${t("mystery.guessesLabel")}`}
+          <Link
+            href="/play"
+            onClick={() => playSound("click")}
+            aria-label={t("common.back")}
+            className="flex h-11 w-11 items-center justify-center rounded-full text-white/70 ring-1 ring-white/15 transition-colors hover:bg-white/10 hover:text-white active:scale-90"
           >
-            {Array.from({ length: mystery.maxGuesses }).map((_, i) => {
-              const g = mystery.guesses[i];
-              const next = i === mystery.guessCount;
-              let tone = "h-3.5 w-3.5 bg-muted-foreground/25";
-              if (g?.isCorrect)
-                tone =
-                  "h-4 w-4 bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.6)]";
-              else if (g)
-                tone =
-                  "h-3.5 w-3.5 bg-secondary shadow-[0_0_8px_rgba(255,90,54,0.45)]";
-              else if (next)
-                tone = "h-4 w-4 bg-primary ring-[3px] ring-primary/35";
-              return (
-                <motion.span
-                  key={i}
-                  animate={next ? { scale: [1, 1.2, 1] } : undefined}
-                  transition={
-                    next
-                      ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
-                      : undefined
-                  }
-                  className={["rounded-full", tone].join(" ")}
-                />
-              );
-            })}
-          </div>
-        )}
+            <X className="h-5 w-5" strokeWidth={2.25} />
+          </Link>
+        </div>
       </motion.header>
 
-      {/* ── How to play — quest plaque ───────────────────────── */}
+      {/* Attempt dots */}
       {!done && (
-        <motion.div
-          layout
-          className="relative overflow-hidden rounded-bubble-lg bg-linear-to-br from-amber-500/25 via-secondary/15 to-primary/20 p-[3px] shadow-fantasy"
+        <div
+          className="relative z-10 flex items-center justify-center gap-2"
+          aria-label={`${toLocaleDigits(remaining, locale)} ${t("mystery.guessesLabel")}`}
         >
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -end-8 -top-10 h-28 w-28 rounded-full bg-accent/30 blur-2xl"
-          />
-          <div className="relative overflow-hidden rounded-[1.35rem] bg-linear-to-b from-[#2a1f12]/92 to-[#1a140c]/95 text-white">
-            <button
-              type="button"
-              onClick={() => {
-                playSound("click");
-                setHowOpen((v) => !v);
-              }}
-              className="flex min-h-12 w-full items-center gap-2.5 px-3 py-2.5 text-start active:scale-[0.99]"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/icons/help.png"
-                alt=""
-                aria-hidden
-                draggable={false}
-                className="h-10 w-10 shrink-0 object-contain drop-shadow-[0_3px_6px_rgba(0,0,0,0.45)]"
+          {Array.from({ length: mystery.maxGuesses }).map((_, i) => {
+            const g = mystery.guesses[i];
+            const next = i === mystery.guessCount;
+            let tone = "h-2.5 w-2.5 bg-white/20";
+            if (g?.isCorrect)
+              tone =
+                "h-3 w-3 bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.7)]";
+            else if (g)
+              tone =
+                "h-2.5 w-2.5 bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]";
+            else if (next)
+              tone = "h-3 w-3 bg-white ring-2 ring-white/35";
+            return (
+              <motion.span
+                key={i}
+                animate={next ? { scale: [1, 1.2, 1] } : undefined}
+                transition={
+                  next
+                    ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
+                    : undefined
+                }
+                className={["rounded-full", tone].join(" ")}
               />
-              <span className="min-w-0 flex-1 font-display text-base font-black tracking-wide text-amber-100 drop-shadow-sm">
-                {t("mystery.howToTitle")}
-              </span>
-              <span
-                className={[
-                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-400/25 font-display text-sm font-black text-amber-200 ring-1 ring-amber-300/40 transition-transform",
-                  howOpen ? "rotate-180" : "",
-                ].join(" ")}
-                aria-hidden
-              >
-                ▾
-              </span>
-            </button>
-            <AnimatePresence initial={false}>
-              {howOpen && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.22 }}
-                  className="overflow-hidden"
-                >
-                  <div className="space-y-3 px-3 pb-3.5 text-start">
-                    <p className="rounded-2xl bg-black/25 px-3 py-2.5 font-display text-sm font-bold leading-relaxed text-amber-50/95 ring-1 ring-amber-200/15">
-                      {t("mystery.howToBody")}
-                    </p>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      <LegendChip tone="correct" label={t("mystery.legendCorrect")} />
-                      <LegendChip tone="close" label={t("mystery.legendClose")} />
-                      <LegendChip tone="wrong" label={t("mystery.legendWrong")} />
-                      <LegendChip
-                        tone="dir"
-                        label={`▲ ${t("mystery.legendHigher")}`}
-                        className="col-span-1"
-                      />
-                      <LegendChip
-                        tone="dir"
-                        label={`▼ ${t("mystery.legendLower")}`}
-                        className="col-span-2"
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </motion.div>
+            );
+          })}
+        </div>
       )}
 
+      {/* How-to — header ? → bottom sheet only */}
+      <BottomSheet
+        open={howOpen}
+        onClose={() => setHowOpen(false)}
+        title={t("mystery.howToTitle")}
+        subtitle={t("mystery.howToTip")}
+        closeLabel={t("common.back")}
+      >
+        <div className="space-y-3 pb-2">
+          <p className="font-display text-sm font-bold leading-relaxed text-foreground/85">
+            {t("mystery.howToBody")}
+          </p>
+          <div className="grid grid-cols-3 gap-1.5">
+            <LegendChip tone="correct" label={t("mystery.legendCorrect")} />
+            <LegendChip tone="close" label={t("mystery.legendClose")} />
+            <LegendChip tone="wrong" label={t("mystery.legendWrong")} />
+            <LegendChip
+              tone="dir"
+              label={`▲ ${t("mystery.legendHigher")}`}
+            />
+            <LegendChip
+              tone="dir"
+              label={`▼ ${t("mystery.legendLower")}`}
+              className="col-span-2"
+            />
+          </div>
+        </div>
+      </BottomSheet>
+
       {done && mystery.shareCode && (
-        <div className="flex flex-col gap-3">
-          <p className="text-center font-display text-xl font-black text-foreground">
+        <div className="relative z-10 flex flex-col gap-3">
+          <p className="text-center font-display text-xl font-black text-white">
             {mystery.status === "SOLVED"
               ? t("mystery.solved")
               : t("mystery.failed")}
@@ -370,23 +333,52 @@ export function MysteryArena({ initial }: Props) {
         />
       )}
 
-      {/* ── Clue board ───────────────────────────────────────── */}
-      <div className="flex flex-col gap-2.5">
-        {mystery.guesses.length === 0 && !done ? (
-          <div className="flex flex-col items-center gap-2 rounded-bubble-lg bg-muted/30 px-4 py-7 text-center">
-            <span className="text-3xl" aria-hidden>
-              🧩
-            </span>
-            <p className="font-display text-sm font-bold text-muted-foreground">
-              {t("mystery.emptyBoard")}
-            </p>
+      {/* ── Anticipation grid — always 6 rows ─────────────────── */}
+      {!done && (
+        <div className="relative z-10 flex flex-col gap-2">
+          {/* Column legend (tiny) */}
+          <div className="grid grid-cols-3 gap-1.5 px-0.5">
+            {attrLabels.map((label) => (
+              <span
+                key={label}
+                className="text-center font-display text-[9px] font-extrabold uppercase tracking-wider text-white/35"
+              >
+                {label}
+              </span>
+            ))}
           </div>
-        ) : (
-          mystery.guesses.map((g, i) => (
+
+          {Array.from({ length: mystery.maxGuesses }).map((_, i) => {
+            const guess = mystery.guesses[i];
+            if (guess) {
+              return (
+                <GuessRow
+                  key={`${guess.playerId}-${guess.at}`}
+                  guess={guess}
+                  index={i}
+                />
+              );
+            }
+            return (
+              <EmptyGuessRow
+                key={`empty-${i}`}
+                index={i}
+                isNext={i === mystery.guessCount}
+                labels={attrLabels}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {/* When done, still show filled rows above share if any */}
+      {done && mystery.guesses.length > 0 && !mystery.shareCode && (
+        <div className="relative z-10 flex flex-col gap-2">
+          {mystery.guesses.map((g, i) => (
             <GuessRow key={`${g.playerId}-${g.at}`} guess={g} index={i} />
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
       {!done && (
         <div
@@ -401,8 +393,8 @@ export function MysteryArena({ initial }: Props) {
           animate={{ opacity: 1, y: 0 }}
           className="pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-mobile px-3 pb-[calc(theme(spacing.nav)+env(safe-area-inset-bottom,0px))] pt-2"
         >
-          <div className="pointer-events-auto rounded-t-bubble-lg bg-background/96 px-2 pt-2.5 shadow-[0_-10px_28px_rgba(0,0,0,0.12)] backdrop-blur-md">
-            <p className="mb-1.5 text-center font-display text-[11px] font-bold text-muted-foreground">
+          <div className="pointer-events-auto rounded-t-bubble-lg border border-white/10 bg-[#121a22]/96 px-2 pt-2.5 shadow-[0_-12px_32px_rgba(0,0,0,0.45)] backdrop-blur-md">
+            <p className="mb-1.5 text-center font-display text-[11px] font-bold text-white/55">
               {selectedLabel ? `✓ ${selectedLabel}` : t("mystery.pickHint")}
             </p>
             <input
@@ -413,11 +405,11 @@ export function MysteryArena({ initial }: Props) {
                 setSelectedId(null);
               }}
               placeholder={t("mystery.searchPlaceholder")}
-              className="min-h-11 w-full rounded-2xl bg-surface px-3 font-display text-sm font-bold text-foreground outline-none ring-1 ring-border focus:ring-2 focus:ring-primary/40"
+              className="min-h-11 w-full rounded-2xl bg-white/8 px-3 font-display text-sm font-bold text-white outline-none ring-1 ring-white/15 placeholder:text-white/35 focus:ring-2 focus:ring-emerald-400/45"
             />
-            <ul className="mt-1.5 max-h-28 overflow-y-auto rounded-2xl bg-surface ring-1 ring-border/70">
+            <ul className="mt-1.5 max-h-28 overflow-y-auto rounded-2xl bg-black/30 ring-1 ring-white/10">
               {filtered.length === 0 ? (
-                <li className="px-3 py-2.5 text-center font-display text-xs font-bold text-muted-foreground">
+                <li className="px-3 py-2.5 text-center font-display text-xs font-bold text-white/40">
                   …
                 </li>
               ) : (
@@ -435,12 +427,12 @@ export function MysteryArena({ initial }: Props) {
                         className={[
                           "flex w-full min-h-11 items-center justify-between gap-2 px-3 py-2 text-start font-display text-sm font-bold",
                           active
-                            ? "bg-primary/15 text-primary"
-                            : "text-foreground hover:bg-muted/50",
+                            ? "bg-emerald-500/20 text-emerald-200"
+                            : "text-white/90 hover:bg-white/8",
                         ].join(" ")}
                       >
                         <span className="truncate">{label}</span>
-                        <span className="shrink-0 text-[11px] font-semibold text-muted-foreground">
+                        <span className="shrink-0 text-[11px] font-semibold text-white/40">
                           {o.club}
                         </span>
                       </button>
@@ -458,7 +450,7 @@ export function MysteryArena({ initial }: Props) {
                 "btn-fantasy mt-2 mb-1 w-full min-h-touch justify-center",
                 selectedId && !pending
                   ? "btn-fantasy-primary"
-                  : "bg-muted text-muted-foreground opacity-55",
+                  : "bg-white/10 text-white/40 opacity-70",
               ].join(" ")}
             >
               {pending ? "…" : t("mystery.guess")}
@@ -500,6 +492,53 @@ function LegendChip({
   );
 }
 
+function EmptyGuessRow({
+  index,
+  isNext,
+  labels,
+}: {
+  index: number;
+  isNext: boolean;
+  labels: string[];
+}) {
+  const { locale } = useTranslation();
+  return (
+    <div
+      className={[
+        "rounded-2xl p-2 ring-1 transition-colors",
+        isNext
+          ? "bg-white/[0.06] ring-white/25"
+          : "bg-white/[0.03] ring-white/10",
+      ].join(" ")}
+    >
+      <p className="mb-1.5 flex items-center gap-2 font-display text-xs font-bold text-white/30">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[10px] font-black text-white/45">
+          {toLocaleDigits(index + 1, locale)}
+        </span>
+        <span>{isNext ? "…" : "—"}</span>
+      </p>
+      <div className="grid grid-cols-3 gap-1.5">
+        {ATTR_KEYS.map((key, i) => (
+          <div
+            key={key}
+            className={[
+              "flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5",
+              isNext
+                ? "bg-white/[0.07] ring-1 ring-dashed ring-white/20"
+                : "bg-black/25 ring-1 ring-white/8",
+            ].join(" ")}
+          >
+            <span className="font-display text-[9px] font-extrabold uppercase tracking-wide text-white/25">
+              {labels[i]}
+            </span>
+            <span className="h-2 w-2 rounded-full bg-white/15" aria-hidden />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function GuessRow({
   guess,
   index,
@@ -533,15 +572,15 @@ function GuessRow({
         delay: index * 0.04,
       }}
       className={[
-        "rounded-bubble-lg p-2.5 shadow-fantasy ring-1",
+        "rounded-2xl p-2.5 shadow-lg ring-1",
         guess.isCorrect
-          ? "bg-emerald-500/10 ring-emerald-500/35"
-          : "bg-surface ring-border/50",
+          ? "bg-emerald-500/15 ring-emerald-400/45"
+          : "bg-white/[0.06] ring-white/12",
       ].join(" ")}
     >
-      <p className="mb-2 flex items-center gap-2 font-display text-sm font-extrabold text-foreground">
+      <p className="mb-2 flex items-center gap-2 font-display text-sm font-extrabold text-white">
         <span
-          className="flex h-6 w-6 items-center justify-center rounded-full bg-foreground/90 font-display text-[11px] font-black text-background"
+          className="flex h-6 w-6 items-center justify-center rounded-full bg-white/90 font-display text-[11px] font-black text-[#0c1218]"
           aria-hidden
         >
           {toLocaleDigits(index + 1, locale)}
@@ -561,7 +600,7 @@ function GuessRow({
               key={c.key}
               title={verdictLabel(c.v, t)}
               className={[
-                "flex min-h-13 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 py-1.5 text-center",
+                "flex min-h-13 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center",
                 style.tile,
               ].join(" ")}
             >

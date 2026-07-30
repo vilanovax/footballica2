@@ -51,6 +51,9 @@ export async function selectDuelCategory(
       include: { rounds: { orderBy: { roundNumber: "asc" } } },
     });
     if (!duel) return { ok: false, error: "not_found" };
+    if (duel.timeoutUserId === user.id) {
+      return { ok: false, error: "not_your_turn" };
+    }
 
     if (
       !canUserAct({

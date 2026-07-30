@@ -40,6 +40,8 @@ export function pickActiveDuels(duels: DuelSnapshot[]): DuelSnapshot[] {
 export type DuelViewerOutcome = "WIN" | "LOSE" | "DRAW";
 
 export function duelViewerOutcome(d: DuelSnapshot): DuelViewerOutcome {
+  // AFK timeout — always present as a loss (never reveal Shadow Bot).
+  if (d.youTimedOut) return "LOSE";
   if (d.winnerId == null) return "DRAW";
   const youId =
     d.youAre === "challenger"

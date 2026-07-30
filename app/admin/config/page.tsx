@@ -3,19 +3,24 @@ import { EconomyConfigPanel } from "@/components/admin/EconomyConfigPanel";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminEconomyConfigPage() {
+export default async function AdminGameConfigPage() {
   const config = await getGameConfig();
 
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Economy</h1>
+        <h1 className="text-xl font-semibold text-slate-900">
+          Game Config & Economy
+        </h1>
         <p className="mt-1 max-w-2xl text-sm leading-relaxed text-slate-500">
-          Control soft currency, XP, and stamina without a redeploy. Start on{" "}
+          Command center for global game parameters — theme weeks, duel timeout
+          behavior, Survival rates, and soft currency. Start on{" "}
           <strong className="font-semibold text-slate-700">Live Ops</strong> for
-          events and inflation; open Match / Survival / Duel only when you need
-          deeper balance. Each field explains what it changes in the player
-          economy.
+          events; open Match / Survival / Duel for deeper balance. One Save
+          writes the full GameConfig JSON (no redeploy).
+        </p>
+        <p className="mt-1 text-sm text-slate-500" dir="rtl">
+          تنظیمات بازی و اقتصاد — تم هفته، دوئل، بقا و سکه‌ها در یک داشبورد.
         </p>
       </div>
 

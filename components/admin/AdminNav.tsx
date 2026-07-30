@@ -28,7 +28,7 @@ const LINKS = [
   { href: "/admin/missions", label: "Missions", icon: Target, exact: false },
   { href: "/admin/challenges", label: "Challenges", icon: Trophy, exact: false },
   { href: "/admin/badges", label: "Badges", icon: Medal, exact: false },
-  { href: "/admin/config", label: "Economy", icon: Coins, exact: false },
+  { href: "/admin/config", label: "Game Config", icon: Coins, exact: false },
   { href: "/admin/users", label: "Users & Bots", icon: Users, exact: false },
   { href: "/admin/reports", label: "Reports", icon: Flag, exact: false },
   { href: "/admin/settings", label: "Settings", icon: Settings, exact: false },
