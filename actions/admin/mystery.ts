@@ -7,6 +7,10 @@ import { prisma } from "@/lib/prisma";
 import { ADMIN_COOKIE, isValidAdminToken } from "@/lib/admin/auth";
 import { tehranDayKey } from "@/lib/game/dailyMissions";
 import { MYSTERY_MAX_GUESSES } from "@/lib/mystery";
+import {
+  ensureMysterySchedule,
+  MYSTERY_SCHEDULE_DAYS,
+} from "@/lib/mystery/jobs";
 import { ensureFootballPlayerCatalog } from "@/lib/mystery/players";
 import { maxGuessesFromConfig } from "@/lib/mystery/puzzle";
 
@@ -162,6 +166,36 @@ export async function upsertDailyMysteryPuzzle(input: {
     };
   } catch (err) {
     console.error("[upsertDailyMysteryPuzzle]", err);
+    return { ok: false, error: "unknown" };
+  }
+}
+
+/**
+ * Fill missing Mystery days for Tehran today + horizon (never overwrites).
+ * Same job as `/api/cron/mystery` — for Live-Ops one-click from Admin.
+ */
+export async function ensureMysteryScheduleWeek(
+  days = MYSTERY_SCHEDULE_DAYS,
+): Promise<
+  | { ok: true; todayKey: string; created: number; skipped: number }
+  | { ok: false; error: string }
+> {
+  if (!(await assertAdmin())) return { ok: false, error: "unauthorized" };
+  try {
+    await ensureFootballPlayerCatalog(prisma);
+    const stats = await ensureMysterySchedule(prisma, { days });
+    revalidatePath("/admin/mystery");
+    revalidatePath("/play");
+    revalidatePath("/play/mystery");
+    revalidatePath("/club");
+    return {
+      ok: true,
+      todayKey: stats.todayKey,
+      created: stats.created.length,
+      skipped: stats.skipped.length,
+    };
+  } catch (err) {
+    console.error("[ensureMysteryScheduleWeek]", err);
     return { ok: false, error: "unknown" };
   }
 }

@@ -18,17 +18,13 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
+import { playerPhotoSrc } from "@/lib/players/photos";
 
 type Props = {
   initial: DailyGridSnapshot;
 };
 
 const GRID_MOOD = "#0a0f14";
-
-/** Optional photo path convention — shown when asset exists in /public. */
-function playerPhotoSrc(playerId: string): string {
-  return `/players/${playerId}.png`;
-}
 
 export function GridArena({ initial }: Props) {
   const { t, locale } = useTranslation();
@@ -39,7 +35,6 @@ export function GridArena({ initial }: Props) {
   const [query, setQuery] = useState("");
   const [pending, startTransition] = useTransition();
   const [unlockedBadges, setUnlockedBadges] = useState<UnlockedBadge[]>([]);
-  const [photoOk, setPhotoOk] = useState<Record<string, boolean>>({});
   /** Cell key currently shaking / crimson-flashing (temporary — not locked). */
   const [missCellKey, setMissCellKey] = useState<string | null>(null);
   const [livesPulse, setLivesPulse] = useState(false);
@@ -340,9 +335,9 @@ export function GridArena({ initial }: Props) {
                     ? filled.nameFa
                     : filled.nameEn
                   : "";
-                const photoState = filled
-                  ? photoOk[filled.playerId]
-                  : undefined;
+                const photoSrc = filled
+                  ? playerPhotoSrc(filled.playerId)
+                  : null;
 
                 return (
                   <motion.button
@@ -363,10 +358,10 @@ export function GridArena({ initial }: Props) {
                   >
                     {filled ? (
                       <>
-                        {photoState === true ? (
+                        {photoSrc ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={playerPhotoSrc(filled.playerId)}
+                            src={photoSrc}
                             alt=""
                             draggable={false}
                             className="h-8 w-8 rounded-full object-cover ring-1 ring-emerald-300/50"
@@ -379,27 +374,6 @@ export function GridArena({ initial }: Props) {
                             {name.trim().slice(0, 1)}
                           </span>
                         )}
-                        {photoState == null ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={playerPhotoSrc(filled.playerId)}
-                            alt=""
-                            aria-hidden
-                            className="pointer-events-none absolute h-0 w-0 opacity-0"
-                            onLoad={() =>
-                              setPhotoOk((m) => ({
-                                ...m,
-                                [filled.playerId]: true,
-                              }))
-                            }
-                            onError={() =>
-                              setPhotoOk((m) => ({
-                                ...m,
-                                [filled.playerId]: false,
-                              }))
-                            }
-                          />
-                        ) : null}
                         <span className="line-clamp-2 font-display text-[10px] font-black leading-tight text-white">
                           {name}
                         </span>

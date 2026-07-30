@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CalendarPlus, Sparkles, Grid3x3 } from "lucide-react";
 import {
+  ensureGridScheduleWeek,
   previewGridSolvability,
   suggestAutoGridAxes,
   upsertDailyGridPuzzle,
@@ -195,6 +196,20 @@ export function GridPuzzlesPanel({
     });
   }
 
+  function fillWeek() {
+    startTransition(async () => {
+      const res = await ensureGridScheduleWeek(7);
+      if (!res.ok) {
+        toast.error("Could not fill Grid week.");
+        return;
+      }
+      toast.success(
+        `Grid week · created ${res.created}, skipped ${res.skipped} (today ${res.todayKey})`,
+      );
+      router.refresh();
+    });
+  }
+
   function autoFill() {
     startTransition(async () => {
       const res = await suggestAutoGridAxes();
@@ -300,20 +315,32 @@ export function GridPuzzlesPanel({
               Publish / edit day
             </h2>
           </div>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={pending}
-            onClick={autoFill}
-          >
-            <Sparkles className="me-1.5 h-3.5 w-3.5" />
-            Auto-fill
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={pending}
+              onClick={fillWeek}
+            >
+              Fill 7-day gaps
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={pending}
+              onClick={autoFill}
+            >
+              <Sparkles className="me-1.5 h-3.5 w-3.5" />
+              Auto-fill
+            </Button>
+          </div>
         </div>
         <p className="mb-3 text-xs text-slate-500">
-          Tehran calendar day · today is <code>{todayKey}</code>. Cron
-          pre-creates missing days; this form overrides Live-Ops.
+          Tehran calendar day · today is <code>{todayKey}</code>.{" "}
+          <strong className="font-semibold text-slate-700">Fill 7-day gaps</strong>{" "}
+          auto-builds missing days only; this form overrides a single day.
         </p>
 
         <div className="mb-4 grid gap-3 sm:grid-cols-2">

@@ -9,6 +9,10 @@ import { tehranDayKey } from "@/lib/game/dailyMissions";
 import { ensureFootballPlayerCatalog } from "@/lib/mystery/players";
 import { parseGridAxes } from "@/lib/grid/parse";
 import {
+  ensureGridSchedule,
+  GRID_SCHEDULE_DAYS,
+} from "@/lib/grid/jobs";
+import {
   buildAutoGridAxes,
   loadGridPlayers,
   maxMistakesFromConfig,
@@ -286,6 +290,36 @@ export async function upsertDailyGridPuzzle(input: {
     return { ok: true, puzzle };
   } catch (err) {
     console.error("[upsertDailyGridPuzzle]", err);
+    return { ok: false, error: "unknown" };
+  }
+}
+
+/**
+ * Fill missing Grid days for Tehran today + horizon (never overwrites).
+ * Same job as `/api/cron/grid` — for Live-Ops one-click from Admin.
+ */
+export async function ensureGridScheduleWeek(
+  days = GRID_SCHEDULE_DAYS,
+): Promise<
+  | { ok: true; todayKey: string; created: number; skipped: number }
+  | { ok: false; error: string }
+> {
+  if (!(await assertAdmin())) return { ok: false, error: "unauthorized" };
+  try {
+    await ensureFootballPlayerCatalog(prisma);
+    const stats = await ensureGridSchedule(prisma, { days });
+    revalidatePath("/admin/grid");
+    revalidatePath("/play");
+    revalidatePath("/play/grid");
+    revalidatePath("/club");
+    return {
+      ok: true,
+      todayKey: stats.todayKey,
+      created: stats.created.length,
+      skipped: stats.skipped.length,
+    };
+  } catch (err) {
+    console.error("[ensureGridScheduleWeek]", err);
     return { ok: false, error: "unknown" };
   }
 }

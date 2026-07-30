@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CalendarPlus } from "lucide-react";
 import {
+  ensureMysteryScheduleWeek,
   upsertDailyMysteryPuzzle,
   type AdminMysteryPuzzleRow,
 } from "@/actions/admin/mystery";
@@ -101,18 +102,45 @@ export function MysteryPuzzlesPanel({
     setMaxGuesses(p.maxGuesses);
   }
 
+  function fillWeek() {
+    startTransition(async () => {
+      const res = await ensureMysteryScheduleWeek(7);
+      if (!res.ok) {
+        toast.error("Could not fill Mystery week.");
+        return;
+      }
+      toast.success(
+        `Mystery week · created ${res.created}, skipped ${res.skipped} (today ${res.todayKey})`,
+      );
+      router.refresh();
+    });
+  }
+
   return (
     <div className="space-y-5">
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="mb-3 flex items-center gap-2">
-          <CalendarPlus className="h-4 w-4 text-emerald-600" />
-          <h2 className="text-sm font-semibold text-slate-900">
-            Publish / edit day
-          </h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <CalendarPlus className="h-4 w-4 text-emerald-600" />
+            <h2 className="text-sm font-semibold text-slate-900">
+              Publish / edit day
+            </h2>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={pending}
+            onClick={fillWeek}
+          >
+            Fill 7-day gaps
+          </Button>
         </div>
         <p className="mb-3 text-xs text-slate-500">
           Tehran calendar day · today is <code>{todayKey}</code>. Changing
-          today’s target updates the live Game of the Day immediately.
+          today’s target updates the live Game of the Day immediately.{" "}
+          <strong className="font-semibold text-slate-700">Fill 7-day gaps</strong>{" "}
+          auto-picks missing days only (never overwrites).
         </p>
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="space-y-1.5">
