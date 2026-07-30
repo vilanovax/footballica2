@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { X } from "lucide-react";
 import { toast } from "sonner";
 import type { DailyMysterySnapshot } from "@/actions/mystery/getDailyMystery";
 import { submitMysteryGuess } from "@/actions/mystery/submitGuess";
@@ -19,9 +18,9 @@ import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { MysteryShareCard } from "@/components/mystery/MysteryShareCard";
 import { BadgeUnlockPopup } from "@/components/quiz/BadgeUnlockPopup";
+import { GotdResultModal } from "@/components/play/GotdResultModal";
 import { BottomSheet } from "@/components/ui/BottomSheet";
-
-const MYSTERY_MOOD = "#0a0f14";
+import type { GotdRewardsPayload } from "@/lib/game/gotdRewards";
 
 type Props = {
   initial: DailyMysterySnapshot;
@@ -79,35 +78,11 @@ export function MysteryArena({ initial }: Props) {
   const [pending, startTransition] = useTransition();
   const [unlockedBadges, setUnlockedBadges] = useState<UnlockedBadge[]>([]);
   const [howOpen, setHowOpen] = useState(false);
-
-  // Match browser chrome / status bar to the dark arena (undo Day Match cream).
-  useEffect(() => {
-    const metas = Array.from(
-      document.querySelectorAll('meta[name="theme-color"]'),
-    ) as HTMLMetaElement[];
-    const prev = metas.map((m) => m.getAttribute("content"));
-    if (metas.length === 0) {
-      const meta = document.createElement("meta");
-      meta.name = "theme-color";
-      meta.content = MYSTERY_MOOD;
-      document.head.appendChild(meta);
-      return () => {
-        meta.remove();
-      };
-    }
-    for (const m of metas) m.setAttribute("content", MYSTERY_MOOD);
-    document.documentElement.style.backgroundColor = MYSTERY_MOOD;
-    document.body.style.backgroundColor = MYSTERY_MOOD;
-    document.body.style.backgroundImage = "none";
-    return () => {
-      metas.forEach((m, i) => {
-        if (prev[i] != null) m.setAttribute("content", prev[i]!);
-      });
-      document.documentElement.style.backgroundColor = "";
-      document.body.style.backgroundColor = "";
-      document.body.style.backgroundImage = "";
-    };
-  }, []);
+  const [rewards, setRewards] = useState<GotdRewardsPayload | null>(null);
+  const [previousStreak, setPreviousStreak] = useState(0);
+  const [showResult, setShowResult] = useState(
+    initial.status === "SOLVED" || initial.status === "FAILED",
+  );
 
   const done = mystery.status === "SOLVED" || mystery.status === "FAILED";
   const remaining = Math.max(0, mystery.maxGuesses - mystery.guessCount);
@@ -169,13 +144,17 @@ export function MysteryArena({ initial }: Props) {
       if (res.unlockedBadges.length > 0) {
         setUnlockedBadges(res.unlockedBadges);
       }
+      if (res.rewards) setRewards(res.rewards);
+      setPreviousStreak(res.previousStreak);
       const last = res.mystery.guesses[res.mystery.guesses.length - 1];
       if (last?.isCorrect) {
         playSound("goal");
         haptic(HAPTIC.tap);
+        window.setTimeout(() => setShowResult(true), 380);
       } else if (res.mystery.status === "FAILED") {
         playSound("miss");
         haptic(HAPTIC.miss);
+        window.setTimeout(() => setShowResult(true), 380);
       } else {
         playSound("click");
         haptic(HAPTIC.light);
@@ -183,17 +162,28 @@ export function MysteryArena({ initial }: Props) {
     });
   }
 
+  async function copyShare() {
+    if (!mystery.shareCode) return;
+    try {
+      await navigator.clipboard.writeText(mystery.shareCode);
+      toast.success(t("mystery.shared"));
+      playSound("click");
+    } catch {
+      toast.error(t("mystery.errGeneric"));
+    }
+  }
+
   const answerName =
     locale === "fa" ? mystery.answer?.nameFa : mystery.answer?.nameEn;
 
   return (
-    <section className="relative flex min-h-dvh flex-1 flex-col gap-3 bg-linear-to-b from-[#0c1218] via-[#111a22] to-[#0a0f14] px-4 pb-2 text-white">
-      {/* Atmosphere — full viewport including status / home-indicator bands */}
+    <section className="relative -mx-4 flex min-h-0 flex-1 flex-col gap-3 bg-black px-4 pb-2 text-white">
+      {/* Atmosphere — solid black content plane (shell margins keep game bg) */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 overflow-hidden"
       >
-        <div className="absolute inset-0 bg-[#0a0f14]" />
+        <div className="absolute inset-0 bg-black" />
         <div className="absolute -end-16 top-0 h-56 w-56 rounded-full bg-amber-500/10 blur-3xl" />
         <div className="absolute -start-20 top-40 h-48 w-48 rounded-full bg-emerald-500/10 blur-3xl" />
       </div>
@@ -202,7 +192,7 @@ export function MysteryArena({ initial }: Props) {
       <motion.header
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative z-10 flex items-center justify-between gap-2 pt-[max(0.75rem,env(safe-area-inset-top))]"
+        className="relative z-10 flex items-center justify-between gap-2 pt-1"
       >
         <div className="flex min-w-0 items-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -254,18 +244,30 @@ export function MysteryArena({ initial }: Props) {
               setHowOpen(true);
             }}
             aria-label={t("mystery.howToTitle")}
-            className="flex h-11 w-11 items-center justify-center rounded-full text-white/70 ring-1 ring-white/15 transition-colors hover:bg-white/10 hover:text-white active:scale-90"
+            className="flex h-12 w-12 items-center justify-center active:scale-90"
           >
-            <span className="font-display text-lg font-black">?</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/help-gold.png"
+              alt=""
+              draggable={false}
+              className="h-11 w-11 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.45)]"
+            />
           </button>
 
           <Link
             href="/play"
             onClick={() => playSound("click")}
             aria-label={t("common.back")}
-            className="flex h-11 w-11 items-center justify-center rounded-full text-white/70 ring-1 ring-white/15 transition-colors hover:bg-white/10 hover:text-white active:scale-90"
+            className="flex h-12 w-12 items-center justify-center active:scale-90"
           >
-            <X className="h-5 w-5" strokeWidth={2.25} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/close-gold.png"
+              alt=""
+              draggable={false}
+              className="h-11 w-11 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.45)]"
+            />
           </Link>
         </div>
       </motion.header>
@@ -358,12 +360,25 @@ export function MysteryArena({ initial }: Props) {
         </div>
       )}
 
-      {unlockedBadges.length > 0 && (
+      {unlockedBadges.length > 0 && !showResult && (
         <BadgeUnlockPopup
           badges={unlockedBadges}
           onClose={() => setUnlockedBadges([])}
         />
       )}
+
+      <GotdResultModal
+        open={showResult && done}
+        outcome={mystery.status === "SOLVED" ? "SOLVED" : "FAILED"}
+        kind="mystery"
+        rewards={rewards}
+        previousStreak={previousStreak}
+        currentStreak={mystery.mysteryStreak}
+        shareCode={mystery.shareCode}
+        unlockedBadges={unlockedBadges}
+        onShare={copyShare}
+        onClose={() => setShowResult(false)}
+      />
 
       {/* ── Anticipation grid — always 6 rows ─────────────────── */}
       {!done && (
@@ -411,20 +426,15 @@ export function MysteryArena({ initial }: Props) {
         </div>
       )}
 
-      {!done && (
-        <div
-          aria-hidden
-          className="h-[calc(11rem+env(safe-area-inset-bottom,0px))] shrink-0"
-        />
-      )}
+      {!done && <div aria-hidden className="h-48 shrink-0" />}
 
       {!done && (
         <motion.footer
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-mobile bg-linear-to-t from-[#0a0f14] via-[#0a0f14] to-transparent px-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pt-3"
+          className="pointer-events-none fixed inset-x-0 z-40 mx-auto w-full max-w-mobile px-3 pt-3 bottom-[max(0.75rem,env(safe-area-inset-bottom,0px))]"
         >
-          <div className="pointer-events-auto rounded-t-bubble-lg border border-white/10 bg-[#121a22] px-2 pt-2.5 shadow-[0_-12px_32px_rgba(0,0,0,0.45)]">
+          <div className="pointer-events-auto rounded-t-bubble-lg border border-white/10 bg-[#0c1016] px-2 pt-2.5 shadow-[0_-12px_32px_rgba(0,0,0,0.55)]">
             <p className="mb-1.5 text-center font-display text-[11px] font-bold text-white/55">
               {selectedLabel ? `✓ ${selectedLabel}` : t("mystery.pickHint")}
             </p>

@@ -14,13 +14,18 @@ export default async function AdminGameConfigPage() {
         </h1>
         <p className="mt-1 max-w-2xl text-sm leading-relaxed text-slate-500">
           Command center for global game parameters — theme weeks, duel timeout
-          behavior, Survival rates, and soft currency. Start on{" "}
+          behavior, Survival rates, soft currency, and{" "}
+          <strong className="font-semibold text-slate-700">
+            Game of the Day
+          </strong>{" "}
+          (Mystery / Grid) economy. Start on{" "}
           <strong className="font-semibold text-slate-700">Live Ops</strong> for
-          events; open Match / Survival / Duel for deeper balance. One Save
-          writes the full GameConfig JSON (no redeploy).
+          events; open Match / Survival / Duel / GotD for deeper balance. One
+          Save writes the full GameConfig JSON (no redeploy).
         </p>
         <p className="mt-1 text-sm text-slate-500" dir="rtl">
-          تنظیمات بازی و اقتصاد — تم هفته، دوئل، بقا و سکه‌ها در یک داشبورد.
+          تنظیمات بازی و اقتصاد — تم هفته، دوئل، بقا، سکه‌ها و اقتصاد بازی امروز
+          در یک داشبورد.
         </p>
       </div>
 

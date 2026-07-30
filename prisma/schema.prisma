@@ -952,6 +952,9 @@ model DailyMysteryAttempt {
   /// Shareable emoji grid (🟩🟨🟥…).
   shareCode String?
 
+  /// Lightweight GotD payout audit: { coinsEarned, xpEarned, streakBonus, … }.
+  rewardJson Json?
+
   solvedAt DateTime?
 
   createdAt DateTime @default(now())
@@ -1010,6 +1013,9 @@ model DailyGridAttempt {
 
   shareCode String?
   solvedAt  DateTime?
+
+  /// Lightweight GotD payout audit: { coinsEarned, xpEarned, streakBonus, … }.
+  rewardJson Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

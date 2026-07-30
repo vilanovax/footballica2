@@ -2,16 +2,18 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { X } from "lucide-react";
 import { toast } from "sonner";
 import type { DailyGridSnapshot } from "@/actions/grid/getDailyGrid";
 import { submitGridGuess } from "@/actions/grid/submitGridGuess";
 import type { UnlockedBadge } from "@/actions/resolveMatch";
 import { BadgeUnlockPopup } from "@/components/quiz/BadgeUnlockPopup";
+import { GotdResultModal } from "@/components/play/GotdResultModal";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { buildGridShareCode } from "@/lib/grid/share";
 import { cellKey } from "@/lib/grid/types";
+import type { GotdRewardsPayload } from "@/lib/game/gotdRewards";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { playSound } from "@/lib/audio/SoundManager";
@@ -41,8 +43,10 @@ export function GridArena({ initial }: Props) {
   /** Cell key currently shaking / crimson-flashing (temporary — not locked). */
   const [missCellKey, setMissCellKey] = useState<string | null>(null);
   const [livesPulse, setLivesPulse] = useState(false);
-  const [showGameOver, setShowGameOver] = useState(
-    initial.status === "FAILED",
+  const [rewards, setRewards] = useState<GotdRewardsPayload | null>(null);
+  const [previousStreak, setPreviousStreak] = useState(0);
+  const [showResult, setShowResult] = useState(
+    initial.status === "SOLVED" || initial.status === "FAILED",
   );
 
   // Match browser chrome to dark Locker Room (undo Day Match cream).
@@ -172,10 +176,15 @@ export function GridArena({ initial }: Props) {
       if (res.unlockedBadges.length > 0) {
         setUnlockedBadges(res.unlockedBadges);
       }
+      if (res.rewards) setRewards(res.rewards);
+      setPreviousStreak(res.previousStreak);
       if (res.correct) {
         playSound("goal");
         haptic(HAPTIC.tap);
         setSelected(null);
+        if (res.grid.status === "SOLVED") {
+          window.setTimeout(() => setShowResult(true), 380);
+        }
       } else {
         // Close sheet so the cell shake/crimson flash is visible on the board.
         setSelected(null);
@@ -183,7 +192,7 @@ export function GridArena({ initial }: Props) {
         playSound("miss");
         haptic(HAPTIC.miss);
         if (res.grid.status === "FAILED") {
-          window.setTimeout(() => setShowGameOver(true), 420);
+          window.setTimeout(() => setShowResult(true), 420);
         }
       }
     });
@@ -210,12 +219,25 @@ export function GridArena({ initial }: Props) {
         <div className="absolute -start-20 top-48 h-48 w-48 rounded-full bg-sky-500/10 blur-3xl" />
       </div>
 
-      {unlockedBadges.length > 0 && (
+      {unlockedBadges.length > 0 && !showResult && (
         <BadgeUnlockPopup
           badges={unlockedBadges}
           onClose={() => setUnlockedBadges([])}
         />
       )}
+
+      <GotdResultModal
+        open={showResult && done}
+        outcome={grid.status === "SOLVED" ? "SOLVED" : "FAILED"}
+        kind="grid"
+        rewards={rewards}
+        previousStreak={previousStreak}
+        currentStreak={grid.gridStreak}
+        shareCode={boardShare}
+        unlockedBadges={unlockedBadges}
+        onShare={copyShare}
+        onClose={() => setShowResult(false)}
+      />
 
       <header className="relative z-10 flex shrink-0 items-center justify-between gap-2 pt-[max(0.75rem,env(safe-area-inset-top))]">
         <div className="min-w-0 flex flex-1 items-center gap-2.5">
@@ -280,31 +302,11 @@ export function GridArena({ initial }: Props) {
         </Link>
       </header>
 
-      {grid.status === "SOLVED" && (
-        <div className="relative z-10 shrink-0 rounded-bubble-lg border border-emerald-400/30 bg-emerald-500/10 p-4 text-center shadow-[0_12px_32px_rgba(0,0,0,0.35)]">
-          <p className="font-display text-lg font-black text-emerald-200">
-            {t("grid.solved")}
-          </p>
-          {boardShare ? (
-            <pre className="mt-2 font-display text-sm leading-relaxed text-white/80">
-              {boardShare}
-            </pre>
-          ) : null}
-          <button
-            type="button"
-            onClick={copyShare}
-            className="mt-3 min-h-11 rounded-2xl bg-white/10 px-4 font-display text-sm font-bold text-white ring-1 ring-white/15"
-          >
-            {t("grid.share")}
-          </button>
-        </div>
-      )}
-
       {/* 3×3 board — central focus */}
       <div
         className={[
           "relative z-10 mx-auto w-full max-w-md shrink-0 overflow-x-auto rounded-bubble-lg bg-linear-to-b from-[#1c2738] to-[#121820] p-2.5 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/10 transition-opacity",
-          grid.status === "FAILED" && showGameOver ? "opacity-40" : "",
+          done && showResult ? "opacity-40" : "",
         ].join(" ")}
       >
         <div
@@ -477,74 +479,6 @@ export function GridArena({ initial }: Props) {
         </div>
       </BottomSheet>
 
-      {/* FAILED — polished game-over overlay */}
-      <AnimatePresence>
-        {showGameOver && grid.status === "FAILED" && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <button
-              type="button"
-              aria-label={t("common.back")}
-              className="absolute inset-0 bg-black/70 backdrop-blur-[6px]"
-              onClick={() => setShowGameOver(false)}
-            />
-            <motion.div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="grid-game-over-title"
-              initial={{ y: 40, opacity: 0.9, scale: 0.98 }}
-              animate={{ y: 0, opacity: 1, scale: 1 }}
-              exit={{ y: 24, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 380, damping: 30 }}
-              className="relative z-10 mx-4 mb-[max(1rem,env(safe-area-inset-bottom))] w-full max-w-sm overflow-hidden rounded-bubble-xl border border-rose-400/25 bg-[#141c24] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.55)] sm:mb-0"
-            >
-              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/20 ring-1 ring-rose-400/40">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/icons/broken-heart.png"
-                  alt=""
-                  draggable={false}
-                  className="h-8 w-8 object-contain"
-                />
-              </div>
-              <h2
-                id="grid-game-over-title"
-                className="text-center font-display text-xl font-black text-white"
-              >
-                {t("grid.gameOverTitle")}
-              </h2>
-              <p className="mt-1.5 text-center font-display text-sm font-bold text-white/55">
-                {t("grid.gameOverBody", {
-                  n: toLocaleDigits(grid.maxMistakes, locale),
-                })}
-              </p>
-              <pre className="mt-4 rounded-2xl bg-black/35 px-3 py-3 text-center font-display text-base leading-relaxed text-white/85 ring-1 ring-white/10">
-                {boardShare}
-              </pre>
-              <div className="mt-4 flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={copyShare}
-                  className="flex min-h-touch w-full items-center justify-center rounded-2xl bg-white/10 font-display text-base font-extrabold text-white ring-1 ring-white/15"
-                >
-                  {t("grid.share")}
-                </button>
-                <Link
-                  href="/play"
-                  onClick={() => playSound("click")}
-                  className="flex min-h-touch w-full items-center justify-center rounded-2xl bg-rose-500/90 font-display text-base font-extrabold text-white shadow-[0_6px_0_0_rgba(136,19,55,0.9)]"
-                >
-                  {t("grid.backPlay")}
-                </Link>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </section>
   );
 }

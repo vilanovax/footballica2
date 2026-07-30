@@ -76,10 +76,13 @@ function isImmersivePlayRoute(pathname: string | null | undefined): boolean {
   return false;
 }
 
-/** Arenas that own the full viewport mood (no shell inset / cream bleed). */
+/**
+ * Arenas that paint edge-to-edge dark (no shell inset).
+ * Mystery is excluded: content is black, but top/bottom shell margins
+ * keep the Day Match game background.
+ */
 function isFullBleedMoodRoute(pathname: string | null | undefined): boolean {
   if (!pathname) return false;
-  if (pathname.startsWith("/play/mystery")) return true;
   if (pathname.startsWith("/play/grid")) return true;
   return false;
 }

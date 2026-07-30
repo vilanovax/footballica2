@@ -124,6 +124,20 @@ export type GameConfig = {
     preferredTypes: string[];
     formatBiasEveryN: number;
   };
+  /**
+   * Game of the Day (Mystery odd / Grid even Tehran days).
+   * Direct Club.coins + User.xp grants — no global wallet ledger.
+   */
+  gotd: {
+    mysteryWinCoins: number;
+    mysteryWinXp: number;
+    gridWinCoins: number;
+    gridWinXp: number;
+    /** Extra coin fraction per streak day, e.g. 0.1 → +10% of base per day. */
+    streakMultiplierPerDay: number;
+    /** Flat coin bonus for perfect clear (Mystery 1-guess / Grid 0 mistakes). */
+    perfectClearBonusCoins: number;
+  };
 };
 
 export const DEFAULT_GAME_CONFIG: GameConfig = {
@@ -186,6 +200,14 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     preferredTypes: [],
     formatBiasEveryN: 1,
   },
+  gotd: {
+    mysteryWinCoins: 40,
+    mysteryWinXp: 30,
+    gridWinCoins: 50,
+    gridWinXp: 35,
+    streakMultiplierPerDay: 0.1,
+    perfectClearBonusCoins: 25,
+  },
 };
 
 /** Finite-number guard with fallback (rejects NaN/Infinity/non-numbers). */
@@ -209,6 +231,7 @@ export function mergeGameConfig(raw: unknown): GameConfig {
   const d = src.duel ?? {};
   const s = src.survival ?? {};
   const lo = (src.liveOps ?? {}) as Record<string, unknown>;
+  const g = src.gotd ?? {};
   const D = DEFAULT_GAME_CONFIG;
 
   // Normalize LOGO_WEEK / logo / aliases → short key (or null = NONE).
@@ -330,6 +353,34 @@ export function mergeGameConfig(raw: unknown): GameConfig {
         Math.max(
           1,
           Math.round(num(lo.formatBiasEveryN, D.liveOps.formatBiasEveryN)),
+        ),
+      ),
+    },
+    gotd: {
+      mysteryWinCoins: Math.max(
+        0,
+        Math.round(num(g.mysteryWinCoins, D.gotd.mysteryWinCoins)),
+      ),
+      mysteryWinXp: Math.max(
+        0,
+        Math.round(num(g.mysteryWinXp, D.gotd.mysteryWinXp)),
+      ),
+      gridWinCoins: Math.max(
+        0,
+        Math.round(num(g.gridWinCoins, D.gotd.gridWinCoins)),
+      ),
+      gridWinXp: Math.max(0, Math.round(num(g.gridWinXp, D.gotd.gridWinXp))),
+      streakMultiplierPerDay: Math.min(
+        1,
+        Math.max(
+          0,
+          num(g.streakMultiplierPerDay, D.gotd.streakMultiplierPerDay),
+        ),
+      ),
+      perfectClearBonusCoins: Math.max(
+        0,
+        Math.round(
+          num(g.perfectClearBonusCoins, D.gotd.perfectClearBonusCoins),
         ),
       ),
     },

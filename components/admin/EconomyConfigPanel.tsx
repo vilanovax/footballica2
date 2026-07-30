@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
+  CalendarDays,
   Heart,
   RotateCcw,
   Save,
@@ -29,7 +30,7 @@ type EconomyConfigPanelProps = {
   initialConfig: GameConfig;
 };
 
-type TabId = "live" | "match" | "survival" | "duel" | "advanced";
+type TabId = "live" | "match" | "survival" | "duel" | "gotd" | "advanced";
 
 type FieldDef = {
   key: string;
@@ -119,6 +120,17 @@ const TABS: {
     ],
   },
   {
+    id: "gotd",
+    label: "Game of the Day",
+    icon: CalendarDays,
+    blurb: "بازی امروز — Mystery (odd) / Grid (even) Tehran-day rewards.",
+    guide: [
+      "Paid on SOLVED only — direct Club.coins + User.xp (no wallet ledger).",
+      "FAILED hard-resets the GotD streak to 0; streak multiplies base coins.",
+      "Perfect clear = Mystery 1-guess or Grid 0 mistakes → flat coin bonus.",
+    ],
+  },
+  {
     id: "advanced",
     label: "Advanced",
     icon: Settings2,
@@ -170,6 +182,22 @@ const LIVE_FIELDS: FieldDef[] = [
     description:
       "Points added to the weekly leaderboard when a player wins a Draft Duel.",
     tip: "Does not grant soft coins by itself.",
+  },
+  {
+    key: "gotd.mysteryWinCoins",
+    label: "GotD Mystery coins",
+    description:
+      "Base soft coins on a Mystery Player solve (سکه برد بازیکن مرموز). Main GotD inflation lever for odd Tehran days.",
+    tip: "Scaled by streak multiplier; perfect clear adds a flat bonus.",
+    featured: true,
+  },
+  {
+    key: "gotd.gridWinCoins",
+    label: "GotD Grid coins",
+    description:
+      "Base soft coins on a Football Grid solve (سکه برد جدول فوتبال). Main GotD inflation lever for even Tehran days.",
+    tip: "Scaled by streak multiplier; perfect clear adds a flat bonus.",
+    featured: true,
   },
   {
     key: "survival.staminaCost",
@@ -336,6 +364,53 @@ const DUEL_FIELDS: FieldDef[] = [
   },
 ];
 
+const GOTD_FIELDS: FieldDef[] = [
+  {
+    key: "gotd.mysteryWinCoins",
+    label: "Mystery win coins (سکه برد بازیکن مرموز)",
+    description:
+      "Base soft coins granted when the player solves Mysterious Player (odd Tehran days).",
+    tip: "Streak multiplies this base; perfect clear is a separate flat bonus.",
+    featured: true,
+  },
+  {
+    key: "gotd.mysteryWinXp",
+    label: "Mystery win XP (XP برد بازیکن مرموز)",
+    description: "Lifetime XP granted on a Mystery Player solve.",
+    tip: "Not scaled by streak — flat XP grant.",
+  },
+  {
+    key: "gotd.gridWinCoins",
+    label: "Grid win coins (سکه برد جدول فوتبال)",
+    description:
+      "Base soft coins granted when the player solves Football Grid (even Tehran days).",
+    tip: "Streak multiplies this base; perfect clear is a separate flat bonus.",
+    featured: true,
+  },
+  {
+    key: "gotd.gridWinXp",
+    label: "Grid win XP (XP برد جدول فوتبال)",
+    description: "Lifetime XP granted on a Football Grid solve.",
+    tip: "Not scaled by streak — flat XP grant.",
+  },
+  {
+    key: "gotd.streakMultiplierPerDay",
+    label: "Streak multiplier / day (ضریب استریک روزانه)",
+    description:
+      "Extra coin fraction of the base win coins per consecutive GotD streak day (e.g. 0.1 → +10% per day).",
+    tip: "Clamped 0–1 by mergeGameConfig. FAILED resets streak to 0.",
+    min: 0,
+    step: 0.1,
+  },
+  {
+    key: "gotd.perfectClearBonusCoins",
+    label: "Perfect clear coins (پاداش سکه بدون اشتباه)",
+    description:
+      "Flat coin bonus for a perfect clear — Mystery in 1 guess, or Grid with 0 mistakes.",
+    tip: "Added on top of base + streak-scaled coins.",
+  },
+];
+
 const ADVANCED_FIELDS: FieldDef[] = [
   {
     key: "helpers.hint",
@@ -419,6 +494,8 @@ function fieldsForTab(tab: TabId): FieldDef[] {
       return SURVIVAL_FIELDS;
     case "duel":
       return DUEL_FIELDS;
+    case "gotd":
+      return GOTD_FIELDS;
     case "advanced":
       return ADVANCED_FIELDS;
   }
@@ -501,6 +578,16 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
           label="Duel week"
           value={draft.duel.winWeeklyXp}
           hint="XP"
+        />
+        <Snap
+          label="GotD Mystery"
+          value={draft.gotd.mysteryWinCoins}
+          hint="coins"
+        />
+        <Snap
+          label="GotD Grid"
+          value={draft.gotd.gridWinCoins}
+          hint="coins"
         />
         {dirty ? (
           <Badge className="self-center bg-amber-100 text-amber-900 hover:bg-amber-100">
@@ -664,7 +751,7 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
       <div
         className={[
           "grid gap-3",
-          tab === "live" || tab === "survival"
+          tab === "live" || tab === "survival" || tab === "gotd"
             ? "sm:grid-cols-2"
             : "sm:grid-cols-2 lg:grid-cols-3",
         ].join(" ")}

@@ -28,6 +28,11 @@ import {
   getBadgePresentationsBySlug,
 } from "@/lib/game/badgeCatalog";
 import { calculateLevel } from "@/lib/game/economy";
+import { getGameConfig } from "@/lib/game/gameConfig";
+import {
+  calculateGotdWinRewards,
+  type GotdRewardsPayload,
+} from "@/lib/game/gotdRewards";
 import type { UnlockedBadge } from "@/actions/resolveMatch";
 import type { DailyMysterySnapshot } from "./getDailyMystery";
 
@@ -36,6 +41,10 @@ export type SubmitMysteryGuessResult =
       ok: true;
       mystery: DailyMysterySnapshot;
       unlockedBadges: UnlockedBadge[];
+      /** Present on first SOLVED settle. */
+      rewards: GotdRewardsPayload | null;
+      /** Streak before hard-reset on FAILED (0 if none). */
+      previousStreak: number;
     }
   | {
       ok: false;
@@ -71,6 +80,7 @@ export async function submitMysteryGuess(
     const pair = await requireUserClub();
     if (!pair) return { ok: false, error: "unauthenticated" };
     const { user, club } = pair;
+    const config = await getGameConfig();
 
     const guessed = await getMysteryPlayer(playerId, prisma);
     if (!guessed) return { ok: false, error: "unknown_player" };
@@ -110,6 +120,9 @@ export async function submitMysteryGuess(
       let longestMysteryStreak = club.longestMysteryStreak;
       let mysterySolves = club.mysterySolves;
       let unlockedBadges: UnlockedBadge[] = [];
+      let rewards: GotdRewardsPayload | null = null;
+      let previousStreak = 0;
+      let rewardJson: Prisma.InputJsonValue | undefined;
 
       if (row.isCorrect) {
         status = "SOLVED";
@@ -125,7 +138,16 @@ export async function submitMysteryGuess(
         );
         mysteryStreak = upd.mysteryStreak;
         longestMysteryStreak = upd.longestMysteryStreak;
-        mysterySolves = club.mysterySolves + 1;
+        mysterySolves = club.mysterySolves + (upd.isNewDay ? 1 : 0);
+
+        const perfect = guessCount === 1;
+        rewards = calculateGotdWinRewards({
+          gotd: config.gotd,
+          kind: "mystery",
+          streakDays: mysteryStreak,
+          perfect,
+        });
+        rewardJson = rewards as unknown as Prisma.InputJsonValue;
 
         const owned = await tx.clubBadge.findMany({
           where: { clubId: club.id },
@@ -139,7 +161,7 @@ export async function submitMysteryGuess(
               goals: 0,
               total: 0,
               won: true,
-              perfect: guessCount === 1,
+              perfect,
               usedHelp: false,
               isTutorial: false,
             },
@@ -168,13 +190,15 @@ export async function submitMysteryGuess(
         const newlyUnlocked = rawUnlocked
           .map((a) => applyPresentation(a, presentations.get(a.slug)))
           .filter((a) => {
-            const row = presentations.get(a.slug);
-            return row ? row.isActive : true;
+            const badgeRow = presentations.get(a.slug);
+            return badgeRow ? badgeRow.isActive : true;
           });
 
         const badgeCoins = newlyUnlocked.reduce((n, a) => n + a.reward.coins, 0);
         const badgeXp = newlyUnlocked.reduce((n, a) => n + a.reward.xp, 0);
-        const newXp = user.xp + badgeXp;
+        const totalCoins = rewards.coinsEarned + badgeCoins;
+        const totalXp = rewards.xpEarned + badgeXp;
+        const newXp = user.xp + totalXp;
         const levelInfo = calculateLevel(newXp);
 
         await tx.club.update({
@@ -183,17 +207,17 @@ export async function submitMysteryGuess(
             mysteryStreak,
             longestMysteryStreak,
             lastMysteryDate: upd.lastMysteryDate,
-            mysterySolves,
-            ...(badgeCoins > 0 ? { coins: { increment: badgeCoins } } : {}),
+            ...(upd.isNewDay ? { mysterySolves: { increment: 1 } } : {}),
+            ...(totalCoins > 0 ? { coins: { increment: totalCoins } } : {}),
           },
         });
 
-        if (badgeXp > 0) {
+        if (totalXp > 0) {
           await tx.user.update({
             where: { id: user.id },
             data: {
-              xp: { increment: badgeXp },
-              weeklyXp: { increment: badgeXp },
+              xp: { increment: totalXp },
+              weeklyXp: { increment: totalXp },
               managerLevel: levelInfo.level,
             },
           });
@@ -213,6 +237,12 @@ export async function submitMysteryGuess(
       } else if (guessCount >= maxGuesses) {
         status = "FAILED";
         shareCode = buildMysteryShareCode(nextGuesses);
+        previousStreak = club.mysteryStreak;
+        mysteryStreak = 0;
+        await tx.club.update({
+          where: { id: club.id },
+          data: { mysteryStreak: 0 },
+        });
       }
 
       const updated = await tx.dailyMysteryAttempt.update({
@@ -223,6 +253,7 @@ export async function submitMysteryGuess(
           guesses: nextGuesses as unknown as Prisma.InputJsonValue,
           shareCode,
           solvedAt,
+          ...(rewardJson !== undefined ? { rewardJson } : {}),
         },
       });
 
@@ -236,6 +267,8 @@ export async function submitMysteryGuess(
         longestMysteryStreak,
         target,
         unlockedBadges,
+        rewards,
+        previousStreak,
       };
     });
 
@@ -257,6 +290,8 @@ export async function submitMysteryGuess(
     return {
       ok: true,
       unlockedBadges: result.unlockedBadges,
+      rewards: result.rewards,
+      previousStreak: result.previousStreak,
       mystery: {
         dateKey: result.puzzle.dateKey,
         maxGuesses: result.maxGuesses,

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUserClub } from "@/lib/player/current";
 import {
@@ -28,6 +29,11 @@ import {
   getBadgePresentationsBySlug,
 } from "@/lib/game/badgeCatalog";
 import { calculateLevel } from "@/lib/game/economy";
+import { getGameConfig } from "@/lib/game/gameConfig";
+import {
+  calculateGotdWinRewards,
+  type GotdRewardsPayload,
+} from "@/lib/game/gotdRewards";
 import type { UnlockedBadge } from "@/actions/resolveMatch";
 
 export type SubmitGridGuessResult =
@@ -36,6 +42,8 @@ export type SubmitGridGuessResult =
       grid: DailyGridSnapshot;
       correct: boolean;
       unlockedBadges: UnlockedBadge[];
+      rewards: GotdRewardsPayload | null;
+      previousStreak: number;
     }
   | { ok: false; error: string };
 
@@ -64,6 +72,7 @@ export async function submitGridGuess(input: {
   const pair = await requireUserClub();
   if (!pair) return { ok: false, error: "not_authenticated" };
   const { user } = pair;
+  const config = await getGameConfig();
 
   const row = Math.floor(input.row);
   const col = Math.floor(input.col);
@@ -131,6 +140,9 @@ export async function submitGridGuess(input: {
     let gridStreak = club.gridStreak;
     let correct = false;
     let unlockedBadges: UnlockedBadge[] = [];
+    let rewards: GotdRewardsPayload | null = null;
+    let previousStreak = 0;
+    let rewardJson: Prisma.InputJsonValue | undefined;
 
     if (matches) {
       correct = true;
@@ -152,6 +164,15 @@ export async function submitGridGuess(input: {
         gridStreak = streak.gridStreak;
         const gridSolves = club.gridSolves + (streak.isNewDay ? 1 : 0);
 
+        const perfect = mistakeCount === 0;
+        rewards = calculateGotdWinRewards({
+          gotd: config.gotd,
+          kind: "grid",
+          streakDays: gridStreak,
+          perfect,
+        });
+        rewardJson = rewards as unknown as Prisma.InputJsonValue;
+
         const owned = await tx.clubBadge.findMany({
           where: { clubId: club.id },
           select: { badgeSlug: true },
@@ -164,7 +185,7 @@ export async function submitGridGuess(input: {
               goals: 0,
               total: 0,
               won: true,
-              perfect: mistakeCount === 0,
+              perfect,
               usedHelp: false,
               isTutorial: false,
             },
@@ -193,13 +214,15 @@ export async function submitGridGuess(input: {
         const newlyUnlocked = rawUnlocked
           .map((a) => applyPresentation(a, presentations.get(a.slug)))
           .filter((a) => {
-            const row = presentations.get(a.slug);
-            return row ? row.isActive : true;
+            const badgeRow = presentations.get(a.slug);
+            return badgeRow ? badgeRow.isActive : true;
           });
 
         const badgeCoins = newlyUnlocked.reduce((n, a) => n + a.reward.coins, 0);
         const badgeXp = newlyUnlocked.reduce((n, a) => n + a.reward.xp, 0);
-        const newXp = user.xp + badgeXp;
+        const totalCoins = rewards.coinsEarned + badgeCoins;
+        const totalXp = rewards.xpEarned + badgeXp;
+        const newXp = user.xp + totalXp;
         const levelInfo = calculateLevel(newXp);
 
         await tx.club.update({
@@ -209,16 +232,16 @@ export async function submitGridGuess(input: {
             longestGridStreak: streak.longestGridStreak,
             lastGridDate: streak.lastGridDate,
             ...(streak.isNewDay ? { gridSolves: { increment: 1 } } : {}),
-            ...(badgeCoins > 0 ? { coins: { increment: badgeCoins } } : {}),
+            ...(totalCoins > 0 ? { coins: { increment: totalCoins } } : {}),
           },
         });
 
-        if (badgeXp > 0) {
+        if (totalXp > 0) {
           await tx.user.update({
             where: { id: user.id },
             data: {
-              xp: { increment: badgeXp },
-              weeklyXp: { increment: badgeXp },
+              xp: { increment: totalXp },
+              weeklyXp: { increment: totalXp },
               managerLevel: levelInfo.level,
             },
           });
@@ -247,6 +270,12 @@ export async function submitGridGuess(input: {
       if (mistakeCount >= maxMistakes) {
         status = "FAILED";
         shareCode = buildGridShareCode(cells);
+        previousStreak = club.gridStreak;
+        gridStreak = 0;
+        await tx.club.update({
+          where: { id: club.id },
+          data: { gridStreak: 0 },
+        });
       }
     }
 
@@ -259,6 +288,7 @@ export async function submitGridGuess(input: {
         status,
         shareCode,
         solvedAt,
+        ...(rewardJson !== undefined ? { rewardJson } : {}),
       },
     });
 
@@ -266,6 +296,8 @@ export async function submitGridGuess(input: {
     return {
       correct,
       unlockedBadges,
+      rewards,
+      previousStreak,
       grid: {
         dateKey: puzzle.dateKey,
         status: updated.status,
@@ -299,5 +331,7 @@ export async function submitGridGuess(input: {
     grid: result.grid,
     correct: Boolean(result.correct),
     unlockedBadges: result.unlockedBadges ?? [],
+    rewards: result.rewards ?? null,
+    previousStreak: result.previousStreak ?? 0,
   };
 }
