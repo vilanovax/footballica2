@@ -15,7 +15,11 @@ import {
 import { gradeDuelAnswers } from "@/lib/duel/grade";
 import { assertNoDuelBoosters } from "@/lib/duel/fairPlay";
 import type { DuelAnswerSubmission } from "@/lib/duel/types";
-import { memoryRoundCreateData } from "@/lib/duel/createMemoryRound";
+import { quizRoundCreateData } from "@/lib/duel/createQuizRound";
+import {
+  listDuelEligibleCategories,
+  usedCategoryIdsFromRounds,
+} from "@/lib/duel/draw";
 import { tickDuelJobs } from "@/lib/duel/jobs";
 import { toDuelSnapshot, type DuelSnapshot } from "@/lib/duel/snapshot";
 import { duelSnapshotInclude } from "@/lib/duel/include";
@@ -214,20 +218,19 @@ export async function submitDuelDefend(
       });
 
       if (nextStatus === "B_ATTACKING" && duel.opponentId) {
-        // v1: Round 2 is MEMORY — shared boardJson for attack + defend halves.
-        const memoryData = await memoryRoundCreateData({
-          duelId: duel.id,
+        // Round 2 starts as QUIZ draft; attacker may lock Memory if unused.
+        const quizData = await quizRoundCreateData({
           attackerId: duel.opponentId,
-          pairCount: config.duel.memoryPairs,
+          roundNumber: 2,
+          excludeCategoryIds: usedCategoryIdsFromRounds(duel.rounds),
         });
         await tx.duelRound.create({
           data: {
             duelId: duel.id,
-            roundNumber: memoryData.roundNumber,
-            roundType: memoryData.roundType,
-            attackerId: memoryData.attackerId,
-            draftOptionIds: memoryData.draftOptionIds,
-            boardJson: memoryData.boardJson,
+            roundNumber: quizData.roundNumber,
+            roundType: quizData.roundType,
+            attackerId: quizData.attackerId,
+            draftOptionIds: quizData.draftOptionIds,
           },
         });
 
@@ -297,7 +300,16 @@ export async function submitDuelDefend(
       });
     });
 
-    const snapshot = toDuelSnapshot(updated, user.id);
+    let draftOptions = undefined;
+    if (updated.status === "B_ATTACKING") {
+      const r2 = updated.rounds.find((r) => r.roundNumber === 2);
+      const draftIds = Array.isArray(r2?.draftOptionIds)
+        ? (r2!.draftOptionIds as string[])
+        : [];
+      const cats = await listDuelEligibleCategories();
+      draftOptions = cats.filter((c) => draftIds.includes(c.id));
+    }
+    const snapshot = toDuelSnapshot(updated, user.id, draftOptions);
     let missions: EvaluateMissionsResult | undefined;
     try {
       const turnResult = await creditDuelTurnMissions({

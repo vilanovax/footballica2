@@ -1,12 +1,12 @@
 /**
- * Game of the Day rotator (ADR 002): one daily type per Tehran day.
- * Odd day-of-month → Mystery (حدس بازیکن); even → Football Grid.
+ * Game of the Day rotator (ADR 001 / 002 + Star Path):
+ * Tehran day-of-month mod 3 → mystery | grid | starPath.
  * Client-safe (no server-only imports).
  */
 
 import { tehranDayNumber } from "@/lib/game/streak";
 
-export type GameOfTheDayKind = "mystery" | "grid";
+export type GameOfTheDayKind = "mystery" | "grid" | "starPath";
 
 const dayKeyFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Tehran",
@@ -15,18 +15,20 @@ const dayKeyFormatter = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
 });
 
+const KIND_CYCLE: GameOfTheDayKind[] = ["mystery", "grid", "starPath"];
+
 /** `YYYY-MM-DD` in Asia/Tehran. */
 export function gotdDateKey(date: Date = new Date()): string {
   return dayKeyFormatter.format(date);
 }
 
 /**
- * Odd → mystery, even → grid (Tehran calendar day from `YYYY-MM-DD`).
+ * day % 3 → 1 mystery · 2 grid · 0 starPath (1-indexed day-of-month).
  */
 export function gameOfTheDayKind(dateKey: string): GameOfTheDayKind {
   const day = Number(dateKey.slice(-2));
-  if (!Number.isFinite(day)) return "mystery";
-  return day % 2 === 0 ? "grid" : "mystery";
+  if (!Number.isFinite(day) || day < 1) return "mystery";
+  return KIND_CYCLE[day % 3]!;
 }
 
 export function gameOfTheDayKindNow(now: Date = new Date()): GameOfTheDayKind {
@@ -45,7 +47,8 @@ export function gameOfTheDayRotation(now: Date = new Date()): {
   const dayNum = tehranDayNumber(now);
   const rotatesAt = new Date((dayNum + 1) * 86_400_000);
   const kind = gameOfTheDayKind(dateKey);
-  const nextKind: GameOfTheDayKind = kind === "mystery" ? "grid" : "mystery";
+  const nextDateKey = dayKeyFormatter.format(rotatesAt);
+  const nextKind = gameOfTheDayKind(nextDateKey);
   return {
     dateKey,
     kind,

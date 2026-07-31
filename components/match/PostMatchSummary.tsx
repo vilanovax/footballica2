@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { CountUp } from "@/components/quiz/CountUp";
@@ -27,13 +27,16 @@ export type PostMatchSummaryProps = {
 
 const sectionMotion = {
   outcome: { delay: 0 },
-  rewards: { delay: 0.18 },
-  achievements: { delay: 0.38 },
+  rewards: { delay: 0.12 },
+  achievements: { delay: 0.28 },
 } as const;
 
 /**
- * Shared end-of-match shell — Outcome → Rewards → Achievements → sticky CTAs.
+ * Shared end-of-match shell — Outcome → Rewards → Achievements → in-flow CTA dock.
  * Mode screens only map settle data into these four sections.
+ *
+ * Dock is in-document (not fixed): AppShell already clears BottomNav when present;
+ * immersive arenas (penalty/quick) have no nav — fixed+nav-offset left a dead gap.
  */
 export function PostMatchSummary({
   outcome,
@@ -43,6 +46,7 @@ export function PostMatchSummary({
   celebrateBadges = true,
 }: PostMatchSummaryProps) {
   const { t, locale } = useTranslation();
+  const reduceMotion = useReducedMotion();
   const badges = achievements?.badges ?? [];
   const [badgesDismissed, setBadgesDismissed] = useState(false);
   const showBadgePopup =
@@ -84,6 +88,8 @@ export function PostMatchSummary({
         ? "text-accent-deep"
         : "text-muted-foreground";
 
+  const dualCtas = Boolean(ctas.primary && ctas.secondary && !ctas.tertiary);
+
   return (
     <>
       {showBadgePopup && (
@@ -94,26 +100,32 @@ export function PostMatchSummary({
       )}
 
       <section className="relative flex min-h-0 flex-1 flex-col">
-        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain px-0.5 pb-4 text-center">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-0.5 pb-3 text-center">
           {/* ── 1. Outcome ─────────────────────────────────────────── */}
           <motion.div
-            initial={{ opacity: 0, y: 16, scale: 0.96 }}
+            initial={
+              reduceMotion ? false : { opacity: 0, y: 14, scale: 0.97 }
+            }
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{
               type: "spring",
-              stiffness: 260,
-              damping: 20,
+              stiffness: 280,
+              damping: 22,
               delay: sectionMotion.outcome.delay,
             }}
-            className="flex flex-col items-center gap-3"
+            className="flex flex-col items-center gap-2.5"
           >
             <motion.div
-              animate={{ rotate: [0, -6, 6, 0], scale: [1, 1.08, 1] }}
+              animate={
+                reduceMotion
+                  ? undefined
+                  : { rotate: [0, -6, 6, 0], scale: [1, 1.08, 1] }
+              }
               transition={{ duration: 0.55, delay: 0.05 }}
               className={
                 outcome.heroSrc
-                  ? "flex h-20 w-20 items-center justify-center"
-                  : "text-6xl"
+                  ? "flex h-[4.5rem] w-[4.5rem] items-center justify-center"
+                  : "text-5xl"
               }
               aria-hidden
             >
@@ -123,25 +135,25 @@ export function PostMatchSummary({
                   src={outcome.heroSrc}
                   alt=""
                   draggable={false}
-                  className="h-20 w-20 object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.2)]"
+                  className="h-[4.5rem] w-[4.5rem] object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.2)]"
                 />
               ) : (
                 outcome.emoji
               )}
             </motion.div>
             <div>
-              <h1 className="font-display text-3xl font-bold text-foreground">
+              <h1 className="font-display text-2xl font-black text-foreground sm:text-3xl">
                 {outcome.title}
               </h1>
               {outcome.subtitle && (
-                <p className="mt-1 font-display text-lg font-semibold text-muted-foreground">
+                <p className="mt-0.5 font-display text-base font-semibold text-muted-foreground">
                   {outcome.subtitle}
                 </p>
               )}
               {outcome.hint && (
                 <p
                   className={[
-                    "mt-2 font-display text-sm font-bold",
+                    "mt-1.5 font-display text-sm font-bold",
                     hintToneClass,
                   ].join(" ")}
                 >
@@ -151,23 +163,25 @@ export function PostMatchSummary({
             </div>
 
             {outcome.chips && outcome.chips.length > 0 && (
-              <div className="flex flex-wrap items-center justify-center gap-4">
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 {outcome.chips.map((chip, i) => (
                   <motion.div
                     key={chip.key}
-                    initial={{ opacity: 0, scale: 0.7 }}
+                    initial={
+                      reduceMotion ? false : { opacity: 0, scale: 0.85 }
+                    }
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{
                       type: "spring",
-                      stiffness: 300,
-                      damping: 14,
-                      delay: 0.2 + i * 0.06,
+                      stiffness: 320,
+                      damping: 16,
+                      delay: 0.15 + i * 0.05,
                     }}
                     className={
                       chip.bare
-                        ? "inline-flex items-center gap-1.5 font-display text-base font-black text-foreground"
+                        ? "inline-flex items-center gap-1.5 font-display text-sm font-black text-foreground"
                         : [
-                            "inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-display text-sm font-bold",
+                            "inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-sm font-bold shadow-fantasy-sm",
                             chip.tone === "secondary"
                               ? "bg-secondary/15 text-secondary"
                               : chip.tone === "muted"
@@ -183,7 +197,7 @@ export function PostMatchSummary({
                         alt=""
                         aria-hidden
                         draggable={false}
-                        className="h-7 w-7 object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+                        className="h-6 w-6 object-contain"
                       />
                     ) : null}
                     <span className="tabular-nums">{chip.label}</span>
@@ -197,28 +211,26 @@ export function PostMatchSummary({
             )}
           </motion.div>
 
-          {/* ── 2. Rewards — loot pile (earned) + club balance ───── */}
+          {/* ── 2. Rewards board ───────────────────────────────────── */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={reduceMotion ? false : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{
               type: "spring",
-              stiffness: 240,
+              stiffness: 260,
               damping: 22,
               delay: sectionMotion.rewards.delay,
             }}
-            className="flex w-full flex-col gap-4"
+            className="w-full rounded-bubble-xl border border-border/70 bg-surface/90 p-4 shadow-fantasy-sm"
           >
-            <div className="flex flex-col items-center gap-0.5">
-              <p className="font-display text-lg font-black tracking-tight text-foreground">
-                {t("result.rewardsApplied")}
-              </p>
-              <p className="font-display text-[11px] font-bold uppercase tracking-widest text-primary">
-                {t("result.rewardsSection")}
-              </p>
-            </div>
+            <p className="font-display text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+              {t("result.rewardsSection")}
+            </p>
+            <p className="mt-0.5 font-display text-base font-black text-foreground">
+              {t("result.rewardsApplied")}
+            </p>
 
-            <div className="flex items-end justify-around gap-1 px-0.5">
+            <div className="mt-3 flex items-end justify-around gap-1">
               {(
                 [
                   {
@@ -227,7 +239,7 @@ export function PostMatchSummary({
                     label: t("result.coins"),
                     amount: rewards.coins,
                     tone: "text-accent-deep",
-                    glow: "shadow-[0_0_18px_rgba(234,179,8,0.35)]",
+                    glow: "shadow-[0_0_16px_rgba(234,179,8,0.3)]",
                   },
                   {
                     key: "xp" as const,
@@ -235,7 +247,7 @@ export function PostMatchSummary({
                     label: "",
                     amount: rewards.xp,
                     tone: "text-primary",
-                    glow: "shadow-[0_0_18px_rgba(0,209,102,0.3)]",
+                    glow: "shadow-[0_0_16px_rgba(0,209,102,0.28)]",
                   },
                   {
                     key: "fans" as const,
@@ -243,7 +255,7 @@ export function PostMatchSummary({
                     label: t("result.fans"),
                     amount: rewards.fans,
                     tone: "text-secondary",
-                    glow: "shadow-[0_0_18px_rgba(255,90,54,0.3)]",
+                    glow: "shadow-[0_0_16px_rgba(255,90,54,0.28)]",
                   },
                 ] as const
               ).map((r, i) => {
@@ -251,33 +263,29 @@ export function PostMatchSummary({
                 return (
                   <motion.div
                     key={r.key}
-                    initial={{ opacity: 0, y: 16, scale: 0.8 }}
+                    initial={
+                      reduceMotion ? false : { opacity: 0, y: 12, scale: 0.88 }
+                    }
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{
                       type: "spring",
                       stiffness: 340,
                       damping: 16,
-                      delay: 0.22 + i * 0.08,
+                      delay: 0.16 + i * 0.06,
                     }}
-                    className="flex min-w-0 flex-1 flex-col items-center gap-1.5"
+                    className="flex min-w-0 flex-1 flex-col items-center gap-1"
                   >
-                    <motion.div
+                    <div
                       className={[
                         "rounded-full",
                         earned ? r.glow : "opacity-35 grayscale",
                       ].join(" ")}
-                      animate={
-                        earned
-                          ? { y: [0, -8, 0], scale: [1, 1.14, 1] }
-                          : undefined
-                      }
-                      transition={{ duration: 0.6, delay: 0.35 + i * 0.09 }}
                     >
                       <ResourceIcon kind={r.kind} size="xl" />
-                    </motion.div>
+                    </div>
                     <p
                       className={[
-                        "font-display text-[1.75rem] font-black tabular-nums leading-none",
+                        "font-display text-2xl font-black tabular-nums leading-none",
                         earned ? r.tone : "text-muted-foreground",
                       ].join(" ")}
                     >
@@ -286,14 +294,14 @@ export function PostMatchSummary({
                           value={r.amount}
                           locale={locale}
                           prefix={t("result.earnedPrefix")}
-                          delay={0.25 + i * 0.06}
+                          delay={0.18 + i * 0.05}
                         />
                       ) : (
                         `${t("result.earnedPrefix")}${toLocaleDigits(0, locale)}`
                       )}
                     </p>
                     {r.label ? (
-                      <p className="font-display text-xs font-extrabold text-muted-foreground">
+                      <p className="font-display text-[11px] font-extrabold text-muted-foreground">
                         {r.label}
                       </p>
                     ) : null}
@@ -303,7 +311,7 @@ export function PostMatchSummary({
             </div>
 
             {bonusLines.length > 0 && (
-              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-border/50 pt-2.5">
                 {bonusLines.map((line) => {
                   const unitKey = line.unit.toLowerCase();
                   const iconKind =
@@ -336,25 +344,23 @@ export function PostMatchSummary({
             )}
 
             {rewards.balances && (
-              <div className="mx-auto flex w-full max-w-[20rem] flex-col items-center gap-1.5 border-t border-border/60 pt-3">
-                <p className="font-display text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-2xl bg-muted/60 px-3 py-2 font-display text-xs font-extrabold tabular-nums text-foreground/85">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   {t("result.balanceAfter")}
-                </p>
-                <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 font-display text-sm font-extrabold tabular-nums text-foreground/85">
-                  <span className="inline-flex items-center gap-1.5">
-                    <ResourceIcon kind="coin" size="sm" />
-                    {toLocaleDigits(rewards.balances.coins, locale)}
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <ResourceIcon kind="fans" size="sm" />
-                    {toLocaleDigits(rewards.balances.fans, locale)}
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <ResourceIcon kind="energy" size="sm" />
-                    {toLocaleDigits(rewards.balances.stamina, locale)}/
-                    {toLocaleDigits(rewards.balances.maxStamina, locale)}
-                  </span>
-                </div>
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <ResourceIcon kind="coin" size="sm" />
+                  {toLocaleDigits(rewards.balances.coins, locale)}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <ResourceIcon kind="fans" size="sm" />
+                  {toLocaleDigits(rewards.balances.fans, locale)}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <ResourceIcon kind="energy" size="sm" />
+                  {toLocaleDigits(rewards.balances.stamina, locale)}/
+                  {toLocaleDigits(rewards.balances.maxStamina, locale)}
+                </span>
               </div>
             )}
           </motion.div>
@@ -362,42 +368,41 @@ export function PostMatchSummary({
           {/* ── 3. Achievements ────────────────────────────────────── */}
           {hasAchievements && (
             <motion.div
-              initial={{ opacity: 0, y: 22 }}
+              initial={reduceMotion ? false : { opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
                 type: "spring",
-                stiffness: 240,
+                stiffness: 260,
                 damping: 22,
                 delay: sectionMotion.achievements.delay,
               }}
-              className="flex w-full flex-col gap-3"
+              className="flex w-full flex-col gap-2.5"
             >
-              <p className="px-1 text-start font-display text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                {t("result.achievementsSection")}
-              </p>
-
-              {achievements?.streakNote && (
-                <p className="font-display text-xs font-bold text-secondary">
-                  {achievements.streakNote}
+              <div className="flex items-center justify-between gap-2 px-0.5">
+                <p className="font-display text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                  {t("result.achievementsSection")}
                 </p>
-              )}
+                {achievements?.streakNote && (
+                  <span className="inline-flex max-w-[70%] items-center gap-1 rounded-full bg-secondary/15 px-2.5 py-1 font-display text-[11px] font-bold text-secondary">
+                    <span aria-hidden>🔥</span>
+                    <span className="truncate">{achievements.streakNote}</span>
+                  </span>
+                )}
+              </div>
 
               {trophies.length > 0 && (
                 <div className="flex flex-col gap-2">
                   {trophies.map((trophy, i) => (
                     <motion.div
                       key={trophy.key}
-                      initial={{ opacity: 0, scale: 0.92, y: 8 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 280,
-                        damping: 16,
-                        delay: 0.42 + i * 0.06,
-                      }}
-                      className="flex items-center gap-3 rounded-bubble border-2 border-secondary/40 bg-secondary/10 px-4 py-3 text-start shadow-fantasy-sm"
+                      initial={
+                        reduceMotion ? false : { opacity: 0, y: 8 }
+                      }
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.32 + i * 0.05 }}
+                      className="flex items-center gap-3 rounded-bubble border-2 border-secondary/35 bg-secondary/10 px-3.5 py-3 text-start shadow-fantasy-sm"
                     >
-                      <span className="text-3xl" aria-hidden>
+                      <span className="text-2xl" aria-hidden>
                         {trophy.emoji}
                       </span>
                       <div className="min-w-0 flex-1">
@@ -434,8 +439,8 @@ export function PostMatchSummary({
               )}
 
               {level && (
-                <div className="w-full rounded-bubble border border-border bg-surface p-4 shadow-fantasy">
-                  <div className="flex items-center justify-between">
+                <div className="w-full rounded-bubble border border-border bg-surface p-3.5 text-start shadow-fantasy-sm">
+                  <div className="flex items-center justify-between gap-2">
                     <span className="font-display text-sm font-bold text-primary">
                       {t("result.level", {
                         n: toLocaleDigits(level.level, locale),
@@ -449,7 +454,7 @@ export function PostMatchSummary({
                       <ResourceIcon kind="xp" size="sm" />
                     </span>
                   </div>
-                  <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-muted">
+                  <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-muted">
                     <motion.div
                       className="h-full rounded-full bg-linear-to-r from-primary to-secondary"
                       initial={{
@@ -459,23 +464,20 @@ export function PostMatchSummary({
                         width: `${Math.round(level.progress * 100)}%`,
                       }}
                       transition={{
-                        duration: 0.9,
-                        delay: 0.5,
+                        duration: 0.85,
+                        delay: 0.4,
                         ease: "easeOut",
                       }}
                     />
                   </div>
                   {level.levelUp && (
                     <motion.div
-                      initial={{ opacity: 0, y: 8, scale: 0.9 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 260,
-                        damping: 16,
-                        delay: 0.7,
-                      }}
-                      className="mt-3 flex flex-wrap items-center justify-center gap-x-2 rounded-bubble bg-accent/15 px-3 py-2 font-display text-sm font-bold text-accent-deep"
+                      initial={
+                        reduceMotion ? false : { opacity: 0, y: 6 }
+                      }
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.55 }}
+                      className="mt-2.5 flex flex-wrap items-center justify-center gap-x-2 rounded-2xl bg-accent/15 px-3 py-2 font-display text-sm font-bold text-accent-deep"
                     >
                       <span>🎉 {t("result.levelUp")}</span>
                       <span className="text-muted-foreground">·</span>
@@ -494,31 +496,29 @@ export function PostMatchSummary({
 
               {achievements?.milestone && (
                 <motion.div
-                  initial={{ opacity: 0, y: 12 }}
+                  initial={reduceMotion ? false : { opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    delay: 0.55,
-                    type: "spring",
-                    stiffness: 220,
-                    damping: 20,
-                  }}
-                  className="w-full rounded-bubble border-2 border-accent/40 bg-accent/10 p-4 text-start shadow-fantasy"
+                  transition={{ delay: 0.42 }}
+                  className="w-full rounded-bubble border border-accent/35 bg-accent/10 p-3.5 text-start shadow-fantasy-sm"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-3xl" aria-hidden>
+                    <span
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-surface text-2xl shadow-fantasy-sm"
+                      aria-hidden
+                    >
                       {achievements.milestone.icon}
                     </span>
-                    <div className="flex-1">
-                      <p className="font-display text-[0.7rem] font-bold uppercase tracking-widest text-accent-deep">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-display text-[0.65rem] font-bold uppercase tracking-widest text-accent-deep">
                         {achievements.milestone.eyebrow}
                       </p>
-                      <p className="mt-0.5 font-display text-sm font-bold text-foreground">
+                      <p className="mt-0.5 font-display text-sm font-bold leading-snug text-foreground">
                         {achievements.milestone.body}
                       </p>
                     </div>
                   </div>
                   {achievements.milestone.fill != null && (
-                    <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-muted">
                       <motion.div
                         className="h-full rounded-full bg-linear-to-r from-accent to-secondary"
                         initial={{ width: 0 }}
@@ -529,8 +529,8 @@ export function PostMatchSummary({
                           )}%`,
                         }}
                         transition={{
-                          duration: 0.9,
-                          delay: 0.75,
+                          duration: 0.85,
+                          delay: 0.55,
                           ease: "easeOut",
                         }}
                       />
@@ -542,38 +542,40 @@ export function PostMatchSummary({
           )}
         </div>
 
-        {/* Spacer: CTA stack (~9.5rem) + BottomNav (spacing.nav) + safe area */}
-        <div
-          aria-hidden
-          className="h-[calc(9.5rem+theme(spacing.nav)+env(safe-area-inset-bottom,0px))] shrink-0"
-        />
-
-        {/* ── 4. Fixed CTA dock — sits above BottomNav ───────────── */}
+        {/* In-flow dock — clears fantasy button 3D shadow; no fixed/nav offset */}
         <motion.footer
-          initial={{ opacity: 0, y: 12 }}
+          initial={reduceMotion ? false : { opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.45 }}
-          className="pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-mobile px-4 pb-[calc(theme(spacing.nav)+env(safe-area-inset-bottom,0px))] pt-2"
+          transition={{ delay: 0.35 }}
+          className="relative z-20 shrink-0 border-t border-border/60 bg-background/95 px-0.5 pt-3 pb-[max(0.25rem,env(safe-area-inset-bottom,0px))] backdrop-blur-md"
         >
-          <div className="pointer-events-auto flex flex-col gap-2.5 rounded-t-bubble-lg border-t border-border/50 bg-background/95 px-0.5 pt-3 backdrop-blur-md">
-            {ctas.notice && (
-              <div className="w-full rounded-bubble border border-accent/40 bg-accent/10 px-4 py-3 text-center font-display text-sm font-bold text-accent-deep">
-                {ctas.notice}
-              </div>
-            )}
-            {ctas.primary && (
-              <CtaButton cta={ctas.primary} fallbackVariant="primary" />
-            )}
-            {ctas.secondary && (
-              <CtaButton
-                cta={ctas.secondary}
-                fallbackVariant={ctas.primary ? "accent" : "primary"}
-              />
-            )}
-            {ctas.tertiary && (
-              <CtaButton cta={ctas.tertiary} fallbackVariant="secondary" />
-            )}
-          </div>
+          {ctas.notice && (
+            <div className="mb-2.5 w-full rounded-bubble border border-accent/40 bg-accent/10 px-3 py-2.5 text-center font-display text-sm font-bold text-accent-deep">
+              {ctas.notice}
+            </div>
+          )}
+
+          {dualCtas ? (
+            <div className="flex flex-col gap-2.5">
+              <CtaButton cta={ctas.primary!} fallbackVariant="primary" />
+              <CtaButton cta={ctas.secondary!} fallbackVariant="accent" />
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {ctas.primary && (
+                <CtaButton cta={ctas.primary} fallbackVariant="primary" />
+              )}
+              {ctas.secondary && (
+                <CtaButton
+                  cta={ctas.secondary}
+                  fallbackVariant={ctas.primary ? "accent" : "primary"}
+                />
+              )}
+              {ctas.tertiary && (
+                <CtaButton cta={ctas.tertiary} fallbackVariant="secondary" />
+              )}
+            </div>
+          )}
         </motion.footer>
       </section>
     </>
@@ -606,7 +608,7 @@ function CtaButton({
       disabled={cta.disabled}
       onClick={cta.onClick}
       className={[
-        "btn-fantasy w-full justify-center disabled:opacity-50",
+        "btn-fantasy mb-0.5 min-h-touch w-full justify-center text-base disabled:opacity-50",
         variant === "accent" ? "btn-fantasy-accent" : "btn-fantasy-primary",
       ].join(" ")}
     >

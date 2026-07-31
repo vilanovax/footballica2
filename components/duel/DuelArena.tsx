@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { getDuel } from "@/actions/duel/getDuel";
 import { selectDuelCategory } from "@/actions/duel/selectCategory";
+import { selectDuelMemory } from "@/actions/duel/selectMemory";
 import { submitDuelAttack } from "@/actions/duel/submitAttack";
 import {
   beginDuelDefend,
@@ -141,8 +142,11 @@ function derivePhase(
     if (questions && questions.length > 0) {
       return { kind: "quiz", mode: "attack", questions };
     }
-    if (duel.draftOptions && duel.draftOptions.length > 0) {
-      return { kind: "draft", options: duel.draftOptions };
+    if (
+      (duel.draftOptions && duel.draftOptions.length > 0) ||
+      duel.memoryAvailable
+    ) {
+      return { kind: "draft", options: duel.draftOptions ?? [] };
     }
     return { kind: "loading" };
   }
@@ -447,6 +451,29 @@ export function DuelArena({
     });
   }
 
+  function handlePickMemory() {
+    startTransition(async () => {
+      const res = await selectDuelMemory(duelId);
+      if (!res.ok) {
+        if (res.error === "memory_already_used") {
+          toast.error(t("duel.errMemoryUsed"));
+        } else {
+          toast.error(t("duel.errGeneric"));
+        }
+        void refresh();
+        return;
+      }
+      setDuel(res.duel);
+      setQuestions(null);
+      setMemoryBoard(res.board);
+      setMemoryEndsAt(null);
+      setPhase({ kind: "loading" });
+      playSound("whistle");
+      // beginMemoryTurn effect will stamp the clock + open the board.
+      void refresh();
+    });
+  }
+
   function handleAttackDone(answers: DuelAnswerSubmission[]) {
     startTransition(async () => {
       const res = await submitDuelAttack(duelId, answers);
@@ -545,8 +572,10 @@ export function DuelArena({
     return (
       <DraftPicker
         options={phase.options}
+        memoryAvailable={duel.memoryAvailable}
         pending={pending}
         onPick={handlePickCategory}
+        onPickMemory={handlePickMemory}
       />
     );
   }

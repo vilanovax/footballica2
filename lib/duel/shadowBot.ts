@@ -23,7 +23,11 @@ import {
   tallyRoundWins,
 } from "@/lib/duel";
 import { creditDuelMissions } from "@/lib/game/missionEngine";
-import { memoryRoundCreateData } from "@/lib/duel/createMemoryRound";
+import {
+  duelHasMemoryRound,
+  memoryRoundCreateData,
+} from "@/lib/duel/createMemoryRound";
+import { quizRoundCreateData } from "@/lib/duel/createQuizRound";
 import { parseMemoryBoard } from "@/lib/duel/memoryBoard";
 import { fabricateBotMemoryLog } from "@/lib/duel/memoryBot";
 
@@ -159,12 +163,11 @@ async function playDefendTurn(
     duel.opponentCorrect + (!isChallenger ? defenseCorrect : 0);
 
   if (nextStatus === "B_ATTACKING") {
-    // Create MEMORY round 2 shell — shadow will attack next loop iteration.
-    const config = await getGameConfig();
-    const memoryData = await memoryRoundCreateData({
-      duelId: duel.id,
+    // Round 2 QUIZ draft — attacker may still lock Memory if unused.
+    const quizData = await quizRoundCreateData({
       attackerId: duel.opponentId!,
-      pairCount: config.duel.memoryPairs,
+      roundNumber: 2,
+      excludeCategoryIds: usedCategoryIdsFromRounds(duel.rounds),
     });
     await prisma.$transaction(async (tx) => {
       await tx.duelRound.update({
@@ -178,11 +181,10 @@ async function playDefendTurn(
       await tx.duelRound.create({
         data: {
           duelId: duel.id,
-          roundNumber: memoryData.roundNumber,
-          roundType: memoryData.roundType,
-          attackerId: memoryData.attackerId,
-          draftOptionIds: memoryData.draftOptionIds,
-          boardJson: memoryData.boardJson,
+          roundNumber: quizData.roundNumber,
+          roundType: quizData.roundType,
+          attackerId: quizData.attackerId,
+          draftOptionIds: quizData.draftOptionIds,
         },
       });
       await tx.duelMatch.update({
@@ -308,14 +310,22 @@ async function playAttackTurn(
   if (!round) return false;
   if (round.attackSubmittedAt) return false;
 
-  // Round 2 MEMORY attack
-  if (round.roundType === "MEMORY" || roundNumber === 2) {
+  const memoryAvailable =
+    !duelHasMemoryRound(duel.rounds.filter((r) => r.id !== round.id)) &&
+    round.roundType !== "MEMORY";
+
+  // Prefer Memory when still available (keeps old R2 flavor if R1 was quiz).
+  const playMemory =
+    round.roundType === "MEMORY" || (memoryAvailable && roundNumber === 2);
+
+  if (playMemory) {
     let board = parseMemoryBoard(round.boardJson);
     if (!board) {
       const memoryData = await memoryRoundCreateData({
         duelId: duel.id,
         attackerId: actorId,
         pairCount: duelCfg.memoryPairs,
+        roundNumber,
       });
       board = memoryData.board;
       await prisma.duelRound.update({

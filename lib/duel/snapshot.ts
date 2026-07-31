@@ -77,6 +77,11 @@ export type DuelSnapshot = {
   rounds: DuelRoundSnapshot[];
   /** Draft categories for the active attack round (when picking). */
   draftOptions?: DuelCategoryOption[];
+  /**
+   * Attacker may lock Memory on this draft turn — false once any round
+   * in the duel is already MEMORY (one Memory pick per match).
+   */
+  memoryAvailable: boolean;
   challenger: DuelPartySnapshot | null;
   opponent: DuelPartySnapshot | null;
 };
@@ -142,6 +147,22 @@ export function toDuelSnapshot(
     duel.turnUserId === viewerId &&
     (turn.kind === "attack" || turn.kind === "defend");
 
+  const activeRound =
+    turn.roundNumber != null
+      ? duel.rounds.find((r) => r.roundNumber === turn.roundNumber)
+      : null;
+  const memoryUsed = duel.rounds.some((r) => r.roundType === "MEMORY");
+  const questionsLocked =
+    Array.isArray(activeRound?.questionIds) &&
+    (activeRound!.questionIds as unknown[]).length > 0;
+  const memoryAvailable =
+    turn.kind === "attack" &&
+    activeRound != null &&
+    activeRound.roundType === "QUIZ" &&
+    !memoryUsed &&
+    !questionsLocked &&
+    !activeRound.attackSubmittedAt;
+
   return {
     id: duel.id,
     status: duel.status,
@@ -163,6 +184,7 @@ export function toDuelSnapshot(
     youTimedOut,
     youAre,
     draftOptions,
+    memoryAvailable,
     challenger: partyFromUser(duel.challenger),
     opponent: partyFromUser(duel.opponent),
     rounds: duel.rounds

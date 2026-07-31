@@ -80,7 +80,7 @@ function mapRound(
   if (!round) {
     return {
       roundNumber,
-      roundType: roundNumber === 2 ? "MEMORY" : "QUIZ",
+      roundType: "QUIZ",
       categoryNameEn: "",
       categoryNameFa: "",
       youAnswers: padAnswers(null, DEFAULT_SLOTS),

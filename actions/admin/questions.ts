@@ -10,6 +10,7 @@ import {
   questionFormSchema,
   QUESTION_STATUSES,
   normalizeExplanation,
+  membershipCategoryIds,
   type QuestionFormValues,
 } from "@/lib/admin/questionSchema";
 
@@ -72,11 +73,19 @@ export async function createQuestion(
   }
   const values = parsed.data;
 
+  const bankIds = membershipCategoryIds(values);
   const category = await prisma.category.findUnique({
     where: { id: values.categoryId },
     select: { nameEn: true, nameFa: true },
   });
   if (!category) return { ok: false, error: "Selected category not found." };
+
+  const bankCount = await prisma.category.count({
+    where: { id: { in: bankIds } },
+  });
+  if (bankCount !== bankIds.length) {
+    return { ok: false, error: "One or more extra categories were not found." };
+  }
 
   try {
     const created = await prisma.question.create({
@@ -99,9 +108,8 @@ export async function createQuestion(
         tags: values.tagIds.length
           ? { connect: values.tagIds.map((id) => ({ id })) }
           : undefined,
-        // Mirror primary into M2N so Draw sees the home bank membership.
         categories: {
-          create: [{ categoryId: values.categoryId }],
+          create: bankIds.map((categoryId) => ({ categoryId })),
         },
       },
       select: { id: true },
@@ -133,11 +141,19 @@ export async function updateQuestion(
   }
   const values = parsed.data;
 
+  const bankIds = membershipCategoryIds(values);
   const category = await prisma.category.findUnique({
     where: { id: values.categoryId },
     select: { nameEn: true, nameFa: true },
   });
   if (!category) return { ok: false, error: "Selected category not found." };
+
+  const bankCount = await prisma.category.count({
+    where: { id: { in: bankIds } },
+  });
+  if (bankCount !== bankIds.length) {
+    return { ok: false, error: "One or more extra categories were not found." };
+  }
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -163,16 +179,17 @@ export async function updateQuestion(
           tags: { set: values.tagIds.map((id) => ({ id })) },
         },
       });
-      // Ensure primary category is always a Draw membership (keep extra links).
-      await tx.questionCategory.upsert({
+
+      // Full sync of Draw memberships (primary + extras).
+      await tx.questionCategory.deleteMany({
         where: {
-          questionId_categoryId: {
-            questionId: id,
-            categoryId: values.categoryId,
-          },
+          questionId: id,
+          categoryId: { notIn: bankIds },
         },
-        create: { questionId: id, categoryId: values.categoryId },
-        update: {},
+      });
+      await tx.questionCategory.createMany({
+        data: bankIds.map((categoryId) => ({ questionId: id, categoryId })),
+        skipDuplicates: true,
       });
     });
   } catch (err) {

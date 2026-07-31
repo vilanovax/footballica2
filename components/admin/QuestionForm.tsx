@@ -89,10 +89,23 @@ export function QuestionForm({
   const type = form.watch("type");
   const correctIndex = form.watch("correctIndex");
   const isTemporal = form.watch("isTemporal");
+  const categoryId = form.watch("categoryId");
+  const alsoCategoryIds = form.watch("alsoCategoryIds");
 
   useEffect(() => {
     seedFormatDefaults(form, type);
   }, [type, form]);
+
+  // Keep extras free of the primary id when primary changes.
+  useEffect(() => {
+    if (!categoryId) return;
+    if (!alsoCategoryIds.includes(categoryId)) return;
+    form.setValue(
+      "alsoCategoryIds",
+      alsoCategoryIds.filter((id) => id !== categoryId),
+      { shouldDirty: true },
+    );
+  }, [categoryId, alsoCategoryIds, form]);
 
   function onSubmit(values: QuestionFormValues) {
     setServerError(null);
@@ -217,7 +230,7 @@ export function QuestionForm({
               name="categoryId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Category</FormLabel>
+                  <FormLabel>Primary category</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
@@ -232,9 +245,64 @@ export function QuestionForm({
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormDescription>
+                    Home bank for Admin labels. Always included in Draw.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
+            />
+
+            <FormField
+              control={form.control}
+              name="alsoCategoryIds"
+              render={({ field }) => {
+                const extras = categories.filter((c) => c.id !== categoryId);
+                return (
+                  <FormItem className="sm:col-span-2">
+                    <FormLabel>Also in banks (Draw)</FormLabel>
+                    {extras.length === 0 ? (
+                      <FormDescription>
+                        Add more categories in Taxonomy to enable multi-bank
+                        membership.
+                      </FormDescription>
+                    ) : (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {extras.map((c) => {
+                          const selected = field.value.includes(c.id);
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              aria-pressed={selected}
+                              onClick={() =>
+                                field.onChange(
+                                  selected
+                                    ? field.value.filter((id) => id !== c.id)
+                                    : [...field.value, c.id],
+                                )
+                              }
+                            >
+                              <Badge
+                                variant={selected ? "default" : "outline"}
+                                className="cursor-pointer select-none transition-colors"
+                              >
+                                {c.nameEn}
+                              </Badge>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <FormDescription>
+                      Same question can appear in Survival / Duel drafts for
+                      these categories — no duplicate rows. Tags stay for
+                      Live-Ops only.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
 
             <FormField

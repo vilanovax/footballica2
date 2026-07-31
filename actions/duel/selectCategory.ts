@@ -73,6 +73,9 @@ export async function selectDuelCategory(
 
     const round = duel.rounds.find((r) => r.roundNumber === turn.roundNumber);
     if (!round) return { ok: false, error: "not_found" };
+    if (round.roundType === "MEMORY") {
+      return { ok: false, error: "already_locked" };
+    }
 
     const draftIds = Array.isArray(round.draftOptionIds)
       ? (round.draftOptionIds as string[])

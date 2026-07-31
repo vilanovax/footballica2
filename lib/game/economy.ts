@@ -131,7 +131,7 @@ export type GameConfig = {
     formatBiasEveryN: number;
   };
   /**
-   * Game of the Day (Mystery odd / Grid even Tehran days).
+   * Game of the Day (Mystery / Grid / Star Path rotation).
    * Direct Club.coins + User.xp grants — no global wallet ledger.
    */
   gotd: {
@@ -139,9 +139,15 @@ export type GameConfig = {
     mysteryWinXp: number;
     gridWinCoins: number;
     gridWinXp: number;
+    /** Star Path max payout (score 100 — first clue). */
+    starPathWinCoinsMax: number;
+    starPathWinXpMax: number;
+    /** Star Path min payout (score 25 — fourth clue). */
+    starPathWinCoinsMin: number;
+    starPathWinXpMin: number;
     /** Extra coin fraction per streak day, e.g. 0.1 → +10% of base per day. */
     streakMultiplierPerDay: number;
-    /** Flat coin bonus for perfect clear (Mystery 1-guess / Grid 0 mistakes). */
+    /** Flat coin bonus for perfect clear (Mystery 1-guess / Grid 0 mistakes / Star Path 100). */
     perfectClearBonusCoins: number;
   };
 };
@@ -214,6 +220,10 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     mysteryWinXp: 30,
     gridWinCoins: 50,
     gridWinXp: 35,
+    starPathWinCoinsMax: 45,
+    starPathWinXpMax: 35,
+    starPathWinCoinsMin: 15,
+    starPathWinXpMin: 12,
     streakMultiplierPerDay: 0.1,
     perfectClearBonusCoins: 25,
   },
@@ -391,6 +401,22 @@ export function mergeGameConfig(raw: unknown): GameConfig {
         Math.round(num(g.gridWinCoins, D.gotd.gridWinCoins)),
       ),
       gridWinXp: Math.max(0, Math.round(num(g.gridWinXp, D.gotd.gridWinXp))),
+      starPathWinCoinsMax: Math.max(
+        0,
+        Math.round(num(g.starPathWinCoinsMax, D.gotd.starPathWinCoinsMax)),
+      ),
+      starPathWinXpMax: Math.max(
+        0,
+        Math.round(num(g.starPathWinXpMax, D.gotd.starPathWinXpMax)),
+      ),
+      starPathWinCoinsMin: Math.max(
+        0,
+        Math.round(num(g.starPathWinCoinsMin, D.gotd.starPathWinCoinsMin)),
+      ),
+      starPathWinXpMin: Math.max(
+        0,
+        Math.round(num(g.starPathWinXpMin, D.gotd.starPathWinXpMin)),
+      ),
       streakMultiplierPerDay: Math.min(
         1,
         Math.max(

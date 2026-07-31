@@ -70,7 +70,10 @@ export default async function EditQuestionPage({
   const [question, categories, tags] = await Promise.all([
     prisma.question.findUnique({
       where: { id },
-      include: { tags: { select: { id: true } } },
+      include: {
+        tags: { select: { id: true } },
+        categories: { select: { categoryId: true } },
+      },
     }),
     prisma.category.findMany({
       where: { isActive: true },
@@ -95,10 +98,16 @@ export default async function EditQuestionPage({
     fa?: string;
   };
 
+  const primaryId = question.categoryId ?? "";
+  const alsoCategoryIds = question.categories
+    .map((l) => l.categoryId)
+    .filter((cid) => cid !== primaryId);
+
   const initialValues: QuestionFormValues = {
     type: question.type,
     mediaUrl: question.mediaUrl ?? "",
-    categoryId: question.categoryId ?? "",
+    categoryId: primaryId,
+    alsoCategoryIds,
     difficulty: question.difficulty,
     correctIndex: question.correctIndex,
     status: question.status,

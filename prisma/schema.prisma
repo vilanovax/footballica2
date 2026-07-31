@@ -74,6 +74,13 @@ enum DailyGridAttemptStatus {
   FAILED
 }
 
+/// Star Path (مسیر ستاره) daily attempt — sequential club-clue puzzle.
+enum DailyStarPathAttemptStatus {
+  IN_PROGRESS
+  SOLVED
+  FAILED
+}
+
 enum QuestionStatus {
   DRAFT
   IN_REVIEW
@@ -283,21 +290,28 @@ model Club {
   gridSolves        Int       @default(0)
   lastGridDate      DateTime?
 
+  // ── Star Path daily streak (GotD #3 — isolated) ──
+  starPathStreak        Int       @default(0)
+  longestStarPathStreak Int       @default(0)
+  starPathSolves        Int       @default(0)
+  lastStarPathDate      DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  matches         Match[]
-  boosters        ActiveBooster[]
-  badges          ClubBadge[]
-  missionBatches  ClubMissionBatch[]
-  missions        ClubMission[]
-  purchases       PurchaseLog[]
-  adminGrants     AdminCoinGrant[]
-  categoryRecords CategoryRecord[]
-  challengeAccess ClubChallengeAccess[]
-  challengeRuns   ClubChallengeRun[]
-  mysteryAttempts DailyMysteryAttempt[]
-  gridAttempts    DailyGridAttempt[]
+  matches          Match[]
+  boosters         ActiveBooster[]
+  badges           ClubBadge[]
+  missionBatches   ClubMissionBatch[]
+  missions         ClubMission[]
+  purchases        PurchaseLog[]
+  adminGrants      AdminCoinGrant[]
+  categoryRecords  CategoryRecord[]
+  challengeAccess  ClubChallengeAccess[]
+  challengeRuns    ClubChallengeRun[]
+  mysteryAttempts  DailyMysteryAttempt[]
+  gridAttempts     DailyGridAttempt[]
+  starPathAttempts DailyStarPathAttempt[]
 
   @@index([fans])
   @@index([coins])
@@ -946,7 +960,8 @@ model FootballPlayer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  puzzles DailyMysteryPuzzle[]
+  puzzles         DailyMysteryPuzzle[]
+  starPathPuzzles DailyStarPathPuzzle[]
 
   @@index([isActive])
   @@index([nameEn])
@@ -1060,6 +1075,71 @@ model DailyGridAttempt {
   solvedAt  DateTime?
 
   /// Lightweight GotD payout audit: { coinsEarned, xpEarned, streakBonus, … }.
+  rewardJson Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clubId, puzzleId])
+  @@index([clubId, status])
+  @@index([puzzleId])
+  @@index([solvedAt])
+}
+
+// ─── Daily Star Path (مسیر ستاره) — GotD #3 ──────────────────────────────────
+// Isolated ledger — does NOT write Match rows. Clues from FootballPlayer.pastClubs.
+
+/// One Star Path puzzle published per Tehran calendar day.
+model DailyStarPathPuzzle {
+  id String @id @default(cuid())
+
+  /// Tehran calendar day key, e.g. "2026-07-31". Unique — one puzzle per day.
+  dateKey String @unique
+
+  /// FK → FootballPlayer.slug (target to guess).
+  targetPlayerId String
+  targetPlayer   FootballPlayer @relation(fields: [targetPlayerId], references: [slug], onDelete: Restrict)
+
+  /// Snapshot of club steps for the day: [{ "name": "Sporting CP" }, …].
+  /// Frozen at puzzle create so catalog edits don't change mid-day.
+  pathJson Json
+
+  /// Optional Live-Ops knobs: maxClues (default 4).
+  config Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attempts DailyStarPathAttempt[]
+
+  @@index([targetPlayerId])
+}
+
+/// One attempt per club per Star Path puzzle.
+model DailyStarPathAttempt {
+  id String @id @default(cuid())
+
+  clubId String
+  club   Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  puzzleId String
+  puzzle   DailyStarPathPuzzle @relation(fields: [puzzleId], references: [id], onDelete: Cascade)
+
+  status DailyStarPathAttemptStatus @default(IN_PROGRESS)
+
+  /// How many club clues are visible (1..maxClues). Starts at 1.
+  cluesRevealed Int @default(1)
+
+  /// Score when SOLVED: 100 | 75 | 50 | 25. FAILED → 0.
+  score Int @default(0)
+
+  /// Guess log: [{ playerId, correct, at }].
+  guessesJson Json @default("[]")
+
+  shareCode String?
+  solvedAt  DateTime?
+
+  /// Lightweight GotD payout audit: { coinsEarned, xpEarned, score, … }.
   rewardJson Json?
 
   createdAt DateTime @default(now())

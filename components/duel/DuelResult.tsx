@@ -150,8 +150,8 @@ export function DuelResult({ duel, missions: initialMissions }: DuelResultProps)
         <div className="absolute -inset-e-16 bottom-32 h-52 w-52 rounded-full bg-secondary/15 blur-3xl" />
       </div>
 
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 pt-3">
-        {/* Outcome hero — compact, brand of this result */}
+      {/* Scrollable board — dock stays in-flow below (immersive: no BottomNav). */}
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 pt-3 pb-3">
         <motion.header
           initial={{ opacity: 0, y: 12, scale: 0.97 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -188,7 +188,6 @@ export function DuelResult({ duel, missions: initialMissions }: DuelResultProps)
           variant="result"
         />
 
-        {/* Loot / XP — only when something actually dropped */}
         {weeklyXp > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -217,7 +216,7 @@ export function DuelResult({ duel, missions: initialMissions }: DuelResultProps)
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.28 }}
-            className="mt-3 mb-1"
+            className="mt-3"
           >
             <p className="mb-2 px-1 font-display text-[11px] font-bold uppercase tracking-widest text-white/40">
               {t("duel.scorecard.missionsNudge")}
@@ -225,35 +224,29 @@ export function DuelResult({ duel, missions: initialMissions }: DuelResultProps)
             <MissionProgressBanner missions={missionBoard} />
           </motion.div>
         )}
-
-        {/* Spacer for sticky dock + bottom nav */}
-        <div
-          aria-hidden
-          className="h-[calc(7.25rem+theme(spacing.nav)+env(safe-area-inset-bottom,0px))] shrink-0"
-        />
       </div>
 
-      {/* Sticky dock — Rematch + (Back | Share) so content never sits under 3 full buttons */}
+      {/* In-flow dock — gap clears fantasy button 3D shadow (6px). */}
       <motion.footer
-        initial={{ opacity: 0, y: 16 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-mobile px-3 pb-[calc(theme(spacing.nav)+env(safe-area-inset-bottom,0px))] pt-2"
+        transition={{ delay: 0.15 }}
+        className="relative z-20 shrink-0 border-t border-white/10 bg-[#0c1218]/98 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur-md"
       >
-        <div className="pointer-events-auto flex flex-col gap-2 rounded-t-3xl border-t border-white/10 bg-[#0c1218]/95 px-1 pt-3 backdrop-blur-md">
+        <div className="flex flex-col gap-3">
           <button
             type="button"
             disabled={pending}
             onClick={handleRematch}
-            className="btn-fantasy btn-fantasy-primary min-h-touch w-full justify-center text-base disabled:opacity-50"
+            className="btn-fantasy btn-fantasy-primary mb-0.5 min-h-touch w-full justify-center text-base disabled:opacity-50"
           >
             {pending ? t("duel.starting") : t("duel.scorecard.rematch")}
           </button>
-          <div className="grid grid-cols-[1fr_auto] gap-2">
+          <div className="flex gap-2">
             <button
               type="button"
               onClick={() => router.push("/play/duel")}
-              className="min-h-touch rounded-2xl border border-amber-300/40 bg-amber-400/15 px-4 font-display text-sm font-bold text-amber-100 transition-transform active:scale-[0.98]"
+              className="min-h-touch min-w-0 flex-1 rounded-2xl border border-white/20 bg-white/10 px-4 font-display text-sm font-bold text-white transition-transform active:scale-[0.98]"
             >
               {t("duel.backLobby")}
             </button>
@@ -261,7 +254,7 @@ export function DuelResult({ duel, missions: initialMissions }: DuelResultProps)
               type="button"
               onClick={() => void handleShare()}
               aria-label={t("duel.scorecard.share")}
-              className="min-h-touch min-w-touch rounded-2xl border border-white/15 bg-white/8 px-4 font-display text-sm font-bold text-white/80 transition-transform active:scale-[0.98]"
+              className="min-h-touch shrink-0 rounded-2xl border border-white/15 bg-white/5 px-4 font-display text-sm font-bold text-white/75 transition-transform active:scale-[0.98]"
             >
               {t("duel.scorecard.share")}
             </button>

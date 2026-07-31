@@ -7,8 +7,16 @@ import { normalizeClubName } from "@/lib/auth/blacklist";
 import { botAccuracy } from "@/lib/bots/difficulty";
 import { countCorrect } from "@/lib/duel";
 import type { DuelAnswerLogEntry } from "@/lib/duel/types";
-import { memoryRoundCreateData } from "@/lib/duel/createMemoryRound";
+import {
+  duelHasMemoryRound,
+  memoryRoundCreateData,
+} from "@/lib/duel/createMemoryRound";
+import { quizRoundCreateData } from "@/lib/duel/createQuizRound";
+import { usedCategoryIdsFromRounds } from "@/lib/duel/draw";
+import { drawCategoryQuestions } from "@/lib/duel/draw";
 import { fabricateBotMemoryLog } from "@/lib/duel/memoryBot";
+import { parseMemoryBoard } from "@/lib/duel/memoryBoard";
+import { gradeDuelAnswers } from "@/lib/duel/grade";
 
 export const BOT_EMAIL = "bot@footballica.local";
 const BOT_CLUB_NAME = "Bot United";
@@ -151,6 +159,9 @@ export async function fabricateBotAnswers(
 /**
  * Execute every due bot action for one duel (defense + attack in one shot after delay).
  * Safe to call repeatedly — no-ops when not due / not a bot duel.
+ *
+ * Round formats: Memory once per duel. If human already spent Memory in R1,
+ * bot attacks R2 as QUIZ; otherwise bot prefers Memory for R2.
  */
 export async function runBotTurnIfDue(duelId: string, now = new Date()): Promise<boolean> {
   const duel = await prisma.duelMatch.findUnique({
@@ -169,53 +180,110 @@ export async function runBotTurnIfDue(duelId: string, now = new Date()): Promise
 
   const config = await getGameConfig();
   const round1 = duel.rounds.find((r) => r.roundNumber === 1);
-  if (!round1?.questionIds || !Array.isArray(round1.questionIds)) {
-    return false;
+  if (!round1) return false;
+
+  // ── Defend round 1 (QUIZ or MEMORY) ───────────────────────────────────────
+  let defenseLog: DuelAnswerLogEntry[] | ReturnType<typeof fabricateBotMemoryLog>;
+  let defenseCorrect: number;
+
+  if (round1.roundType === "MEMORY") {
+    const board = parseMemoryBoard(round1.boardJson);
+    if (!board) return false;
+    const mem = fabricateBotMemoryLog(board, difficulty);
+    defenseLog = mem;
+    defenseCorrect = mem.pairsFound;
+  } else {
+    if (!round1.questionIds || !Array.isArray(round1.questionIds)) return false;
+    const qIds = round1.questionIds as string[];
+    const quizLog = await fabricateBotAnswers(qIds, difficulty);
+    defenseLog = quizLog;
+    defenseCorrect = countCorrect(quizLog);
   }
-  const qIds = round1.questionIds as string[];
 
-  // ── Defend round 1 ────────────────────────────────────────────────────────
-  const defenseLog = await fabricateBotAnswers(qIds, difficulty);
-  const defenseCorrect = countCorrect(defenseLog);
+  // ── Attack round 2 ────────────────────────────────────────────────────────
+  const memorySpent = duelHasMemoryRound(duel.rounds);
+  let attackCorrect = 0;
 
-  // ── Attack round 2 (MEMORY) ───────────────────────────────────────────────
-  const memoryData = await memoryRoundCreateData({
-    duelId: duel.id,
-    attackerId: duel.opponentId!,
-    pairCount: config.duel.memoryPairs,
-  });
-  const board = memoryData.board;
-  const memoryAttack = fabricateBotMemoryLog(board, difficulty);
-  const attackCorrect = memoryAttack.pairsFound;
-
-  const challengerCorrect = duel.challengerCorrect + 0;
-  const opponentCorrect =
-    duel.opponentCorrect + defenseCorrect + attackCorrect;
+  const challengerCorrect = duel.challengerCorrect;
+  let opponentCorrect = duel.opponentCorrect + defenseCorrect;
 
   await prisma.$transaction(async (tx) => {
     await tx.duelRound.update({
       where: { id: round1.id },
       data: {
-        defenseAnswers: defenseLog,
+        defenseAnswers: defenseLog as object,
         defenseCorrect,
         defenseSubmittedAt: now,
       },
     });
 
-    await tx.duelRound.create({
-      data: {
+    if (!memorySpent) {
+      const memoryData = await memoryRoundCreateData({
         duelId: duel.id,
-        roundNumber: memoryData.roundNumber,
-        roundType: memoryData.roundType,
-        attackerId: memoryData.attackerId,
-        draftOptionIds: memoryData.draftOptionIds,
-        boardJson: memoryData.boardJson,
-        attackAnswers: memoryAttack,
-        attackCorrect,
-        attackSubmittedAt: now,
-        attackStartedAt: now,
-      },
-    });
+        attackerId: duel.opponentId!,
+        pairCount: config.duel.memoryPairs,
+        roundNumber: 2,
+      });
+      const memoryAttack = fabricateBotMemoryLog(memoryData.board, difficulty);
+      attackCorrect = memoryAttack.pairsFound;
+      opponentCorrect += attackCorrect;
+
+      await tx.duelRound.create({
+        data: {
+          duelId: duel.id,
+          roundNumber: memoryData.roundNumber,
+          roundType: memoryData.roundType,
+          attackerId: memoryData.attackerId,
+          draftOptionIds: memoryData.draftOptionIds,
+          boardJson: memoryData.boardJson,
+          attackAnswers: memoryAttack,
+          attackCorrect,
+          attackSubmittedAt: now,
+          attackStartedAt: now,
+        },
+      });
+    } else {
+      const quizData = await quizRoundCreateData({
+        attackerId: duel.opponentId!,
+        roundNumber: 2,
+        excludeCategoryIds: usedCategoryIdsFromRounds(duel.rounds),
+      });
+      const draftIds = quizData.draftOptionIds as string[];
+      const categoryId = draftIds[0];
+      if (!categoryId) throw new Error("not_enough_categories");
+
+      const attackQs = await drawCategoryQuestions(
+        categoryId,
+        config.duel.questionsPerAttack,
+      );
+      const attackIds = attackQs.map((q) => q.id);
+      const attackLog = await fabricateBotAnswers(attackIds, difficulty);
+      const graded = await gradeDuelAnswers(
+        attackIds,
+        attackLog.map((a) => ({
+          questionId: a.questionId,
+          selectedIndex: a.selectedIndex,
+          ms: a.ms,
+        })),
+      );
+      attackCorrect = countCorrect(graded);
+      opponentCorrect += attackCorrect;
+
+      await tx.duelRound.create({
+        data: {
+          duelId: duel.id,
+          roundNumber: quizData.roundNumber,
+          roundType: "QUIZ",
+          attackerId: quizData.attackerId,
+          draftOptionIds: quizData.draftOptionIds,
+          categoryId,
+          questionIds: attackIds,
+          attackAnswers: graded,
+          attackCorrect,
+          attackSubmittedAt: now,
+        },
+      });
+    }
 
     await tx.duelMatch.update({
       where: { id: duel.id },
@@ -232,8 +300,6 @@ export async function runBotTurnIfDue(duelId: string, now = new Date()): Promise
     });
   });
 
-  // Intermediate B_DEFENDING / B_ATTACKING statuses are collapsed for the bot
-  // batch so the human sees WAITING_A after the simulated delay.
   return true;
 }
 

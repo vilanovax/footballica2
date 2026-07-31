@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import type { DailyMysterySnapshot } from "@/actions/mystery/getDailyMystery";
 import type { DailyGridSnapshot } from "@/actions/grid/getDailyGrid";
+import type { DailyStarPathSnapshot } from "@/actions/starpath/getDailyStarPath";
 import {
   gameOfTheDayKind,
   gameOfTheDayRotation,
@@ -18,31 +19,40 @@ import { playSound } from "@/lib/audio/SoundManager";
 type Props = {
   mystery: DailyMysterySnapshot | null;
   grid?: DailyGridSnapshot | null;
+  starPath?: DailyStarPathSnapshot | null;
   /** ISO timestamp — next Tehran midnight (GotD rotate). */
   rotatesAt?: string | null;
 };
 
 /**
- * Rotating Live-Ops slot — Mystery (odd) or Football Grid (even).
+ * Rotating Live-Ops slot — Mystery / Grid / Star Path (day % 3).
  * ADR 001 / 002 — not a permanent fifth core mode.
  */
 export function GameOfTheDayCard({
   mystery,
   grid = null,
+  starPath = null,
   rotatesAt = null,
 }: Props) {
-  const dateKey = grid?.dateKey ?? mystery?.dateKey ?? "";
+  const dateKey =
+    starPath?.dateKey ?? grid?.dateKey ?? mystery?.dateKey ?? "";
   const kind = gameOfTheDayKind(dateKey || "2026-01-01");
   const rotateIso =
     rotatesAt ?? gameOfTheDayRotation().rotatesAt.toISOString();
 
+  if (kind === "starPath" && starPath) {
+    return <StarPathGotdCard starPath={starPath} rotatesAt={rotateIso} />;
+  }
   if (kind === "grid" && grid) {
     return <GridGotdCard grid={grid} rotatesAt={rotateIso} />;
   }
   if (kind === "mystery" && mystery) {
     return <MysteryGotdCard mystery={mystery} rotatesAt={rotateIso} />;
   }
-  // Fallback if preferred snapshot missing but the other exists.
+  // Fallback if preferred snapshot missing but another exists.
+  if (starPath) {
+    return <StarPathGotdCard starPath={starPath} rotatesAt={rotateIso} />;
+  }
   if (mystery) {
     return <MysteryGotdCard mystery={mystery} rotatesAt={rotateIso} />;
   }
@@ -94,6 +104,54 @@ function MysteryGotdCard({
             })
       }
       href="/play/mystery"
+      cta={cta}
+      rotatesAt={rotatesAt}
+    />
+  );
+}
+
+function StarPathGotdCard({
+  starPath,
+  rotatesAt,
+}: {
+  starPath: DailyStarPathSnapshot;
+  rotatesAt: string;
+}) {
+  const { t, locale } = useTranslation();
+  const done =
+    starPath.status === "SOLVED" || starPath.status === "FAILED";
+  const started =
+    starPath.guesses.length > 0 || starPath.cluesRevealed > 1;
+
+  const blurb = done
+    ? t("play.starPathBlurbDone", {
+        n: toLocaleDigits(starPath.starPathStreak, locale),
+      })
+    : t("play.starPathBlurb", {
+        n: toLocaleDigits(starPath.maxClues, locale),
+      });
+
+  const cta = done
+    ? t("play.starPathCtaResult")
+    : started
+      ? t("play.starPathCtaContinue")
+      : t("play.starPathCta");
+
+  return (
+    <GotdShell
+      kind="starPath"
+      icon="/icons/streak.png"
+      title={t("play.starPathTitle")}
+      blurb={blurb}
+      meta={
+        done
+          ? `⭐ ${toLocaleDigits(starPath.score, locale)} · 🔥 ${toLocaleDigits(starPath.starPathStreak, locale)}`
+          : t("starPath.pathLabel", {
+              n: toLocaleDigits(starPath.cluesRevealed, locale),
+              max: toLocaleDigits(starPath.maxClues, locale),
+            })
+      }
+      href="/play/star-path"
       cta={cta}
       rotatesAt={rotatesAt}
     />
@@ -168,7 +226,11 @@ function GotdShell({
           {t("play.gameOfTheDay")}
         </h2>
         <span className="rounded-full bg-amber-500/20 px-2.5 py-0.5 font-display text-[10px] font-extrabold text-amber-900 ring-1 ring-amber-400/40 dark:text-amber-100">
-          {kind === "mystery" ? t("play.gotdKindMystery") : t("play.gotdKindGrid")}
+          {kind === "mystery"
+            ? t("play.gotdKindMystery")
+            : kind === "grid"
+              ? t("play.gotdKindGrid")
+              : t("play.gotdKindStarPath")}
         </span>
       </div>
 

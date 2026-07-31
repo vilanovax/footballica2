@@ -16,6 +16,11 @@ import {
   isMemorySubmitTooLate,
 } from "@/lib/duel/memoryGrade";
 import type { MemoryAttemptSubmission } from "@/lib/duel/memoryTypes";
+import { quizRoundCreateData } from "@/lib/duel/createQuizRound";
+import {
+  listDuelEligibleCategories,
+  usedCategoryIdsFromRounds,
+} from "@/lib/duel/draw";
 import { tickDuelJobs } from "@/lib/duel/jobs";
 import { toDuelSnapshot, type DuelSnapshot } from "@/lib/duel/snapshot";
 import { duelSnapshotInclude } from "@/lib/duel/include";
@@ -44,8 +49,9 @@ export type SubmitMemoryDefendResult =
     };
 
 /**
- * Submit MEMORY defense half. Round 2 → COMPLETED + winner resolve.
- * (Round 1 is QUIZ-only in v1 — this action is for MEMORY rounds.)
+ * Submit MEMORY defense half.
+ * Round 1 → open Round 2 QUIZ draft for opponent (Memory already spent).
+ * Round 2 → COMPLETED + winner resolve.
  */
 export async function submitMemoryDefend(
   duelId: string,
@@ -122,12 +128,6 @@ export async function submitMemoryDefend(
     let opponentCorrect =
       duel.opponentCorrect + (!defenderIsChallenger ? defenseCorrect : 0);
 
-    // v1: MEMORY is round 2 only → nextStatus should be COMPLETED.
-    if (nextStatus !== "COMPLETED") {
-      console.error("submitMemoryDefend unexpected nextStatus", nextStatus);
-      return { ok: false, error: "server_error" };
-    }
-
     const updated = await prisma.$transaction(async (tx) => {
       await tx.duelRound.update({
         where: { id: round.id },
@@ -138,6 +138,37 @@ export async function submitMemoryDefend(
           defenseStartedAt: startedAt,
         },
       });
+
+      if (nextStatus === "B_ATTACKING" && duel.opponentId) {
+        const quizData = await quizRoundCreateData({
+          attackerId: duel.opponentId,
+          roundNumber: 2,
+          excludeCategoryIds: usedCategoryIdsFromRounds(duel.rounds),
+        });
+        await tx.duelRound.create({
+          data: {
+            duelId: duel.id,
+            roundNumber: quizData.roundNumber,
+            roundType: quizData.roundType,
+            attackerId: quizData.attackerId,
+            draftOptionIds: quizData.draftOptionIds,
+          },
+        });
+
+        return tx.duelMatch.update({
+          where: { id: duel.id },
+          data: {
+            status: "B_ATTACKING",
+            turnUserId: duel.opponentId,
+            turnDeadlineAt: new Date(
+              now.getTime() + config.duel.turnHours * 60 * 60 * 1000,
+            ),
+            challengerCorrect,
+            opponentCorrect,
+          },
+          include: duelSnapshotInclude,
+        });
+      }
 
       const roundWins = tallyRoundWins(
         duel.rounds.map((r) => {
@@ -188,7 +219,16 @@ export async function submitMemoryDefend(
       });
     });
 
-    const snapshot = toDuelSnapshot(updated, user.id);
+    let draftOptions = undefined;
+    if (updated.status === "B_ATTACKING") {
+      const r2 = updated.rounds.find((r) => r.roundNumber === 2);
+      const draftIds = Array.isArray(r2?.draftOptionIds)
+        ? (r2!.draftOptionIds as string[])
+        : [];
+      const cats = await listDuelEligibleCategories();
+      draftOptions = cats.filter((c) => draftIds.includes(c.id));
+    }
+    const snapshot = toDuelSnapshot(updated, user.id, draftOptions);
     let missions: EvaluateMissionsResult | undefined;
     try {
       const turnResult = await creditDuelTurnMissions({
@@ -203,16 +243,18 @@ export async function submitMemoryDefend(
       console.error("creditDuelTurnMissions after memory defend", err);
     }
 
-    try {
-      const map = await creditDuelMissions({
-        duelId: updated.id,
-        challengerId: updated.challengerId,
-        opponentId: updated.opponentId,
-        winnerId: updated.winnerId,
-      });
-      missions = map.get(user.id) ?? missions;
-    } catch (err) {
-      console.error("creditDuelMissions after memory defend", err);
+    if (updated.status === "COMPLETED") {
+      try {
+        const map = await creditDuelMissions({
+          duelId: updated.id,
+          challengerId: updated.challengerId,
+          opponentId: updated.opponentId,
+          winnerId: updated.winnerId,
+        });
+        missions = map.get(user.id) ?? missions;
+      } catch (err) {
+        console.error("creditDuelMissions after memory defend", err);
+      }
     }
 
     return { ok: true, duel: snapshot, missions };

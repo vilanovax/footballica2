@@ -7,6 +7,7 @@ import { getPlayModeEconomy } from "@/lib/play/modeEconomy";
 import { listRecordChallenges } from "@/actions/challenge/recordChallenge";
 import { getDailyMystery } from "@/actions/mystery/getDailyMystery";
 import { getDailyGrid } from "@/actions/grid/getDailyGrid";
+import { getDailyStarPath } from "@/actions/starpath/getDailyStarPath";
 import { gameOfTheDayRotation } from "@/lib/grid/gotd";
 import { prisma } from "@/lib/prisma";
 import { PlayModes } from "@/components/play/PlayModes";
@@ -21,21 +22,30 @@ export default async function PlayPage() {
   const club = await getClubSnapshot();
   if (!club) redirect("/onboarding");
 
-  const [res, inbox, config, bestAgg, challengeRes, mysteryRes, gridRes] =
-    await Promise.all([
-      getMyDuels(),
-      getDuelInbox(),
-      getGameConfig(),
-      user.club
-        ? prisma.categoryRecord.aggregate({
-            where: { clubId: user.club.id },
-            _max: { maxSurvivalScore: true },
-          })
-        : Promise.resolve({ _max: { maxSurvivalScore: null } }),
-      listRecordChallenges(),
-      getDailyMystery(),
-      getDailyGrid(),
-    ]);
+  const [
+    res,
+    inbox,
+    config,
+    bestAgg,
+    challengeRes,
+    mysteryRes,
+    gridRes,
+    starPathRes,
+  ] = await Promise.all([
+    getMyDuels(),
+    getDuelInbox(),
+    getGameConfig(),
+    user.club
+      ? prisma.categoryRecord.aggregate({
+          where: { clubId: user.club.id },
+          _max: { maxSurvivalScore: true },
+        })
+      : Promise.resolve({ _max: { maxSurvivalScore: null } }),
+    listRecordChallenges(),
+    getDailyMystery(),
+    getDailyGrid(),
+    getDailyStarPath(),
+  ]);
 
   const recentDuels = res.ok ? res.history : [];
   const modes = getPlayModeEconomy(config);
@@ -57,6 +67,7 @@ export default async function PlayPage() {
       liveChallengeCount={liveChallengeCount}
       mystery={mysteryRes.ok ? mysteryRes.mystery : null}
       grid={gridRes.ok ? gridRes.grid : null}
+      starPath={starPathRes.ok ? starPathRes.starPath : null}
       gotdRotatesAt={rotatesAt.toISOString()}
     />
   );

@@ -63,7 +63,13 @@ export const questionFormSchema = z
       "REVEAL_IMAGE",
     ]),
     mediaUrl: z.string().trim(),
+    /** Primary / home bank (Admin default + content.category labels). */
     categoryId: z.string().min(1, "Select a category"),
+    /**
+     * Extra Draw banks (QuestionCategory M2N). Primary is always included
+     * server-side; do not list categoryId here.
+     */
+    alsoCategoryIds: z.array(z.string()),
     difficulty: z.enum(["EASY", "MEDIUM", "HARD"]),
     correctIndex: z.number().int().min(0).max(3),
     status: z.enum(QUESTION_STATUSES),
@@ -204,6 +210,7 @@ export const emptyQuestionForm: QuestionFormValues = {
   type: "TEXT",
   mediaUrl: "",
   categoryId: "",
+  alsoCategoryIds: [],
   difficulty: "EASY",
   correctIndex: 0,
   status: "PUBLISHED",
@@ -217,6 +224,19 @@ export const emptyQuestionForm: QuestionFormValues = {
   },
   explanation: { en: "", fa: "" },
 };
+
+/** Primary + extras for QuestionCategory rows (deduped). */
+export function membershipCategoryIds(values: {
+  categoryId: string;
+  alsoCategoryIds: string[];
+}): string[] {
+  return Array.from(
+    new Set([
+      values.categoryId,
+      ...values.alsoCategoryIds.filter((id) => id && id !== values.categoryId),
+    ]),
+  );
+}
 
 export function normalizeExplanation(
   exp: { en: string; fa: string } | null | undefined,

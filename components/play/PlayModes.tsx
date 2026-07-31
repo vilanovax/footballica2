@@ -4,6 +4,7 @@ import type { DuelSnapshot } from "@/lib/duel/snapshot";
 import type { DuelInboxItem } from "@/actions/duel/getInboxCount";
 import type { DailyMysterySnapshot } from "@/actions/mystery/getDailyMystery";
 import type { DailyGridSnapshot } from "@/actions/grid/getDailyGrid";
+import type { DailyStarPathSnapshot } from "@/actions/starpath/getDailyStarPath";
 import type { PlayModeEconomy } from "@/lib/play/modeEconomy";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
@@ -27,6 +28,8 @@ type PlayModesProps = {
   mystery?: DailyMysterySnapshot | null;
   /** Rotating daily slot (Football Grid — ADR 002). */
   grid?: DailyGridSnapshot | null;
+  /** Rotating daily slot (Star Path — GotD #3). */
+  starPath?: DailyStarPathSnapshot | null;
   /** ISO — next Tehran midnight when GotD kind rotates. */
   gotdRotatesAt?: string | null;
 };
@@ -47,6 +50,7 @@ export function PlayModes({
   liveChallengeCount = 0,
   mystery = null,
   grid = null,
+  starPath = null,
   gotdRotatesAt = null,
 }: PlayModesProps) {
   const { t, locale } = useTranslation();
@@ -92,6 +96,7 @@ export function PlayModes({
       <GameOfTheDayCard
         mystery={mystery}
         grid={grid}
+        starPath={starPath}
         rotatesAt={gotdRotatesAt}
       />
 
