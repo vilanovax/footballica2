@@ -562,10 +562,10 @@ const fa: Dictionary = {
     thatsAll: "برای امروز همین بود!",
     comeBack: "فردا برای خبر تازه برگرد.",
     claim: "دریافت!",
-    effectCoin: "{mult} برابر سکه برای {hours} ساعت!",
-    effectFan: "{mult} برابر هوادار برای {hours} ساعت!",
-    activeChipCoin: "{mult}× سکه فعال",
-    activeChipFan: "{mult}× هوادار فعال",
+    /** Duration suffix after “{mult}× 🪙” / “{mult}× 👥” in the newspaper pill. */
+    effectForHours: "برای {hours} ساعت!",
+    activeChipCoin: "{mult}× 🪙 فعال",
+    activeChipFan: "{mult}× 👥 فعال",
     events: {
       LEGEND_VISIT: "یک اسطوره به باشگاه سر زد!",
       MYSTERY_SPONSOR: "اسپانسر مرموز قرارداد بست!",

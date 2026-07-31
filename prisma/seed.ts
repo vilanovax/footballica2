@@ -95,7 +95,7 @@ async function upsertQuestion(params: {
       Prisma.DbNull) as Prisma.InputJsonValue | typeof Prisma.DbNull,
   };
 
-  await prisma.question.upsert({
+  const row = await prisma.question.upsert({
     where: { contentHash },
     update: shared,
     create: {
@@ -105,6 +105,11 @@ async function upsertQuestion(params: {
       timesServed: 0,
       timesCorrect: 0,
     },
+    select: { id: true },
+  });
+  await prisma.questionCategory.createMany({
+    data: [{ questionId: row.id, categoryId: params.category.id }],
+    skipDuplicates: true,
   });
 }
 
@@ -151,6 +156,10 @@ async function main() {
         timesServed: 0,
         timesCorrect: 0,
       },
+    });
+    await prisma.questionCategory.createMany({
+      data: [{ questionId: q.id, categoryId: general.id }],
+      skipDuplicates: true,
     });
   }
 

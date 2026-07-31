@@ -19,6 +19,7 @@ import {
 } from "@/lib/game/survival";
 import type { Locale } from "@/lib/i18n/config";
 import { getRequestLocale } from "@/lib/i18n/getRequestLocale";
+import { publishedInCategoryWhere } from "@/lib/quiz/inCategory";
 
 function pickFromPool<T extends { eloRating: number }>(
   pool: T[],
@@ -149,22 +150,34 @@ export async function listEligibleCategories(
         ? {}
         : { challengeOnly: challengeOnly === true }),
     },
-    include: {
-      _count: {
-        select: { questions: { where: { status: "PUBLISHED" } } },
-      },
+    select: {
+      id: true,
+      slug: true,
+      nameEn: true,
+      nameFa: true,
+      icon: true,
     },
   });
 
-  return cats
-    .filter((c) => c._count.questions >= need)
+  // Count primary + M2N memberships (distinct questions) per category.
+  const counted = await Promise.all(
+    cats.map(async (c) => ({
+      ...c,
+      questionCount: await prisma.question.count({
+        where: publishedInCategoryWhere(c.id),
+      }),
+    })),
+  );
+
+  return counted
+    .filter((c) => c.questionCount >= need)
     .map((c) => ({
       id: c.id,
       slug: c.slug,
       nameEn: c.nameEn,
       nameFa: c.nameFa,
       icon: c.icon,
-      questionCount: c._count.questions,
+      questionCount: c.questionCount,
     }));
 }
 
@@ -197,11 +210,7 @@ export async function getCategoryQuestionsProgressive(
   const everyN = bias.everyN ?? FORMAT_BIAS_EVERY_N;
 
   const rows = await prisma.question.findMany({
-    where: {
-      categoryId,
-      status: "PUBLISHED",
-      ...(exclude.size > 0 ? { id: { notIn: [...exclude] } } : {}),
-    },
+    where: publishedInCategoryWhere(categoryId, [...exclude]),
   });
 
   const pools: Record<QuestionDifficulty, typeof rows> = {
@@ -242,12 +251,7 @@ export async function countCategoryQuestionsRemaining(
   categoryId: string,
   excludeIds: string[] = [],
 ): Promise<number> {
-  const exclude = excludeIds.filter(Boolean);
   return prisma.question.count({
-    where: {
-      categoryId,
-      status: "PUBLISHED",
-      ...(exclude.length > 0 ? { id: { notIn: exclude } } : {}),
-    },
+    where: publishedInCategoryWhere(categoryId, excludeIds),
   });
 }

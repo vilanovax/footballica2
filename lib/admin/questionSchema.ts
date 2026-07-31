@@ -141,7 +141,18 @@ export const importQuestionSchema = z
     correctIndex: z.number().int().min(0).max(3),
     content: z.object({ en: localeContentSchema, fa: localeContentSchema }),
     explanation: explanationSchema.nullish(),
+    /** Free-form / campaign labels (slugs or names). */
     tags: z.array(z.string().trim().min(1)).optional().default([]),
+    /**
+     * Preferred home category (slug or EN name). Used as `categoryId` on create
+     * when it resolves; otherwise treated as an extra bucket tag.
+     */
+    primaryCategory: z.string().trim().min(1).nullish(),
+    /**
+     * Extra buckets without duplicating the row. Resolved to Category.slug or
+     * Tag.slug (created as tags when unknown).
+     */
+    alsoIn: z.array(z.string().trim().min(1)).optional().default([]),
     status: z.enum(QUESTION_STATUSES).default("PUBLISHED"),
     isTemporal: z.boolean().default(false),
     asOfDate: z.string().nullish(),

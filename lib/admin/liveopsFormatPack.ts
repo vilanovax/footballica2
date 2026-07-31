@@ -98,7 +98,7 @@ async function upsertFormatQuestion(
       PrismaNS.DbNull) as Prisma.InputJsonValue | typeof PrismaNS.DbNull,
   };
 
-  await db.question.upsert({
+  const row = await db.question.upsert({
     where: { contentHash },
     update: shared,
     create: {
@@ -108,6 +108,11 @@ async function upsertFormatQuestion(
       timesServed: 0,
       timesCorrect: 0,
     },
+    select: { id: true },
+  });
+  await db.questionCategory.createMany({
+    data: [{ questionId: row.id, categoryId: category.id }],
+    skipDuplicates: true,
   });
 }
 

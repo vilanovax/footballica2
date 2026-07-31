@@ -25,6 +25,7 @@ import {
   AdminHelpTip,
   AdminHowItWorks,
 } from "@/components/admin/AdminHelpTip";
+import { inCategoryWhere } from "@/lib/quiz/inCategory";
 
 export const dynamic = "force-dynamic";
 
@@ -53,12 +54,16 @@ const TYPE_VALUES = [
 ] as const;
 type QuestionType = (typeof TYPE_VALUES)[number];
 
+const DIFFICULTY_VALUES = ["EASY", "MEDIUM", "HARD"] as const;
+type QuestionDifficulty = (typeof DIFFICULTY_VALUES)[number];
+
 type SearchParams = {
   category?: string;
   tag?: string;
   q?: string;
   status?: string;
   type?: string;
+  difficulty?: string;
   sort?: string;
   dir?: string;
   page?: string;
@@ -67,16 +72,23 @@ type SearchParams = {
 function buildOrderBy(
   sort: string | undefined,
   dir: "asc" | "desc",
-): Prisma.QuestionOrderByWithRelationInput {
+): Prisma.QuestionOrderByWithRelationInput[] {
   switch (sort) {
+    case "question":
+    case "type":
+      return [{ type: dir }, { createdAt: "desc" }];
     case "category":
-      return { category: { nameEn: dir } };
+      return [{ category: { nameEn: dir } }, { createdAt: "desc" }];
+    case "tags":
+      return [{ tags: { _count: dir } }, { createdAt: "desc" }];
     case "difficulty":
-      return { difficulty: dir };
+      return [{ difficulty: dir }, { createdAt: "desc" }];
     case "status":
-      return { status: dir };
+      return [{ status: dir }, { createdAt: "desc" }];
+    case "created":
+      return [{ createdAt: dir }];
     default:
-      return { createdAt: "desc" };
+      return [{ createdAt: "desc" }];
   }
 }
 
@@ -94,6 +106,15 @@ function parseType(raw: string | undefined): QuestionType | undefined {
     : undefined;
 }
 
+function parseDifficulty(
+  raw: string | undefined,
+): QuestionDifficulty | undefined {
+  if (!raw) return undefined;
+  return DIFFICULTY_VALUES.includes(raw as QuestionDifficulty)
+    ? (raw as QuestionDifficulty)
+    : undefined;
+}
+
 export default async function AdminQuestionsPage({
   searchParams,
 }: {
@@ -103,25 +124,28 @@ export default async function AdminQuestionsPage({
   const { category, tag } = sp;
   const status = parseStatus(sp.status);
   const type = parseType(sp.type);
+  const difficulty = parseDifficulty(sp.difficulty);
   const q = sp.q?.trim() || "";
   const sort = sp.sort;
   const dir: "asc" | "desc" = sp.dir === "desc" ? "desc" : "asc";
   const requestedPage = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
 
-  const where: Prisma.QuestionWhereInput = {
-    ...(category ? { categoryId: category } : {}),
-    ...(tag ? { tags: { some: { id: tag } } } : {}),
-    ...(status ? { status } : {}),
-    ...(type ? { type } : {}),
-    ...(q
-      ? {
-          OR: [
-            { content: { path: ["en", "text"], string_contains: q } },
-            { content: { path: ["fa", "text"], string_contains: q } },
-          ],
-        }
-      : {}),
-  };
+  const filters: Prisma.QuestionWhereInput[] = [];
+  if (category) filters.push(inCategoryWhere(category));
+  if (tag) filters.push({ tags: { some: { id: tag } } });
+  if (status) filters.push({ status });
+  if (type) filters.push({ type });
+  if (difficulty) filters.push({ difficulty });
+  if (q) {
+    filters.push({
+      OR: [
+        { content: { path: ["en", "text"], string_contains: q } },
+        { content: { path: ["fa", "text"], string_contains: q } },
+      ],
+    });
+  }
+  const where: Prisma.QuestionWhereInput =
+    filters.length > 0 ? { AND: filters } : {};
 
   const orderBy = buildOrderBy(sort, dir);
 
@@ -152,12 +176,15 @@ export default async function AdminQuestionsPage({
       difficulty: true,
       status: true,
       content: true,
+      createdAt: true,
       category: { select: { nameEn: true, nameFa: true } },
       tags: { select: { slug: true } },
     },
   });
 
-  const isFiltered = Boolean(category || tag || q || status || type);
+  const isFiltered = Boolean(
+    category || tag || q || status || type || difficulty,
+  );
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">
@@ -205,8 +232,8 @@ export default async function AdminQuestionsPage({
 
       {/* Toolbar */}
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="w-full lg:max-w-sm">
+        <div className="flex flex-col gap-4">
+          <div className="w-full lg:max-w-md">
             <p className="mb-1 flex items-center gap-1 text-xs font-medium text-slate-600">
               Search
               <AdminHelpTip
@@ -223,6 +250,7 @@ export default async function AdminQuestionsPage({
             tag={tag}
             status={status}
             type={type}
+            difficulty={difficulty}
           />
         </div>
       </div>
@@ -232,20 +260,23 @@ export default async function AdminQuestionsPage({
         <Table>
           <TableHeader>
             <TableRow className="border-slate-100 bg-slate-50/90 hover:bg-slate-50/90">
-              <TableHead className="ps-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Question
+              <TableHead className="ps-4">
+                <SortableHeader label="Question" sortKey="type" />
               </TableHead>
               <TableHead>
                 <SortableHeader label="Category" sortKey="category" />
               </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Tags
+              <TableHead>
+                <SortableHeader label="Tags" sortKey="tags" />
               </TableHead>
               <TableHead>
                 <SortableHeader label="Difficulty" sortKey="difficulty" />
               </TableHead>
               <TableHead>
                 <SortableHeader label="Status" sortKey="status" />
+              </TableHead>
+              <TableHead>
+                <SortableHeader label="Created" sortKey="created" />
               </TableHead>
               <TableHead className="pe-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Actions
@@ -255,7 +286,7 @@ export default async function AdminQuestionsPage({
           <TableBody>
             {questions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-16 text-center">
+                <TableCell colSpan={7} className="py-16 text-center">
                   <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
                     <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400">
                       <BookOpen className="h-5 w-5" />
@@ -347,6 +378,13 @@ export default async function AdminQuestionsPage({
                     </TableCell>
                     <TableCell>
                       <QuestionStatusBadge status={question.status} />
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-xs text-slate-500">
+                      {question.createdAt.toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "2-digit",
+                      })}
                     </TableCell>
                     <TableCell className="pe-4 text-right">
                       <div className="flex items-center justify-end gap-0.5">

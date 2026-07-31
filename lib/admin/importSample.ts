@@ -29,7 +29,9 @@ Return ONLY valid JSON (no markdown fences, no commentary) matching this schema:
         "en": "Short fact after reveal (optional but preferred)",
         "fa": "واقعیت کوتاه بعد از جواب (اختیاری ولی بهتر است)"
       },
-      "tags": ["lowercase-slug", "optional"],
+      "primaryCategory": "world-cup",
+      "alsoIn": ["ucl", "real-madrid"],
+      "tags": ["2024", "final"],
       "status": "PUBLISHED",
       "source": "ai"
     }
@@ -44,8 +46,10 @@ Hard rules:
 5. FA must be natural Persian (not word-by-word machine tone).
 6. difficulty: EASY = casual fan, MEDIUM = regular, HARD = deep lore.
 7. 8–20 questions per batch unless asked otherwise.
-8. tags: short English lowercase slugs (worldcup, ucl, iran, premier-league).
-9. No spoilers in the question text itself beyond what is needed to ask.
+8. tags / alsoIn / primaryCategory: short English lowercase slugs (world-cup, ucl, iran).
+9. primaryCategory = best home Category (slug or EN name). alsoIn = other Category banks for the SAME question (M2N — do NOT duplicate the text). Unknown alsoIn values become tags.
+10. tags = Live-Ops / campaign labels only (not game banks).
+11. No spoilers in the question text itself beyond what is needed to ask.
 
 Optional fields (omit if unused):
 - type IMAGE | REVEAL_IMAGE → require "mediaUrl": "https://…"
@@ -62,6 +66,8 @@ export const SAMPLE_IMPORT_JSON = {
       type: "TEXT" as const,
       difficulty: "MEDIUM" as const,
       correctIndex: 0,
+      primaryCategory: "Champions League",
+      alsoIn: ["real-madrid", "ucl"],
       content: {
         en: {
           text: "Which club won the UEFA Champions League in 2024?",
@@ -86,7 +92,7 @@ export const SAMPLE_IMPORT_JSON = {
         en: "Real Madrid beat Dortmund 2–0 in the Wembley final.",
         fa: "رئال مادرید دورتموند را ۲–۰ در فینال ومبلی شکست داد.",
       },
-      tags: ["ucl", "2024"],
+      tags: ["2024", "final"],
       status: "PUBLISHED" as const,
       source: "sample",
     },
@@ -94,6 +100,8 @@ export const SAMPLE_IMPORT_JSON = {
       type: "TEXT" as const,
       difficulty: "EASY" as const,
       correctIndex: 2,
+      primaryCategory: "World Cup",
+      alsoIn: ["france"],
       content: {
         en: {
           text: "Which country won the 2018 FIFA World Cup?",
@@ -116,21 +124,33 @@ export const SAMPLE_IMPORT_JSON = {
       type: "TEXT" as const,
       difficulty: "HARD" as const,
       correctIndex: 1,
+      primaryCategory: "World Cup",
+      alsoIn: ["iran", "worldcup"],
       content: {
         en: {
           text: "Who scored the winning goal for Iran vs Wales at Qatar 2022?",
-          options: ["Sardar Azmoun", "Rouzbeh Cheshmi", "Mehdi Taremi", "Alireza Jahanbakhsh"],
+          options: [
+            "Sardar Azmoun",
+            "Rouzbeh Cheshmi",
+            "Mehdi Taremi",
+            "Alireza Jahanbakhsh",
+          ],
         },
         fa: {
           text: "گل پیروزی ایران برابر ولز در جام جهانی ۲۰۲۲ را چه کسی زد؟",
-          options: ["سردار آزمون", "روزبه چشمی", "مهدی طارمی", "علیرضا جهانبخش"],
+          options: [
+            "سردار آزمون",
+            "روزبه چشمی",
+            "مهدی طارمی",
+            "علیرضا جهانبخش",
+          ],
         },
       },
       explanation: {
         en: "Cheshmi equalized late; Taremi sealed it — ask focuses the equalizer often misremembered.",
         fa: "چشمی گل تساوی را زد؛ طارمی کار را تمام کرد — این سوال روی گل تساوی تمرکز دارد.",
       },
-      tags: ["iran", "worldcup", "2022"],
+      tags: ["2022"],
       status: "PUBLISHED" as const,
       source: "sample",
     },

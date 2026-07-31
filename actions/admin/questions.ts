@@ -99,6 +99,10 @@ export async function createQuestion(
         tags: values.tagIds.length
           ? { connect: values.tagIds.map((id) => ({ id })) }
           : undefined,
+        // Mirror primary into M2N so Draw sees the home bank membership.
+        categories: {
+          create: [{ categoryId: values.categoryId }],
+        },
       },
       select: { id: true },
     });
@@ -136,26 +140,40 @@ export async function updateQuestion(
   if (!category) return { ok: false, error: "Selected category not found." };
 
   try {
-    await prisma.question.update({
-      where: { id },
-      data: {
-        type: values.type,
-        mediaUrl:
-          values.type === "IMAGE" || values.type === "REVEAL_IMAGE"
-            ? values.mediaUrl
-            : null,
-        categoryId: values.categoryId,
-        difficulty: values.difficulty,
-        correctIndex: values.correctIndex,
-        content: buildContent(values, category),
-        explanation: normalizeExplanation(values.explanation) ?? Prisma.DbNull,
-        status: values.status,
-        isTemporal: values.isTemporal,
-        asOfDate: parseAsOfDate(values.asOfDate),
-        source: values.source || null,
-        contentHash: computeContentHash(values.content),
-        tags: { set: values.tagIds.map((id) => ({ id })) },
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.question.update({
+        where: { id },
+        data: {
+          type: values.type,
+          mediaUrl:
+            values.type === "IMAGE" || values.type === "REVEAL_IMAGE"
+              ? values.mediaUrl
+              : null,
+          categoryId: values.categoryId,
+          difficulty: values.difficulty,
+          correctIndex: values.correctIndex,
+          content: buildContent(values, category),
+          explanation:
+            normalizeExplanation(values.explanation) ?? Prisma.DbNull,
+          status: values.status,
+          isTemporal: values.isTemporal,
+          asOfDate: parseAsOfDate(values.asOfDate),
+          source: values.source || null,
+          contentHash: computeContentHash(values.content),
+          tags: { set: values.tagIds.map((id) => ({ id })) },
+        },
+      });
+      // Ensure primary category is always a Draw membership (keep extra links).
+      await tx.questionCategory.upsert({
+        where: {
+          questionId_categoryId: {
+            questionId: id,
+            categoryId: values.categoryId,
+          },
+        },
+        create: { questionId: id, categoryId: values.categoryId },
+        update: {},
+      });
     });
   } catch (err) {
     if (isDuplicateHashError(err)) {

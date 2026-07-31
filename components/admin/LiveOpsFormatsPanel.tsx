@@ -9,13 +9,6 @@ import {
   type LiveopsFormatsSnapshot,
 } from "@/actions/admin/liveopsFormats";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
 const LABELS: { key: keyof LiveopsFormatsSnapshot["published"]; label: string }[] =
   [
@@ -53,49 +46,40 @@ export function LiveOpsFormatsPanel({
   }
 
   return (
-    <Card className="border-slate-200">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <Layers className="h-4 w-4 text-emerald-600" />
-          Visual format pack
-        </CardTitle>
-        <CardDescription>
-          Idempotent upsert from{" "}
-          <code className="rounded bg-slate-100 px-1 text-[11px]">
-            prisma/seeds/format-questions.json
-          </code>
-          . Draw bias (~1/5) only fires when these are Published.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {LABELS.map(({ key, label }) => (
-            <div
-              key={key}
-              className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-center"
-            >
-              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                {label}
-              </p>
-              <p className="font-mono text-lg font-bold tabular-nums text-slate-900">
-                {snap.published[key]}
-              </p>
-            </div>
-          ))}
-        </div>
-        <p className="text-xs text-slate-500">
-          Seed file rows:{" "}
-          <span className="font-mono font-semibold text-slate-700">
-            {snap.packSize}
+    <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
+      <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+        <Layers className="h-3.5 w-3.5 text-emerald-600" />
+        Format pack
+        <span className="font-normal text-slate-400">
+          · {snap.packSize} seed rows
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {LABELS.map(({ key, label }) => (
+          <span
+            key={key}
+            className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-600 ring-1 ring-slate-200"
+          >
+            {label}
+            <span className="font-mono tabular-nums text-slate-900">
+              {snap.published[key]}
+            </span>
           </span>
-        </p>
-        <Button type="button" disabled={pending} onClick={sync}>
-          <RefreshCw
-            className={`me-1.5 h-3.5 w-3.5 ${pending ? "animate-spin" : ""}`}
-          />
-          {pending ? "Syncing…" : "Sync format pack"}
-        </Button>
-      </CardContent>
-    </Card>
+        ))}
+      </div>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="ms-auto h-8"
+        disabled={pending}
+        onClick={sync}
+      >
+        <RefreshCw
+          className={`h-3.5 w-3.5 ${pending ? "animate-spin" : ""}`}
+        />
+        {pending ? "Syncing…" : "Sync"}
+      </Button>
+    </div>
   );
 }

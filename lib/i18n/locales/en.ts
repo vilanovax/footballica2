@@ -561,10 +561,10 @@ const en = {
     thatsAll: "THAT'S ALL FOR TODAY!",
     comeBack: "Come back tomorrow for a fresh headline.",
     claim: "Claim!",
-    effectCoin: "{mult}x Coins for {hours}h!",
-    effectFan: "{mult}x Fans for {hours}h!",
-    activeChipCoin: "{mult}× coins live",
-    activeChipFan: "{mult}× fans live",
+    /** Duration suffix after “{mult}× 🪙” / “{mult}× 👥” in the newspaper pill. */
+    effectForHours: "for {hours}h!",
+    activeChipCoin: "{mult}× 🪙 live",
+    activeChipFan: "{mult}× 👥 live",
     events: {
       LEGEND_VISIT: "LEGEND VISITS THE CLUB!",
       MYSTERY_SPONSOR: "MYSTERY SPONSOR SIGNS ON!",

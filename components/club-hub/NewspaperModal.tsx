@@ -66,11 +66,8 @@ export function NewspaperModal({ news, state, onClaim }: NewspaperModalProps) {
   }
 
   const alreadyActive = state === "active";
-  const effectKey = news.type === "COIN_BOOST" ? "news.effectCoin" : "news.effectFan";
-  const effectParams = {
-    mult: formatMultiplier(news.multiplier),
-    hours: BOOSTER_DURATION_HOURS,
-  };
+  const isCoin = news.type === "COIN_BOOST";
+  const multLabel = formatMultiplier(news.multiplier);
   // `headline` is a translation key for new boosters; fall back to the stored
   // raw text for any legacy booster claimed before keys were introduced.
   const headlineKey = `news.events.${news.headline}`;
@@ -117,9 +114,18 @@ export function NewspaperModal({ news, state, onClaim }: NewspaperModalProps) {
           {headline}
         </h2>
 
-        {/* Effect callout */}
-        <div className="mx-auto mt-4 w-fit -rotate-1 rounded-bubble bg-primary px-4 py-2 font-display text-lg font-extrabold text-primary-foreground shadow-fantasy">
-          {t(effectKey, effectParams)}
+        {/* Effect callout — “2× 🪙 for 2h” reads faster than “2 برابر سکه”. */}
+        <div
+          className="mx-auto mt-4 flex w-fit -rotate-1 items-center gap-1.5 rounded-bubble bg-primary px-4 py-2 font-display text-lg font-extrabold text-primary-foreground shadow-fantasy"
+          aria-label={`${multLabel}× ${isCoin ? t("result.coins") : t("stadium.fans")} ${t("news.effectForHours", { hours: BOOSTER_DURATION_HOURS })}`}
+        >
+          <span className="tabular-nums">{multLabel}×</span>
+          <span className="text-xl leading-none" aria-hidden>
+            {isCoin ? "🪙" : "👥"}
+          </span>
+          <span className="text-base font-bold">
+            {t("news.effectForHours", { hours: BOOSTER_DURATION_HOURS })}
+          </span>
         </div>
 
         <button

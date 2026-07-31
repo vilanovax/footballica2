@@ -501,11 +501,14 @@ model Category {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  questions      Question[]
-  duelRounds     DuelRound[]
-  matches        Match[]
-  records        CategoryRecord[]
-  challengeLinks RecordChallengeCategory[]
+  /// Primary-FK questions (`Question.categoryId`).
+  questions          Question[]
+  /// Extra bank memberships (M2N via QuestionCategory) — used by Draw.
+  questionCategories QuestionCategory[]
+  duelRounds         DuelRound[]
+  matches            Match[]
+  records            CategoryRecord[]
+  challengeLinks     RecordChallengeCategory[]
 }
 
 // ─── RecordChallenge (Premium Live-Ops survival events) ──────────────────────
@@ -650,8 +653,11 @@ model Question {
   correctIndex Int
   difficulty   QuestionDifficulty @default(EASY)
 
+  /// Primary category (Admin UI / default home bank). Keep stable for forms.
   categoryId String?
-  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  category   Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  /// Additional category memberships for Draw (M2N). Does not replace `categoryId`.
+  categories QuestionCategory[]
   tags       Tag[]
 
   /// Optional flavor for match framing ("penalty", "derby", …)
@@ -689,6 +695,25 @@ model Question {
   @@index([categoryId, difficulty])
   @@index([status])
   @@index([eloRating])
+}
+
+// ─── QuestionCategory (M2N bank membership) ──────────────────────────────────
+// A question may appear in multiple Category draws without duplicating the row.
+// `Question.categoryId` remains the primary/home category for Admin UX.
+// Tags stay for Live-Ops / campaigns — not game-rule banks.
+
+model QuestionCategory {
+  id         String   @id @default(cuid())
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([questionId, categoryId])
+  @@index([categoryId])
+  @@index([questionId])
 }
 
 // ─── QuestionReport (user-submitted content flags) ───────────────────────────

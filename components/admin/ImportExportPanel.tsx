@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -15,12 +15,19 @@ import {
   Pencil,
   Trash2,
   ShieldCheck,
+  ChevronDown,
+  Loader2,
 } from "lucide-react";
-import { exportQuestions, importQuestions } from "@/actions/admin/io";
+import {
+  exportQuestions,
+  importQuestions,
+  previewImportQuestions,
+} from "@/actions/admin/io";
 import {
   importPayloadSchema,
   type ImportQuestion,
 } from "@/lib/admin/questionSchema";
+import type { TriageItem, TriageKind } from "@/lib/admin/importTriage";
 import {
   AI_QUESTION_EXTRACT_PROMPT,
   sampleImportJsonString,
@@ -119,7 +126,6 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
   const [exportCat, setExportCat] = useState<string>(ALL);
   const [exporting, startExport] = useTransition();
 
-  // Empty until the admin explicitly picks a category.
   const [importCat, setImportCat] = useState<string>("");
   const [tags, setTags] = useState("");
   const [jsonText, setJsonText] = useState("");
@@ -128,17 +134,44 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
   const [parseError, setParseError] = useState<string | null>(null);
   const [importing, startImport] = useTransition();
   const [copiedPrompt, setCopiedPrompt] = useState(false);
+  const [showJsonEditor, setShowJsonEditor] = useState(true);
 
   const [editId, setEditId] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [triage, setTriage] = useState<TriageItem[]>([]);
+  const [triagePending, startTriage] = useTransition();
 
   const selectedCategory = categories.find((c) => c.id === importCat) ?? null;
-  const validRows = draft.filter((r): r is Extract<DraftRow, { ok: true }> => r.ok);
+  const validRows = draft.filter(
+    (r): r is Extract<DraftRow, { ok: true }> => r.ok,
+  );
   const invalidCount = draft.length - validRows.length;
   const allValid = draft.length > 0 && invalidCount === 0;
   const categoryReady = Boolean(importCat && selectedCategory);
+  const canOpenConfirm =
+    allValid && categoryReady && !importing && !triagePending;
 
-  const canOpenConfirm = allValid && categoryReady && !importing;
+  /** Map triage rows (indexed by valid payload order) back to draft row ids. */
+  const triageByDraftId = useMemo(() => {
+    const map = new Map<string, TriageItem>();
+    validRows.forEach((row, i) => {
+      const item = triage.find((t) => t.index === i);
+      if (item) map.set(row.id, item);
+    });
+    return map;
+  }, [triage, validRows]);
+
+  const triageSummary = useMemo(() => {
+    let neu = 0;
+    let attach = 0;
+    let skip = 0;
+    for (const t of triage) {
+      if (t.kind === "new") neu += 1;
+      else if (t.kind === "duplicate_attach") attach += 1;
+      else skip += 1;
+    }
+    return { neu, attach, skip };
+  }, [triage]);
 
   const step = useMemo(() => {
     if (!draft.length) return 1;
@@ -146,11 +179,39 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
     return 3;
   }, [draft.length, allValid, categoryReady]);
 
+  // Re-run L1 dedupe whenever batch / category / global tags change.
+  useEffect(() => {
+    if (!importCat || validRows.length === 0 || invalidCount > 0) {
+      setTriage([]);
+      return;
+    }
+    const payload = { version: 1, questions: validRows.map((r) => r.q) };
+    const globalTags = tags
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    startTriage(async () => {
+      const res = await previewImportQuestions({
+        categoryId: importCat,
+        globalTags,
+        payload,
+      });
+      if (res.ok) setTriage(res.items);
+      else {
+        setTriage([]);
+        toast.error(res.error);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- draft identity via validRows content
+  }, [importCat, tags, draft, invalidCount]);
+
   function clearDraft() {
     setDraft([]);
+    setTriage([]);
     setJsonText("");
     setFileName(null);
     setParseError(null);
+    setShowJsonEditor(true);
     if (fileRef.current) fileRef.current.value = "";
   }
 
@@ -172,11 +233,14 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
         return;
       }
       setDraft(rows);
+      setShowJsonEditor(false);
       const bad = rows.filter((r) => !r.ok).length;
       if (bad === 0) {
         toast.success(`${rows.length} question(s) ready to review`);
       } else {
-        toast.message(`${rows.length - bad}/${rows.length} valid — fix or remove red rows`);
+        toast.message(
+          `${rows.length - bad}/${rows.length} valid — fix or remove red rows`,
+        );
       }
     } catch {
       setDraft([]);
@@ -187,7 +251,9 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
 
   function handleExport() {
     startExport(async () => {
-      const res = await exportQuestions(exportCat === ALL ? undefined : exportCat);
+      const res = await exportQuestions(
+        exportCat === ALL ? undefined : exportCat,
+      );
       if (!res.ok) {
         toast.error(res.error);
         return;
@@ -221,7 +287,11 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
   }
 
   function deleteRow(id: string) {
-    setDraft((prev) => prev.filter((r) => r.id !== id));
+    setDraft((prev) => {
+      const next = prev.filter((r) => r.id !== id);
+      if (next.length === 0) setShowJsonEditor(true);
+      return next;
+    });
     toast.message("Removed from import batch");
   }
 
@@ -267,7 +337,9 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
         payload,
       });
       if (res.ok) {
-        toast.success(`Imported ${res.created} into ${selectedCategory.nameEn}`);
+        toast.success(
+          `Done: ${res.created} new · ${res.attached} attached · ${res.skipped} skipped → ${selectedCategory.nameEn}`,
+        );
         setConfirmOpen(false);
         clearDraft();
         setTags("");
@@ -285,222 +357,250 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
   }
 
   const editingRow = editId
-    ? draft.find((r): r is Extract<DraftRow, { ok: true }> => r.id === editId && r.ok)
+    ? draft.find(
+        (r): r is Extract<DraftRow, { ok: true }> => r.id === editId && r.ok,
+      )
     : null;
 
+  const steps = [
+    { n: 1, label: "Load" },
+    { n: 2, label: "Review" },
+    { n: 3, label: "Confirm" },
+  ] as const;
+
   return (
-    <div className="space-y-5">
-      {/* Steps */}
-      <ol className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-200 bg-white p-2 text-center text-[11px] font-semibold">
-        {[
-          { n: 1, label: "Load JSON" },
-          { n: 2, label: "Review · Edit" },
-          { n: 3, label: "Confirm" },
-        ].map((s) => (
-          <li
-            key={s.n}
-            className={[
-              "rounded-xl px-2 py-2",
-              step === s.n
-                ? "bg-slate-900 text-white"
-                : step > s.n
-                  ? "bg-emerald-50 text-emerald-800"
-                  : "bg-slate-50 text-slate-400",
-            ].join(" ")}
-          >
-            {s.n}. {s.label}
-          </li>
-        ))}
-      </ol>
+    <div className="space-y-4">
+      {/* Compact backup strip — secondary job */}
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
+        <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+          <Download className="h-3.5 w-3.5 text-slate-400" />
+          Backup
+        </div>
+        <Select value={exportCat} onValueChange={setExportCat}>
+          <SelectTrigger className="h-8 w-44 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>All categories</SelectItem>
+            {categories.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.nameEn} ({c._count})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8"
+          onClick={handleExport}
+          disabled={exporting}
+        >
+          <Download className="h-3.5 w-3.5" />
+          {exporting ? "…" : "Download JSON"}
+        </Button>
+      </div>
 
-      {/* AI brief */}
-      <Card className="border-violet-200 bg-violet-50/40">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <Sparkles className="h-4 w-4 text-violet-600" />
-            AI extract → Import
-          </CardTitle>
-          <CardDescription className="text-xs">
-            Copy prompt → AI JSON → load → edit/delete in preview → confirm
-            into the chosen category.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="bg-white"
-            onClick={() => void handleCopyPrompt()}
-          >
-            {copiedPrompt ? (
-              <Check className="h-3.5 w-3.5" />
-            ) : (
-              <Copy className="h-3.5 w-3.5" />
-            )}
-            {copiedPrompt ? "Copied" : "Copy AI prompt"}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="bg-white"
-            onClick={() => ingestJson(SAMPLE_JSON, "sample-import.json")}
-          >
-            <FileJson className="h-3.5 w-3.5" />
-            Load sample JSON
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="bg-white"
-            onClick={() => void copyText(SAMPLE_JSON, "Sample JSON copied")}
-          >
-            <Copy className="h-3.5 w-3.5" />
-            Copy sample
-          </Button>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1.15fr]">
-        <div className="space-y-5">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Download className="h-4 w-4" />
-                Backup
+      {/* Hero: one import workspace */}
+      <Card className="overflow-hidden border-slate-200 shadow-sm">
+        <CardHeader className="space-y-3 border-b border-slate-100 bg-linear-to-br from-slate-50 to-white pb-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Upload className="h-4 w-4 text-emerald-600" />
+                Import questions
               </CardTitle>
-              <CardDescription className="text-xs">
-                Download the bank (or one category) as JSON.
+              <CardDescription className="mt-1 text-xs">
+                Category → JSON → edit preview → confirm. Nothing writes early.
               </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-wrap items-end gap-2">
-              <div className="min-w-48 flex-1 space-y-1">
-                <Label className="text-[11px] text-slate-500">Scope</Label>
-                <Select value={exportCat} onValueChange={setExportCat}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 bg-white text-xs"
+                onClick={() => void handleCopyPrompt()}
+              >
+                {copiedPrompt ? (
+                  <Check className="h-3.5 w-3.5 text-emerald-600" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5" />
+                )}
+                {copiedPrompt ? "Prompt copied" : "AI prompt"}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 bg-white text-xs"
+                onClick={() => void copyText(SAMPLE_JSON, "Sample copied")}
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Copy sample
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => ingestJson(SAMPLE_JSON, "sample-import.json")}
+              >
+                <FileJson className="h-3.5 w-3.5" />
+                Try sample
+              </Button>
+            </div>
+          </div>
+
+          {/* Connected stepper */}
+          <ol className="flex items-center gap-0">
+            {steps.map((s, i) => {
+              const done = step > s.n;
+              const active = step === s.n;
+              return (
+                <li key={s.n} className="flex flex-1 items-center">
+                  <div
+                    className={[
+                      "flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-semibold transition-colors",
+                      active
+                        ? "bg-slate-900 text-white shadow-sm"
+                        : done
+                          ? "bg-emerald-50 text-emerald-800"
+                          : "bg-slate-100/80 text-slate-400",
+                    ].join(" ")}
+                  >
+                    <span
+                      className={[
+                        "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
+                        active
+                          ? "bg-white/20 text-white"
+                          : done
+                            ? "bg-emerald-200 text-emerald-900"
+                            : "bg-white text-slate-400",
+                      ].join(" ")}
+                    >
+                      {done ? "✓" : s.n}
+                    </span>
+                    {s.label}
+                  </div>
+                  {i < steps.length - 1 && (
+                    <div
+                      className={[
+                        "mx-1 h-0.5 w-3 shrink-0 rounded-full sm:w-5",
+                        step > s.n ? "bg-emerald-300" : "bg-slate-200",
+                      ].join(" ")}
+                    />
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        </CardHeader>
+
+        <CardContent className="p-0">
+          <div className="grid lg:grid-cols-[minmax(0,22rem)_1fr]">
+            {/* Left rail: destination + source */}
+            <div className="space-y-4 border-b border-slate-100 p-4 lg:border-b-0 lg:border-e">
+              <div className="space-y-1.5">
+                <Label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Destination <span className="text-rose-500">*</span>
+                </Label>
+                <Select
+                  value={importCat || undefined}
+                  onValueChange={setImportCat}
+                >
+                  <SelectTrigger
+                    className={[
+                      "h-10",
+                      !importCat
+                        ? "border-amber-300 bg-amber-50/40"
+                        : "border-emerald-200 bg-emerald-50/30",
+                    ].join(" ")}
+                  >
+                    <SelectValue placeholder="Select category…" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={ALL}>All categories</SelectItem>
                     {categories.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
-                        {c.nameEn} ({c._count})
+                        {c.nameEn} · {c.nameFa}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {selectedCategory ? (
+                  <p className="text-[11px] font-medium text-emerald-700">
+                    → {selectedCategory.nameEn}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-amber-700">
+                    Required before confirm
+                  </p>
+                )}
               </div>
-              <Button
-                size="sm"
-                className="h-9"
-                onClick={handleExport}
-                disabled={exporting}
-              >
-                <Download className="h-3.5 w-3.5" />
-                {exporting ? "…" : "Download"}
-              </Button>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Upload className="h-4 w-4" />
-                1 · Setup
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Category is required. Nothing writes until you confirm.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid gap-2 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <Label className="text-[11px] text-slate-500">
-                    Target category <span className="text-rose-500">*</span>
+              <div className="space-y-1.5">
+                <Label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Extra tags
+                </Label>
+                <Input
+                  className="h-9"
+                  placeholder="nostalgia, derby"
+                  value={tags}
+                  onChange={(e) => setTags(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Source JSON
                   </Label>
-                  <Select value={importCat || undefined} onValueChange={setImportCat}>
-                    <SelectTrigger
-                      className={[
-                        "h-9",
-                        !importCat ? "border-amber-300 ring-1 ring-amber-200" : "",
-                      ].join(" ")}
+                  {draft.length > 0 && (
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-800"
+                      onClick={() => setShowJsonEditor((v) => !v)}
                     >
-                      <SelectValue placeholder="Select category…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.nameEn} · {c.nameFa}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {!importCat && (
-                    <p className="text-[11px] text-amber-700">
-                      Pick the category these questions belong to.
-                    </p>
+                      <ChevronDown
+                        className={[
+                          "h-3.5 w-3.5 transition-transform",
+                          showJsonEditor ? "rotate-180" : "",
+                        ].join(" ")}
+                      />
+                      {showJsonEditor ? "Hide editor" : "Show editor"}
+                    </button>
                   )}
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-[11px] text-slate-500">
-                    Extra tags (optional)
-                  </Label>
-                  <Input
-                    className="h-9"
-                    placeholder="nostalgia, derby"
-                    value={tags}
-                    onChange={(e) => setTags(e.target.value)}
-                  />
-                </div>
-              </div>
 
-              <div className="space-y-1">
-                <Label className="text-[11px] text-slate-500">
-                  JSON (paste or file)
-                </Label>
-                <textarea
-                  value={jsonText}
-                  onChange={(e) => {
-                    setJsonText(e.target.value);
-                    setFileName(null);
-                  }}
-                  spellCheck={false}
-                  rows={8}
-                  placeholder='{ "questions": [ … ] }'
-                  className="w-full resize-y rounded-lg border border-slate-200 bg-slate-950 px-3 py-2 font-mono text-[11px] leading-relaxed text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-400"
-                  dir="ltr"
-                />
-                <div className="flex flex-wrap items-center gap-2">
+                {showJsonEditor && (
+                  <textarea
+                    value={jsonText}
+                    onChange={(e) => {
+                      setJsonText(e.target.value);
+                      setFileName(null);
+                    }}
+                    spellCheck={false}
+                    rows={7}
+                    placeholder='Paste AI output: { "questions": […] }'
+                    className="w-full resize-y rounded-xl border border-slate-200 bg-slate-950 px-3 py-2.5 font-mono text-[11px] leading-relaxed text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                    dir="ltr"
+                  />
+                )}
+
+                <div className="flex flex-wrap gap-1.5">
                   <Button
                     type="button"
                     size="sm"
-                    variant="secondary"
                     className="h-8"
                     onClick={() => ingestJson(jsonText, fileName)}
                     disabled={!jsonText.trim()}
                   >
                     Parse → Preview
                   </Button>
-                  <Input
-                    ref={fileRef}
-                    type="file"
-                    accept="application/json,.json"
-                    onChange={(e) => void handleFile(e)}
-                    className="h-9 max-w-xs cursor-pointer text-xs file:me-2 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-1"
-                  />
-                  {fileName && (
-                    <span className="inline-flex items-center gap-1 text-[11px] text-slate-500">
-                      <FileJson className="h-3.5 w-3.5" />
-                      {fileName}
-                    </span>
-                  )}
                   <Button
                     type="button"
                     size="sm"
-                    variant="ghost"
-                    className="h-8 text-xs"
+                    variant="outline"
+                    className="h-8"
                     onClick={async () => {
                       try {
                         const text = await navigator.clipboard.readText();
@@ -513,140 +613,218 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
                     <ClipboardPaste className="h-3.5 w-3.5" />
                     Paste
                   </Button>
+                  <label className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
+                    <Upload className="h-3.5 w-3.5" />
+                    File
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept="application/json,.json"
+                      className="hidden"
+                      onChange={(e) => void handleFile(e)}
+                    />
+                  </label>
                   {draft.length > 0 && (
                     <Button
                       type="button"
                       size="sm"
                       variant="ghost"
-                      className="h-8 text-xs text-rose-600"
+                      className="h-8 text-rose-600"
                       onClick={clearDraft}
                     >
-                      Clear batch
+                      Clear
                     </Button>
                   )}
                 </div>
+
+                {fileName && (
+                  <p className="flex items-center gap-1 text-[11px] text-slate-500">
+                    <FileJson className="h-3.5 w-3.5" />
+                    {fileName}
+                  </p>
+                )}
                 {parseError && (
                   <p className="flex items-center gap-1 text-xs text-rose-600">
-                    <AlertCircle className="h-3.5 w-3.5" />
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                     {parseError}
                   </p>
                 )}
               </div>
+            </div>
 
-              <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-                <Button
-                  onClick={requestConfirm}
-                  disabled={!canOpenConfirm}
-                  size="sm"
-                >
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  Review & confirm import…
-                </Button>
-                {draft.length > 0 && (
-                  <span
-                    className={[
-                      "text-xs font-semibold",
-                      allValid && categoryReady
-                        ? "text-emerald-700"
-                        : "text-amber-700",
-                    ].join(" ")}
-                  >
-                    {validRows.length}/{draft.length} valid
-                    {!categoryReady ? " · category required" : ""}
-                  </span>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Preview */}
-        <Card className="min-h-112">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">2 · Preview</CardTitle>
-            <CardDescription className="text-xs">
-              Edit or delete before confirm. Green option = correct answer.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {draft.length === 0 ? (
-              <div className="flex h-64 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200 bg-slate-50 text-center text-sm text-slate-500">
-                <FileJson className="h-8 w-8 text-slate-300" />
-                Load sample or paste AI JSON, then Parse → Preview.
-              </div>
-            ) : (
-              <ul className="flex max-h-136 flex-col gap-2.5 overflow-y-auto pe-1">
-                {draft.map((item, index) =>
-                  item.ok ? (
-                    <QuestionPreviewCard
-                      key={item.id}
-                      index={index}
-                      q={item.q}
-                      onEdit={() => setEditId(item.id)}
-                      onDelete={() => deleteRow(item.id)}
-                    />
-                  ) : (
-                    <li
-                      key={item.id}
-                      className="flex items-start justify-between gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs text-rose-800"
-                    >
-                      <span className="flex items-start gap-2">
-                        <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                        <span>
-                          <strong>#{index + 1}</strong> — {item.error}
-                        </span>
+            {/* Right: preview stage */}
+            <div className="flex min-h-80 flex-col bg-slate-50/50">
+              <div className="flex items-center justify-between gap-2 border-b border-slate-100 bg-white/80 px-4 py-2.5">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">
+                    Preview
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    L1 dedupe by contentHash · green option = correct
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {triagePending && (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />
+                  )}
+                  {draft.length > 0 && categoryReady && triage.length > 0 && (
+                    <>
+                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                        {triageSummary.neu} new
                       </span>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 shrink-0 text-rose-700"
-                        onClick={() => deleteRow(item.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Remove
-                      </Button>
-                    </li>
-                  ),
-                )}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                      <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-800">
+                        {triageSummary.attach} attach
+                      </span>
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                        {triageSummary.skip} skip
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
 
-      {/* Sample on page */}
-      <Card className="border-slate-200 bg-slate-50/70">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Sample JSON (import format)</CardTitle>
-          <CardDescription className="text-xs">
-            Give this shape to an AI, or click{" "}
-            <strong>Load sample JSON</strong> above to try the flow.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <pre className="max-h-72 overflow-auto rounded-xl bg-slate-900 p-4 text-[11px] leading-relaxed text-slate-100">
-            {SAMPLE_JSON}
-          </pre>
-          <details className="rounded-lg border border-slate-200 bg-white px-3 py-2">
-            <summary className="cursor-pointer text-xs font-semibold text-slate-700">
-              Full AI prompt (expand)
-            </summary>
-            <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap text-[11px] leading-relaxed text-slate-600">
-              {AI_QUESTION_EXTRACT_PROMPT}
-            </pre>
-          </details>
+              <div className="flex-1 overflow-hidden p-3">
+                {draft.length === 0 ? (
+                  <div className="flex h-full min-h-64 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-white px-6 text-center">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100">
+                      <FileJson className="h-6 w-6 text-slate-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">
+                        No questions yet
+                      </p>
+                      <p className="mt-1 max-w-xs text-xs text-slate-500">
+                        Paste AI JSON on the left, or load the sample to see the
+                        full review flow.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() =>
+                        ingestJson(SAMPLE_JSON, "sample-import.json")
+                      }
+                    >
+                      <FileJson className="h-3.5 w-3.5" />
+                      Load sample batch
+                    </Button>
+                  </div>
+                ) : (
+                  <ul className="flex max-h-112 flex-col gap-2 overflow-y-auto pe-1">
+                    {draft.map((item, index) =>
+                      item.ok ? (
+                        <QuestionPreviewCard
+                          key={item.id}
+                          index={index}
+                          q={item.q}
+                          triage={
+                            categoryReady
+                              ? triageByDraftId.get(item.id)
+                              : undefined
+                          }
+                          onEdit={() => setEditId(item.id)}
+                          onDelete={() => deleteRow(item.id)}
+                        />
+                      ) : (
+                        <li
+                          key={item.id}
+                          className="flex items-start justify-between gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs text-rose-800"
+                        >
+                          <span className="flex items-start gap-2">
+                            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                            <span>
+                              <strong>#{index + 1}</strong> — {item.error}
+                            </span>
+                          </span>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 shrink-0 text-rose-700"
+                            onClick={() => deleteRow(item.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </li>
+                      ),
+                    )}
+                  </ul>
+                )}
+              </div>
+
+              {/* Sticky confirm dock */}
+              <div className="sticky bottom-0 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[11px] text-slate-500">
+                    {canOpenConfirm ? (
+                      <span className="font-semibold text-emerald-700">
+                        {triageSummary.neu} create · {triageSummary.attach}{" "}
+                        attach · {triageSummary.skip} skip
+                      </span>
+                    ) : !draft.length ? (
+                      "Load JSON to continue"
+                    ) : !categoryReady ? (
+                      <span className="font-semibold text-amber-700">
+                        Select a category to run dedupe
+                      </span>
+                    ) : (
+                      <span className="font-semibold text-amber-700">
+                        Fix or remove invalid rows
+                      </span>
+                    )}
+                  </p>
+                  <Button
+                    onClick={requestConfirm}
+                    disabled={!canOpenConfirm}
+                    className="h-9 min-w-40"
+                  >
+                    <ShieldCheck className="h-4 w-4" />
+                    Confirm import…
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Edit dialog */}
-      <Dialog open={Boolean(editingRow)} onOpenChange={(o) => !o && setEditId(null)}>
+      {/* Reference — collapsed by default */}
+      <details className="group rounded-2xl border border-slate-200 bg-white open:shadow-sm">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-semibold text-slate-800 marker:content-none [&::-webkit-details-marker]:hidden">
+          <span className="flex items-center gap-2">
+            <FileJson className="h-4 w-4 text-slate-400" />
+            Sample JSON & AI prompt
+          </span>
+          <ChevronDown className="h-4 w-4 text-slate-400 transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="space-y-3 border-t border-slate-100 px-4 pb-4 pt-3">
+          <p className="text-xs text-slate-500">
+            Hand this shape to an AI extractor, or use{" "}
+            <strong className="text-slate-700">Try sample</strong> above.
+          </p>
+          <pre className="max-h-56 overflow-auto rounded-xl bg-slate-900 p-3 text-[11px] leading-relaxed text-slate-100">
+            {SAMPLE_JSON}
+          </pre>
+          <details className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+            <summary className="cursor-pointer text-xs font-semibold text-slate-700">
+              Full AI prompt
+            </summary>
+            <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap text-[11px] leading-relaxed text-slate-600">
+              {AI_QUESTION_EXTRACT_PROMPT}
+            </pre>
+          </details>
+        </div>
+      </details>
+
+      <Dialog
+        open={Boolean(editingRow)}
+        onOpenChange={(o) => !o && setEditId(null)}
+      >
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Edit question</DialogTitle>
             <DialogDescription>
-              Changes apply to this import batch only — nothing is saved until
-              you confirm import.
+              Applies to this batch only — DB write happens after confirm.
             </DialogDescription>
           </DialogHeader>
           {editingRow && (
@@ -659,7 +837,6 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
         </DialogContent>
       </Dialog>
 
-      {/* Confirm dialog */}
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -668,17 +845,36 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
               Confirm import
             </DialogTitle>
             <DialogDescription>
-              This will create questions in the database. Double-check the
-              category.
+              Creates questions in the database. Check the category once more.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
             <div className="flex justify-between gap-2">
-              <span className="text-slate-500">Questions</span>
-              <span className="font-bold text-slate-900">{validRows.length}</span>
+              <span className="text-slate-500">Batch size</span>
+              <span className="font-bold text-slate-900">
+                {validRows.length}
+              </span>
             </div>
             <div className="flex justify-between gap-2">
-              <span className="text-slate-500">Category</span>
+              <span className="text-emerald-700">🟢 New</span>
+              <span className="font-bold text-slate-900">
+                {triageSummary.neu}
+              </span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span className="text-sky-700">🔵 Attach tags</span>
+              <span className="font-bold text-slate-900">
+                {triageSummary.attach}
+              </span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span className="text-amber-700">🟡 Skip</span>
+              <span className="font-bold text-slate-900">
+                {triageSummary.skip}
+              </span>
+            </div>
+            <div className="flex justify-between gap-2 border-t border-slate-200 pt-2">
+              <span className="text-slate-500">Fallback category</span>
               <span className="text-end font-bold text-slate-900">
                 {selectedCategory
                   ? `${selectedCategory.nameEn} · ${selectedCategory.nameFa}`
@@ -718,38 +914,61 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
   );
 }
 
+function TriageBadge({ kind }: { kind: TriageKind }) {
+  if (kind === "new") {
+    return (
+      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+        🟢 New
+      </span>
+    );
+  }
+  if (kind === "duplicate_attach") {
+    return (
+      <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-800">
+        🔵 Duplicate · Attach
+      </span>
+    );
+  }
+  return (
+    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+      🟡 Duplicate · Skip
+    </span>
+  );
+}
+
 function QuestionPreviewCard({
   index,
   q,
+  triage,
   onEdit,
   onDelete,
 }: {
   index: number;
   q: ImportQuestion;
+  triage?: TriageItem;
   onEdit: () => void;
   onDelete: () => void;
 }) {
   return (
-    <li className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+    <li className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
             #{index + 1}
           </span>
+          {triage ? (
+            <TriageBadge kind={triage.kind} />
+          ) : (
+            <span className="rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-400">
+              Select category…
+            </span>
+          )}
           <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-800">
             {q.type}
           </span>
           <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800">
             {q.difficulty}
           </span>
-          {q.tags?.slice(0, 3).map((t) => (
-            <span
-              key={t}
-              className="rounded-full bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-500"
-            >
-              #{t}
-            </span>
-          ))}
         </div>
         <div className="flex gap-1">
           <Button
@@ -777,6 +996,46 @@ function QuestionPreviewCard({
       <p className="mt-0.5 text-sm text-slate-600" dir="rtl">
         {q.content.fa.text}
       </p>
+      {triage && (
+        <p className="mt-1.5 text-[11px] text-slate-500">
+          {triage.kind === "new" && (
+            <>
+              Will create
+              {triage.categoryIdsToWrite.length
+                ? ` · banks: ${triage.categoryIdsToWrite.length}`
+                : ""}
+              {triage.tagsToWrite.length
+                ? ` · tags: ${triage.tagsToWrite.join(", ")}`
+                : ""}
+              {q.primaryCategory ? ` · primary: ${q.primaryCategory}` : ""}
+            </>
+          )}
+          {triage.kind === "duplicate_attach" && (
+            <>
+              Exists
+              {triage.existingCategoryName
+                ? ` in ${triage.existingCategoryName}`
+                : ""}
+              {triage.categoryIdsToWrite.length
+                ? ` · +${triage.categoryIdsToWrite.length} bank(s)`
+                : ""}
+              {triage.tagsToWrite.length
+                ? ` · tags: ${triage.tagsToWrite.join(", ")}`
+                : ""}
+            </>
+          )}
+          {triage.kind === "duplicate_skip" && (
+            <>
+              Exact match
+              {triage.existingCategoryName
+                ? ` (${triage.existingCategoryName})`
+                : ""}
+              {" · "}
+              no new banks/tags
+            </>
+          )}
+        </p>
+      )}
       <ol className="mt-2 grid gap-1 sm:grid-cols-2">
         {q.content.en.options.map((opt, i) => {
           const correct = i === q.correctIndex;
@@ -786,12 +1045,12 @@ function QuestionPreviewCard({
               className={[
                 "rounded-lg border px-2 py-1.5 text-[11px]",
                 correct
-                  ? "border-emerald-300 bg-emerald-50 text-emerald-900"
+                  ? "border-emerald-300 bg-emerald-50 font-medium text-emerald-900"
                   : "border-slate-100 bg-slate-50 text-slate-600",
               ].join(" ")}
             >
               <span className="font-bold text-slate-400">{i + 1}.</span> {opt}
-              <span className="mt-0.5 block text-slate-500" dir="rtl">
+              <span className="mt-0.5 block font-normal text-slate-500" dir="rtl">
                 {q.content.fa.options[i]}
               </span>
             </li>
@@ -812,7 +1071,9 @@ function EditQuestionForm({
   onSave: (q: ImportQuestion) => boolean;
 }) {
   const [difficulty, setDifficulty] = useState(initial.difficulty);
-  const [correctIndex, setCorrectIndex] = useState(String(initial.correctIndex));
+  const [correctIndex, setCorrectIndex] = useState(
+    String(initial.correctIndex),
+  );
   const [enText, setEnText] = useState(initial.content.en.text);
   const [faText, setFaText] = useState(initial.content.fa.text);
   const [enOpts, setEnOpts] = useState([...initial.content.en.options]);
@@ -820,6 +1081,12 @@ function EditQuestionForm({
   const [expEn, setExpEn] = useState(initial.explanation?.en ?? "");
   const [expFa, setExpFa] = useState(initial.explanation?.fa ?? "");
   const [tagStr, setTagStr] = useState((initial.tags ?? []).join(", "));
+  const [primaryCategory, setPrimaryCategory] = useState(
+    initial.primaryCategory ?? "",
+  );
+  const [alsoInStr, setAlsoInStr] = useState(
+    (initial.alsoIn ?? []).join(", "),
+  );
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -831,19 +1098,34 @@ function EditQuestionForm({
         en: {
           ...initial.content.en,
           text: enText,
-          options: enOpts.map((o) => o.trim()) as [string, string, string, string],
+          options: enOpts.map((o) => o.trim()) as [
+            string,
+            string,
+            string,
+            string,
+          ],
         },
         fa: {
           ...initial.content.fa,
           text: faText,
-          options: faOpts.map((o) => o.trim()) as [string, string, string, string],
+          options: faOpts.map((o) => o.trim()) as [
+            string,
+            string,
+            string,
+            string,
+          ],
         },
       },
       explanation:
         expEn.trim() || expFa.trim()
           ? { en: expEn, fa: expFa }
-          : initial.explanation ?? null,
+          : (initial.explanation ?? null),
       tags: tagStr
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
+      primaryCategory: primaryCategory.trim() || null,
+      alsoIn: alsoInStr
         .split(",")
         .map((t) => t.trim())
         .filter(Boolean),
@@ -904,7 +1186,10 @@ function EditQuestionForm({
 
       <div className="grid gap-2 sm:grid-cols-2">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="space-y-1 rounded-lg border border-slate-100 p-2">
+          <div
+            key={i}
+            className="space-y-1 rounded-lg border border-slate-100 p-2"
+          >
             <Label className="text-[10px] text-slate-500">Option {i + 1}</Label>
             <Input
               className="h-8 text-xs"
@@ -949,6 +1234,24 @@ function EditQuestionForm({
       <div className="space-y-1">
         <Label className="text-xs">Tags (comma-separated)</Label>
         <Input value={tagStr} onChange={(e) => setTagStr(e.target.value)} />
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="space-y-1">
+          <Label className="text-xs">primaryCategory</Label>
+          <Input
+            value={primaryCategory}
+            onChange={(e) => setPrimaryCategory(e.target.value)}
+            placeholder="world-cup"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">alsoIn (buckets)</Label>
+          <Input
+            value={alsoInStr}
+            onChange={(e) => setAlsoInStr(e.target.value)}
+            placeholder="ucl, real-madrid"
+          />
+        </div>
       </div>
 
       <DialogFooter className="gap-2">

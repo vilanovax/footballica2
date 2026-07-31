@@ -27,18 +27,29 @@ export default async function AdminSettingsPage() {
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Settings</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-slate-900">
+          Settings
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Sync format packs, backup the bank, and import questions with
-          preview, edit, and confirm.
+          Question bank tools — import with preview, backup, format sync.
         </p>
       </div>
 
-      <LiveOpsFormatsPanel initial={liveops} />
+      <section className="space-y-2">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+          Live-Ops
+        </p>
+        <LiveOpsFormatsPanel initial={liveops} />
+      </section>
 
-      <ImportExportPanel categories={options} />
+      <section className="space-y-2">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+          Question bank
+        </p>
+        <ImportExportPanel categories={options} />
+      </section>
     </div>
   );
 }
