@@ -2,6 +2,7 @@
 // can share the exact same cost/level rules (single source of truth).
 
 import type { BoosterType } from "@/lib/boosters/boosters";
+import type { BusinessSnapshot } from "@/lib/club/businessEconomy";
 
 /** Live Newspaper Event still within its TTL (hub chip + match math). */
 export type ActiveNewsBoosterSnapshot = {
@@ -41,6 +42,8 @@ export type ClubSnapshot = {
   /** Mysterious Player consecutive solved days (Hub chip). */
   mysteryStreak: number;
   longestMysteryStreak: number;
+  /** ADR 003 Club Funds business layer (preview + balances). */
+  business: BusinessSnapshot;
 };
 
 export type UpgradeKey = "STADIUM" | "MEDICAL" | "TRAINING_GROUND";

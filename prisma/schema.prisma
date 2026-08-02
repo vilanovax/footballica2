@@ -167,6 +167,19 @@ enum MissionObjective {
   WIN_DUEL
 }
 
+/// Business-layer facilities (ADR 003) — Club Funds only, not match coins.
+enum BusinessFacilityKey {
+  TICKET_OFFICE
+  CLUB_SHOP
+  MUSEUM
+}
+
+enum ClubFacilityStatus {
+  LOCKED
+  AVAILABLE
+  BUILT
+}
+
 // ─── User (Manager) ──────────────────────────────────────────────────────────
 // Owns auth identity + global progression. Economy currency lives on Club.
 
@@ -258,6 +271,14 @@ model Club {
   /// the "once per day" claim; a fresh calendar day re-enables the mailbox.
   lastNewsClaim     DateTime?
 
+  // ── Business layer / Club Funds (ADR 003) — separate from match coins ──
+  /// Spendable Club Funds (build / upgrade business facilities + vault).
+  clubFunds    Int @default(0)
+  /// Funds sitting in the vault after collect (capped by vaultLevel).
+  vaultBalance Int @default(0)
+  /// Vault capacity tier (hours of aggregate income). Starts at 1.
+  vaultLevel   Int @default(1)
+
   // Infrastructure upgrade levels (0 = ruined start state)
   stadiumLevel        Int @default(0)
   pitchLevel          Int @default(0)
@@ -331,9 +352,32 @@ model Club {
   gridAttempts     DailyGridAttempt[]
   starPathAttempts DailyStarPathAttempt[]
   memoryAttempts   DailyMemoryAttempt[]
+  facilities       ClubFacility[]
 
   @@index([fans])
   @@index([coins])
+}
+
+/// Per-club business facility state (lazy income — ADR 003).
+model ClubFacility {
+  id     String @id @default(cuid())
+  clubId String
+  club   Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  key              BusinessFacilityKey
+  status           ClubFacilityStatus @default(LOCKED)
+  /// 0 until built; built facilities start at 1.
+  level            Int                @default(0)
+  storedAmount     Int                @default(0)
+  lastCalculatedAt DateTime           @default(now())
+  /// Optimistic lock for collect / upgrade double-taps.
+  version          Int                @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clubId, key])
+  @@index([clubId, status])
 }
 
 /// Immutable IAP ledger for mock (and future real) coin-pack purchases.

@@ -10,6 +10,7 @@ import type { BoosterType } from "@/lib/boosters/boosters";
 import { computeStaminaRegen } from "@/lib/club/stamina";
 import { getSessionUserId } from "@/lib/auth/session";
 import { toClubSnapshot, type ProfileSnapshot } from "@/lib/dev/dummyClub";
+import { loadBusinessSnapshot } from "@/lib/club/businessService";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -39,13 +40,27 @@ export async function loadActiveNewsBooster(
   };
 }
 
-/** ClubSnapshot including any live Newspaper Event. */
+/** ClubSnapshot including Newspaper Event + business layer preview. */
 export async function toClubSnapshotWithBooster(
   club: Club,
   db: Db = prisma,
+  userXp?: number,
 ): Promise<ClubSnapshot> {
   const activeNewsBooster = await loadActiveNewsBooster(club.id, db);
-  return toClubSnapshot(club, activeNewsBooster);
+  let xp = userXp;
+  if (xp === undefined) {
+    const u = await db.user.findUnique({
+      where: { id: club.userId },
+      select: { xp: true },
+    });
+    xp = u?.xp ?? 0;
+  }
+  const { club: withBusiness, business } = await loadBusinessSnapshot(
+    club,
+    xp,
+    db,
+  );
+  return toClubSnapshot(withBusiness, activeNewsBooster, business);
 }
 
 export type UserWithClub = User & { club: Club | null };
@@ -87,8 +102,7 @@ export async function getClubSnapshot(): Promise<ClubSnapshot | null> {
       })
     : user.club;
 
-  const activeNewsBooster = await loadActiveNewsBooster(club.id);
-  return toClubSnapshot(club, activeNewsBooster);
+  return toClubSnapshotWithBooster(club, prisma, user.xp);
 }
 
 /** Profile / trophy-room payload for the session user. */

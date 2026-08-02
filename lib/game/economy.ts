@@ -180,6 +180,41 @@ export type GameConfig = {
     starPath: LiveModePlacement;
     tikiTaka: LiveModePlacement;
   };
+  /**
+   * Club business layer (ADR 003) — Club Funds idle economy.
+   * Never pays into `Club.coins`.
+   */
+  businessEconomy: {
+    /** Spendable Funds granted once when business layer unlocks (FTUE / bootstrap). */
+    seedFunds: number;
+    vault: {
+      maxLevel: number;
+      baseCost: number;
+      costGrowth: number;
+      /** Hours of aggregate rate at vault levels 1..N. */
+      capHours: number[];
+    };
+    /** Club Shop: rate *= 1 + min(cap, fans / divisor). */
+    shopFansDivisor: number;
+    shopFansBonusCap: number;
+    facilities: {
+      TICKET_OFFICE: BusinessFacilityConfig;
+      CLUB_SHOP: BusinessFacilityConfig;
+      MUSEUM: BusinessFacilityConfig;
+    };
+  };
+};
+
+export type BusinessFacilityConfig = {
+  unlockPlayerLevel: number;
+  baseBuildCost: number;
+  baseRatePerHour: number;
+  baseStorageHours: number;
+  costGrowth: number;
+  rateGrowth: number;
+  capGrowth: number;
+  maxLevel: number;
+  usesFansFactor: boolean;
 };
 
 export const DEFAULT_GAME_CONFIG: GameConfig = {
@@ -267,6 +302,52 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     starPath: { duel: false, gotd: true },
     tikiTaka: { duel: true, gotd: false },
   },
+  businessEconomy: {
+    seedFunds: 150,
+    vault: {
+      maxLevel: 5,
+      baseCost: 500,
+      costGrowth: 2,
+      capHours: [3, 6, 8, 12, 24],
+    },
+    shopFansDivisor: 2000,
+    shopFansBonusCap: 0.5,
+    facilities: {
+      TICKET_OFFICE: {
+        unlockPlayerLevel: 1,
+        baseBuildCost: 0,
+        baseRatePerHour: 40,
+        baseStorageHours: 2,
+        costGrowth: 2,
+        rateGrowth: 1.5,
+        capGrowth: 1.15,
+        maxLevel: 5,
+        usesFansFactor: false,
+      },
+      CLUB_SHOP: {
+        unlockPlayerLevel: 3,
+        baseBuildCost: 500,
+        baseRatePerHour: 80,
+        baseStorageHours: 3,
+        costGrowth: 1.75,
+        rateGrowth: 1.5,
+        capGrowth: 1.1,
+        maxLevel: 5,
+        usesFansFactor: true,
+      },
+      MUSEUM: {
+        unlockPlayerLevel: 5,
+        baseBuildCost: 2500,
+        baseRatePerHour: 100,
+        baseStorageHours: 4,
+        costGrowth: 1.55,
+        rateGrowth: 1.5,
+        capGrowth: 1.08,
+        maxLevel: 5,
+        usesFansFactor: false,
+      },
+    },
+  },
 };
 
 /** Finite-number guard with fallback (rejects NaN/Infinity/non-numbers). */
@@ -292,7 +373,47 @@ export function mergeGameConfig(raw: unknown): GameConfig {
   const lo = (src.liveOps ?? {}) as Record<string, unknown>;
   const g = src.gotd ?? {};
   const lm = (src.liveModes ?? {}) as Record<string, unknown>;
+  const be = (src.businessEconomy ?? {}) as Record<string, unknown>;
+  const beVault = (be.vault ?? {}) as Record<string, unknown>;
+  const beFac = (be.facilities ?? {}) as Record<string, unknown>;
   const D = DEFAULT_GAME_CONFIG;
+
+  const mergeFacility = (
+    raw: unknown,
+    fallback: BusinessFacilityConfig,
+  ): BusinessFacilityConfig => {
+    const o =
+      raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+    return {
+      unlockPlayerLevel: Math.max(
+        1,
+        Math.round(num(o.unlockPlayerLevel, fallback.unlockPlayerLevel)),
+      ),
+      baseBuildCost: Math.max(
+        0,
+        Math.round(num(o.baseBuildCost, fallback.baseBuildCost)),
+      ),
+      baseRatePerHour: Math.max(
+        0,
+        Math.round(num(o.baseRatePerHour, fallback.baseRatePerHour)),
+      ),
+      baseStorageHours: Math.max(
+        0.5,
+        num(o.baseStorageHours, fallback.baseStorageHours),
+      ),
+      costGrowth: Math.max(1, num(o.costGrowth, fallback.costGrowth)),
+      rateGrowth: Math.max(1, num(o.rateGrowth, fallback.rateGrowth)),
+      capGrowth: Math.max(1, num(o.capGrowth, fallback.capGrowth)),
+      maxLevel: Math.max(
+        1,
+        Math.min(20, Math.round(num(o.maxLevel, fallback.maxLevel))),
+      ),
+      usesFansFactor:
+        typeof o.usesFansFactor === "boolean"
+          ? o.usesFansFactor
+          : fallback.usesFansFactor,
+    };
+  };
 
   const mergePlacement = (
     raw: unknown,
@@ -502,6 +623,66 @@ export function mergeGameConfig(raw: unknown): GameConfig {
       grid: mergePlacement(lm.grid, D.liveModes.grid),
       starPath: mergePlacement(lm.starPath, D.liveModes.starPath),
       tikiTaka: mergePlacement(lm.tikiTaka, D.liveModes.tikiTaka),
+    },
+    businessEconomy: {
+      seedFunds: Math.max(
+        0,
+        Math.round(num(be.seedFunds, D.businessEconomy.seedFunds)),
+      ),
+      vault: {
+        maxLevel: Math.max(
+          1,
+          Math.min(
+            20,
+            Math.round(num(beVault.maxLevel, D.businessEconomy.vault.maxLevel)),
+          ),
+        ),
+        baseCost: Math.max(
+          1,
+          Math.round(num(beVault.baseCost, D.businessEconomy.vault.baseCost)),
+        ),
+        costGrowth: Math.max(
+          1,
+          num(beVault.costGrowth, D.businessEconomy.vault.costGrowth),
+        ),
+        capHours: Array.isArray(beVault.capHours)
+          ? (beVault.capHours as unknown[])
+              .map((h, i) =>
+                Math.max(
+                  1,
+                  num(h, D.businessEconomy.vault.capHours[i] ?? 3),
+                ),
+              )
+              .slice(0, 10)
+          : [...D.businessEconomy.vault.capHours],
+      },
+      shopFansDivisor: Math.max(
+        1,
+        Math.round(
+          num(be.shopFansDivisor, D.businessEconomy.shopFansDivisor),
+        ),
+      ),
+      shopFansBonusCap: Math.min(
+        2,
+        Math.max(
+          0,
+          num(be.shopFansBonusCap, D.businessEconomy.shopFansBonusCap),
+        ),
+      ),
+      facilities: {
+        TICKET_OFFICE: mergeFacility(
+          beFac.TICKET_OFFICE,
+          D.businessEconomy.facilities.TICKET_OFFICE,
+        ),
+        CLUB_SHOP: mergeFacility(
+          beFac.CLUB_SHOP,
+          D.businessEconomy.facilities.CLUB_SHOP,
+        ),
+        MUSEUM: mergeFacility(
+          beFac.MUSEUM,
+          D.businessEconomy.facilities.MUSEUM,
+        ),
+      },
     },
   };
 }

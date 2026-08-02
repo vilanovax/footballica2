@@ -79,6 +79,13 @@ export async function createClub(
           pitchLevel: 0,
           medicalLevel: 0,
           trainingGroundLevel: 0,
+          facilities: {
+            create: [
+              { key: "TICKET_OFFICE", status: "AVAILABLE", level: 0 },
+              { key: "CLUB_SHOP", status: "LOCKED", level: 0 },
+              { key: "MUSEUM", status: "LOCKED", level: 0 },
+            ],
+          },
         },
       });
 

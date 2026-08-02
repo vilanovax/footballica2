@@ -2,6 +2,8 @@ import "server-only";
 
 import type { Club } from "@/generated/prisma/client";
 import type { ClubSnapshot } from "@/lib/club/upgrades";
+import type { BusinessSnapshot } from "@/lib/club/businessEconomy";
+import { buildBusinessSnapshot } from "@/lib/club/businessEconomy";
 import { computeStaminaRegen } from "@/lib/club/stamina";
 import { canClaimNews } from "@/lib/boosters/boosters";
 import { DEFAULT_CLUB_COLOR_KEY } from "@/lib/onboarding/clubColors";
@@ -12,10 +14,20 @@ import { DEFAULT_CLUB_COLOR_KEY } from "@/lib/onboarding/clubColors";
  * `lib/player/current.ts` — do not add dummy-user fallbacks here.
  */
 
+const EMPTY_BUSINESS: BusinessSnapshot = buildBusinessSnapshot({
+  clubFunds: 0,
+  vaultBalance: 0,
+  vaultLevel: 1,
+  fans: 0,
+  playerLevel: 1,
+  facilities: [],
+});
+
 /** Serializable club shape shared with client components. */
 export function toClubSnapshot(
   club: Club,
   activeNewsBooster: ClubSnapshot["activeNewsBooster"] = null,
+  business: BusinessSnapshot = EMPTY_BUSINESS,
 ): ClubSnapshot {
   const regen = computeStaminaRegen(club);
   return {
@@ -37,6 +49,7 @@ export function toClubSnapshot(
     activeNewsBooster,
     mysteryStreak: club.mysteryStreak,
     longestMysteryStreak: club.longestMysteryStreak,
+    business,
   };
 }
 

@@ -46,6 +46,7 @@ import type { CampaignSeasonView } from "@/lib/game/campaignSeason";
 import { NextGoalCard } from "@/components/club-hub/NextGoalCard";
 import { MysteryDailyChip } from "@/components/club-hub/MysteryDailyChip";
 import { CampaignSeasonCard } from "@/components/club-hub/CampaignSeasonCard";
+import { BusinessPanel } from "@/components/club-hub/BusinessPanel";
 
 type ClubHubProps = {
   initialClub: ClubSnapshot;
@@ -354,6 +355,10 @@ export function ClubHub({
             trainingGroundLevel: club.trainingGroundLevel,
           }}
         />
+      )}
+
+      {ftueComplete && (
+        <BusinessPanel club={club} onClubUpdate={setClub} />
       )}
 
       <div className="flex flex-col gap-3">
