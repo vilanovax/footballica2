@@ -4,11 +4,12 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  CalendarPlus,
-  Sparkles,
   Eye,
-  Save,
+  Grid3x3,
   Pencil,
+  Save,
+  Sparkles,
+  Wand2,
 } from "lucide-react";
 import {
   ensureGridScheduleWeek,
@@ -20,9 +21,9 @@ import {
 } from "@/actions/admin/grid";
 import type { GridRuleKind } from "@/lib/grid/types";
 import { GRID_MAX_MISTAKES, GRID_SIZE } from "@/lib/grid/types";
+import { AdminHelpTip, FieldLabel } from "@/components/admin/AdminHelpTip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -30,14 +31,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 type RuleOptions = {
   leagues: string[];
@@ -47,12 +40,12 @@ type RuleOptions = {
   trophies: string[];
 };
 
-const KINDS: { value: GridRuleKind; label: string; short: string }[] = [
-  { value: "club", label: "Club", short: "Club" },
-  { value: "trophy", label: "Trophy", short: "Cup" },
-  { value: "league", label: "League", short: "Lge" },
-  { value: "position", label: "Position", short: "Pos" },
-  { value: "nationalityCode", label: "Nation", short: "Nat" },
+const KINDS: { value: GridRuleKind; label: string }[] = [
+  { value: "club", label: "Club" },
+  { value: "trophy", label: "Trophy" },
+  { value: "league", label: "League" },
+  { value: "position", label: "Position" },
+  { value: "nationalityCode", label: "Nation" },
 ];
 
 function emptyAxes(kind: GridRuleKind, values: string[]): AdminGridAxisInput[] {
@@ -77,6 +70,32 @@ function valuesForKind(kind: GridRuleKind, opts: RuleOptions): string[] {
   }
 }
 
+function axesFromPuzzle(p: AdminGridPuzzleRow): {
+  rows: AdminGridAxisInput[];
+  cols: AdminGridAxisInput[];
+} {
+  return {
+    rows: p.rows.map((a) => ({
+      kind: a.rule.kind,
+      value: a.rule.value,
+      labelEn: a.labelEn,
+      labelFa: a.labelFa,
+    })),
+    cols: p.cols.map((a) => ({
+      kind: a.rule.kind,
+      value: a.rule.value,
+      labelEn: a.labelEn,
+      labelFa: a.labelFa,
+    })),
+  };
+}
+
+function boardSummary(p: AdminGridPuzzleRow): string {
+  const r = p.rows.map((a) => a.rule.value).join(" · ");
+  const c = p.cols.map((a) => a.rule.value).join(" · ");
+  return `${r}  ×  ${c}`;
+}
+
 function AxisChip({
   axis,
   onChange,
@@ -94,7 +113,7 @@ function AxisChip({
       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
         {label}
       </span>
-      <div className="flex min-w-0 flex-col gap-1 sm:flex-row">
+      <div className="flex min-w-0 flex-col gap-1">
         <Select
           value={axis.kind}
           onValueChange={(kind) => {
@@ -105,7 +124,7 @@ function AxisChip({
             });
           }}
         >
-          <SelectTrigger className="h-8 w-full shrink-0 text-xs sm:w-[5.5rem]">
+          <SelectTrigger className="h-8 w-full text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -120,7 +139,7 @@ function AxisChip({
           value={axis.value || undefined}
           onValueChange={(value) => onChange({ ...axis, value })}
         >
-          <SelectTrigger className="h-8 min-w-0 flex-1 text-xs">
+          <SelectTrigger className="h-8 min-w-0 w-full text-xs">
             <SelectValue placeholder="…" />
           </SelectTrigger>
           <SelectContent>
@@ -146,32 +165,60 @@ export function GridPuzzlesPanel({
   ruleOptions: RuleOptions;
 }) {
   const router = useRouter();
+  const seedToday = initialPuzzles.find((p) => p.dateKey === todayKey) ?? null;
+  const seedAxes = seedToday
+    ? axesFromPuzzle(seedToday)
+    : {
+        rows:
+          ruleOptions.clubs.length >= 3
+            ? emptyAxes("club", ruleOptions.clubs)
+            : emptyAxes("league", ruleOptions.leagues),
+        cols:
+          ruleOptions.clubs.length >= 6
+            ? emptyAxes("club", ruleOptions.clubs.slice(3))
+            : emptyAxes("position", ["FWD", "MID", "DEF"]),
+      };
+
   const [puzzles, setPuzzles] = useState(initialPuzzles);
   const [dateKey, setDateKey] = useState(todayKey);
-  const [maxMistakes, setMaxMistakes] = useState(GRID_MAX_MISTAKES);
-  const [rows, setRows] = useState<AdminGridAxisInput[]>(() =>
-    ruleOptions.clubs.length >= 3
-      ? emptyAxes("club", ruleOptions.clubs)
-      : emptyAxes("league", ruleOptions.leagues),
+  const [maxMistakes, setMaxMistakes] = useState(
+    seedToday?.maxMistakes ?? GRID_MAX_MISTAKES,
   );
-  const [cols, setCols] = useState<AdminGridAxisInput[]>(() =>
-    ruleOptions.clubs.length >= 6
-      ? emptyAxes("club", ruleOptions.clubs.slice(3))
-      : emptyAxes("position", ["FWD", "MID", "DEF"]),
-  );
+  const [rows, setRows] = useState<AdminGridAxisInput[]>(seedAxes.rows);
+  const [cols, setCols] = useState<AdminGridAxisInput[]>(seedAxes.cols);
   const [preview, setPreview] = useState<{
     solvable: boolean;
     emptyCells: number;
     counts: number[];
-  } | null>(null);
+  } | null>(
+    seedToday
+      ? {
+          solvable: seedToday.solvable,
+          emptyCells: seedToday.emptyCells,
+          counts: seedToday.cellCounts,
+        }
+      : null,
+  );
   const [pending, startTransition] = useTransition();
 
   const readyToSave = preview?.solvable === true;
   const isToday = dateKey === todayKey;
 
+  const todayPuzzle = useMemo(
+    () => puzzles.find((p) => p.dateKey === todayKey) ?? null,
+    [puzzles, todayKey],
+  );
+
+  const schedule = useMemo(
+    () => puzzles.filter((p) => p.dateKey !== todayKey),
+    [puzzles, todayKey],
+  );
+
   const weekCoverage = useMemo(() => {
-    const keys = new Set(puzzles.map((p) => p.dateKey));
-    return { scheduled: keys.size, solvable: puzzles.filter((p) => p.solvable).length };
+    return {
+      scheduled: puzzles.length,
+      solvable: puzzles.filter((p) => p.solvable).length,
+    };
   }, [puzzles]);
 
   function updateRow(i: number, next: AdminGridAxisInput) {
@@ -220,9 +267,7 @@ export function GridPuzzlesPanel({
         toast.error("Could not fill Grid week.");
         return;
       }
-      toast.success(
-        `Week filled · +${res.created} new, ${res.skipped} skipped`,
-      );
+      toast.success(`Week filled · +${res.created} new · ${res.skipped} kept`);
       router.refresh();
     });
   }
@@ -234,32 +279,23 @@ export function GridPuzzlesPanel({
         toast.error("No solvable auto board from catalog.");
         return;
       }
-      setRows(
-        res.rows.map((a) => ({
-          kind: a.rule.kind,
-          value: a.rule.value,
-          labelEn: a.labelEn,
-          labelFa: a.labelFa,
-        })),
-      );
-      setCols(
-        res.cols.map((a) => ({
-          kind: a.rule.kind,
-          value: a.rule.value,
-          labelEn: a.labelEn,
-          labelFa: a.labelFa,
-        })),
-      );
-      // Immediately preview so admin sees green/red without extra click.
+      const nextRows = res.rows.map((a) => ({
+        kind: a.rule.kind,
+        value: a.rule.value,
+        labelEn: a.labelEn,
+        labelFa: a.labelFa,
+      }));
+      const nextCols = res.cols.map((a) => ({
+        kind: a.rule.kind,
+        value: a.rule.value,
+        labelEn: a.labelEn,
+        labelFa: a.labelFa,
+      }));
+      setRows(nextRows);
+      setCols(nextCols);
       const prev = await previewGridSolvability({
-        rows: res.rows.map((a) => ({
-          kind: a.rule.kind,
-          value: a.rule.value,
-        })),
-        cols: res.cols.map((a) => ({
-          kind: a.rule.kind,
-          value: a.rule.value,
-        })),
+        rows: nextRows,
+        cols: nextCols,
       });
       if (prev.ok) {
         setPreview({
@@ -321,88 +357,160 @@ export function GridPuzzlesPanel({
   }
 
   function loadRow(p: AdminGridPuzzleRow) {
+    const axes = axesFromPuzzle(p);
     setDateKey(p.dateKey);
     setMaxMistakes(p.maxMistakes);
-    setRows(
-      p.rows.map((a) => ({
-        kind: a.rule.kind,
-        value: a.rule.value,
-        labelEn: a.labelEn,
-        labelFa: a.labelFa,
-      })),
-    );
-    setCols(
-      p.cols.map((a) => ({
-        kind: a.rule.kind,
-        value: a.rule.value,
-        labelEn: a.labelEn,
-        labelFa: a.labelFa,
-      })),
-    );
+    setRows(axes.rows);
+    setCols(axes.cols);
     setPreview({
       solvable: p.solvable,
       emptyCells: p.emptyCells,
       counts: p.cellCounts,
     });
-    toast.message(`Editing ${p.dateKey}`);
+  }
+
+  function loadToday() {
+    if (todayPuzzle) {
+      loadRow(todayPuzzle);
+      return;
+    }
+    setDateKey(todayKey);
   }
 
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={pending}
-          onClick={fillWeek}
-        >
-          <CalendarPlus className="me-1.5 h-3.5 w-3.5" />
-          Fill week
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={pending}
-          onClick={autoFill}
-          className="border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-100"
-        >
-          <Sparkles className="me-1.5 h-3.5 w-3.5" />
-          Auto-fill
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={pending}
-          onClick={runPreview}
-        >
-          <Eye className="me-1.5 h-3.5 w-3.5" />
-          Preview
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          disabled={pending || !readyToSave}
-          onClick={publish}
-          className="ms-auto"
-        >
-          <Save className="me-1.5 h-3.5 w-3.5" />
-          {pending ? "Saving…" : "Save"}
-        </Button>
-        <span className="w-full text-[11px] text-slate-500 sm:w-auto sm:ms-0">
-          Schedule: {weekCoverage.scheduled} days · {weekCoverage.solvable}{" "}
-          solvable
+      {/* Live today */}
+      <button
+        type="button"
+        onClick={loadToday}
+        className="flex w-full items-center gap-3 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white px-4 py-3.5 text-start shadow-sm transition hover:border-amber-300 hover:shadow"
+      >
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+          <Grid3x3 className="h-5 w-5" strokeWidth={2} />
         </span>
-      </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
+              Live today
+            </p>
+            <code className="rounded-md bg-white/80 px-1.5 py-0.5 font-mono text-[11px] text-slate-600 ring-1 ring-amber-100">
+              {todayKey}
+            </code>
+            {todayPuzzle ? (
+              <span
+                className={[
+                  "rounded-full px-2 py-0.5 text-[10px] font-bold",
+                  todayPuzzle.solvable
+                    ? "bg-emerald-100 text-emerald-800"
+                    : "bg-rose-100 text-rose-800",
+                ].join(" ")}
+              >
+                {todayPuzzle.solvable ? "OK" : `${todayPuzzle.emptyCells} empty`}
+              </span>
+            ) : null}
+          </div>
+          {todayPuzzle ? (
+            <>
+              <p className="mt-0.5 truncate text-sm font-medium text-slate-900">
+                {boardSummary(todayPuzzle)}
+              </p>
+              <p className="text-xs text-slate-500">
+                {todayPuzzle.maxMistakes} mistakes · {todayPuzzle.attemptCount}{" "}
+                plays · {todayPuzzle.solvedCount} solved
+              </p>
+            </>
+          ) : (
+            <p className="mt-0.5 text-sm text-slate-600">
+              No board yet — Auto-fill + Save to publish.
+            </p>
+          )}
+        </div>
+        <span className="shrink-0 text-xs font-semibold text-amber-800">
+          {todayPuzzle ? "Edit" : "Set"}
+        </span>
+      </button>
 
-      {/* Editor card */}
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="mb-4 flex flex-wrap items-end gap-3">
-          <div className="space-y-1">
-            <Label className="text-[11px] text-slate-500">Day</Label>
+      {/* Board editor */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-sm font-semibold text-slate-900">Board</h2>
+            {isToday ? (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                TODAY
+              </span>
+            ) : null}
+            {preview ? (
+              <span
+                className={[
+                  "rounded-full px-2 py-0.5 text-[10px] font-bold",
+                  preview.solvable
+                    ? "bg-emerald-100 text-emerald-800"
+                    : "bg-rose-100 text-rose-800",
+                ].join(" ")}
+              >
+                {preview.solvable
+                  ? "Ready"
+                  : `${preview.emptyCells} empty`}
+              </span>
+            ) : (
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">
+                Preview needed
+              </span>
+            )}
+            <AdminHelpTip text="Green cells ≥ 3 catalog matches. Save requires all 9 green." />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={pending}
+              onClick={fillWeek}
+              className="gap-1.5"
+            >
+              <Wand2 className="h-3.5 w-3.5" />
+              Fill week
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={pending}
+              onClick={autoFill}
+              className="gap-1.5 border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-100"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Auto-fill
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={pending}
+              onClick={runPreview}
+              className="gap-1.5"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              Preview
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={pending || !readyToSave}
+              onClick={publish}
+              className="gap-1.5"
+            >
+              <Save className="h-3.5 w-3.5" />
+              {pending ? "Saving…" : "Save"}
+            </Button>
+          </div>
+        </div>
+
+        <div className="mb-4 grid gap-3 sm:grid-cols-12">
+          <div className="sm:col-span-4">
+            <FieldLabel>Date</FieldLabel>
             <Input
               type="date"
               value={dateKey}
@@ -410,56 +518,47 @@ export function GridPuzzlesPanel({
                 setDateKey(e.target.value);
                 setPreview(null);
               }}
-              className="h-9 w-[11rem]"
+              className="h-10"
             />
           </div>
-          <div className="space-y-1">
-            <Label className="text-[11px] text-slate-500">Max mistakes</Label>
+          <div className="sm:col-span-3">
+            <FieldLabel>Max mistakes</FieldLabel>
             <Input
               type="number"
               min={1}
               max={20}
               value={maxMistakes}
               onChange={(e) => setMaxMistakes(Number(e.target.value))}
-              className="h-9 w-20"
+              className="h-10"
             />
           </div>
-          {isToday && (
-            <span className="mb-1 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-700 ring-1 ring-amber-200">
-              Today
-            </span>
-          )}
-          {preview && (
-            <span
-              className={[
-                "mb-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ring-1",
-                preview.solvable
-                  ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                  : "bg-rose-50 text-rose-700 ring-rose-200",
-              ].join(" ")}
-            >
-              {preview.solvable
-                ? "Ready to publish"
-                : `${preview.emptyCells} empty`}
-            </span>
-          )}
+          <div className="flex items-end sm:col-span-5">
+            <p className="pb-2 text-xs text-slate-500">
+              Schedule{" "}
+              <span className="font-semibold text-slate-700">
+                {weekCoverage.scheduled}
+              </span>{" "}
+              · solvable{" "}
+              <span className="font-semibold text-slate-700">
+                {weekCoverage.solvable}
+              </span>
+            </p>
+          </div>
         </div>
 
-        {/* Visual 3×3 board editor */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-xl bg-slate-50/80 p-3 ring-1 ring-slate-100">
           <div
-            className="mx-auto grid min-w-[20rem] gap-2"
+            className="mx-auto grid min-w-[22rem] gap-2"
             style={{
-              gridTemplateColumns: "minmax(9rem,1.1fr) repeat(3, minmax(5.5rem,1fr))",
+              gridTemplateColumns:
+                "minmax(8.5rem,1.15fr) repeat(3, minmax(5.5rem,1fr))",
             }}
           >
-            {/* Corner */}
             <div className="flex items-end justify-center pb-1">
               <span className="text-[10px] font-bold uppercase tracking-widest text-slate-300">
                 3×3
               </span>
             </div>
-            {/* Column headers */}
             {cols.map((axis, i) => (
               <AxisChip
                 key={`c-${i}`}
@@ -470,7 +569,6 @@ export function GridPuzzlesPanel({
               />
             ))}
 
-            {/* Rows + cells */}
             {rows.map((rowAxis, r) => (
               <div key={`r-${r}`} className="contents">
                 <AxisChip
@@ -484,7 +582,7 @@ export function GridPuzzlesPanel({
                   const n = preview?.counts[idx];
                   const tone =
                     n == null
-                      ? "border-dashed border-slate-200 bg-slate-50 text-slate-300"
+                      ? "border-dashed border-slate-200 bg-white text-slate-300"
                       : n === 0
                         ? "border-rose-200 bg-rose-50 text-rose-700"
                         : n < 3
@@ -494,7 +592,7 @@ export function GridPuzzlesPanel({
                     <div
                       key={`cell-${r}-${c}`}
                       className={[
-                        "flex h-14 items-center justify-center rounded-xl border-2 text-sm font-bold tabular-nums",
+                        "flex h-14 items-center justify-center rounded-xl border-2 text-sm font-bold tabular-nums shadow-sm",
                         tone,
                       ].join(" ")}
                       title={
@@ -512,98 +610,88 @@ export function GridPuzzlesPanel({
           </div>
         </div>
 
-        <p className="mt-3 text-center text-[11px] text-slate-500">
-          Cell numbers = catalog matches. Green ≥ 3 · Amber 1–2 · Red 0.
-        </p>
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-[11px] text-slate-500">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />≥ 3
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+            1–2
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />0
+          </span>
+        </div>
       </div>
 
       {/* Schedule */}
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
-          <h2 className="text-sm font-semibold text-slate-800">Schedule</h2>
-          <span className="text-[11px] text-slate-500">
-            Tap Edit to load into the board
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+          <h2 className="text-sm font-semibold text-slate-900">Schedule</h2>
+          <span className="text-xs font-medium text-slate-400">
+            {schedule.length} day{schedule.length === 1 ? "" : "s"}
           </span>
         </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[7.5rem]">Day</TableHead>
-              <TableHead>Board</TableHead>
-              <TableHead className="w-24">Status</TableHead>
-              <TableHead className="w-20 text-end">Stats</TableHead>
-              <TableHead className="w-20" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {puzzles.map((p) => (
-              <TableRow key={p.id} className={p.isToday ? "bg-amber-50/40" : ""}>
-                <TableCell>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-mono text-sm font-semibold text-slate-800">
+
+        {schedule.length === 0 ? (
+          <p className="px-4 py-8 text-center text-sm text-slate-500">
+            No other days — Fill week or Auto-fill + Save a future date.
+          </p>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {schedule.map((p) => (
+              <li
+                key={p.id}
+                className="flex items-center gap-3 px-4 py-3 transition hover:bg-slate-50"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <code className="font-mono text-xs font-semibold text-slate-700">
                       {p.dateKey}
-                    </span>
-                    {p.isToday && (
-                      <span className="w-fit rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-800">
-                        TODAY
+                    </code>
+                    {p.dateKey > todayKey ? (
+                      <span className="rounded-full bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold text-sky-700">
+                        UPCOMING
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500">
+                        PAST
                       </span>
                     )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-col gap-1 text-[11px] text-slate-600">
-                    <span className="truncate">
-                      <span className="font-semibold text-slate-400">R</span>{" "}
-                      {p.rows.map((a) => a.rule.value).join(" · ")}
-                    </span>
-                    <span className="truncate">
-                      <span className="font-semibold text-slate-400">C</span>{" "}
-                      {p.cols.map((a) => a.rule.value).join(" · ")}
+                    <span
+                      className={[
+                        "rounded-full px-1.5 py-0.5 text-[10px] font-bold",
+                        p.solvable
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-rose-50 text-rose-700",
+                      ].join(" ")}
+                    >
+                      {p.solvable ? "OK" : `${p.emptyCells} empty`}
                     </span>
                   </div>
-                </TableCell>
-                <TableCell>
-                  <span
-                    className={[
-                      "inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold",
-                      p.solvable
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "bg-rose-50 text-rose-700",
-                    ].join(" ")}
-                  >
-                    {p.solvable ? "OK" : `${p.emptyCells} empty`}
-                  </span>
-                </TableCell>
-                <TableCell className="text-end text-xs tabular-nums text-slate-500">
-                  {p.attemptCount}/{p.solvedCount}
-                </TableCell>
-                <TableCell className="text-end">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => loadRow(p)}
-                    className="h-8 gap-1 text-xs"
-                  >
-                    <Pencil className="h-3 w-3" />
-                    Edit
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {puzzles.length === 0 && (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="py-10 text-center text-sm text-slate-500"
+                  <p className="mt-0.5 truncate text-sm text-slate-800">
+                    {boardSummary(p)}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {p.maxMistakes} mistakes · {p.attemptCount} plays ·{" "}
+                    {p.solvedCount} solved
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => loadRow(p)}
+                  className="h-9 gap-1.5 px-2.5 text-slate-600"
+                  aria-label={`Edit ${p.dateKey}`}
                 >
-                  Empty schedule — hit <strong>Fill week</strong> or{" "}
-                  <strong>Auto-fill</strong> + Save.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                  <Pencil className="h-3.5 w-3.5" />
+                  Edit
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

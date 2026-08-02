@@ -11,6 +11,14 @@
     {
       "path": "/api/cron/grid",
       "schedule": "35 20 * * *"
+    },
+    {
+      "path": "/api/cron/star-path",
+      "schedule": "40 20 * * *"
+    },
+    {
+      "path": "/api/cron/memory",
+      "schedule": "45 20 * * *"
     }
   ]
 }

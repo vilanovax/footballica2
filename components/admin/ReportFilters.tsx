@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { cn } from "@/lib/utils";
 
 export type ReportFilterKey = "PENDING" | "RESOLVED" | "REJECTED" | "ALL";
 
@@ -25,7 +24,6 @@ export function ReportFilters({
 
   function select(key: ReportFilterKey) {
     const next = new URLSearchParams(params.toString());
-    // PENDING is the default view, so it stays out of the URL.
     if (key === "PENDING") next.delete("status");
     else next.set("status", key);
     const qs = next.toString();
@@ -33,29 +31,43 @@ export function ReportFilters({
   }
 
   return (
-    <div className="inline-flex flex-wrap gap-1 rounded-xl border bg-card p-1 shadow-sm">
+    <div
+      className="inline-flex flex-wrap gap-1 rounded-2xl bg-slate-100 p-1"
+      role="tablist"
+      aria-label="Report status"
+    >
       {TABS.map((t) => {
         const isActive = active === t.key;
+        const count = counts[t.key];
+        const urgent = t.key === "PENDING" && count > 0 && !isActive;
         return (
           <button
             key={t.key}
             type="button"
+            role="tab"
+            aria-selected={isActive}
             onClick={() => select(t.key)}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition",
+            className={[
+              "inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition",
               isActive
-                ? "bg-slate-900 text-white shadow-sm"
-                : "text-slate-600 hover:bg-slate-100",
-            )}
+                ? "bg-white text-slate-900 shadow-sm"
+                : urgent
+                  ? "text-rose-700 hover:bg-rose-50"
+                  : "text-slate-500 hover:text-slate-800",
+            ].join(" ")}
           >
             {t.label}
             <span
-              className={cn(
-                "rounded-full px-1.5 text-xs tabular-nums",
-                isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500",
-              )}
+              className={[
+                "rounded-full px-1.5 text-[10px] font-bold tabular-nums",
+                isActive
+                  ? "bg-slate-900 text-white"
+                  : urgent
+                    ? "bg-rose-100 text-rose-800"
+                    : "bg-white text-slate-500 ring-1 ring-slate-200",
+              ].join(" ")}
             >
-              {counts[t.key]}
+              {count}
             </span>
           </button>
         );

@@ -38,7 +38,6 @@ import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -57,6 +56,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { AdminHelpTip } from "@/components/admin/AdminHelpTip";
 
 type Category = { id: string; nameEn: string; nameFa: string; _count: number };
 
@@ -140,6 +140,8 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [triage, setTriage] = useState<TriageItem[]>([]);
   const [triagePending, startTriage] = useTransition();
+  /** Soft nudge only after the user tries to proceed without a category. */
+  const [categoryNudge, setCategoryNudge] = useState(false);
 
   const selectedCategory = categories.find((c) => c.id === importCat) ?? null;
   const validRows = draft.filter(
@@ -212,6 +214,7 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
     setFileName(null);
     setParseError(null);
     setShowJsonEditor(true);
+    setCategoryNudge(false);
     if (fileRef.current) fileRef.current.value = "";
   }
 
@@ -314,6 +317,7 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
 
   function requestConfirm() {
     if (!categoryReady) {
+      setCategoryNudge(true);
       toast.error("Select a target category first.");
       return;
     }
@@ -368,16 +372,23 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
     { n: 3, label: "Confirm" },
   ] as const;
 
+  const needsCategory = categoryNudge && !importCat;
+
   return (
-    <div className="space-y-4">
-      {/* Compact backup strip — secondary job */}
-      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
-        <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-          <Download className="h-3.5 w-3.5 text-slate-400" />
-          Backup
+    <div className="space-y-3">
+      {/* Backup strip */}
+      <div className="flex flex-wrap items-center gap-2.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-3 shadow-sm">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-600 ring-1 ring-slate-100">
+          <Download className="h-4 w-4" />
+        </span>
+        <div className="me-1 min-w-0">
+          <p className="flex items-center gap-1 text-sm font-semibold text-slate-900">
+            Backup
+            <AdminHelpTip text="Download the question bank as JSON — all categories or one bank." />
+          </p>
         </div>
         <Select value={exportCat} onValueChange={setExportCat}>
-          <SelectTrigger className="h-8 w-44 text-xs">
+          <SelectTrigger className="h-9 w-44 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -392,34 +403,36 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
         <Button
           size="sm"
           variant="outline"
-          className="h-8"
+          className="ms-auto h-9"
           onClick={handleExport}
           disabled={exporting}
         >
           <Download className="h-3.5 w-3.5" />
-          {exporting ? "…" : "Download JSON"}
+          {exporting ? "Exporting…" : "Download JSON"}
         </Button>
       </div>
 
-      {/* Hero: one import workspace */}
+      {/* Import workspace */}
       <Card className="overflow-hidden border-slate-200 shadow-sm">
-        <CardHeader className="space-y-3 border-b border-slate-100 bg-linear-to-br from-slate-50 to-white pb-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Upload className="h-4 w-4 text-emerald-600" />
-                Import questions
-              </CardTitle>
-              <CardDescription className="mt-1 text-xs">
-                Category → JSON → edit preview → confirm. Nothing writes early.
-              </CardDescription>
-            </div>
+        <CardHeader className="gap-3 space-y-0 border-b border-slate-100 bg-white pb-3.5 pt-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+                <Upload className="h-4 w-4" />
+              </span>
+              Import questions
+              <AdminHelpTip
+                wide
+                title="Safe import"
+                text="Pick a destination category, paste AI JSON (or Try sample), review triage badges, then confirm. Nothing writes until you confirm. Green option = correct answer."
+              />
+            </CardTitle>
             <div className="flex flex-wrap gap-1.5">
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
-                className="h-8 bg-white text-xs"
+                className="h-8 text-xs"
                 onClick={() => void handleCopyPrompt()}
               >
                 {copiedPrompt ? (
@@ -427,17 +440,17 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
                 ) : (
                   <Sparkles className="h-3.5 w-3.5" />
                 )}
-                {copiedPrompt ? "Prompt copied" : "AI prompt"}
+                {copiedPrompt ? "Copied" : "AI prompt"}
               </Button>
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
-                className="h-8 bg-white text-xs"
+                className="h-8 text-xs"
                 onClick={() => void copyText(SAMPLE_JSON, "Sample copied")}
               >
                 <Copy className="h-3.5 w-3.5" />
-                Copy sample
+                Sample
               </Button>
               <Button
                 type="button"
@@ -451,28 +464,27 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
             </div>
           </div>
 
-          {/* Connected stepper */}
-          <ol className="flex items-center gap-0">
+          <ol className="flex items-center gap-1.5">
             {steps.map((s, i) => {
               const done = step > s.n;
               const active = step === s.n;
               return (
-                <li key={s.n} className="flex flex-1 items-center">
+                <li key={s.n} className="flex flex-1 items-center gap-1.5">
                   <div
                     className={[
-                      "flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-semibold transition-colors",
+                      "flex w-full items-center justify-center gap-1.5 rounded-full px-2 py-1.5 text-[11px] font-semibold transition-colors sm:justify-start sm:px-3",
                       active
-                        ? "bg-slate-900 text-white shadow-sm"
+                        ? "bg-slate-900 text-white"
                         : done
-                          ? "bg-emerald-50 text-emerald-800"
-                          : "bg-slate-100/80 text-slate-400",
+                          ? "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-100"
+                          : "bg-slate-100 text-slate-400",
                     ].join(" ")}
                   >
                     <span
                       className={[
-                        "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
+                        "flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold",
                         active
-                          ? "bg-white/20 text-white"
+                          ? "bg-white/20"
                           : done
                             ? "bg-emerald-200 text-emerald-900"
                             : "bg-white text-slate-400",
@@ -480,12 +492,12 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
                     >
                       {done ? "✓" : s.n}
                     </span>
-                    {s.label}
+                    <span className="hidden sm:inline">{s.label}</span>
                   </div>
                   {i < steps.length - 1 && (
                     <div
                       className={[
-                        "mx-1 h-0.5 w-3 shrink-0 rounded-full sm:w-5",
+                        "hidden h-px w-2 shrink-0 sm:block",
                         step > s.n ? "bg-emerald-300" : "bg-slate-200",
                       ].join(" ")}
                     />
@@ -497,23 +509,29 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
         </CardHeader>
 
         <CardContent className="p-0">
-          <div className="grid lg:grid-cols-[minmax(0,22rem)_1fr]">
-            {/* Left rail: destination + source */}
-            <div className="space-y-4 border-b border-slate-100 p-4 lg:border-b-0 lg:border-e">
+          <div className="grid lg:grid-cols-[minmax(0,20rem)_1fr]">
+            <div className="space-y-3.5 border-b border-slate-100 p-4 lg:border-b-0 lg:border-e">
               <div className="space-y-1.5">
-                <Label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  Destination <span className="text-rose-500">*</span>
+                <Label className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Destination
+                  <span className="text-rose-500">*</span>
+                  <AdminHelpTip text="Fallback bank for questions without primaryCategory. Required before confirm." />
                 </Label>
                 <Select
                   value={importCat || undefined}
-                  onValueChange={setImportCat}
+                  onValueChange={(v) => {
+                    setImportCat(v);
+                    setCategoryNudge(false);
+                  }}
                 >
                   <SelectTrigger
                     className={[
                       "h-10",
-                      !importCat
-                        ? "border-amber-300 bg-amber-50/40"
-                        : "border-emerald-200 bg-emerald-50/30",
+                      needsCategory
+                        ? "border-amber-300 bg-amber-50/50 ring-1 ring-amber-200"
+                        : importCat
+                          ? "border-emerald-200 bg-emerald-50/20"
+                          : "",
                     ].join(" ")}
                   >
                     <SelectValue placeholder="Select category…" />
@@ -522,24 +540,24 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
                     {categories.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
                         {c.nameEn} · {c.nameFa}
+                        <span className="ms-1 text-slate-400">
+                          ({c._count})
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {selectedCategory ? (
-                  <p className="text-[11px] font-medium text-emerald-700">
-                    → {selectedCategory.nameEn}
+                {needsCategory ? (
+                  <p className="text-[11px] font-medium text-amber-700">
+                    Pick a category to continue
                   </p>
-                ) : (
-                  <p className="text-[11px] text-amber-700">
-                    Required before confirm
-                  </p>
-                )}
+                ) : null}
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                <Label className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                   Extra tags
+                  <AdminHelpTip text="Comma-separated tags applied to every question in this batch." />
                 </Label>
                 <Input
                   className="h-9"
@@ -566,7 +584,7 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
                           showJsonEditor ? "rotate-180" : "",
                         ].join(" ")}
                       />
-                      {showJsonEditor ? "Hide editor" : "Show editor"}
+                      {showJsonEditor ? "Hide" : "Show"}
                     </button>
                   )}
                 </div>
@@ -579,8 +597,8 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
                       setFileName(null);
                     }}
                     spellCheck={false}
-                    rows={7}
-                    placeholder='Paste AI output: { "questions": […] }'
+                    rows={8}
+                    placeholder='{ "questions": […] }'
                     className="w-full resize-y rounded-xl border border-slate-200 bg-slate-950 px-3 py-2.5 font-mono text-[11px] leading-relaxed text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                     dir="ltr"
                   />
@@ -594,7 +612,7 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
                     onClick={() => ingestJson(jsonText, fileName)}
                     disabled={!jsonText.trim()}
                   >
-                    Parse → Preview
+                    Parse
                   </Button>
                   <Button
                     type="button"
@@ -638,8 +656,8 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
                 </div>
 
                 {fileName && (
-                  <p className="flex items-center gap-1 text-[11px] text-slate-500">
-                    <FileJson className="h-3.5 w-3.5" />
+                  <p className="flex items-center gap-1 truncate text-[11px] text-slate-500">
+                    <FileJson className="h-3.5 w-3.5 shrink-0" />
                     {fileName}
                   </p>
                 )}
@@ -652,17 +670,20 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
               </div>
             </div>
 
-            {/* Right: preview stage */}
-            <div className="flex min-h-80 flex-col bg-slate-50/50">
-              <div className="flex items-center justify-between gap-2 border-b border-slate-100 bg-white/80 px-4 py-2.5">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">
-                    Preview
-                  </p>
-                  <p className="text-[11px] text-slate-500">
-                    L1 dedupe by contentHash · green option = correct
-                  </p>
-                </div>
+            <div className="flex min-h-80 flex-col bg-slate-50/40">
+              <div className="flex items-center justify-between gap-2 border-b border-slate-100 bg-white px-4 py-2.5">
+                <p className="flex items-center gap-1 text-sm font-semibold text-slate-900">
+                  Preview
+                  {draft.length > 0 && (
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold tabular-nums text-slate-600">
+                      {draft.length}
+                    </span>
+                  )}
+                  <AdminHelpTip
+                    wide
+                    text="L1 dedupe by contentHash against the selected bank. New / Attach / Skip badges appear after a category is picked."
+                  />
+                </p>
                 <div className="flex flex-wrap items-center gap-1.5">
                   {triagePending && (
                     <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />
@@ -685,28 +706,26 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
 
               <div className="flex-1 overflow-hidden p-3">
                 {draft.length === 0 ? (
-                  <div className="flex h-full min-h-64 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-white px-6 text-center">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100">
-                      <FileJson className="h-6 w-6 text-slate-400" />
+                  <div className="flex h-full min-h-56 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-white px-5 text-center">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+                      <FileJson className="h-5 w-5 text-slate-400" />
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800">
-                        No questions yet
-                      </p>
-                      <p className="mt-1 max-w-xs text-xs text-slate-500">
-                        Paste AI JSON on the left, or load the sample to see the
-                        full review flow.
-                      </p>
-                    </div>
+                    <p className="text-sm font-semibold text-slate-800">
+                      Waiting for JSON
+                    </p>
+                    <p className="max-w-[16rem] text-xs text-slate-500">
+                      Paste on the left, or try the sample batch.
+                    </p>
                     <Button
                       type="button"
                       size="sm"
+                      variant="outline"
                       onClick={() =>
                         ingestJson(SAMPLE_JSON, "sample-import.json")
                       }
                     >
                       <FileJson className="h-3.5 w-3.5" />
-                      Load sample batch
+                      Try sample
                     </Button>
                   </div>
                 ) : (
@@ -740,7 +759,8 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
                             type="button"
                             size="sm"
                             variant="ghost"
-                            className="h-7 shrink-0 text-rose-700"
+                            className="h-8 w-8 shrink-0 p-0 text-rose-700"
+                            aria-label="Remove row"
                             onClick={() => deleteRow(item.id)}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -752,7 +772,6 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
                 )}
               </div>
 
-              {/* Sticky confirm dock */}
               <div className="sticky bottom-0 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-[11px] text-slate-500">
@@ -762,10 +781,10 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
                         attach · {triageSummary.skip} skip
                       </span>
                     ) : !draft.length ? (
-                      "Load JSON to continue"
+                      "Parse JSON to continue"
                     ) : !categoryReady ? (
-                      <span className="font-semibold text-amber-700">
-                        Select a category to run dedupe
+                      <span className="font-medium text-slate-600">
+                        Select destination to dedupe
                       </span>
                     ) : (
                       <span className="font-semibold text-amber-700">
@@ -775,11 +794,14 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
                   </p>
                   <Button
                     onClick={requestConfirm}
-                    disabled={!canOpenConfirm}
-                    className="h-9 min-w-40"
+                    disabled={
+                      draft.length === 0 ||
+                      (categoryReady && !canOpenConfirm)
+                    }
+                    className="h-9 min-w-36"
                   >
                     <ShieldCheck className="h-4 w-4" />
-                    Confirm import…
+                    Confirm import
                   </Button>
                 </div>
               </div>
@@ -787,34 +809,6 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
           </div>
         </CardContent>
       </Card>
-
-      {/* Reference — collapsed by default */}
-      <details className="group rounded-2xl border border-slate-200 bg-white open:shadow-sm">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-semibold text-slate-800 marker:content-none [&::-webkit-details-marker]:hidden">
-          <span className="flex items-center gap-2">
-            <FileJson className="h-4 w-4 text-slate-400" />
-            Sample JSON & AI prompt
-          </span>
-          <ChevronDown className="h-4 w-4 text-slate-400 transition-transform group-open:rotate-180" />
-        </summary>
-        <div className="space-y-3 border-t border-slate-100 px-4 pb-4 pt-3">
-          <p className="text-xs text-slate-500">
-            Hand this shape to an AI extractor, or use{" "}
-            <strong className="text-slate-700">Try sample</strong> above.
-          </p>
-          <pre className="max-h-56 overflow-auto rounded-xl bg-slate-900 p-3 text-[11px] leading-relaxed text-slate-100">
-            {SAMPLE_JSON}
-          </pre>
-          <details className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
-            <summary className="cursor-pointer text-xs font-semibold text-slate-700">
-              Full AI prompt
-            </summary>
-            <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap text-[11px] leading-relaxed text-slate-600">
-              {AI_QUESTION_EXTRACT_PROMPT}
-            </pre>
-          </details>
-        </div>
-      </details>
 
       <Dialog
         open={Boolean(editingRow)}
@@ -824,7 +818,7 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
           <DialogHeader>
             <DialogTitle>Edit question</DialogTitle>
             <DialogDescription>
-              Applies to this batch only — DB write happens after confirm.
+              Batch only — database write happens after confirm.
             </DialogDescription>
           </DialogHeader>
           {editingRow && (
@@ -845,36 +839,36 @@ export function ImportExportPanel({ categories }: { categories: Category[] }) {
               Confirm import
             </DialogTitle>
             <DialogDescription>
-              Creates questions in the database. Check the category once more.
+              Writes to the database. Double-check the destination.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+          <div className="space-y-2.5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
             <div className="flex justify-between gap-2">
-              <span className="text-slate-500">Batch size</span>
-              <span className="font-bold text-slate-900">
+              <span className="text-slate-500">Batch</span>
+              <span className="font-bold tabular-nums text-slate-900">
                 {validRows.length}
               </span>
             </div>
             <div className="flex justify-between gap-2">
-              <span className="text-emerald-700">🟢 New</span>
-              <span className="font-bold text-slate-900">
+              <span className="text-emerald-700">New</span>
+              <span className="font-bold tabular-nums text-slate-900">
                 {triageSummary.neu}
               </span>
             </div>
             <div className="flex justify-between gap-2">
-              <span className="text-sky-700">🔵 Attach tags</span>
-              <span className="font-bold text-slate-900">
+              <span className="text-sky-700">Attach</span>
+              <span className="font-bold tabular-nums text-slate-900">
                 {triageSummary.attach}
               </span>
             </div>
             <div className="flex justify-between gap-2">
-              <span className="text-amber-700">🟡 Skip</span>
-              <span className="font-bold text-slate-900">
+              <span className="text-amber-700">Skip</span>
+              <span className="font-bold tabular-nums text-slate-900">
                 {triageSummary.skip}
               </span>
             </div>
-            <div className="flex justify-between gap-2 border-t border-slate-200 pt-2">
-              <span className="text-slate-500">Fallback category</span>
+            <div className="flex justify-between gap-2 border-t border-slate-200 pt-2.5">
+              <span className="text-slate-500">Destination</span>
               <span className="text-end font-bold text-slate-900">
                 {selectedCategory
                   ? `${selectedCategory.nameEn} · ${selectedCategory.nameFa}`
@@ -956,13 +950,7 @@ function QuestionPreviewCard({
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
             #{index + 1}
           </span>
-          {triage ? (
-            <TriageBadge kind={triage.kind} />
-          ) : (
-            <span className="rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-400">
-              Select category…
-            </span>
-          )}
+          {triage ? <TriageBadge kind={triage.kind} /> : null}
           <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-800">
             {q.type}
           </span>
@@ -970,22 +958,23 @@ function QuestionPreviewCard({
             {q.difficulty}
           </span>
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-0.5">
           <Button
             type="button"
             size="sm"
-            variant="outline"
-            className="h-8"
+            variant="ghost"
+            className="h-8 w-8 p-0 text-slate-500"
+            aria-label="Edit"
             onClick={onEdit}
           >
             <Pencil className="h-3.5 w-3.5" />
-            Edit
           </Button>
           <Button
             type="button"
             size="sm"
             variant="ghost"
-            className="h-8 text-rose-600 hover:text-rose-700"
+            className="h-8 w-8 p-0 text-rose-600 hover:text-rose-700"
+            aria-label="Remove"
             onClick={onDelete}
           >
             <Trash2 className="h-3.5 w-3.5" />

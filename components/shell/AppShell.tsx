@@ -70,6 +70,7 @@ function isImmersivePlayRoute(pathname: string | null | undefined): boolean {
   if (pathname.startsWith("/play/mystery")) return true;
   if (pathname.startsWith("/play/grid")) return true;
   if (pathname.startsWith("/play/star-path")) return true;
+  if (pathname.startsWith("/play/memory")) return true;
   if (pathname.startsWith("/play/penalty")) return true;
   if (pathname.startsWith("/play/quick")) return true;
   // Duel detail only — lobby keeps nav.

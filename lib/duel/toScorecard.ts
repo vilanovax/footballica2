@@ -91,6 +91,7 @@ function mapRound(
 
   const { you, them } = sidesForRound(duel, round);
   const isMemory = round.roundType === "MEMORY";
+  const isTiki = round.roundType === "TIKI_TAKA";
   const slots = isMemory
     ? Math.max(round.questionCount, 8)
     : Math.max(round.questionCount, DEFAULT_SLOTS);
@@ -103,9 +104,17 @@ function mapRound(
 
   return {
     roundNumber,
-    roundType: isMemory ? "MEMORY" : "QUIZ",
-    categoryNameEn: round.categoryNameEn ?? (isMemory ? "Memory Pairs" : ""),
-    categoryNameFa: round.categoryNameFa ?? (isMemory ? "حافظه جفت‌ها" : ""),
+    roundType: isMemory
+      ? "MEMORY"
+      : isTiki
+        ? "TIKI_TAKA"
+        : "QUIZ",
+    categoryNameEn:
+      round.categoryNameEn ??
+      (isMemory ? "Memory Pairs" : isTiki ? "Tiki-Taka" : ""),
+    categoryNameFa:
+      round.categoryNameFa ??
+      (isMemory ? "حافظه جفت‌ها" : isTiki ? "تیکی‌تاکا" : ""),
     youAnswers: padAnswers(you, slots),
     themAnswers: padAnswers(them, slots),
     waitingOnThem,

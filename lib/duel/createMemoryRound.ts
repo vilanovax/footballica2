@@ -4,6 +4,11 @@ import { buildMemoryBoard } from "@/lib/duel/memoryBoard";
 import type { Prisma } from "@/generated/prisma/client";
 import type { MemoryBoardJson } from "@/lib/duel/memoryTypes";
 
+export {
+  duelHasMemoryRound,
+  duelHasSpecialRound,
+} from "@/lib/duel/specialRounds";
+
 export type MemoryRoundShell = {
   roundNumber: number;
   roundType: "MEMORY";
@@ -12,13 +17,6 @@ export type MemoryRoundShell = {
   boardJson: Prisma.InputJsonValue;
   board: MemoryBoardJson;
 };
-
-/** True when this duel already locked a MEMORY round (max one per match). */
-export function duelHasMemoryRound(
-  rounds: { roundType: string }[],
-): boolean {
-  return rounds.some((r) => r.roundType === "MEMORY");
-}
 
 /** Shared create/convert payload for a MEMORY attack shell (human, bot, shadow). */
 export async function memoryRoundCreateData(opts: {

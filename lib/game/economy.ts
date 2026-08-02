@@ -11,6 +11,20 @@ import { normalizeThemeKey } from "@/lib/game/liveOpsTheme";
 // without a deploy. `mergeGameConfig` fills any missing/invalid key from the
 // defaults below, so a partial or malformed DB row can never break the loop.
 
+export type LiveModeId =
+  | "memory"
+  | "mystery"
+  | "grid"
+  | "starPath"
+  | "tikiTaka";
+
+export type LiveModePlacement = {
+  /** Offer as a one-shot special round in Draft Duel. */
+  duel: boolean;
+  /** Include in the Game of the Day rotator. */
+  gotd: boolean;
+};
+
 export type GameConfig = {
   rewards: {
     /** XP per correct answer (goal). */
@@ -96,6 +110,8 @@ export type GameConfig = {
     memoryTurnMs: number;
     /** Client flip-reveal duration hint (ms); server may ignore. */
     memoryRevealMs: number;
+    /** Tiki-Taka mini-turn clock (ms) — server-authoritative. */
+    tikiTakaTurnMs: number;
   };
   /**
    * Survival Mode soft economy — Live-Ops tunable (weekend 2× coins, etc.).
@@ -131,7 +147,7 @@ export type GameConfig = {
     formatBiasEveryN: number;
   };
   /**
-   * Game of the Day (Mystery / Grid / Star Path rotation).
+   * Game of the Day (Mystery / Grid / Star Path / Memory rotation).
    * Direct Club.coins + User.xp grants — no global wallet ledger.
    */
   gotd: {
@@ -145,10 +161,24 @@ export type GameConfig = {
     /** Star Path min payout (score 25 — fourth clue). */
     starPathWinCoinsMin: number;
     starPathWinXpMin: number;
+    /** Memory GotD win payout. */
+    memoryWinCoins: number;
+    memoryWinXp: number;
     /** Extra coin fraction per streak day, e.g. 0.1 → +10% of base per day. */
     streakMultiplierPerDay: number;
     /** Flat coin bonus for perfect clear (Mystery 1-guess / Grid 0 mistakes / Star Path 100). */
     perfectClearBonusCoins: number;
+  };
+  /**
+   * Live-Ops mode placement — admin toggles Duel draft tiles vs GotD rotator.
+   * Engines always exist; surfaces honor these flags.
+   */
+  liveModes: {
+    memory: LiveModePlacement;
+    mystery: LiveModePlacement;
+    grid: LiveModePlacement;
+    starPath: LiveModePlacement;
+    tikiTaka: LiveModePlacement;
   };
 };
 
@@ -195,6 +225,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     memoryPairs: 8,
     memoryTurnMs: 20_000,
     memoryRevealMs: 2_000,
+    tikiTakaTurnMs: 20_000,
   },
   survival: {
     coinsPerCorrect: 5,
@@ -224,8 +255,17 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     starPathWinXpMax: 35,
     starPathWinCoinsMin: 15,
     starPathWinXpMin: 12,
+    memoryWinCoins: 35,
+    memoryWinXp: 25,
     streakMultiplierPerDay: 0.1,
     perfectClearBonusCoins: 25,
+  },
+  liveModes: {
+    memory: { duel: true, gotd: false },
+    mystery: { duel: false, gotd: true },
+    grid: { duel: false, gotd: true },
+    starPath: { duel: false, gotd: true },
+    tikiTaka: { duel: true, gotd: false },
   },
 };
 
@@ -251,7 +291,20 @@ export function mergeGameConfig(raw: unknown): GameConfig {
   const s = src.survival ?? {};
   const lo = (src.liveOps ?? {}) as Record<string, unknown>;
   const g = src.gotd ?? {};
+  const lm = (src.liveModes ?? {}) as Record<string, unknown>;
   const D = DEFAULT_GAME_CONFIG;
+
+  const mergePlacement = (
+    raw: unknown,
+    fallback: LiveModePlacement,
+  ): LiveModePlacement => {
+    const o =
+      raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+    return {
+      duel: typeof o.duel === "boolean" ? o.duel : fallback.duel,
+      gotd: typeof o.gotd === "boolean" ? o.gotd : fallback.gotd,
+    };
+  };
 
   // Normalize LOGO_WEEK / logo / aliases → short key (or null = NONE).
   const themeKey = normalizeThemeKey(lo.themeKey);
@@ -336,6 +389,10 @@ export function mergeGameConfig(raw: unknown): GameConfig {
         500,
         Math.min(5_000, Math.round(num(d.memoryRevealMs, D.duel.memoryRevealMs))),
       ),
+      tikiTakaTurnMs: Math.max(
+        5_000,
+        Math.min(60_000, Math.round(num(d.tikiTakaTurnMs, D.duel.tikiTakaTurnMs))),
+      ),
     },
     survival: {
       coinsPerCorrect: Math.max(
@@ -417,6 +474,14 @@ export function mergeGameConfig(raw: unknown): GameConfig {
         0,
         Math.round(num(g.starPathWinXpMin, D.gotd.starPathWinXpMin)),
       ),
+      memoryWinCoins: Math.max(
+        0,
+        Math.round(num(g.memoryWinCoins, D.gotd.memoryWinCoins)),
+      ),
+      memoryWinXp: Math.max(
+        0,
+        Math.round(num(g.memoryWinXp, D.gotd.memoryWinXp)),
+      ),
       streakMultiplierPerDay: Math.min(
         1,
         Math.max(
@@ -430,6 +495,13 @@ export function mergeGameConfig(raw: unknown): GameConfig {
           num(g.perfectClearBonusCoins, D.gotd.perfectClearBonusCoins),
         ),
       ),
+    },
+    liveModes: {
+      memory: mergePlacement(lm.memory, D.liveModes.memory),
+      mystery: mergePlacement(lm.mystery, D.liveModes.mystery),
+      grid: mergePlacement(lm.grid, D.liveModes.grid),
+      starPath: mergePlacement(lm.starPath, D.liveModes.starPath),
+      tikiTaka: mergePlacement(lm.tikiTaka, D.liveModes.tikiTaka),
     },
   };
 }

@@ -81,18 +81,23 @@ export function ReportReview({ report, question }: ReportReviewData) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex w-full items-center gap-2 text-start"
+        className="group flex w-full max-w-xl items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-start transition hover:border-emerald-300 hover:bg-emerald-50/40"
       >
-        <TypeBadge type={question.type} />
-        <span className="flex min-w-0 flex-col">
-          <span className="truncate font-medium text-slate-800 hover:text-slate-950 hover:underline">
+        <span className="min-w-0 flex-1">
+          <span className="line-clamp-2 text-sm font-semibold text-slate-900">
             {enText}
           </span>
-          {faText && (
-            <span dir="rtl" className="truncate text-xs text-muted-foreground">
+          {faText ? (
+            <span
+              dir="rtl"
+              className="mt-0.5 line-clamp-1 block text-xs text-slate-500"
+            >
               {faText}
             </span>
-          )}
+          ) : null}
+        </span>
+        <span className="shrink-0 text-xs font-bold text-emerald-700 group-hover:underline">
+          Review
         </span>
       </button>
 
@@ -100,20 +105,22 @@ export function ReportReview({ report, question }: ReportReviewData) {
         <DialogContent dir="ltr" className="admin max-w-xl">
           <DialogHeader>
             <div className="flex items-center justify-between gap-3 pe-6">
-              <DialogTitle>Review report</DialogTitle>
+              <DialogTitle>Triage report</DialogTitle>
               <ReportStatusBadge status={report.status} />
             </div>
-            <DialogDescription className="sr-only">
-              Question details and moderation actions for this user report.
+            <DialogDescription>
+              Resolve = fixed or accepted. Reject = no change to the question.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm">
-            <p className="font-medium text-amber-900">🚩 {report.reasonLabel}</p>
-            {report.note && (
-              <p className="mt-1 text-amber-800">{report.note}</p>
-            )}
-            <p className="mt-1 text-xs text-amber-700/80">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm">
+            <p className="font-semibold text-amber-950">
+              Flag: {report.reasonLabel}
+            </p>
+            {report.note ? (
+              <p className="mt-1 text-amber-900">{report.note}</p>
+            ) : null}
+            <p className="mt-1 text-xs font-medium text-amber-800/80" dir="rtl">
               {report.dateLabel} · {report.timeLabel}
             </p>
           </div>
@@ -169,7 +176,9 @@ export function ReportReview({ report, question }: ReportReviewData) {
                     size="sm"
                     disabled={pending}
                     className="bg-emerald-600 text-white hover:bg-emerald-700"
-                    onClick={() => moderate("RESOLVED", "Marked resolved.")}
+                    onClick={() =>
+                      moderate("RESOLVED", "Resolved — issue handled.")
+                    }
                   >
                     <CheckCircle2 className="h-4 w-4" />
                     Resolve
@@ -178,7 +187,9 @@ export function ReportReview({ report, question }: ReportReviewData) {
                     size="sm"
                     variant="destructive"
                     disabled={pending}
-                    onClick={() => moderate("REJECTED", "Marked rejected.")}
+                    onClick={() =>
+                      moderate("REJECTED", "Rejected — no change needed.")
+                    }
                   >
                     <XCircle className="h-4 w-4" />
                     Reject

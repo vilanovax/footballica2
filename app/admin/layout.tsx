@@ -63,14 +63,17 @@ export default async function AdminLayout({
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 items-center justify-between border-b border-slate-200 bg-white px-6">
-          <h2 className="text-sm font-semibold text-slate-700">
-            Admin
-          </h2>
-          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+          <div className="leading-tight">
+            <p className="text-sm font-semibold text-slate-800">Control room</p>
+            <p className="text-[11px] font-medium text-slate-400">
+              Content · Live-Ops · economy
+            </p>
+          </div>
+          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
             Live-Ops
           </span>
         </header>
-        <main className="flex-1 overflow-x-auto p-6">{children}</main>
+        <main className="flex-1 overflow-x-auto p-5 sm:p-6">{children}</main>
       </div>
       <Toaster />
     </div>

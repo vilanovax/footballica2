@@ -45,6 +45,7 @@ export async function updateGameConfig(raw: unknown): Promise<ConfigResult> {
   }
 
   revalidatePath("/admin/config");
+  revalidatePath("/admin/modes");
   revalidatePath("/admin");
   revalidatePath("/play");
   return { ok: true, config };

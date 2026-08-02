@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getLiveopsFormatsSnapshot } from "@/actions/admin/liveopsFormats";
 import { ImportExportPanel } from "@/components/admin/ImportExportPanel";
 import { LiveOpsFormatsPanel } from "@/components/admin/LiveOpsFormatsPanel";
+import { AdminHelpTip } from "@/components/admin/AdminHelpTip";
 
 export const dynamic = "force-dynamic";
 
@@ -27,29 +28,23 @@ export default async function AdminSettingsPage() {
   }));
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto max-w-5xl space-y-4">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900">
+        <h1 className="flex items-center gap-1.5 text-xl font-semibold tracking-tight text-slate-900">
           Settings
+          <AdminHelpTip
+            wide
+            title="Bank tools"
+            text="Sync the format pack into the published bank, download a JSON backup, or import AI-shaped questions with preview + L1 dedupe before anything writes."
+          />
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Question bank tools — import with preview, backup, format sync.
+        <p className="mt-1 text-sm text-slate-500">
+          ایمپورت، بکاپ و سینک فرمت‌ها
         </p>
       </div>
 
-      <section className="space-y-2">
-        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-          Live-Ops
-        </p>
-        <LiveOpsFormatsPanel initial={liveops} />
-      </section>
-
-      <section className="space-y-2">
-        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-          Question bank
-        </p>
-        <ImportExportPanel categories={options} />
-      </section>
+      <LiveOpsFormatsPanel initial={liveops} />
+      <ImportExportPanel categories={options} />
     </div>
   );
 }

@@ -5,6 +5,8 @@ import type { DuelInboxItem } from "@/actions/duel/getInboxCount";
 import type { DailyMysterySnapshot } from "@/actions/mystery/getDailyMystery";
 import type { DailyGridSnapshot } from "@/actions/grid/getDailyGrid";
 import type { DailyStarPathSnapshot } from "@/actions/starpath/getDailyStarPath";
+import type { DailyMemorySnapshot } from "@/actions/memorygotd/getDailyMemory";
+import type { GameConfig } from "@/lib/game/economy";
 import type { PlayModeEconomy } from "@/lib/play/modeEconomy";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
@@ -30,6 +32,10 @@ type PlayModesProps = {
   grid?: DailyGridSnapshot | null;
   /** Rotating daily slot (Star Path — GotD #3). */
   starPath?: DailyStarPathSnapshot | null;
+  /** Rotating daily slot (Memory Pairs — GotD #4). */
+  memory?: DailyMemorySnapshot | null;
+  /** Drives GotD rotator + liveModes gates. */
+  gameConfig?: GameConfig;
   /** ISO — next Tehran midnight when GotD kind rotates. */
   gotdRotatesAt?: string | null;
 };
@@ -51,6 +57,8 @@ export function PlayModes({
   mystery = null,
   grid = null,
   starPath = null,
+  memory = null,
+  gameConfig,
   gotdRotatesAt = null,
 }: PlayModesProps) {
   const { t, locale } = useTranslation();
@@ -97,6 +105,8 @@ export function PlayModes({
         mystery={mystery}
         grid={grid}
         starPath={starPath}
+        memory={memory}
+        config={gameConfig}
         rotatesAt={gotdRotatesAt}
       />
 

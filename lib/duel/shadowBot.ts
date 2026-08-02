@@ -100,6 +100,43 @@ async function playOneShadowTurn(
   const config = await getGameConfig();
   const status = duel.status as DuelStatus;
 
+  // Tiki-Taka shared board — one mini-turn when actor owns the clock.
+  const tikiRound = duel.rounds.find(
+    (r) =>
+      r.roundType === "TIKI_TAKA" &&
+      !(r.attackSubmittedAt && r.defenseSubmittedAt),
+  );
+  if (tikiRound) {
+    const { parseTikiTakaBoard } = await import("@/lib/duel/tikiTakaTypes");
+    const board = parseTikiTakaBoard(tikiRound.boardJson);
+    if (board && board.status === "IN_PROGRESS" && board.turnOwnerId === actorId) {
+      const { fabricateTikiTakaGuess } = await import("@/lib/duel/tikiTakaBot");
+      const { executeTikiTakaGuess } = await import("@/lib/duel/tikiTakaPlay");
+      const guess = await fabricateTikiTakaGuess(board, difficulty);
+      if (!guess) {
+        const res = await executeTikiTakaGuess({
+          duelId: duel.id,
+          userId: actorId,
+          row: 0,
+          col: 0,
+          playerId: "",
+          timedOut: true,
+          viewerId: actorId,
+        });
+        return res.ok;
+      }
+      const res = await executeTikiTakaGuess({
+        duelId: duel.id,
+        userId: actorId,
+        row: guess.row,
+        col: guess.col,
+        playerId: guess.playerId,
+        viewerId: actorId,
+      });
+      return res.ok;
+    }
+  }
+
   // Claim WAITING → DEFENDING
   if (status === "WAITING_B" || status === "WAITING_A") {
     const next = status === "WAITING_B" ? "B_DEFENDING" : "A_DEFENDING";
@@ -147,6 +184,24 @@ async function playDefendTurn(
     const mem = fabricateBotMemoryLog(board, difficulty);
     defenseLog = mem;
     defenseCorrect = mem.pairsFound;
+  } else if (
+    round.roundType === "STAR_PATH" ||
+    round.roundType === "MYSTERY" ||
+    round.roundType === "GRID" ||
+    round.roundType === "TIKI_TAKA"
+  ) {
+    // TIKI_TAKA is normally handled move-by-move above; this branch is a
+    // last-resort stub if the board was already completed mid-takeover.
+    const score =
+      round.roundType === "STAR_PATH"
+        ? 75
+        : round.roundType === "MYSTERY"
+          ? 80
+          : round.roundType === "GRID"
+            ? 6
+            : 3;
+    defenseLog = { status: "SOLVED", score, guesses: [] };
+    defenseCorrect = score;
   } else {
     if (!round.questionIds || !Array.isArray(round.questionIds)) return false;
     const qIds = round.questionIds as string[];
@@ -310,13 +365,18 @@ async function playAttackTurn(
   if (!round) return false;
   if (round.attackSubmittedAt) return false;
 
-  const memoryAvailable =
-    !duelHasMemoryRound(duel.rounds.filter((r) => r.id !== round.id)) &&
-    round.roundType !== "MEMORY";
+  const { duelHasSpecialRound } = await import("@/lib/duel/specialRounds");
+  const { isLiveModeEnabledInDuel } = await import("@/lib/game/liveModes");
+  const { getGameConfig } = await import("@/lib/game/gameConfig");
+  const liveConfig = await getGameConfig();
+  const memoryStillOpen =
+    !duelHasSpecialRound(duel.rounds.filter((r) => r.id !== round.id)) &&
+    round.roundType === "QUIZ" &&
+    isLiveModeEnabledInDuel("memory", liveConfig);
 
   // Prefer Memory when still available (keeps old R2 flavor if R1 was quiz).
   const playMemory =
-    round.roundType === "MEMORY" || (memoryAvailable && roundNumber === 2);
+    round.roundType === "MEMORY" || (memoryStillOpen && roundNumber === 2);
 
   if (playMemory) {
     let board = parseMemoryBoard(round.boardJson);

@@ -69,7 +69,10 @@ export async function startDuel(): Promise<StartDuelResult> {
       const draftOptions = cats.filter((c) => draftIds.includes(c.id));
       return {
         ok: true,
-        duel: toDuelSnapshot(duel, user.id, draftOptions),
+        duel: toDuelSnapshot(duel, user.id, {
+          draftOptions,
+          liveModes: config.liveModes,
+        }),
       };
     }
 
@@ -147,7 +150,10 @@ export async function startDuel(): Promise<StartDuelResult> {
 
     return {
       ok: true,
-      duel: toDuelSnapshot(duel, user.id, draftOptions),
+      duel: toDuelSnapshot(duel, user.id, {
+        draftOptions,
+        liveModes: config.liveModes,
+      }),
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "";

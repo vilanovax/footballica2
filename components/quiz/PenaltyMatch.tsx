@@ -24,6 +24,7 @@ import { GoalBurst } from "./GoalBurst";
 import { MissedPopup } from "./MissedPopup";
 import { ReportModal } from "./ReportModal";
 import { FormatDevToggle } from "./FormatDevToggle";
+import { MatchLeaveControl } from "./MatchLeaveControl";
 
 /** Auto-advance delay after a scored goal (miss waits for Continue tap). */
 const GOAL_REVEAL_MS = 1500;
@@ -78,9 +79,15 @@ export function PenaltyMatch({
   const next = usePenaltyStore((s) => s.next);
   const reset = usePenaltyStore((s) => s.reset);
   const useHelper = usePenaltyStore((s) => s.useHelper);
+  const setPaused = usePenaltyStore((s) => s.setPaused);
 
   const [shake, setShake] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+
+  const handleLeaveMatch = useCallback(() => {
+    reset();
+    router.push("/play");
+  }, [reset, router]);
 
   // Seed the match EXACTLY ONCE on mount. A server-action refresh (Next.js
   // auto-refreshes the route after resolveMatch runs) re-renders this page and
@@ -211,11 +218,15 @@ export function PenaltyMatch({
         onAnimationEnd={() => setShake(false)}
       >
         <header className="flex flex-col gap-3 pt-2">
-          <div className="flex items-center justify-between">
-            <p className="font-display text-sm font-bold uppercase tracking-widest text-secondary">
+          <div className="flex items-center gap-2">
+            <MatchLeaveControl
+              setPaused={setPaused}
+              onConfirmLeave={handleLeaveMatch}
+            />
+            <p className="min-w-0 flex-1 font-display text-sm font-bold uppercase tracking-widest text-secondary">
               {t("quiz.penaltyMode")}
             </p>
-            <p className="font-display text-sm font-semibold text-muted-foreground">
+            <p className="shrink-0 font-display text-sm font-semibold text-muted-foreground">
               {t("quiz.kickOf", {
                 n: toLocaleDigits(currentIndex + 1, lang),
                 total: toLocaleDigits(questions.length, lang),

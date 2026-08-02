@@ -16,18 +16,18 @@ export default async function AdminMissionsPage() {
   ]);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
+    <div className="mx-auto max-w-3xl space-y-4">
       <div>
         <h1 className="flex items-center gap-1.5 text-xl font-semibold text-slate-900">
           Missions
           <AdminHelpTip
             wide
-            title="LiveOps quests"
-            text="Players chase a ladder of batches in the app. Each batch has up to 3 missions and a chest reward when all three are claimed. Use the ? next to any field for details."
+            title="Campaign ladder"
+            text="One live campaign at a time. Each batch: up to 3 missions + chest. Turn On and set Shamsi start/end if you want a schedule window."
           />
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          One live campaign at a time · edit rewards & goals · hover ? for help.
+          کمپین · rewards & goals · schedule with تاریخ شمسی
         </p>
       </div>
 

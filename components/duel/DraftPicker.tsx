@@ -3,19 +3,24 @@
 import { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import type { DuelCategoryOption } from "@/lib/duel/types";
-import { DEFAULT_GAME_CONFIG } from "@/lib/game/economy";
+import { DEFAULT_GAME_CONFIG, type LiveModeId } from "@/lib/game/economy";
+import { LIVE_MODE_LABELS } from "@/lib/game/liveModes";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
+import { DuelSpecialHelpSheet } from "@/components/duel/DuelSpecialHelpSheet";
 
 type DraftPickerProps = {
   options: DuelCategoryOption[];
-  /** Offer Memory as a one-shot format (hidden once already used in the duel). */
+  /** @deprecated Prefer specialAvailable */
   memoryAvailable?: boolean;
+  /** Admin-enabled specials still pickable this turn. */
+  specialAvailable?: LiveModeId[];
   pending?: boolean;
   onPick: (categoryId: string) => void;
   onPickMemory?: () => void;
+  onPickSpecial?: (mode: LiveModeId) => void;
 };
 
 /** Accent themes per quiz slot — pitch / kit colors, no violet cluster. */
@@ -54,26 +59,67 @@ const WEAPON_THEMES = [
   },
 ] as const;
 
-const MEMORY_PICK_ID = "__memory__";
+const SPECIAL_META: Record<
+  LiveModeId,
+  { pickId: string; icon: string; accent: string }
+> = {
+  memory: {
+    pickId: "__memory__",
+    icon: "🃏",
+    accent: "rose",
+  },
+  mystery: {
+    pickId: "__mystery__",
+    icon: "🕵️",
+    accent: "sky",
+  },
+  grid: {
+    pickId: "__grid__",
+    icon: "▦",
+    accent: "emerald",
+  },
+  starPath: {
+    pickId: "__star_path__",
+    icon: "⭐",
+    accent: "amber",
+  },
+  tikiTaka: {
+    pickId: "__tiki_taka__",
+    icon: "⨯",
+    accent: "sky",
+  },
+};
 
 /**
- * Attack loadout — clear step copy, featured Memory (once), then quiz banks.
+ * Attack loadout — special formats (once) + quiz banks.
  */
 export function DraftPicker({
   options,
   memoryAvailable = false,
+  specialAvailable,
   pending,
   onPick,
   onPickMemory,
+  onPickSpecial,
 }: DraftPickerProps) {
   const { t, locale } = useTranslation();
   const reduceMotion = useReducedMotion();
   const [pickedId, setPickedId] = useState<string | null>(null);
+  const [helpMode, setHelpMode] = useState<LiveModeId | null>(null);
   const shots = DEFAULT_GAME_CONFIG.duel.questionsPerAttack;
   const pairs = DEFAULT_GAME_CONFIG.duel.memoryPairs;
   const busy = Boolean(pending || pickedId);
+  const specials: LiveModeId[] = (
+    specialAvailable && specialAvailable.length > 0
+      ? specialAvailable
+      : memoryAvailable
+        ? (["memory"] as LiveModeId[])
+        : []
+  ).filter((mode) => Boolean(SPECIAL_META[mode]));
+  const hasSpecials = specials.length > 0;
 
   return (
+    <>
     <section className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-bubble-xl">
       {/* Arena atmosphere */}
       <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
@@ -113,9 +159,7 @@ export function DraftPicker({
           </motion.h1>
 
           <p className="mx-auto mt-2 max-w-[20rem] font-body text-[0.95rem] font-bold leading-snug text-white/90">
-            {memoryAvailable
-              ? t("duel.draftSubWithMemory")
-              : t("duel.draftSub")}
+            {hasSpecials ? t("duel.draftSubWithMemory") : t("duel.draftSub")}
           </p>
 
           <div className="mx-auto mt-3.5 flex max-w-sm flex-wrap items-stretch justify-center gap-2">
@@ -125,8 +169,8 @@ export function DraftPicker({
                 n: toLocaleDigits(shots, locale),
               })}
             />
-            {memoryAvailable && (
-              <RulePill icon="🃏" label={t("duel.draftRuleMemory")} highlight />
+            {hasSpecials && (
+              <RulePill icon="✨" label={t("duel.draftRuleMemory")} highlight />
             )}
             <RulePill icon="🔒" label={t("duel.draftRuleLock")} />
           </div>
@@ -134,92 +178,103 @@ export function DraftPicker({
 
         {/* ── Options ─────────────────────────────────────────────── */}
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain pb-1">
-          {memoryAvailable && onPickMemory && (
+          {hasSpecials && (
             <div className="flex flex-col gap-2">
               <p className="px-0.5 text-start font-display text-[11px] font-extrabold uppercase tracking-[0.14em] text-rose-200/90">
                 {t("duel.draftSectionSpecial")}
               </p>
-              <motion.button
-                type="button"
-                disabled={busy}
-                initial={reduceMotion ? false : { y: 14, opacity: 0 }}
-                animate={{
-                  y: 0,
-                  opacity: busy && pickedId !== MEMORY_PICK_ID ? 0.4 : 1,
-                  scale: pickedId === MEMORY_PICK_ID ? 1.015 : 1,
-                }}
-                transition={{ type: "spring", stiffness: 320, damping: 22 }}
-                whileTap={busy ? undefined : { scale: 0.98 }}
-                onClick={() => {
-                  if (busy) return;
-                  setPickedId(MEMORY_PICK_ID);
-                  haptic(HAPTIC.tap);
-                  playSound("click");
-                  onPickMemory();
-                }}
-                className={[
-                  "group relative flex min-h-[5.75rem] items-center gap-3 overflow-hidden rounded-2xl border-2 p-3.5 text-start shadow-[0_12px_32px_rgba(0,0,0,0.4)] disabled:cursor-wait",
-                  pickedId === MEMORY_PICK_ID
-                    ? "border-amber-300 bg-white ring-2 ring-rose-400/60"
-                    : "border-rose-300/60 bg-linear-to-br from-rose-50 to-amber-50",
-                ].join(" ")}
-              >
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-y-0 start-0 w-1.5 bg-rose-500"
-                />
-                <span className="relative z-10 flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-2xl bg-rose-500 text-2xl shadow-md ring-2 ring-rose-300/50">
-                  🃏
-                </span>
-                <span className="relative z-10 min-w-0 flex-1">
-                  <span className="flex flex-wrap items-center gap-2">
-                    <span className="font-display text-lg font-black text-slate-900">
-                      {pickedId === MEMORY_PICK_ID
-                        ? t("duel.draftLocking")
-                        : t("duel.memory.title")}
-                    </span>
-                    <span className="rounded-full bg-rose-500 px-2 py-0.5 font-display text-[10px] font-extrabold uppercase tracking-wide text-white">
-                      {t("duel.draftMemoryOnce")}
-                    </span>
-                  </span>
-                  <span className="mt-1 block font-body text-sm font-bold leading-snug text-slate-700">
-                    {t("duel.draftMemoryHint")}
-                  </span>
-                  <span className="mt-1.5 inline-flex items-center gap-1.5 font-display text-xs font-extrabold text-rose-800">
-                    <span>
-                      {t("duel.draftMemoryPairs", {
-                        n: toLocaleDigits(pairs, locale),
-                      })}
-                    </span>
-                    <span className="text-rose-300" aria-hidden>
-                      ·
-                    </span>
-                    <span className="rounded-full bg-rose-500/15 px-2 py-0.5">
-                      {t("duel.draftMemoryCta")}
-                    </span>
-                  </span>
-                </span>
-                <span
-                  aria-hidden
-                  className={[
-                    "relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full font-display text-xl font-black shadow-md",
-                    pickedId === MEMORY_PICK_ID
-                      ? "bg-amber-400 text-amber-950"
-                      : "bg-rose-600 text-white",
-                  ].join(" ")}
-                >
-                  {pickedId === MEMORY_PICK_ID
-                    ? "✓"
-                    : locale === "fa"
-                      ? "‹"
-                      : "›"}
-                </span>
-              </motion.button>
+              {specials.map((mode) => {
+                const meta = SPECIAL_META[mode];
+                const label =
+                  locale === "fa"
+                    ? LIVE_MODE_LABELS[mode].fa
+                    : LIVE_MODE_LABELS[mode].en;
+                const selected = pickedId === meta.pickId;
+                return (
+                  <motion.div
+                    key={mode}
+                    initial={reduceMotion ? false : { y: 14, opacity: 0 }}
+                    animate={{
+                      y: 0,
+                      opacity: busy && !selected ? 0.4 : 1,
+                      scale: selected ? 1.015 : 1,
+                    }}
+                    transition={{ type: "spring", stiffness: 320, damping: 22 }}
+                    className={[
+                      "group relative flex min-h-[5.25rem] items-stretch overflow-hidden rounded-2xl border-2 shadow-[0_12px_32px_rgba(0,0,0,0.4)]",
+                      selected
+                        ? "border-amber-300 bg-white ring-2 ring-rose-400/60"
+                        : "border-rose-300/60 bg-linear-to-br from-rose-50 to-amber-50",
+                    ].join(" ")}
+                  >
+                    <motion.button
+                      type="button"
+                      disabled={busy}
+                      whileTap={busy ? undefined : { scale: 0.985 }}
+                      onClick={() => {
+                        if (busy) return;
+                        setPickedId(meta.pickId);
+                        haptic(HAPTIC.tap);
+                        playSound("click");
+                        if (mode === "memory" && onPickMemory) onPickMemory();
+                        else onPickSpecial?.(mode);
+                      }}
+                      className="flex min-h-[5.25rem] min-w-0 flex-1 items-center gap-3 p-3.5 text-start disabled:cursor-wait"
+                    >
+                      <span className="relative z-10 flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-2xl bg-rose-500 text-2xl shadow-md">
+                        {meta.icon}
+                      </span>
+                      <span className="relative z-10 min-w-0 flex-1">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="font-display text-lg font-black text-slate-900">
+                            {selected ? t("duel.draftLocking") : label}
+                          </span>
+                          <span className="rounded-full bg-rose-500 px-2 py-0.5 font-display text-[10px] font-extrabold uppercase tracking-wide text-white">
+                            {t("duel.draftMemoryOnce")}
+                          </span>
+                        </span>
+                        {mode === "memory" && (
+                          <span className="mt-1 block font-body text-sm font-bold text-slate-700">
+                            {t("duel.draftMemoryPairs", {
+                              n: toLocaleDigits(pairs, locale),
+                            })}
+                          </span>
+                        )}
+                        {mode === "tikiTaka" && (
+                          <span className="mt-1 block font-body text-sm font-bold text-slate-700">
+                            {t("duel.draftTikiBlurb")}
+                          </span>
+                        )}
+                      </span>
+                    </motion.button>
+
+                    <button
+                      type="button"
+                      disabled={busy}
+                      aria-label={t("duel.help.howToPlay")}
+                      onClick={() => {
+                        playSound("click");
+                        haptic(HAPTIC.tap);
+                        setHelpMode(mode);
+                      }}
+                      className="flex w-14 shrink-0 items-center justify-center border-s border-rose-300/40 bg-rose-500/10 active:scale-95 disabled:opacity-40"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src="/icons/help.png"
+                        alt=""
+                        draggable={false}
+                        className="h-9 w-9 object-contain"
+                      />
+                    </button>
+                  </motion.div>
+                );
+              })}
             </div>
           )}
 
           <div className="flex flex-col gap-2">
-            {(memoryAvailable || options.length > 0) && (
+            {(hasSpecials || options.length > 0) && (
               <p className="px-0.5 text-start font-display text-[11px] font-extrabold uppercase tracking-[0.14em] text-white/70">
                 {t("duel.draftSectionQuiz")}
               </p>
@@ -354,6 +409,14 @@ export function DraftPicker({
         </p>
       </div>
     </section>
+
+    <DuelSpecialHelpSheet
+      mode={helpMode}
+      open={helpMode != null}
+      onClose={() => setHelpMode(null)}
+      tone="dark"
+    />
+    </>
   );
 }
 

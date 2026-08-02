@@ -111,3 +111,7 @@ Hybrid schema (implemented in `prisma/schema.prisma`):
 6. ~~Later ADR if Campaign or Grid becomes a permanent pillar.~~ → [ADR 002](./002-campaign-and-grid-pillars.md) (Accepted: Campaign = metagame, Grid daily = GotD rotation — not new MatchModes).
 7. ~~Light Live-Ops format bias in draws (~1 non-TEXT per 5) so CAREER_PATH / HIGHER_LOWER / REVEAL_IMAGE / IMAGE surface in TEXT-heavy banks.~~ (done — `lib/quiz/formatBias.ts`)
 8. ~~Cron `/api/cron/mystery` pre-schedules Tehran week ahead without overwriting admin rows (still safe with `ensureTodayMysteryPuzzle` fallback).~~ (done)
+
+## Mode Placement Catalog (`GameConfig.liveModes`)
+
+Live visual modes (Mystery / Grid / Star Path / Memory) are **engines**, not permanent Play cards. Placement — whether each mode is offered as a Duel special and/or included in the GotD rotator — is stored in `GameConfig.liveModes` and edited from Admin `/admin/modes`. Content panels (`/admin/mystery`, `/admin/grid`, `/admin/star-path`, `/admin/memory`) publish daily puzzles; toggles only gate surfaces.

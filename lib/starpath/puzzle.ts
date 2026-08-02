@@ -38,15 +38,15 @@ async function pickStarPathTargetSlug(
   );
 }
 
-export async function ensureTodayStarPathPuzzle(
-  db: Db,
-  now: Date = new Date(),
-) {
-  const dateKey = tehranDayKey(now);
+/**
+ * Ensure a Star Path puzzle exists for a Tehran `dateKey`.
+ * Never overwrites an existing row (admin / cron wins).
+ */
+export async function ensureStarPathPuzzleForDate(db: Db, dateKey: string) {
   const existing = await db.dailyStarPathPuzzle.findUnique({
     where: { dateKey },
   });
-  if (existing) return existing;
+  if (existing) return { puzzle: existing, created: false as const };
 
   const targetPlayerId = await pickStarPathTargetSlug(dateKey, db);
   const player = await db.footballPlayer.findUniqueOrThrow({
@@ -55,7 +55,7 @@ export async function ensureTodayStarPathPuzzle(
   });
   const path = buildStarPathSteps(player);
 
-  return db.dailyStarPathPuzzle.create({
+  const puzzle = await db.dailyStarPathPuzzle.create({
     data: {
       dateKey,
       targetPlayerId,
@@ -63,6 +63,15 @@ export async function ensureTodayStarPathPuzzle(
       config: { maxClues: STAR_PATH_MAX_CLUES },
     },
   });
+  return { puzzle, created: true as const };
+}
+
+export async function ensureTodayStarPathPuzzle(
+  db: Db,
+  now: Date = new Date(),
+) {
+  const { puzzle } = await ensureStarPathPuzzleForDate(db, tehranDayKey(now));
+  return puzzle;
 }
 
 export function maxCluesFromConfig(config: Prisma.JsonValue | null): number {

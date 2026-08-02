@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -13,6 +13,7 @@ import {
   Pencil,
   X,
   Coins,
+  Search,
 } from "lucide-react";
 import {
   generateBots,
@@ -25,15 +26,9 @@ import {
 } from "@/actions/admin/bots";
 import { grantCoinsToUser } from "@/actions/admin/economy";
 import { BOT_DIFFICULTIES, type BotDifficulty } from "@/lib/bots/difficulty";
+import { formatJalaliLabel } from "@/lib/admin/jalali";
+import { AdminHelpTip } from "@/components/admin/AdminHelpTip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -59,211 +54,311 @@ type UsersBotsPanelProps = {
   users: AdminUserRow[];
 };
 
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(iso));
+function dateKeyFromIso(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function looksRtl(text: string): boolean {
+  return /[\u0600-\u06FF]/.test(text);
 }
 
 export function UsersBotsPanel({ bots, users }: UsersBotsPanelProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [tab, setTab] = useState("bots");
+  const [botQuery, setBotQuery] = useState("");
+  const [userQuery, setUserQuery] = useState("");
+
+  const enabledBots = useMemo(
+    () => bots.filter((b) => b.enabled).length,
+    [bots],
+  );
+
+  const filteredBots = useMemo(() => {
+    const q = botQuery.trim().toLowerCase();
+    if (!q) return bots;
+    return bots.filter(
+      (b) =>
+        b.clubName.toLowerCase().includes(q) ||
+        (b.difficulty ?? "").toLowerCase().includes(q),
+    );
+  }, [bots, botQuery]);
+
+  const filteredUsers = useMemo(() => {
+    const q = userQuery.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter(
+      (u) =>
+        (u.phone ?? "").toLowerCase().includes(q) ||
+        (u.clubName ?? "").toLowerCase().includes(q),
+    );
+  }, [users, userQuery]);
+
+  function refresh() {
+    startTransition(() => router.refresh());
+  }
 
   return (
-    <Tabs defaultValue="bots" className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <TabsList className="bg-slate-200">
-          <TabsTrigger value="users" className="gap-1.5">
-            <Users className="h-3.5 w-3.5" />
-            Real Users
-            <span className="rounded-full bg-slate-300 px-1.5 text-[10px] font-semibold text-slate-700">
-              {users.length}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="bots" className="gap-1.5">
-            <Bot className="h-3.5 w-3.5" />
-            Bots
-            <span className="rounded-full bg-slate-300 px-1.5 text-[10px] font-semibold text-slate-700">
-              {bots.length}
-            </span>
-          </TabsTrigger>
-        </TabsList>
-
-        <div className="flex flex-wrap gap-2">
-          <GenerateBotsDialog
-            pending={pending}
-            onDone={() => {
-              startTransition(() => router.refresh());
-            }}
-          />
-          <BulkRenameDialog
-            pending={pending}
-            onDone={() => {
-              startTransition(() => router.refresh());
-            }}
-          />
-        </div>
+    <div className="space-y-4">
+      {/* Health strip */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatCard
+          label="Real users"
+          value={users.length}
+          hint="OTP managers"
+          tone="sky"
+        />
+        <StatCard
+          label="Bots enabled"
+          value={enabledBots}
+          hint={`of ${bots.length} total`}
+          tone="emerald"
+        />
+        <StatCard
+          label="Bots disabled"
+          value={bots.length - enabledBots}
+          hint="Skipped in matchmaking"
+          tone="slate"
+        />
       </div>
 
-      <TabsContent value="users" className="space-y-3">
-        <p className="text-sm text-slate-500">
-          Phone-authenticated managers (OTP). Bots are excluded. Answers =
-          correct / total questions (matches + duels). Use Grant to top up
-          club coins manually (logged separately from IAP).
-        </p>
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Phone</TableHead>
-                <TableHead>Club</TableHead>
-                <TableHead className="text-right">Coins</TableHead>
-                <TableHead className="text-right">Answers</TableHead>
-                <TableHead className="text-right">Matches</TableHead>
-                <TableHead className="text-right">Weekly XP</TableHead>
-                <TableHead>Joined</TableHead>
-                <TableHead className="w-28" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8} className="py-10 text-center text-slate-400">
-                    No real users yet.
-                  </TableCell>
-                </TableRow>
-              )}
-              {users.map((u) => (
-                <TableRow key={u.id}>
-                  <TableCell className="font-mono text-xs">{u.phone ?? "—"}</TableCell>
-                  <TableCell className="font-medium">{u.clubName ?? "—"}</TableCell>
-                  <TableCell className="text-right font-medium tabular-nums text-amber-700">
-                    {u.clubId ? u.coins.toLocaleString() : "—"}
-                  </TableCell>
-                  <TableCell className="text-end">
-                    <AnswersCell label={u.answersLabel} />
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {u.matchesPlayed}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {u.weeklyXp}
-                  </TableCell>
-                  <TableCell className="text-xs text-slate-500">
-                    {formatDate(u.createdAt)}
-                  </TableCell>
-                  <TableCell className="text-end">
-                    <GrantCoinsDialog
-                      user={u}
-                      pending={pending}
-                      onDone={() => {
-                        startTransition(() => router.refresh());
-                      }}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </TabsContent>
+      <Tabs value={tab} onValueChange={setTab} className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <TabsList className="rounded-2xl bg-slate-100 p-1">
+            <TabsTrigger value="users" className="gap-1.5 rounded-xl">
+              <Users className="h-3.5 w-3.5" />
+              Users
+              <span className="rounded-full bg-white/80 px-1.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200">
+                {users.length}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="bots" className="gap-1.5 rounded-xl">
+              <Bot className="h-3.5 w-3.5" />
+              Bots
+              <span className="rounded-full bg-white/80 px-1.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200">
+                {bots.length}
+              </span>
+            </TabsTrigger>
+          </TabsList>
 
-      <TabsContent value="bots" className="space-y-3">
-        <p className="text-sm text-slate-500">
-          Cold-start PvP pool. Disabled bots stay listed but are skipped by
-          matchmaking. Click a name to rename.
-        </p>
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Difficulty</TableHead>
-                <TableHead className="text-right">Answers</TableHead>
-                <TableHead className="text-right">Duels</TableHead>
-                <TableHead className="text-center">Enabled</TableHead>
-                <TableHead className="w-20" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {bots.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-slate-400">
-                    No bots yet. Generate a batch to fill the queue.
-                  </TableCell>
-                </TableRow>
-              )}
-              {bots.map((b) => (
-                <TableRow
-                  key={b.id}
-                  className={b.enabled ? undefined : "bg-slate-50 opacity-70"}
-                >
-                  <TableCell className="font-medium">
-                    <InlineBotName
-                      botId={b.id}
-                      initialName={b.clubName}
-                      disabled={pending}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <DifficultyBadge difficulty={b.difficulty} />
-                  </TableCell>
-                  <TableCell className="text-end">
-                    <AnswersCell label={b.answersLabel} />
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {b.duelsPlayed}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <BotEnabledToggle
-                      botId={b.id}
-                      enabled={b.enabled}
-                      disabled={pending}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-rose-500 hover:bg-rose-50 hover:text-rose-600"
-                      disabled={pending}
-                      aria-label={`Delete ${b.clubName}`}
-                      onClick={() => {
-                        startTransition(async () => {
-                          const res = await deleteBot(b.id);
-                          if (!res.ok) {
-                            toast.error(
-                              res.error === "in_use"
-                                ? "Bot is in an active duel."
-                                : "Could not delete bot.",
-                            );
-                            return;
-                          }
-                          toast.success("Bot deleted");
-                          router.refresh();
-                        });
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          {tab === "bots" ? (
+            <div className="flex flex-wrap gap-2">
+              <GenerateBotsDialog pending={pending} onDone={refresh} />
+              <BulkRenameDialog pending={pending} onDone={refresh} />
+            </div>
+          ) : null}
         </div>
-      </TabsContent>
-    </Tabs>
+
+        <TabsContent value="users" className="mt-0 space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <SearchField
+              value={userQuery}
+              onChange={setUserQuery}
+              placeholder="Search phone or club…"
+            />
+            <AdminHelpTip text="Grant tops up club coins (logged, not IAP). Answers = correct / total." />
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            {filteredUsers.length === 0 ? (
+              <p className="px-4 py-10 text-center text-sm text-slate-500">
+                {users.length === 0
+                  ? "No real users yet."
+                  : "No users match your search."}
+              </p>
+            ) : (
+              <ul className="divide-y divide-slate-100">
+                {filteredUsers.map((u) => {
+                  const joinedKey = dateKeyFromIso(u.createdAt);
+                  return (
+                    <li
+                      key={u.id}
+                      className="flex flex-wrap items-center gap-3 px-4 py-3"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold text-slate-900">
+                          {u.clubName ?? "No club"}
+                        </p>
+                        <p className="truncate font-mono text-xs text-slate-500">
+                          {u.phone ?? "—"}
+                        </p>
+                        <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                          <span className="font-semibold tabular-nums text-amber-700">
+                            {(u.clubId ? u.coins : 0).toLocaleString()} 🪙
+                          </span>
+                          <AnswersPill label={u.answersLabel} />
+                          <span>{u.matchesPlayed} matches</span>
+                          <span>{u.weeklyXp} XP/wk</span>
+                          {joinedKey ? (
+                            <span dir="rtl">
+                              {formatJalaliLabel(joinedKey)}
+                            </span>
+                          ) : null}
+                        </p>
+                      </div>
+                      <GrantCoinsDialog
+                        user={u}
+                        pending={pending}
+                        onDone={refresh}
+                      />
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="bots" className="mt-0 space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <SearchField
+              value={botQuery}
+              onChange={setBotQuery}
+              placeholder="Search bot name…"
+            />
+            <AdminHelpTip text="Click a name to rename. Toggle Enabled to include/exclude from matchmaking." />
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            {filteredBots.length === 0 ? (
+              <p className="px-4 py-10 text-center text-sm text-slate-500">
+                {bots.length === 0
+                  ? "No bots yet — Generate a batch to fill the duel pool."
+                  : "No bots match your search."}
+              </p>
+            ) : (
+              <ul className="divide-y divide-slate-100">
+                {filteredBots.map((b) => (
+                  <li
+                    key={b.id}
+                    className={[
+                      "flex flex-wrap items-center gap-3 px-4 py-3 transition",
+                      b.enabled ? "hover:bg-slate-50" : "bg-slate-50/80 opacity-80",
+                    ].join(" ")}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <InlineBotName
+                          botId={b.id}
+                          initialName={b.clubName}
+                          disabled={pending}
+                        />
+                        <DifficultyBadge difficulty={b.difficulty} />
+                        {!b.enabled ? (
+                          <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">
+                            OFF
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                        <AnswersPill label={b.answersLabel} />
+                        <span>{b.duelsPlayed} duels</span>
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <BotEnabledToggle
+                        botId={b.id}
+                        enabled={b.enabled}
+                        disabled={pending}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-rose-500 hover:bg-rose-50 hover:text-rose-600"
+                        disabled={pending}
+                        aria-label={`Delete ${b.clubName}`}
+                        onClick={() => {
+                          startTransition(async () => {
+                            const res = await deleteBot(b.id);
+                            if (!res.ok) {
+                              toast.error(
+                                res.error === "in_use"
+                                  ? "Bot is in an active duel."
+                                  : "Could not delete bot.",
+                              );
+                              return;
+                            }
+                            toast.success("Bot deleted");
+                            router.refresh();
+                          });
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
 
-function AnswersCell({ label }: { label: string }) {
+function StatCard({
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  label: string;
+  value: number;
+  hint: string;
+  tone: "sky" | "emerald" | "slate";
+}) {
+  const ring =
+    tone === "sky"
+      ? "border-sky-200"
+      : tone === "emerald"
+        ? "border-emerald-200"
+        : "border-slate-200";
+  return (
+    <div className={`rounded-2xl border bg-white p-4 shadow-sm ${ring}`}>
+      <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+        {label}
+      </p>
+      <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">
+        {value}
+      </p>
+      <p className="mt-0.5 text-xs text-slate-500">{hint}</p>
+    </div>
+  );
+}
+
+function SearchField({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <div className="relative min-w-[12rem] flex-1">
+      <Search className="pointer-events-none absolute start-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="h-10 ps-9"
+      />
+    </div>
+  );
+}
+
+function AnswersPill({ label }: { label: string }) {
   return (
     <span
-      className="inline-flex rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs font-semibold tabular-nums text-slate-800"
+      className="inline-flex rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-slate-700"
       title="Correct / questions answered"
     >
       {label}
@@ -328,7 +423,7 @@ function GrantCoinsDialog({
           variant="outline"
           size="sm"
           disabled={!canGrant || pending}
-          className="h-8 gap-1 border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 hover:text-amber-900"
+          className="h-9 gap-1.5 border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 hover:text-amber-900"
           title={canGrant ? "Grant coins" : "No club yet"}
         >
           <Coins className="h-3.5 w-3.5" />
@@ -339,15 +434,15 @@ function GrantCoinsDialog({
         <DialogHeader>
           <DialogTitle>Grant coins</DialogTitle>
           <DialogDescription>
-            Credit soft currency to{" "}
+            Credit{" "}
             <span className="font-medium text-slate-800">
               {user.clubName ?? user.phone ?? "player"}
             </span>
-            . Current balance:{" "}
+            . Balance{" "}
             <span className="font-semibold tabular-nums text-amber-700">
               {user.coins.toLocaleString()}
             </span>
-            . Logged in AdminCoinGrant (not IAP).
+            .
           </DialogDescription>
         </DialogHeader>
 
@@ -362,7 +457,7 @@ function GrantCoinsDialog({
               step={1}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="tabular-nums"
+              className="h-10 tabular-nums"
             />
             <div className="flex flex-wrap gap-1.5">
               {GRANT_PRESETS.map((n) => (
@@ -387,9 +482,10 @@ function GrantCoinsDialog({
             <Input
               id={`grant-reason-${user.id}`}
               maxLength={200}
-              placeholder="e.g. support ticket #42, promo"
+              placeholder="e.g. support ticket #42"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
+              className="h-10"
             />
           </div>
         </div>
@@ -409,7 +505,9 @@ function GrantCoinsDialog({
             onClick={submit}
             className="bg-amber-600 text-white hover:bg-amber-700"
           >
-            {busy ? "Granting…" : `Grant ${amountOk ? amountNum.toLocaleString() : "…"}`}
+            {busy
+              ? "Granting…"
+              : `Grant ${amountOk ? amountNum.toLocaleString() : "…"}`}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -439,6 +537,7 @@ function BotEnabledToggle({
       type="button"
       role="switch"
       aria-checked={on}
+      aria-label={on ? "Enabled" : "Disabled"}
       disabled={disabled || busy}
       onClick={() => {
         const next = !on;
@@ -455,7 +554,7 @@ function BotEnabledToggle({
         });
       }}
       className={[
-        "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:opacity-50",
+        "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 disabled:opacity-50",
         on ? "bg-emerald-500" : "bg-slate-300",
       ].join(" ")}
     >
@@ -483,6 +582,7 @@ function InlineBotName({
   const [value, setValue] = useState(initialName);
   const [name, setName] = useState(initialName);
   const [busy, startTransition] = useTransition();
+  const rtl = looksRtl(name);
 
   function startEdit() {
     if (disabled || busy) return;
@@ -522,8 +622,9 @@ function InlineBotName({
         type="button"
         onClick={startEdit}
         disabled={disabled || busy}
-        className="group inline-flex max-w-[14rem] items-center gap-1.5 rounded-md px-1.5 py-1 text-start font-medium text-slate-900 hover:bg-slate-100 disabled:opacity-50"
-        title="Click to edit"
+        className="group inline-flex max-w-[16rem] items-center gap-1.5 rounded-lg px-1.5 py-1 text-start font-semibold text-slate-900 hover:bg-slate-100 disabled:opacity-50"
+        title="Click to rename"
+        dir={rtl ? "rtl" : "ltr"}
       >
         <span className="truncate">{name}</span>
         <Pencil className="h-3.5 w-3.5 shrink-0 text-slate-400 opacity-0 transition-opacity group-hover:opacity-100" />
@@ -532,12 +633,13 @@ function InlineBotName({
   }
 
   return (
-    <div className="flex max-w-[16rem] items-center gap-1">
+    <div className="flex max-w-[18rem] items-center gap-1">
       <Input
         autoFocus
         value={value}
         maxLength={32}
         disabled={busy}
+        dir={looksRtl(value) ? "rtl" : "ltr"}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
@@ -550,7 +652,6 @@ function InlineBotName({
           }
         }}
         onBlur={() => {
-          // Delay so check/cancel clicks register first.
           window.setTimeout(() => {
             if (document.activeElement?.closest("[data-inline-name-actions]")) {
               return;
@@ -558,14 +659,14 @@ function InlineBotName({
             save();
           }, 120);
         }}
-        className="h-8 text-sm"
+        className="h-9 text-sm"
       />
       <div data-inline-name-actions className="flex shrink-0 gap-0.5">
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-emerald-600 hover:bg-emerald-50"
+          className="h-9 w-9 text-emerald-600 hover:bg-emerald-50"
           disabled={busy}
           aria-label="Save name"
           onMouseDown={(e) => e.preventDefault()}
@@ -577,7 +678,7 @@ function InlineBotName({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-slate-500 hover:bg-slate-100"
+          className="h-9 w-9 text-slate-500 hover:bg-slate-100"
           disabled={busy}
           aria-label="Cancel"
           onMouseDown={(e) => e.preventDefault()}
@@ -600,7 +701,7 @@ function DifficultyBadge({ difficulty }: { difficulty: BotDifficulty | null }) {
         : "bg-amber-50 text-amber-800 ring-amber-200";
   return (
     <span
-      className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${tone}`}
+      className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 ${tone}`}
     >
       {d}
     </span>
@@ -638,14 +739,14 @@ function GenerateBotsDialog({
       <DialogTrigger asChild>
         <Button type="button" className="gap-1.5" disabled={pending}>
           <Wand2 className="h-4 w-4" />
-          Generate Bots
+          Generate
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Generate bots</DialogTitle>
           <DialogDescription>
-            Creates bot managers with clubs for the Draft Duel cold-start pool.
+            Fill the Draft Duel cold-start pool with bot managers + clubs.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-2">
@@ -658,6 +759,7 @@ function GenerateBotsDialog({
               max={200}
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
+              className="h-10"
             />
           </div>
           <div className="grid gap-2">
@@ -666,7 +768,7 @@ function GenerateBotsDialog({
               value={difficulty}
               onValueChange={(v) => setDifficulty(v as BotDifficulty)}
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-10">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -685,6 +787,7 @@ function GenerateBotsDialog({
               value={prefix}
               onChange={(e) => setPrefix(e.target.value)}
               placeholder="Guest_"
+              className="h-10"
             />
           </div>
         </div>
@@ -729,17 +832,21 @@ function BulkRenameDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button" variant="outline" className="gap-1.5" disabled={pending}>
+        <Button
+          type="button"
+          variant="outline"
+          className="gap-1.5"
+          disabled={pending}
+        >
           <Replace className="h-4 w-4" />
-          Bulk Rename
+          Bulk rename
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Bulk rename bots</DialogTitle>
+          <DialogTitle>Bulk rename</DialogTitle>
           <DialogDescription>
-            Finds bot club names starting with the search string and replaces that
-            prefix globally.
+            Replace a name prefix across bot clubs.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-2">
@@ -749,6 +856,7 @@ function BulkRenameDialog({
               id="old-prefix"
               value={oldPrefix}
               onChange={(e) => setOldPrefix(e.target.value)}
+              className="h-10"
             />
           </div>
           <div className="grid gap-2">
@@ -757,6 +865,7 @@ function BulkRenameDialog({
               id="new-prefix"
               value={newPrefix}
               onChange={(e) => setNewPrefix(e.target.value)}
+              className="h-10"
             />
           </div>
         </div>

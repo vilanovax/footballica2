@@ -5,7 +5,7 @@
 
 import type { GameConfig } from "@/lib/game/economy";
 
-export type GotdKind = "mystery" | "grid" | "starPath";
+export type GotdKind = "mystery" | "grid" | "starPath" | "memory";
 
 /** Client + rewardJson payload for a GotD SOLVED settle. */
 export type GotdRewardsPayload = {
@@ -67,6 +67,9 @@ export function calculateGotdWinRewards(input: {
   } else if (kind === "grid") {
     baseCoins = gotd.gridWinCoins;
     baseXp = gotd.gridWinXp;
+  } else if (kind === "memory") {
+    baseCoins = gotd.memoryWinCoins;
+    baseXp = gotd.memoryWinXp;
   } else {
     const tier = starPathBasePayout(gotd, input.score ?? 25);
     baseCoins = tier.coins;

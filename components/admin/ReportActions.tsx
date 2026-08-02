@@ -12,12 +12,15 @@ type ReportActionsProps = {
   reportId: string;
   questionId: string;
   status: "PENDING" | "RESOLVED" | "REJECTED";
+  /** Compact icon-only row for cards. */
+  compact?: boolean;
 };
 
 export function ReportActions({
   reportId,
   questionId,
   status,
+  compact,
 }: ReportActionsProps) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -35,43 +38,47 @@ export function ReportActions({
   }
 
   return (
-    <div className="flex items-center justify-end gap-1">
+    <div className="flex flex-wrap items-center justify-end gap-1.5">
       {status === "PENDING" ? (
         <>
           <Button
-            variant="ghost"
+            type="button"
             size="sm"
             disabled={pending}
-            onClick={() => setStatus("RESOLVED", "Marked resolved.")}
-            className="text-emerald-600 hover:text-emerald-700"
+            onClick={() => setStatus("RESOLVED", "Resolved — issue handled.")}
+            className="h-9 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
+            title="Question fixed or report accepted"
           >
             <Check className="h-3.5 w-3.5" />
-            Resolve
+            {compact ? null : "Resolve"}
           </Button>
           <Button
-            variant="ghost"
+            type="button"
             size="sm"
+            variant="outline"
             disabled={pending}
-            onClick={() => setStatus("REJECTED", "Marked rejected.")}
-            className="text-rose-600 hover:text-rose-700"
+            onClick={() => setStatus("REJECTED", "Rejected — no change needed.")}
+            className="h-9 gap-1.5 border-rose-200 text-rose-700 hover:bg-rose-50"
+            title="Report invalid / won't change question"
           >
             <X className="h-3.5 w-3.5" />
-            Reject
+            {compact ? null : "Reject"}
           </Button>
         </>
       ) : (
         <Button
-          variant="ghost"
+          type="button"
           size="sm"
+          variant="outline"
           disabled={pending}
-          onClick={() => setStatus("PENDING", "Reopened.")}
-          className="text-muted-foreground"
+          onClick={() => setStatus("PENDING", "Reopened for triage.")}
+          className="h-9 gap-1.5"
         >
           <RotateCcw className="h-3.5 w-3.5" />
           Reopen
         </Button>
       )}
-      <Button asChild variant="ghost" size="sm">
+      <Button asChild type="button" variant="ghost" size="sm" className="h-9 gap-1.5">
         <Link href={`/admin/questions/${questionId}/edit`}>
           <Pencil className="h-3.5 w-3.5" />
           Edit

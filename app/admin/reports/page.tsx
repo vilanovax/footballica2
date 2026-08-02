@@ -1,25 +1,19 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { ReportStatusBadge } from "@/components/admin/AdminBadge";
-import { ReportActions } from "@/components/admin/ReportActions";
-import { ReportReview } from "@/components/admin/ReportReview";
+import { AdminHelpTip } from "@/components/admin/AdminHelpTip";
 import {
   ReportFilters,
   type ReportFilterKey,
 } from "@/components/admin/ReportFilters";
+import {
+  ReportsQueue,
+  type ReportQueueItem,
+} from "@/components/admin/ReportsQueue";
 import { reasonLabelEn } from "@/lib/reports/reasons";
 
 export const dynamic = "force-dynamic";
 
-// Jalali (Persian solar / "Hijri Shamsi") calendar — e.g. "۳ مرداد ۱۴۰۵".
 const jalaliDate = new Intl.DateTimeFormat("fa-IR", {
   calendar: "persian",
   day: "numeric",
@@ -51,13 +45,19 @@ export default async function AdminReportsPage({
   const where: Prisma.QuestionReportWhereInput =
     active === "ALL" ? {} : { status: active };
 
-  const [reports, grouped] = await Promise.all([
+  const [reports, grouped, reasonGroups] = await Promise.all([
     prisma.questionReport.findMany({
       where,
       include: { question: true },
       orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      take: 100,
     }),
     prisma.questionReport.groupBy({ by: ["status"], _count: true }),
+    prisma.questionReport.groupBy({
+      by: ["reason"],
+      where: { status: "PENDING" },
+      _count: true,
+    }),
   ]);
 
   const counts: Record<ReportFilterKey, number> = {
@@ -71,117 +71,141 @@ export default async function AdminReportsPage({
     counts.ALL += g._count;
   }
 
-  const activeLabel =
-    active === "PENDING" ? "new" : active === "ALL" ? "total" : active.toLowerCase();
+  const items: ReportQueueItem[] = reports.map((r) => ({
+    id: r.id,
+    reasonLabel: reasonLabelEn(r.reason),
+    note: r.note,
+    status: r.status,
+    dateLabel: jalaliDate.format(r.createdAt),
+    timeLabel: jalaliTime.format(r.createdAt),
+    questionId: r.questionId,
+    questionType: r.question.type,
+    difficulty: r.question.difficulty,
+    correctIndex: r.question.correctIndex,
+    mediaUrl: r.question.mediaUrl,
+    content: r.question.content,
+  }));
+
+  const topReasons = reasonGroups
+    .map((g) => ({
+      code: g.reason,
+      label: reasonLabelEn(g.reason),
+      count: g._count,
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 4);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">Reports</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {reports.length.toLocaleString("en-US")} {activeLabel} report
-          {reports.length === 1 ? "" : "s"}
-          {counts.PENDING > 0
-            ? ` · ${counts.PENDING.toLocaleString("en-US")} awaiting triage.`
-            : " · queue clear."}
+    <div className="mx-auto max-w-3xl space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="flex items-center gap-1.5 text-xl font-semibold text-slate-900">
+            Reports
+            <AdminHelpTip
+              wide
+              title="Question triage"
+              text="Players flag questions in-quiz. New = needs action. Resolve after you fix (or accept). Reject if the report is wrong. Edit opens the question bank."
+            />
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            گزارش سوالات · triage queue
+          </p>
+        </div>
+        <Link
+          href="/admin/questions"
+          className="text-sm font-medium text-emerald-700 underline-offset-2 hover:underline"
+        >
+          Question bank
+        </Link>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Stat
+          label="New"
+          value={counts.PENDING}
+          hint={counts.PENDING > 0 ? "Needs triage" : "Queue clear"}
+          tone={counts.PENDING > 0 ? "rose" : "emerald"}
+        />
+        <Stat
+          label="Resolved"
+          value={counts.RESOLVED}
+          hint="Handled"
+          tone="emerald"
+        />
+        <Stat
+          label="Rejected"
+          value={counts.REJECTED}
+          hint="No change"
+          tone="slate"
+        />
+      </div>
+
+      {topReasons.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+            Open by reason
+          </span>
+          {topReasons.map((r) => (
+            <span
+              key={r.code}
+              className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-900 ring-1 ring-amber-100"
+            >
+              {r.label}
+              <span className="tabular-nums text-amber-700">{r.count}</span>
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <ReportFilters active={active} counts={counts} />
+        <p className="text-xs text-slate-500">
+          Showing {items.length}
+          {active === "ALL" ? ` of ${counts.ALL}` : ""} · dates Shamsi
         </p>
       </div>
 
-      <ReportFilters active={active} counts={counts} />
+      <ReportsQueue
+        items={items}
+        active={active}
+        pendingCount={counts.PENDING}
+      />
+    </div>
+  );
+}
 
-      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
-              <TableHead className="pl-6 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Question
-              </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Details
-              </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Date
-              </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Status
-              </TableHead>
-              <TableHead className="pr-6 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Actions
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {reports.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="py-14 text-center text-muted-foreground"
-                >
-                  {active === "PENDING"
-                    ? "No new reports — the triage queue is clear."
-                    : "No reports match this filter."}
-                </TableCell>
-              </TableRow>
-            ) : (
-              reports.map((r) => (
-                <TableRow key={r.id} className="align-top">
-                  <TableCell className="max-w-sm py-3 pl-6">
-                    <ReportReview
-                      report={{
-                        id: r.id,
-                        reasonLabel: reasonLabelEn(r.reason),
-                        note: r.note,
-                        status: r.status,
-                        dateLabel: jalaliDate.format(r.createdAt),
-                        timeLabel: jalaliTime.format(r.createdAt),
-                      }}
-                      question={{
-                        id: r.questionId,
-                        type: r.question.type,
-                        difficulty: r.question.difficulty,
-                        correctIndex: r.question.correctIndex,
-                        mediaUrl: r.question.mediaUrl,
-                        content: r.question.content,
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell className="max-w-xs py-3">
-                    <span className="block font-medium text-slate-700">
-                      {reasonLabelEn(r.reason)}
-                    </span>
-                    {r.note && (
-                      <span
-                        className="mt-0.5 block truncate text-xs text-muted-foreground"
-                        title={r.note}
-                      >
-                        {r.note}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap py-3 text-slate-600">
-                    <span dir="rtl" className="block">
-                      {jalaliDate.format(r.createdAt)}
-                    </span>
-                    <span dir="rtl" className="block text-xs text-muted-foreground">
-                      {jalaliTime.format(r.createdAt)}
-                    </span>
-                  </TableCell>
-                  <TableCell className="py-3">
-                    <ReportStatusBadge status={r.status} />
-                  </TableCell>
-                  <TableCell className="py-3 pr-6 text-right">
-                    <ReportActions
-                      reportId={r.id}
-                      questionId={r.questionId}
-                      status={r.status}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+function Stat({
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  label: string;
+  value: number;
+  hint: string;
+  tone: "rose" | "emerald" | "slate";
+}) {
+  const border =
+    tone === "rose"
+      ? "border-rose-200"
+      : tone === "emerald"
+        ? "border-emerald-200"
+        : "border-slate-200";
+  const valueCls =
+    tone === "rose"
+      ? "text-rose-700"
+      : tone === "emerald"
+        ? "text-emerald-800"
+        : "text-slate-900";
+  return (
+    <div className={`rounded-2xl border bg-white p-4 shadow-sm ${border}`}>
+      <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+        {label}
+      </p>
+      <p className={`mt-1 text-2xl font-bold tabular-nums ${valueCls}`}>
+        {value}
+      </p>
+      <p className="mt-0.5 text-xs text-slate-500">{hint}</p>
     </div>
   );
 }

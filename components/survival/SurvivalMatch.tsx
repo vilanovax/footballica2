@@ -24,6 +24,7 @@ import { GoalBurst } from "@/components/quiz/GoalBurst";
 import { ReportModal } from "@/components/quiz/ReportModal";
 import { SurvivalResult } from "@/components/survival/SurvivalResult";
 import { FormatDevToggle } from "@/components/quiz/FormatDevToggle";
+import { MatchLeaveControl } from "@/components/quiz/MatchLeaveControl";
 
 const REVEAL_MS = 900;
 
@@ -64,10 +65,16 @@ export function SurvivalMatch({
   const clearBank = useSurvivalStore((s) => s.clearBank);
   const setPrefetching = useSurvivalStore((s) => s.setPrefetching);
   const reset = useSurvivalStore((s) => s.reset);
+  const setPaused = useSurvivalStore((s) => s.setPaused);
 
   const [shake, setShake] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const prefetchLock = useRef(false);
+
+  const handleLeaveMatch = useCallback(() => {
+    reset();
+    router.push("/play");
+  }, [reset, router]);
 
   useEffect(() => {
     start(category.id, initialQuestions);
@@ -287,11 +294,15 @@ export function SurvivalMatch({
         onAnimationEnd={() => setShake(false)}
       >
         <header className="flex flex-col gap-3 pt-2">
-          <div className="flex items-center justify-between">
-            <p className="font-display text-sm font-bold uppercase tracking-widest text-secondary">
+          <div className="flex items-center gap-2">
+            <MatchLeaveControl
+              setPaused={setPaused}
+              onConfirmLeave={handleLeaveMatch}
+            />
+            <p className="min-w-0 flex-1 font-display text-sm font-bold uppercase tracking-widest text-secondary">
               {t("survival.eyebrow")}
             </p>
-            <p className="font-display text-sm font-semibold text-muted-foreground">
+            <p className="shrink-0 font-display text-sm font-semibold text-muted-foreground">
               {category.icon || "📚"} {catLabel}
             </p>
           </div>

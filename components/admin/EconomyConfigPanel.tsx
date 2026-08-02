@@ -113,65 +113,57 @@ const TABS: {
 const LIVE_FIELDS: FieldDef[] = [
   {
     key: "survival.coinsPerCorrect",
-    label: "Survival coins / correct",
-    description:
-      "Soft coins granted for each correct answer in Survival. Main inflation lever — use 2× for weekend events.",
-    tip: "Also used by Match Day preview chips.",
+    label: "Survival coins",
+    description: "Coins per correct in Survival. Main inflation lever.",
+    tip: "Use the 2× weekend control above for events.",
     featured: true,
   },
   {
     key: "survival.xpPerCorrect",
-    label: "Survival XP / correct",
-    description:
-      "Lifetime XP per correct in Survival. Affects manager level speed, not the weekly league directly.",
-    tip: "Weekly league XP uses the Survival weekly divisor instead.",
+    label: "Survival XP",
+    description: "Lifetime XP per correct in Survival.",
+    tip: "Affects manager level, not weekly league directly.",
     featured: true,
   },
   {
     key: "rewards.coinsPerWin",
-    label: "Match coins on win",
-    description:
-      "Base coins when the player wins a Penalty or Quick Match (goal majority).",
-    tip: "Losses get 0 from this field; combo may still scale wins.",
+    label: "Match win coins",
+    description: "Base coins for winning Penalty / Quick.",
+    tip: "Losses get 0; combo may scale wins.",
     featured: true,
   },
   {
     key: "rewards.baseXp",
-    label: "Match XP per goal",
-    description:
-      "XP for each correct kick in Penalty / Quick before win bonus and combo.",
+    label: "Match XP / goal",
+    description: "XP per correct kick before win bonus & combo.",
     tip: "Shown on Match Day as approximate XP.",
     featured: true,
   },
   {
     key: "duel.winWeeklyXp",
     label: "Duel weekly XP",
-    description:
-      "Points added to the weekly leaderboard when a player wins a Draft Duel.",
-    tip: "Does not grant soft coins by itself.",
+    description: "Weekly leaderboard XP for a Draft Duel win.",
+    tip: "Does not grant soft coins.",
   },
   {
     key: "gotd.mysteryWinCoins",
-    label: "GotD Mystery coins",
-    description:
-      "Base soft coins on a Mystery Player solve (سکه برد بازیکن مرموز). Main GotD inflation lever for odd Tehran days.",
-    tip: "Scaled by streak multiplier; perfect clear adds a flat bonus.",
+    label: "Mystery coins",
+    description: "Base coins on Mysterious Player solve.",
+    tip: "Odd Tehran days · streak & perfect bonuses apply.",
     featured: true,
   },
   {
     key: "gotd.gridWinCoins",
-    label: "GotD Grid coins",
-    description:
-      "Base soft coins on a Football Grid solve (سکه برد جدول فوتبال). Main GotD inflation lever for even Tehran days.",
-    tip: "Scaled by streak multiplier; perfect clear adds a flat bonus.",
+    label: "Grid coins",
+    description: "Base coins on Football Grid solve.",
+    tip: "Even Tehran days · streak & perfect bonuses apply.",
     featured: true,
   },
   {
     key: "survival.staminaCost",
     label: "Survival stamina",
-    description:
-      "Energy deducted when a Survival (or premium challenge) run finishes.",
-    tip: "Entry is blocked if the club has less than this amount.",
+    description: "Energy deducted when a Survival run finishes.",
+    tip: "Blocked if club has less than this.",
   },
 ];
 
@@ -382,6 +374,19 @@ const GOTD_FIELDS: FieldDef[] = [
     tip: "Not scaled by streak — flat XP grant.",
   },
   {
+    key: "gotd.memoryWinCoins",
+    label: "Memory GotD win coins",
+    description: "Base soft coins when Memory is today's GotD and solved.",
+    tip: "Only paid when liveModes.memory.gotd is on.",
+    featured: true,
+  },
+  {
+    key: "gotd.memoryWinXp",
+    label: "Memory GotD win XP",
+    description: "Lifetime XP on a Memory GotD solve.",
+    tip: "Flat XP grant.",
+  },
+  {
     key: "gotd.streakMultiplierPerDay",
     label: "Streak multiplier / day (ضریب استریک روزانه)",
     description:
@@ -505,7 +510,20 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
   );
 
   const activeTab = TABS.find((t) => t.id === tab)!;
-  const fields = fieldsForTab(tab);
+  /** Live Ops keeps only featured rate levers; full lists live on other tabs. */
+  const fields =
+    tab === "live"
+      ? LIVE_FIELDS.filter((f) => f.featured)
+      : fieldsForTab(tab);
+
+  const survivalMult = useMemo(() => {
+    const base = DEFAULT_GAME_CONFIG.survival.coinsPerCorrect;
+    const cur = draft.survival.coinsPerCorrect;
+    if (base > 0 && cur === Math.round(base * 0.5)) return 0.5;
+    if (base > 0 && cur === Math.round(base * 2)) return 2;
+    if (cur === base) return 1;
+    return null;
+  }, [draft.survival.coinsPerCorrect]);
 
   function onFieldChange(path: string, raw: string) {
     const n = Number(raw);
@@ -545,31 +563,26 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
 
   return (
     <div className="space-y-4 pb-24">
-      {/* Compact snapshot */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        <Snap label="Surv 🪙" value={draft.survival.coinsPerCorrect} />
-        <Snap label="Surv XP" value={draft.survival.xpPerCorrect} />
-        <Snap label="Match win" value={draft.rewards.coinsPerWin} />
-        <Snap label="Duel XP" value={draft.duel.winWeeklyXp} />
-        <Snap label="Mystery" value={draft.gotd.mysteryWinCoins} />
-        <Snap label="Grid" value={draft.gotd.gridWinCoins} />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Snap label="Surv" value={draft.survival.coinsPerCorrect} />
+          <Snap label="Match" value={draft.rewards.coinsPerWin} />
+          <Snap label="Mystery" value={draft.gotd.mysteryWinCoins} />
+          <Snap label="Grid" value={draft.gotd.gridWinCoins} />
+        </div>
         {dirty ? (
           <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100">
             Unsaved
           </Badge>
         ) : (
-          <Badge
-            variant="secondary"
-            className="bg-emerald-50 text-emerald-800"
-          >
+          <Badge variant="secondary" className="bg-emerald-50 text-emerald-800">
             Live
           </Badge>
         )}
       </div>
 
-      {/* Tabs */}
       <div
-        className="flex gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1 [scrollbar-width:none]"
+        className="flex gap-1 overflow-x-auto rounded-2xl bg-slate-100 p-1 [scrollbar-width:none]"
         role="tablist"
         aria-label="Game Config sections"
       >
@@ -583,7 +596,7 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
               aria-selected={active}
               onClick={() => setTab(id)}
               className={[
-                "flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors",
+                "flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
                 active
                   ? "bg-white text-slate-900 shadow-sm"
                   : "text-slate-500 hover:text-slate-800",
@@ -596,11 +609,7 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
         })}
       </div>
 
-      <p className="px-0.5 text-xs text-slate-500">
-        <span className="font-semibold text-slate-700">{activeTab.label}</span>
-        {" · "}
-        {activeTab.blurb}
-      </p>
+      <p className="text-xs text-slate-500">{activeTab.blurb}</p>
 
       {tab === "live" ? (
         <>
@@ -608,50 +617,54 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
             config={draft}
             onChange={(next) => setDraft(mergeGameConfig(next))}
           />
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2.5">
-            <span className="text-xs font-semibold text-amber-900">
-              Survival coins
-            </span>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-8 bg-white"
-              onClick={() => quickSurvivalCoins(0.5)}
-            >
-              ½×
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-8 bg-white"
-              onClick={() => quickSurvivalCoins(1)}
-            >
-              Default
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-8 border-amber-300 bg-white font-semibold text-amber-950"
-              onClick={() => quickSurvivalCoins(2)}
-            >
-              2× weekend
-            </Button>
-            <span className="text-[11px] text-amber-900/60">then Save</span>
+
+          <div className="rounded-2xl border border-amber-200 bg-amber-50/40 p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="text-xs font-bold uppercase tracking-wide text-amber-900">
+                Survival coins event
+              </p>
+              <span className="font-mono text-xs font-bold text-amber-950">
+                {draft.survival.coinsPerCorrect}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-1 rounded-xl bg-white/80 p-1 ring-1 ring-amber-100">
+              {(
+                [
+                  { m: 0.5, label: "½×" },
+                  { m: 1, label: "Default" },
+                  { m: 2, label: "2× weekend" },
+                ] as const
+              ).map(({ m, label }) => {
+                const on = survivalMult === m;
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => quickSurvivalCoins(m)}
+                    className={[
+                      "rounded-lg px-2 py-2 text-xs font-bold transition",
+                      on
+                        ? "bg-amber-500 text-white shadow-sm"
+                        : "text-amber-950/70 hover:bg-amber-100",
+                    ].join(" ")}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </>
       ) : null}
 
       {tab === "duel" ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-violet-200 bg-violet-50/40 px-3 py-2.5">
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-violet-200 bg-violet-50/40 px-3 py-3">
           <span className="flex items-center gap-1 text-xs font-semibold text-slate-800">
-            Timeout
-            <AdminHelpTip text="AFK past turnHours: SHADOW_BOT fabricates answers; AUTO_FORFEIT ends the match." />
+            AFK timeout
+            <AdminHelpTip text="Past turnHours: Bot fill answers, or forfeit the match." />
           </span>
           <select
-            className="flex h-9 min-w-[14rem] flex-1 rounded-md border border-slate-200 bg-white px-2.5 text-sm"
+            className="flex h-10 min-w-[12rem] flex-1 rounded-lg border border-slate-200 bg-white px-2.5 text-sm"
             value={draft.duel.timeoutAction}
             onChange={(e) => {
               const v = e.target.value;
@@ -662,8 +675,8 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
               }));
             }}
           >
-            <option value="SHADOW_BOT">SHADOW_BOT</option>
-            <option value="AUTO_FORFEIT">AUTO_FORFEIT</option>
+            <option value="SHADOW_BOT">Bot fills turn</option>
+            <option value="AUTO_FORFEIT">Auto forfeit</option>
           </select>
         </div>
       ) : null}
@@ -679,10 +692,7 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
         {fields.map((field) => (
           <label
             key={field.key}
-            className={[
-              "flex flex-col gap-1.5 rounded-xl border bg-white px-3 py-2.5 shadow-sm transition-shadow focus-within:ring-2 focus-within:ring-slate-300",
-              field.featured ? "border-slate-300" : "border-slate-200",
-            ].join(" ")}
+            className="flex flex-col gap-1.5 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm transition focus-within:ring-2 focus-within:ring-emerald-300/50"
           >
             <span className="flex items-center justify-between gap-1 text-xs font-semibold text-slate-800">
               <span className="min-w-0 truncate">{field.label}</span>
@@ -696,19 +706,16 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
               step={field.step ?? 1}
               value={getPath(draft, field.key)}
               onChange={(e) => onFieldChange(field.key, e.target.value)}
-              className={[
-                "h-10 font-mono text-sm tabular-nums",
-                field.featured ? "font-semibold" : "",
-              ].join(" ")}
+              className="h-10 font-mono text-sm font-semibold tabular-nums"
             />
           </label>
         ))}
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:start-60">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2">
+        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-slate-500">
-            {dirty ? "Unsaved changes" : "Live · no redeploy"}
+            {dirty ? "Unsaved — Save to go live" : "Live for all players"}
           </p>
           <div className="flex gap-2">
             <Button
@@ -717,8 +724,9 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
               size="sm"
               disabled={pending}
               onClick={resetDefaults}
+              className="gap-1.5"
             >
-              <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+              <RotateCcw className="h-3.5 w-3.5" />
               Defaults
             </Button>
             <Button
@@ -726,9 +734,9 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
               size="sm"
               disabled={pending || !dirty}
               onClick={save}
-              className="min-w-24"
+              className="min-w-24 gap-1.5"
             >
-              <Save className="mr-1.5 h-3.5 w-3.5" />
+              <Save className="h-3.5 w-3.5" />
               {pending ? "Saving…" : "Save"}
             </Button>
           </div>
@@ -740,11 +748,11 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
 
 function Snap({ label, value }: { label: string; value: number }) {
   return (
-    <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] shadow-sm">
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] shadow-sm">
       <span className="font-medium text-slate-500">{label}</span>
       <span className="font-mono text-xs font-bold tabular-nums text-slate-900">
         {value}
       </span>
-    </div>
+    </span>
   );
 }

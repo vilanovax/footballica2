@@ -8,6 +8,7 @@ import { listRecordChallenges } from "@/actions/challenge/recordChallenge";
 import { getDailyMystery } from "@/actions/mystery/getDailyMystery";
 import { getDailyGrid } from "@/actions/grid/getDailyGrid";
 import { getDailyStarPath } from "@/actions/starpath/getDailyStarPath";
+import { getDailyMemory } from "@/actions/memorygotd/getDailyMemory";
 import { gameOfTheDayRotation } from "@/lib/grid/gotd";
 import { prisma } from "@/lib/prisma";
 import { PlayModes } from "@/components/play/PlayModes";
@@ -22,16 +23,7 @@ export default async function PlayPage() {
   const club = await getClubSnapshot();
   if (!club) redirect("/onboarding");
 
-  const [
-    res,
-    inbox,
-    config,
-    bestAgg,
-    challengeRes,
-    mysteryRes,
-    gridRes,
-    starPathRes,
-  ] = await Promise.all([
+  const [res, inbox, config, bestAgg, challengeRes] = await Promise.all([
     getMyDuels(),
     getDuelInbox(),
     getGameConfig(),
@@ -42,9 +34,15 @@ export default async function PlayPage() {
         })
       : Promise.resolve({ _max: { maxSurvivalScore: null } }),
     listRecordChallenges(),
-    getDailyMystery(),
-    getDailyGrid(),
-    getDailyStarPath(),
+  ]);
+
+  const { kind, rotatesAt } = gameOfTheDayRotation(new Date(), config);
+
+  const [mysteryRes, gridRes, starPathRes, memoryRes] = await Promise.all([
+    kind === "mystery" ? getDailyMystery() : Promise.resolve(null),
+    kind === "grid" ? getDailyGrid() : Promise.resolve(null),
+    kind === "starPath" ? getDailyStarPath() : Promise.resolve(null),
+    kind === "memory" ? getDailyMemory() : Promise.resolve(null),
   ]);
 
   const recentDuels = res.ok ? res.history : [];
@@ -53,7 +51,6 @@ export default async function PlayPage() {
   const liveChallengeCount = challengeRes.ok
     ? challengeRes.challenges.length
     : 0;
-  const { rotatesAt } = gameOfTheDayRotation();
 
   return (
     <PlayModes
@@ -65,9 +62,15 @@ export default async function PlayPage() {
       survivalBest={survivalBest}
       modes={modes}
       liveChallengeCount={liveChallengeCount}
-      mystery={mysteryRes.ok ? mysteryRes.mystery : null}
-      grid={gridRes.ok ? gridRes.grid : null}
-      starPath={starPathRes.ok ? starPathRes.starPath : null}
+      mystery={
+        mysteryRes && mysteryRes.ok ? mysteryRes.mystery : null
+      }
+      grid={gridRes && gridRes.ok ? gridRes.grid : null}
+      starPath={
+        starPathRes && starPathRes.ok ? starPathRes.starPath : null
+      }
+      memory={memoryRes && memoryRes.ok ? memoryRes.memory : null}
+      gameConfig={config}
       gotdRotatesAt={rotatesAt.toISOString()}
     />
   );

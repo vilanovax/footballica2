@@ -20,7 +20,13 @@ export type ScorecardPlayer = {
   isBot?: boolean;
 };
 
-export type ScorecardRoundType = "QUIZ" | "MEMORY";
+export type ScorecardRoundType =
+  | "QUIZ"
+  | "MEMORY"
+  | "MYSTERY"
+  | "GRID"
+  | "STAR_PATH"
+  | "TIKI_TAKA";
 
 export type ScorecardRound = {
   roundNumber: number;

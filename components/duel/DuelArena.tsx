@@ -12,6 +12,10 @@ import { toast } from "sonner";
 import { getDuel } from "@/actions/duel/getDuel";
 import { selectDuelCategory } from "@/actions/duel/selectCategory";
 import { selectDuelMemory } from "@/actions/duel/selectMemory";
+import { selectDuelStarPath } from "@/actions/duel/selectStarPath";
+import { selectDuelMystery } from "@/actions/duel/selectMystery";
+import { selectDuelGrid } from "@/actions/duel/selectGrid";
+import { selectDuelTikiTaka } from "@/actions/duel/selectTikiTaka";
 import { submitDuelAttack } from "@/actions/duel/submitAttack";
 import {
   beginDuelDefend,
@@ -27,6 +31,8 @@ import type {
   MemoryBoardJson,
 } from "@/lib/duel/memoryTypes";
 import type { QuizQuestion } from "@/lib/quiz/types";
+import type { LiveModeId } from "@/lib/game/economy";
+import { isSpecialDuelRoundType } from "@/lib/game/liveModes";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { playSound } from "@/lib/audio/SoundManager";
 import { DraftPicker } from "./DraftPicker";
@@ -34,6 +40,8 @@ import { DuelQuiz } from "./DuelQuiz";
 import { DuelWaiting } from "./DuelWaiting";
 import { DuelResult } from "./DuelResult";
 import { MemoryBoard } from "./MemoryBoard";
+import { DuelSpecialPlay } from "./DuelSpecialPlay";
+import { TikiTakaBoard } from "./TikiTakaBoard";
 import { MATCHING_MIN_MS } from "./MatchingSearch";
 import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
 
@@ -59,6 +67,8 @@ type Phase =
       endsAt: string;
       revealMs: number;
     }
+  | { kind: "special"; mode: "attack" | "defend" }
+  | { kind: "tiki" }
   | { kind: "wait" }
   | { kind: "result" }
   | { kind: "loading" };
@@ -95,6 +105,12 @@ function derivePhase(
 
   const round = activeRound(duel);
   const isMemory = round?.roundType === "MEMORY";
+  const isTiki = round?.roundType === "TIKI_TAKA";
+  const isOtherSpecial =
+    round != null &&
+    isSpecialDuelRoundType(round.roundType) &&
+    round.roundType !== "MEMORY" &&
+    round.roundType !== "TIKI_TAKA";
 
   const needsDefend =
     (duel.status === "WAITING_A" && duel.youAre === "challenger") ||
@@ -103,6 +119,7 @@ function derivePhase(
     duel.status === "B_DEFENDING";
 
   if (needsDefend) {
+    if (isTiki) return { kind: "tiki" };
     if (isMemory) {
       if (memory.board && memory.endsAt) {
         return {
@@ -114,6 +131,9 @@ function derivePhase(
         };
       }
       return { kind: "loading" };
+    }
+    if (isOtherSpecial) {
+      return { kind: "special", mode: "defend" };
     }
     if (questions && questions.length > 0) {
       return { kind: "quiz", mode: "defend", questions };
@@ -127,6 +147,7 @@ function derivePhase(
       (duel.youAre === "challenger" && duel.status === "A_ATTACKING") ||
       (duel.youAre === "opponent" && duel.status === "B_ATTACKING"))
   ) {
+    if (isTiki) return { kind: "tiki" };
     if (isMemory) {
       if (memory.board && memory.endsAt) {
         return {
@@ -139,11 +160,15 @@ function derivePhase(
       }
       return { kind: "loading" };
     }
+    if (isOtherSpecial) {
+      return { kind: "special", mode: "attack" };
+    }
     if (questions && questions.length > 0) {
       return { kind: "quiz", mode: "attack", questions };
     }
     if (
       (duel.draftOptions && duel.draftOptions.length > 0) ||
+      (duel.specialAvailable?.length ?? 0) > 0 ||
       duel.memoryAvailable
     ) {
       return { kind: "draft", options: duel.draftOptions ?? [] };
@@ -474,6 +499,87 @@ export function DuelArena({
     });
   }
 
+  function handlePickSpecial(mode: LiveModeId) {
+    if (mode === "memory") {
+      handlePickMemory();
+      return;
+    }
+    if (mode === "tikiTaka") {
+      startTransition(async () => {
+        const res = await selectDuelTikiTaka(duelId);
+        if (!res.ok) {
+          toast.error(t("duel.errGeneric"));
+          void refresh();
+          return;
+        }
+        setDuel(res.duel);
+        setQuestions(null);
+        setMemoryBoard(null);
+        setMemoryEndsAt(null);
+        setPhase({ kind: "tiki" });
+        playSound("whistle");
+      });
+      return;
+    }
+    startTransition(async () => {
+      const res =
+        mode === "starPath"
+          ? await selectDuelStarPath(duelId)
+          : mode === "mystery"
+            ? await selectDuelMystery(duelId)
+            : await selectDuelGrid(duelId);
+      if (!res.ok) {
+        toast.error(t("duel.errGeneric"));
+        void refresh();
+        return;
+      }
+      setDuel(res.duel);
+      setQuestions(null);
+      setMemoryBoard(null);
+      setMemoryEndsAt(null);
+      setPhase({ kind: "special", mode: "attack" });
+      playSound("whistle");
+    });
+  }
+
+  function handleTikiDone(
+    next: DuelSnapshot,
+    missions?: EvaluateMissionsResult,
+  ) {
+    setDuel(next);
+    setQuestions(null);
+    setMemoryBoard(null);
+    setMemoryEndsAt(null);
+    if (missions) setMissionFeedback(missions);
+    setPhase(
+      derivePhase(next, null, {
+        board: null,
+        endsAt: null,
+        revealMs: memoryRevealMs,
+      }),
+    );
+    if (next.status === "COMPLETED") playSound("whistle");
+  }
+
+  function handleSpecialDone(
+    next: DuelSnapshot,
+    missions?: EvaluateMissionsResult,
+  ) {
+    setDuel(next);
+    setQuestions(null);
+    setMemoryBoard(null);
+    setMemoryEndsAt(null);
+    if (missions) setMissionFeedback(missions);
+    setPhase(
+      derivePhase(next, null, {
+        board: null,
+        endsAt: null,
+        revealMs: memoryRevealMs,
+      }),
+    );
+    if (next.status === "COMPLETED") playSound("whistle");
+  }
+
   function handleAttackDone(answers: DuelAnswerSubmission[]) {
     startTransition(async () => {
       const res = await submitDuelAttack(duelId, answers);
@@ -573,9 +679,43 @@ export function DuelArena({
       <DraftPicker
         options={phase.options}
         memoryAvailable={duel.memoryAvailable}
+        specialAvailable={duel.specialAvailable}
         pending={pending}
         onPick={handlePickCategory}
         onPickMemory={handlePickMemory}
+        onPickSpecial={handlePickSpecial}
+      />
+    );
+  }
+
+  if (phase.kind === "special") {
+    return (
+      <DuelSpecialPlay
+        duelId={duelId}
+        duel={duel}
+        mode={phase.mode}
+        onDone={handleSpecialDone}
+      />
+    );
+  }
+
+  if (phase.kind === "tiki") {
+    return (
+      <TikiTakaBoard
+        duelId={duelId}
+        duel={duel}
+        pending={pending}
+        onDone={handleTikiDone}
+        onBoardChange={(next) => {
+          setDuel(next);
+          setPhase(
+            derivePhase(next, null, {
+              board: null,
+              endsAt: null,
+              revealMs: memoryRevealMs,
+            }),
+          );
+        }}
       />
     );
   }

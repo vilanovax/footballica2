@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireUserClub } from "@/lib/player/current";
+import { getGameConfig } from "@/lib/game/gameConfig";
 import { tickDuelJobs } from "@/lib/duel/jobs";
 import { toDuelSnapshot, type DuelSnapshot } from "@/lib/duel/snapshot";
 import { duelSnapshotInclude } from "@/lib/duel/include";
@@ -67,6 +68,7 @@ export async function getMyDuels(): Promise<GetMyDuelsResult> {
     });
 
     const cats = await listDuelEligibleCategories();
+    const config = await getGameConfig();
     const snapshots = rows.map((d) => {
       const activeRound = d.rounds.find((r) => {
         const turnRound =
@@ -81,11 +83,10 @@ export async function getMyDuels(): Promise<GetMyDuelsResult> {
         ? (activeRound!.draftOptionIds as string[])
         : [];
       const draftOptions = cats.filter((c) => draftIds.includes(c.id));
-      return toDuelSnapshot(
-        d,
-        user.id,
-        draftOptions.length ? draftOptions : undefined,
-      );
+      return toDuelSnapshot(d, user.id, {
+        draftOptions: draftOptions.length ? draftOptions : undefined,
+        liveModes: config.liveModes,
+      });
     });
 
     const duels = pickActiveDuels(snapshots);

@@ -81,6 +81,13 @@ enum DailyStarPathAttemptStatus {
   FAILED
 }
 
+/// Memory GotD daily attempt — flip pairs against the clock.
+enum DailyMemoryAttemptStatus {
+  IN_PROGRESS
+  SOLVED
+  FAILED
+}
+
 enum QuestionStatus {
   DRAFT
   IN_REVIEW
@@ -127,10 +134,15 @@ enum BotDifficulty {
   HARD
 }
 
-/// Per-round format inside a Draft Duel (v1: R1 QUIZ, R2 MEMORY).
+/// Per-round format inside a Draft Duel (one special format max per match).
 enum DuelRoundType {
   QUIZ
   MEMORY
+  MYSTERY
+  GRID
+  STAR_PATH
+  /// Shared PvP tic-tac-toe on Immortal-style axes (Tiki-Taka).
+  TIKI_TAKA
 }
 
 /// Campaign = long-running LiveOps ladder. Daily = Tehran calendar day reset.
@@ -296,6 +308,12 @@ model Club {
   starPathSolves        Int       @default(0)
   lastStarPathDate      DateTime?
 
+  // ── Memory GotD daily streak (isolated) ──
+  memoryStreak        Int       @default(0)
+  longestMemoryStreak Int       @default(0)
+  memorySolves        Int       @default(0)
+  lastMemoryDate      DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -312,6 +330,7 @@ model Club {
   mysteryAttempts  DailyMysteryAttempt[]
   gridAttempts     DailyGridAttempt[]
   starPathAttempts DailyStarPathAttempt[]
+  memoryAttempts   DailyMemoryAttempt[]
 
   @@index([fans])
   @@index([coins])
@@ -809,10 +828,10 @@ model DuelRound {
   roundNumber Int
   attackerId  String
 
-  /// QUIZ = draft + MCQ; MEMORY = shared flip board (same boardJson both halves).
+  /// QUIZ = draft + MCQ; specials freeze payload in boardJson for both halves.
   roundType DuelRoundType @default(QUIZ)
 
-  /// The 3 category ids offered in the draft UI (empty [] for MEMORY).
+  /// The 3 category ids offered in the draft UI (empty [] for specials).
   draftOptionIds Json
   categoryId     String?
   category       Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
@@ -820,19 +839,18 @@ model DuelRound {
   /// Locked question ids for QUIZ attack (length = GameConfig.duel.questionsPerAttack).
   questionIds Json?
 
-  /// MEMORY: deterministic 4×4 layout shared by attack + defend halves.
-  /// Shape: { seed, pairCount, cards: [{ id, pairKey, face, … }] } — see lib/duel/memoryTypes.ts
+  /// Special round payload (MEMORY board / MYSTERY target / GRID axes / STAR_PATH path).
   boardJson Json?
 
   /// Answer logs:
   /// QUIZ: [{ questionId, selectedIndex, correct, ms }]
-  /// MEMORY: MemoryAttemptLog (pairsFound + verified matches) — see memoryTypes.ts
+  /// Specials: format-specific JSON — see lib/duel/*Types.ts
   attackAnswers  Json?
   defenseAnswers Json?
   attackCorrect  Int   @default(0)
   defenseCorrect Int   @default(0)
 
-  /// When the actor opened the half (MEMORY 20s clock starts here; QUIZ unused).
+  /// When the actor opened the half (timed specials; QUIZ unused).
   attackStartedAt  DateTime?
   defenseStartedAt DateTime?
 
@@ -1140,6 +1158,57 @@ model DailyStarPathAttempt {
   solvedAt  DateTime?
 
   /// Lightweight GotD payout audit: { coinsEarned, xpEarned, score, … }.
+  rewardJson Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clubId, puzzleId])
+  @@index([clubId, status])
+  @@index([puzzleId])
+  @@index([solvedAt])
+}
+
+// ─── Memory Game of the Day ──────────────────────────────────────────────────
+
+model DailyMemoryPuzzle {
+  id      String @id @default(cuid())
+  dateKey String @unique
+
+  /// Board seed — same string fed into buildMemoryBoard for the day.
+  seed String
+
+  /// Pair count (2–8). Frozen so Live-Ops retunes don't change mid-day boards.
+  pairCount Int @default(8)
+
+  /// Optional Live-Ops knobs (turnMs override, etc.).
+  config Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attempts DailyMemoryAttempt[]
+
+  @@index([dateKey])
+}
+
+model DailyMemoryAttempt {
+  id String @id @default(cuid())
+
+  clubId String
+  club   Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  puzzleId String
+  puzzle   DailyMemoryPuzzle @relation(fields: [puzzleId], references: [id], onDelete: Cascade)
+
+  status DailyMemoryAttemptStatus @default(IN_PROGRESS)
+
+  pairsFound Int @default(0)
+  /// MemoryAttemptLog JSON when finished.
+  logJson    Json?
+
+  shareCode  String?
+  solvedAt   DateTime?
   rewardJson Json?
 
   createdAt DateTime @default(now())

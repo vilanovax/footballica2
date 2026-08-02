@@ -62,3 +62,10 @@ export const DUEL_TERMINAL: ReadonlySet<DuelStatus> = new Set([
 export function isDuelTerminal(status: DuelStatus): boolean {
   return DUEL_TERMINAL.has(status);
 }
+
+/** Tiki-Taka boardJson shapes (shared PvP grid round). */
+export type {
+  TikiTakaBoardJson,
+  TikiTakaCellState,
+  TikiTakaMoveLog,
+} from "@/lib/duel/tikiTakaTypes";

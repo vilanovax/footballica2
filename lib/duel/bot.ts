@@ -11,12 +11,14 @@ import {
   duelHasMemoryRound,
   memoryRoundCreateData,
 } from "@/lib/duel/createMemoryRound";
+import { duelHasSpecialRound } from "@/lib/duel/specialRounds";
 import { quizRoundCreateData } from "@/lib/duel/createQuizRound";
 import { usedCategoryIdsFromRounds } from "@/lib/duel/draw";
 import { drawCategoryQuestions } from "@/lib/duel/draw";
 import { fabricateBotMemoryLog } from "@/lib/duel/memoryBot";
 import { parseMemoryBoard } from "@/lib/duel/memoryBoard";
 import { gradeDuelAnswers } from "@/lib/duel/grade";
+import { isLiveModeEnabledInDuel } from "@/lib/game/liveModes";
 
 export const BOT_EMAIL = "bot@footballica.local";
 const BOT_CLUB_NAME = "Bot United";
@@ -170,7 +172,13 @@ export async function runBotTurnIfDue(duelId: string, now = new Date()): Promise
   });
   if (!duel?.isBotOpponent || !duel.opponentId) return false;
   if (!duel.botPlayAt || duel.botPlayAt.getTime() > now.getTime()) return false;
-  if (duel.status !== "WAITING_B" && duel.status !== "B_DEFENDING") return false;
+  if (
+    duel.status !== "WAITING_B" &&
+    duel.status !== "B_DEFENDING" &&
+    duel.status !== "B_ATTACKING"
+  ) {
+    return false;
+  }
 
   const botUser = await prisma.user.findUnique({
     where: { id: duel.opponentId },
@@ -179,11 +187,153 @@ export async function runBotTurnIfDue(duelId: string, now = new Date()): Promise
   const difficulty = botUser?.botDifficulty ?? "MEDIUM";
 
   const config = await getGameConfig();
+
+  // ── Tiki-Taka: one shared-board mini-turn (may repeat until board ends) ──
+  const tikiRound = duel.rounds.find(
+    (r) =>
+      r.roundType === "TIKI_TAKA" &&
+      !(r.attackSubmittedAt && r.defenseSubmittedAt),
+  );
+  if (
+    tikiRound &&
+    (duel.status === "WAITING_B" || duel.status === "B_DEFENDING")
+  ) {
+    const { parseTikiTakaBoard } = await import("@/lib/duel/tikiTakaTypes");
+    const { fabricateTikiTakaGuess } = await import("@/lib/duel/tikiTakaBot");
+    const { executeTikiTakaGuess } = await import("@/lib/duel/tikiTakaPlay");
+    const board = parseTikiTakaBoard(tikiRound.boardJson);
+    if (!board || board.turnOwnerId !== duel.opponentId) return false;
+    const guess = await fabricateTikiTakaGuess(board, difficulty);
+    if (!guess) {
+      // No legal move — pass turn via timeout.
+      const open = Object.entries(board.cells).find(([, c]) => !c.ownerId);
+      const [r, c] = open
+        ? open[0].split(",").map((n) => Number(n))
+        : [0, 0];
+      const res = await executeTikiTakaGuess({
+        duelId: duel.id,
+        userId: duel.opponentId,
+        row: r ?? 0,
+        col: c ?? 0,
+        playerId: "",
+        timedOut: true,
+        viewerId: duel.challengerId,
+      });
+      return res.ok;
+    }
+    const res = await executeTikiTakaGuess({
+      duelId: duel.id,
+      userId: duel.opponentId,
+      row: guess.row,
+      col: guess.col,
+      playerId: guess.playerId,
+      viewerId: duel.challengerId,
+    });
+    return res.ok;
+  }
+
+  // ── Bot R2 attack after Tiki (or other) left status at B_ATTACKING ───────
+  if (duel.status === "B_ATTACKING") {
+    const round2 = duel.rounds.find((r) => r.roundNumber === 2);
+    if (!round2 || round2.attackSubmittedAt) return false;
+    if (round2.roundType === "TIKI_TAKA") {
+      // Should be handled above when turnOwner is bot; if still attacking shell, no-op.
+      return false;
+    }
+    if (round2.roundType !== "QUIZ") return false;
+
+    const specialSpent = duelHasSpecialRound(duel.rounds);
+    const canBotMemory =
+      !specialSpent && isLiveModeEnabledInDuel("memory", config);
+
+    let attackCorrect = 0;
+    let opponentCorrect = duel.opponentCorrect;
+
+    await prisma.$transaction(async (tx) => {
+      if (canBotMemory) {
+        const memoryData = await memoryRoundCreateData({
+          duelId: duel.id,
+          attackerId: duel.opponentId!,
+          pairCount: config.duel.memoryPairs,
+          roundNumber: 2,
+        });
+        const memoryAttack = fabricateBotMemoryLog(memoryData.board, difficulty);
+        attackCorrect = memoryAttack.pairsFound;
+        opponentCorrect += attackCorrect;
+        await tx.duelRound.update({
+          where: { id: round2.id },
+          data: {
+            roundType: memoryData.roundType,
+            draftOptionIds: memoryData.draftOptionIds,
+            boardJson: memoryData.boardJson,
+            attackAnswers: memoryAttack,
+            attackCorrect,
+            attackSubmittedAt: now,
+            attackStartedAt: now,
+          },
+        });
+      } else {
+        const quizData = await quizRoundCreateData({
+          attackerId: duel.opponentId!,
+          roundNumber: 2,
+          excludeCategoryIds: usedCategoryIdsFromRounds(duel.rounds),
+        });
+        const draftIds = quizData.draftOptionIds as string[];
+        const categoryId = draftIds[0];
+        if (!categoryId) throw new Error("not_enough_categories");
+        const attackQs = await drawCategoryQuestions(
+          categoryId,
+          config.duel.questionsPerAttack,
+        );
+        const attackIds = attackQs.map((q) => q.id);
+        const attackLog = await fabricateBotAnswers(attackIds, difficulty);
+        const graded = await gradeDuelAnswers(
+          attackIds,
+          attackLog.map((a) => ({
+            questionId: a.questionId,
+            selectedIndex: a.selectedIndex,
+            ms: a.ms,
+          })),
+        );
+        attackCorrect = countCorrect(graded);
+        opponentCorrect += attackCorrect;
+        await tx.duelRound.update({
+          where: { id: round2.id },
+          data: {
+            categoryId,
+            questionIds: attackIds,
+            draftOptionIds: quizData.draftOptionIds,
+            attackAnswers: graded,
+            attackCorrect,
+            attackSubmittedAt: now,
+          },
+        });
+      }
+
+      await tx.duelMatch.update({
+        where: { id: duel.id },
+        data: {
+          status: "WAITING_A",
+          turnUserId: duel.challengerId,
+          turnDeadlineAt: new Date(
+            now.getTime() + config.duel.turnHours * 60 * 60 * 1000,
+          ),
+          botPlayAt: null,
+          opponentCorrect,
+        },
+      });
+    });
+    return true;
+  }
+
   const round1 = duel.rounds.find((r) => r.roundNumber === 1);
   if (!round1) return false;
 
-  // ── Defend round 1 (QUIZ or MEMORY) ───────────────────────────────────────
-  let defenseLog: DuelAnswerLogEntry[] | ReturnType<typeof fabricateBotMemoryLog>;
+  // ── Defend round 1 (QUIZ / MEMORY / specials) ─────────────────────────────
+  let defenseLog:
+    | DuelAnswerLogEntry[]
+    | ReturnType<typeof fabricateBotMemoryLog>
+    | Record<string, unknown>;
   let defenseCorrect: number;
 
   if (round1.roundType === "MEMORY") {
@@ -192,6 +342,29 @@ export async function runBotTurnIfDue(duelId: string, now = new Date()): Promise
     const mem = fabricateBotMemoryLog(board, difficulty);
     defenseLog = mem;
     defenseCorrect = mem.pairsFound;
+  } else if (
+    round1.roundType === "STAR_PATH" ||
+    round1.roundType === "MYSTERY" ||
+    round1.roundType === "GRID"
+  ) {
+    const score =
+      round1.roundType === "STAR_PATH"
+        ? 75
+        : round1.roundType === "MYSTERY"
+          ? 80
+          : 6;
+    defenseLog = {
+      status: "SOLVED",
+      score,
+      guesses: [],
+      cluesRevealed: 2,
+      cells: {},
+      wrongGuesses: [],
+    };
+    defenseCorrect = score;
+  } else if (round1.roundType === "TIKI_TAKA") {
+    // In-progress Tiki should have returned above; completed R1 falls through as no-op.
+    return false;
   } else {
     if (!round1.questionIds || !Array.isArray(round1.questionIds)) return false;
     const qIds = round1.questionIds as string[];
@@ -201,7 +374,9 @@ export async function runBotTurnIfDue(duelId: string, now = new Date()): Promise
   }
 
   // ── Attack round 2 ────────────────────────────────────────────────────────
-  const memorySpent = duelHasMemoryRound(duel.rounds);
+  const specialSpent = duelHasSpecialRound(duel.rounds);
+  const canBotMemory =
+    !specialSpent && isLiveModeEnabledInDuel("memory", config);
   let attackCorrect = 0;
 
   const challengerCorrect = duel.challengerCorrect;
@@ -217,7 +392,7 @@ export async function runBotTurnIfDue(duelId: string, now = new Date()): Promise
       },
     });
 
-    if (!memorySpent) {
+    if (canBotMemory) {
       const memoryData = await memoryRoundCreateData({
         duelId: duel.id,
         attackerId: duel.opponentId!,
@@ -310,7 +485,7 @@ export async function processDueBotTurns(limit = 20): Promise<number> {
     where: {
       isBotOpponent: true,
       botPlayAt: { lte: now },
-      status: { in: ["WAITING_B", "B_DEFENDING"] },
+      status: { in: ["WAITING_B", "B_DEFENDING", "B_ATTACKING"] },
     },
     select: { id: true },
     take: limit,
@@ -324,3 +499,4 @@ export async function processDueBotTurns(limit = 20): Promise<number> {
   }
   return n;
 }
+

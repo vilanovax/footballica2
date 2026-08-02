@@ -13,6 +13,19 @@ import {
   MEMORY_SUBMIT_GRACE_MS,
   type MemoryBoardJson,
 } from "@/lib/duel/memoryTypes";
+import type { LiveModeId } from "@/lib/game/economy";
+import { DEFAULT_GAME_CONFIG } from "@/lib/game/economy";
+import {
+  duelEnabledModes,
+  DUEL_TYPE_TO_LIVE_MODE,
+  LIVE_MODE_LABELS,
+  isSpecialDuelRoundType,
+  liveModesFromConfig,
+} from "@/lib/game/liveModes";
+import { duelHasSpecialRound } from "@/lib/duel/specialRounds";
+import { parseStarPathBoard } from "@/lib/duel/starPathTypes";
+import { parseMysteryBoard } from "@/lib/duel/mysteryTypes";
+import { parseGridBoard } from "@/lib/duel/gridTypes";
 
 export type DuelPartySnapshot = {
   id: string;
@@ -36,8 +49,10 @@ export type DuelRoundSnapshot = {
   questionIds: string[] | null;
   /** Length of the attack question set (0 if not locked yet). MEMORY = pairCount. */
   questionCount: number;
-  /** Shared MEMORY board (null for QUIZ). Safe for client play. */
+  /** MEMORY board when roundType=MEMORY. */
   board: MemoryBoardJson | null;
+  /** Frozen special payload (star path / mystery / grid / memory raw). */
+  boardJson: unknown | null;
   attackCorrect: number;
   defenseCorrect: number;
   attackSubmitted: boolean;
@@ -49,6 +64,9 @@ export type DuelRoundSnapshot = {
   attackResults: boolean[] | null;
   /** Per-question (or per-pair) correctness for the defender (null if not submitted). */
   defenseResults: boolean[] | null;
+  /** In-progress special half answers (guess logs). */
+  attackAnswers: unknown | null;
+  defenseAnswers: unknown | null;
 };
 
 export type DuelSnapshot = {
@@ -78,10 +96,11 @@ export type DuelSnapshot = {
   /** Draft categories for the active attack round (when picking). */
   draftOptions?: DuelCategoryOption[];
   /**
-   * Attacker may lock Memory on this draft turn — false once any round
-   * in the duel is already MEMORY (one Memory pick per match).
+   * @deprecated Use specialAvailable — kept so older clients still show Memory.
    */
   memoryAvailable: boolean;
+  /** Admin-enabled specials the attacker may still pick this turn. */
+  specialAvailable: LiveModeId[];
   challenger: DuelPartySnapshot | null;
   opponent: DuelPartySnapshot | null;
 };
@@ -90,6 +109,12 @@ type RoundWithCat = DuelRound & { category: Category | null };
 
 type UserWithClub = User & {
   club: { name: string; avatar: string | null; colorKey: string } | null;
+};
+
+export type ToDuelSnapshotOpts = {
+  draftOptions?: DuelCategoryOption[];
+  /** When omitted, defaults to DEFAULT_GAME_CONFIG.liveModes. */
+  liveModes?: typeof DEFAULT_GAME_CONFIG.liveModes;
 };
 
 function parseAnswerResults(raw: unknown): boolean[] | null {
@@ -116,6 +141,14 @@ function partyFromUser(user: UserWithClub | null | undefined): DuelPartySnapshot
   };
 }
 
+function specialLabels(roundType: DuelRoundType): {
+  en: string;
+  fa: string;
+} | null {
+  if (!isSpecialDuelRoundType(roundType)) return null;
+  return LIVE_MODE_LABELS[DUEL_TYPE_TO_LIVE_MODE[roundType]];
+}
+
 export function toDuelSnapshot(
   duel: DuelMatch & {
     rounds: RoundWithCat[];
@@ -123,8 +156,17 @@ export function toDuelSnapshot(
     opponent?: UserWithClub | null;
   },
   viewerId: string,
-  draftOptions?: DuelCategoryOption[],
+  draftOptionsOrOpts?: DuelCategoryOption[] | ToDuelSnapshotOpts,
 ): DuelSnapshot {
+  const opts: ToDuelSnapshotOpts = Array.isArray(draftOptionsOrOpts)
+    ? { draftOptions: draftOptionsOrOpts }
+    : (draftOptionsOrOpts ?? {});
+  const liveModes = liveModesFromConfig({
+    ...DEFAULT_GAME_CONFIG,
+    liveModes: opts.liveModes ?? DEFAULT_GAME_CONFIG.liveModes,
+  });
+  const draftOptions = opts.draftOptions;
+
   const turn = describeTurn(duel.status);
   const youAre =
     viewerId === duel.challengerId
@@ -151,17 +193,21 @@ export function toDuelSnapshot(
     turn.roundNumber != null
       ? duel.rounds.find((r) => r.roundNumber === turn.roundNumber)
       : null;
-  const memoryUsed = duel.rounds.some((r) => r.roundType === "MEMORY");
+  const specialUsed = duelHasSpecialRound(duel.rounds);
   const questionsLocked =
     Array.isArray(activeRound?.questionIds) &&
     (activeRound!.questionIds as unknown[]).length > 0;
-  const memoryAvailable =
+  const canPickSpecial =
     turn.kind === "attack" &&
     activeRound != null &&
     activeRound.roundType === "QUIZ" &&
-    !memoryUsed &&
+    !specialUsed &&
     !questionsLocked &&
     !activeRound.attackSubmittedAt;
+
+  const specialAvailable: LiveModeId[] = canPickSpecial
+    ? duelEnabledModes({ ...DEFAULT_GAME_CONFIG, liveModes })
+    : [];
 
   return {
     id: duel.id,
@@ -184,7 +230,8 @@ export function toDuelSnapshot(
     youTimedOut,
     youAre,
     draftOptions,
-    memoryAvailable,
+    memoryAvailable: specialAvailable.includes("memory"),
+    specialAvailable,
     challenger: partyFromUser(duel.challenger),
     opponent: partyFromUser(duel.opponent),
     rounds: duel.rounds
@@ -194,28 +241,37 @@ export function toDuelSnapshot(
         const questionIds = Array.isArray(r.questionIds)
           ? (r.questionIds as string[])
           : null;
-        const board =
+        const memoryBoard =
           r.roundType === "MEMORY" ? parseMemoryBoard(r.boardJson) : null;
-        const isMemory = r.roundType === "MEMORY";
+        const labels = specialLabels(r.roundType);
+        const starBoard =
+          r.roundType === "STAR_PATH" ? parseStarPathBoard(r.boardJson) : null;
+        const mysteryBoard =
+          r.roundType === "MYSTERY" ? parseMysteryBoard(r.boardJson) : null;
+        const gridBoard =
+          r.roundType === "GRID" ? parseGridBoard(r.boardJson) : null;
+
+        let questionCount = questionIds?.length ?? 0;
+        if (memoryBoard) questionCount = memoryBoard.pairCount;
+        else if (starBoard) questionCount = starBoard.maxClues;
+        else if (mysteryBoard) questionCount = mysteryBoard.maxGuesses;
+        else if (gridBoard) questionCount = 9;
+        else if (r.roundType === "TIKI_TAKA") questionCount = 9;
+
         return {
           roundNumber: r.roundNumber,
           attackerId: r.attackerId,
           roundType: r.roundType,
           categoryId: r.categoryId,
-          categoryNameEn: isMemory
-            ? "Memory Pairs"
-            : (r.category?.nameEn ?? null),
-          categoryNameFa: isMemory
-            ? "حافظه جفت‌ها"
-            : (r.category?.nameFa ?? null),
+          categoryNameEn: labels?.en ?? r.category?.nameEn ?? null,
+          categoryNameFa: labels?.fa ?? r.category?.nameFa ?? null,
           draftOptionIds: Array.isArray(r.draftOptionIds)
             ? (r.draftOptionIds as string[])
             : [],
           questionIds,
-          questionCount: isMemory
-            ? (board?.pairCount ?? 0)
-            : (questionIds?.length ?? 0),
-          board,
+          questionCount,
+          board: memoryBoard,
+          boardJson: r.boardJson ?? null,
           attackCorrect: r.attackCorrect,
           defenseCorrect: r.defenseCorrect,
           attackSubmitted: Boolean(r.attackSubmittedAt),
@@ -224,6 +280,8 @@ export function toDuelSnapshot(
           defenseStartedAt: r.defenseStartedAt?.toISOString() ?? null,
           attackResults: parseAnswerResults(r.attackAnswers),
           defenseResults: parseAnswerResults(r.defenseAnswers),
+          attackAnswers: r.attackAnswers ?? null,
+          defenseAnswers: r.defenseAnswers ?? null,
         };
       }),
   };

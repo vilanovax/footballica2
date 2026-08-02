@@ -11,8 +11,14 @@ export { buildStarPathSteps, parsePathJson } from "./path";
 export { parseStarPathGuesses } from "./parse";
 export {
   ensureTodayStarPathPuzzle,
+  ensureStarPathPuzzleForDate,
   maxCluesFromConfig,
 } from "./puzzle";
+export {
+  ensureStarPathSchedule,
+  STAR_PATH_SCHEDULE_DAYS,
+} from "./jobs";
+
 export {
   computeStarPathStreakUpdate,
   type StarPathStreakInput,

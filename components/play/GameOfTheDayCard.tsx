@@ -6,11 +6,16 @@ import { motion } from "framer-motion";
 import type { DailyMysterySnapshot } from "@/actions/mystery/getDailyMystery";
 import type { DailyGridSnapshot } from "@/actions/grid/getDailyGrid";
 import type { DailyStarPathSnapshot } from "@/actions/starpath/getDailyStarPath";
+import type { DailyMemorySnapshot } from "@/actions/memorygotd/getDailyMemory";
 import {
   gameOfTheDayKind,
   gameOfTheDayRotation,
   type GameOfTheDayKind,
 } from "@/lib/grid/gotd";
+import {
+  DEFAULT_GAME_CONFIG,
+  type GameConfig,
+} from "@/lib/game/economy";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
@@ -20,26 +25,40 @@ type Props = {
   mystery: DailyMysterySnapshot | null;
   grid?: DailyGridSnapshot | null;
   starPath?: DailyStarPathSnapshot | null;
+  memory?: DailyMemorySnapshot | null;
+  /** Live GameConfig — drives GotD rotator + enabled modes. */
+  config?: GameConfig;
   /** ISO timestamp — next Tehran midnight (GotD rotate). */
   rotatesAt?: string | null;
 };
 
 /**
- * Rotating Live-Ops slot — Mystery / Grid / Star Path (day % 3).
- * ADR 001 / 002 — not a permanent fifth core mode.
+ * Rotating Live-Ops slot — Mystery / Grid / Star Path / Memory.
+ * Hidden when admin disabled every GotD mode (kind === null).
  */
 export function GameOfTheDayCard({
   mystery,
   grid = null,
   starPath = null,
+  memory = null,
+  config = DEFAULT_GAME_CONFIG,
   rotatesAt = null,
 }: Props) {
   const dateKey =
-    starPath?.dateKey ?? grid?.dateKey ?? mystery?.dateKey ?? "";
-  const kind = gameOfTheDayKind(dateKey || "2026-01-01");
+    memory?.dateKey ??
+    starPath?.dateKey ??
+    grid?.dateKey ??
+    mystery?.dateKey ??
+    "";
+  const kind = gameOfTheDayKind(dateKey || "2026-01-01", config);
   const rotateIso =
-    rotatesAt ?? gameOfTheDayRotation().rotatesAt.toISOString();
+    rotatesAt ?? gameOfTheDayRotation(new Date(), config).rotatesAt.toISOString();
 
+  if (kind === null) return null;
+
+  if (kind === "memory" && memory) {
+    return <MemoryGotdCard memory={memory} rotatesAt={rotateIso} />;
+  }
   if (kind === "starPath" && starPath) {
     return <StarPathGotdCard starPath={starPath} rotatesAt={rotateIso} />;
   }
@@ -49,16 +68,8 @@ export function GameOfTheDayCard({
   if (kind === "mystery" && mystery) {
     return <MysteryGotdCard mystery={mystery} rotatesAt={rotateIso} />;
   }
-  // Fallback if preferred snapshot missing but another exists.
-  if (starPath) {
-    return <StarPathGotdCard starPath={starPath} rotatesAt={rotateIso} />;
-  }
-  if (mystery) {
-    return <MysteryGotdCard mystery={mystery} rotatesAt={rotateIso} />;
-  }
-  if (grid) {
-    return <GridGotdCard grid={grid} rotatesAt={rotateIso} />;
-  }
+  // Preferred snapshot missing — no fallback across kinds (admin may have
+  // only one mode enabled; wrong card would be misleading).
   return null;
 }
 
@@ -197,6 +208,52 @@ function GridGotdCard({
   );
 }
 
+function MemoryGotdCard({
+  memory,
+  rotatesAt,
+}: {
+  memory: DailyMemorySnapshot;
+  rotatesAt: string;
+}) {
+  const { t, locale } = useTranslation();
+  const done = memory.status === "SOLVED" || memory.status === "FAILED";
+  const started = memory.status !== "IN_PROGRESS" || memory.pairsFound > 0;
+
+  const blurb = done
+    ? t("play.memoryBlurbDone", {
+        n: toLocaleDigits(memory.memoryStreak, locale),
+      })
+    : t("play.memoryBlurb", {
+        n: toLocaleDigits(memory.pairCount, locale),
+        s: toLocaleDigits(Math.round(memory.turnMs / 1000), locale),
+      });
+
+  const cta = done
+    ? t("play.memoryCtaResult")
+    : started && memory.pairsFound > 0
+      ? t("play.memoryCtaContinue")
+      : t("play.memoryCta");
+
+  return (
+    <GotdShell
+      kind="memory"
+      icon="/icons/memory-ball.png"
+      title={t("play.memoryTitle")}
+      blurb={blurb}
+      meta={
+        done
+          ? `${toLocaleDigits(memory.pairsFound, locale)}/${toLocaleDigits(memory.pairCount, locale)} · 🔥 ${toLocaleDigits(memory.memoryStreak, locale)}`
+          : t("memoryGotd.pairsMeta", {
+              n: toLocaleDigits(memory.pairCount, locale),
+            })
+      }
+      href="/play/memory"
+      cta={cta}
+      rotatesAt={rotatesAt}
+    />
+  );
+}
+
 function GotdShell({
   kind,
   icon,
@@ -219,6 +276,15 @@ function GotdShell({
   const { t } = useTranslation();
   const countdown = useGotdCountdown(rotatesAt);
 
+  const kindLabel =
+    kind === "mystery"
+      ? t("play.gotdKindMystery")
+      : kind === "grid"
+        ? t("play.gotdKindGrid")
+        : kind === "memory"
+          ? t("play.gotdKindMemory")
+          : t("play.gotdKindStarPath");
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
@@ -226,11 +292,7 @@ function GotdShell({
           {t("play.gameOfTheDay")}
         </h2>
         <span className="rounded-full bg-amber-500/20 px-2.5 py-0.5 font-display text-[10px] font-extrabold text-amber-900 ring-1 ring-amber-400/40 dark:text-amber-100">
-          {kind === "mystery"
-            ? t("play.gotdKindMystery")
-            : kind === "grid"
-              ? t("play.gotdKindGrid")
-              : t("play.gotdKindStarPath")}
+          {kindLabel}
         </span>
       </div>
 

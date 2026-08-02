@@ -18,7 +18,10 @@ import type { QuizQuestion } from "@/lib/quiz/types";
 import { describeTurn } from "@/lib/duel";
 import { beginDuelDefend } from "@/actions/duel/submitDefend";
 import { beginMemoryTurn } from "@/actions/duel/beginMemoryTurn";
+import { beginTikiTakaTurn } from "@/actions/duel/tikitaka/beginTikiTakaTurn";
 import type { MemoryBoardJson } from "@/lib/duel/memoryTypes";
+import { getGameConfig } from "@/lib/game/gameConfig";
+import { isSpecialDuelRoundType } from "@/lib/game/liveModes";
 
 export type GetDuelResult =
   | {
@@ -99,6 +102,20 @@ export async function getDuel(duelId: string): Promise<GetDuelResult> {
             memoryRevealMs: opened.revealMs,
           };
         }
+      } else if (previewRound?.roundType === "TIKI_TAKA") {
+        const opened = await beginTikiTakaTurn(loadId);
+        if (opened.ok) {
+          return {
+            ok: true,
+            duel: opened.duel,
+            questions: null,
+          };
+        }
+      } else if (
+        previewRound &&
+        isSpecialDuelRoundType(previewRound.roundType)
+      ) {
+        // Guess-based specials don't need a QUIZ defend bootstrap.
       } else {
         const opened = await beginDuelDefend(loadId);
         if (opened.ok) {
@@ -161,7 +178,25 @@ export async function getDuel(duelId: string): Promise<GetDuelResult> {
       }
     }
 
-    const cats = await listDuelEligibleCategories();
+    if (
+      activeAfter?.roundType === "TIKI_TAKA" &&
+      duel.turnUserId === user.id &&
+      !(activeAfter.attackSubmittedAt && activeAfter.defenseSubmittedAt)
+    ) {
+      const opened = await beginTikiTakaTurn(loadId);
+      if (opened.ok) {
+        return {
+          ok: true,
+          duel: opened.duel,
+          questions: null,
+        };
+      }
+    }
+
+    const [cats, config] = await Promise.all([
+      listDuelEligibleCategories(),
+      getGameConfig(),
+    ]);
     const turn = describeTurn(duel.status);
     const activeRound =
       turn.roundNumber != null
@@ -170,14 +205,16 @@ export async function getDuel(duelId: string): Promise<GetDuelResult> {
     const draftIds = Array.isArray(activeRound?.draftOptionIds)
       ? (activeRound!.draftOptionIds as string[])
       : [];
+    const isSpecial =
+      activeRound != null && isSpecialDuelRoundType(activeRound.roundType);
     const draftOptions =
-      turn.kind === "attack" && activeRound?.roundType !== "MEMORY"
+      turn.kind === "attack" && !isSpecial
         ? cats.filter((c) => draftIds.includes(c.id))
         : undefined;
 
     let questions: QuizQuestion[] | null = null;
     if (
-      activeRound?.roundType !== "MEMORY" &&
+      activeRound?.roundType === "QUIZ" &&
       activeRound?.questionIds &&
       Array.isArray(activeRound.questionIds) &&
       (turn.kind === "attack" || turn.kind === "defend" || shouldOpenDefend)
@@ -195,7 +232,10 @@ export async function getDuel(duelId: string): Promise<GetDuelResult> {
 
     return {
       ok: true,
-      duel: toDuelSnapshot(duel, user.id, draftOptions),
+      duel: toDuelSnapshot(duel, user.id, {
+        draftOptions,
+        liveModes: config.liveModes,
+      }),
       questions,
       memoryBoard:
         activeRound?.roundType === "MEMORY"

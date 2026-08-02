@@ -32,14 +32,13 @@ export default async function AdminCategoriesPage() {
   ]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
         <h1 className="text-xl font-semibold text-slate-900">
           Categories &amp; Tags
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Organize the question bank. Categories group questions; tags label
-          them across categories.
+        <p className="mt-1 text-sm text-slate-500">
+          Banks for the question picker · tags for cross-cutting labels.
         </p>
       </div>
 

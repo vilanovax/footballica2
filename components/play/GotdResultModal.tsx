@@ -11,7 +11,7 @@ import { playSound } from "@/lib/audio/SoundManager";
 type Props = {
   open: boolean;
   outcome: "SOLVED" | "FAILED";
-  kind: "mystery" | "grid" | "starPath";
+  kind: "mystery" | "grid" | "starPath" | "memory";
   rewards: GotdRewardsPayload | null;
   /** Streak before hard-reset on loss. */
   previousStreak?: number;
@@ -107,7 +107,9 @@ export function GotdResultModal({
                       ? "gotd.winBodyMystery"
                       : kind === "grid"
                         ? "gotd.winBodyGrid"
-                        : "gotd.winBodyStarPath",
+                        : kind === "memory"
+                          ? "gotd.winBodyMemory"
+                          : "gotd.winBodyStarPath",
                   )
                 : streakBroken
                   ? t("gotd.streakBrokenBody", {
