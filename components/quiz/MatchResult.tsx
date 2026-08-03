@@ -132,6 +132,8 @@ export function MatchResult({
     unlockedBadges,
     streak,
     missions,
+    businessBoostGranted,
+    businessBoostBonus,
   } = save.data;
   const won = confirmed.won;
   const outOfEnergy = balances.stamina <= 0;
@@ -239,6 +241,15 @@ export function MatchResult({
             n: toLocaleDigits(streak.dailyStreak, locale),
           })}`,
           tone: "secondary" as const,
+        }
+      : null,
+    businessBoostGranted
+      ? {
+          key: "bizboost",
+          label: t("result.businessBoost", {
+            pct: toLocaleDigits(Math.round(businessBoostBonus * 100), locale),
+          }),
+          tone: "accent" as const,
         }
       : null,
   ].filter(Boolean) as Array<{

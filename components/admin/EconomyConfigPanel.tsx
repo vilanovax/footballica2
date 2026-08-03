@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
+  Building2,
   CalendarDays,
   Heart,
   RotateCcw,
@@ -29,7 +30,14 @@ type EconomyConfigPanelProps = {
   initialConfig: GameConfig;
 };
 
-type TabId = "live" | "match" | "survival" | "duel" | "gotd" | "advanced";
+type TabId =
+  | "live"
+  | "match"
+  | "survival"
+  | "duel"
+  | "gotd"
+  | "club"
+  | "advanced";
 
 type FieldDef = {
   key: string;
@@ -48,7 +56,9 @@ function getPath(obj: unknown, path: string): number {
   let cur: unknown = obj;
   for (const p of parts) {
     if (cur == null || typeof cur !== "object") return 0;
-    cur = (cur as Record<string, unknown>)[p];
+    cur = (cur as Record<string | number, unknown>)[
+      /^\d+$/.test(p) ? Number(p) : p
+    ];
   }
   return typeof cur === "number" && Number.isFinite(cur) ? cur : 0;
 }
@@ -56,13 +66,24 @@ function getPath(obj: unknown, path: string): number {
 function setPath(obj: GameConfig, path: string, value: number): GameConfig {
   const parts = path.split(".");
   const clone = structuredClone(obj) as Record<string, unknown>;
-  let cur: Record<string, unknown> = clone;
+  let cur: unknown = clone;
   for (let i = 0; i < parts.length - 1; i++) {
     const p = parts[i]!;
-    cur[p] = { ...(cur[p] as Record<string, unknown>) };
-    cur = cur[p] as Record<string, unknown>;
+    const parent = cur as Record<string, unknown>;
+    const child = parent[p];
+    if (Array.isArray(child)) {
+      parent[p] = [...child];
+    } else {
+      parent[p] = { ...((child as Record<string, unknown>) ?? {}) };
+    }
+    cur = parent[p];
   }
-  cur[parts[parts.length - 1]!] = value;
+  const last = parts[parts.length - 1]!;
+  if (Array.isArray(cur) && /^\d+$/.test(last)) {
+    cur[Number(last)] = value;
+  } else {
+    (cur as Record<string, unknown>)[last] = value;
+  }
   return mergeGameConfig(clone);
 }
 
@@ -101,6 +122,12 @@ const TABS: {
     label: "GotD",
     icon: CalendarDays,
     blurb: "Mystery / Grid payouts",
+  },
+  {
+    id: "club",
+    label: "Club Biz",
+    icon: Building2,
+    blurb: "Club Funds idle — never touches match coins",
   },
   {
     id: "advanced",
@@ -164,6 +191,22 @@ const LIVE_FIELDS: FieldDef[] = [
     label: "Survival stamina",
     description: "Energy deducted when a Survival run finishes.",
     tip: "Blocked if club has less than this.",
+  },
+  {
+    key: "businessEconomy.seedFunds",
+    label: "Club Funds seed",
+    description: "One-time Funds when business layer unlocks.",
+    tip: "Club Funds only — not match coins.",
+    featured: true,
+  },
+  {
+    key: "businessEconomy.firstWinBoostBonus",
+    label: "First-win income +",
+    description: "Bonus fraction on facility income after first win of day.",
+    tip: "0.2 = +20% for firstWinBoostMs.",
+    featured: true,
+    min: 0,
+    step: 0.05,
   },
 ];
 
@@ -404,6 +447,201 @@ const GOTD_FIELDS: FieldDef[] = [
   },
 ];
 
+const CLUB_BIZ_FIELDS: FieldDef[] = [
+  {
+    key: "businessEconomy.seedFunds",
+    label: "Seed Funds",
+    description: "Spendable Club Funds granted once on business unlock.",
+    tip: "Existing clubs with 0 funds & no builds also get this.",
+  },
+  {
+    key: "businessEconomy.firstWinBoostBonus",
+    label: "First-win boost +",
+    description: "Added to 1.0 on facility rates after first win of Tehran day.",
+    tip: "0.2 → +20% income while boost is active.",
+    min: 0,
+    step: 0.05,
+  },
+  {
+    key: "businessEconomy.firstWinBoostMs",
+    label: "Boost duration (ms)",
+    description: "How long the first-win income boost lasts.",
+    tip: "Default 3600000 = 1 hour.",
+    min: 60000,
+  },
+  {
+    key: "businessEconomy.vault.baseCost",
+    label: "Vault upgrade cost",
+    description: "Funds cost for vault level 1 → 2 (grows by costGrowth).",
+    tip: "Spendable Funds sink.",
+  },
+  {
+    key: "businessEconomy.vault.costGrowth",
+    label: "Vault cost growth",
+    description: "Multiplier per vault level for upgrade cost.",
+    tip: "2 = doubles each level.",
+    min: 1,
+    step: 0.1,
+  },
+  {
+    key: "businessEconomy.vault.maxLevel",
+    label: "Vault max level",
+    description: "Highest vault tier a club can buy.",
+    tip: "capHours length should cover these levels.",
+    min: 1,
+  },
+  {
+    key: "businessEconomy.vault.capHours.0",
+    label: "Vault L1 hours",
+    description: "Vault capacity as hours of aggregate facility rate at level 1.",
+    tip: "Retention hook — keep early hours short.",
+    min: 1,
+  },
+  {
+    key: "businessEconomy.vault.capHours.1",
+    label: "Vault L2 hours",
+    description: "Capacity hours at vault level 2.",
+    tip: "Usually 6h.",
+    min: 1,
+  },
+  {
+    key: "businessEconomy.vault.capHours.2",
+    label: "Vault L3 hours",
+    description: "Capacity hours at vault level 3.",
+    tip: "Usually 8h.",
+    min: 1,
+  },
+  {
+    key: "businessEconomy.vault.capHours.3",
+    label: "Vault L4 hours",
+    description: "Capacity hours at vault level 4.",
+    tip: "Usually 12h.",
+    min: 1,
+  },
+  {
+    key: "businessEconomy.vault.capHours.4",
+    label: "Vault L5 hours",
+    description: "Capacity hours at vault level 5.",
+    tip: "Usually 24h — sleep-friendly.",
+    min: 1,
+  },
+  {
+    key: "businessEconomy.shopFansDivisor",
+    label: "Shop fans ÷",
+    description: "Club Shop rate bonus = min(cap, fans / this).",
+    tip: "Higher = slower fans scaling.",
+    min: 1,
+  },
+  {
+    key: "businessEconomy.shopFansBonusCap",
+    label: "Shop fans bonus cap",
+    description: "Max bonus fraction from fans on Club Shop rate.",
+    tip: "0.5 → +50% max.",
+    min: 0,
+    step: 0.05,
+  },
+  {
+    key: "businessEconomy.sponsoredBank.interestPercent",
+    label: "Bank interest %",
+    description: "Sponsored bank interest percent per tick (floored).",
+    tip: "1 = 1% every interval.",
+    min: 0,
+    step: 0.5,
+  },
+  {
+    key: "businessEconomy.sponsoredBank.intervalHours",
+    label: "Bank interest hours",
+    description: "Hours between sponsored-bank interest ticks.",
+    tip: "Default 4.",
+    min: 1,
+  },
+  {
+    key: "businessEconomy.sponsoredBank.minBalance",
+    label: "Bank interest min bal",
+    description: "Minimum Bank balance before a tick can pay ≥1.",
+    tip: "At 1%, need 100 for +1.",
+    min: 0,
+  },
+  {
+    key: "businessEconomy.sponsoredBank.maxInterestPerTick",
+    label: "Bank interest cap / tick",
+    description: "Max Funds granted in one interest tick.",
+    tip: "Anti-snowball.",
+    min: 0,
+  },
+  {
+    key: "businessEconomy.sponsoredBank.upgradeCost",
+    label: "Sponsored bank cost",
+    description: "Spendable Funds to activate sponsored bank.",
+    tip: "0 = free switch.",
+    min: 0,
+  },
+  {
+    key: "businessEconomy.sponsoredBank.maxCatchupTicks",
+    label: "Bank catch-up ticks",
+    description: "Max missed interest ticks applied on one settle.",
+    tip: "Default 3.",
+    min: 1,
+  },
+  {
+    key: "businessEconomy.facilities.TICKET_OFFICE.baseRatePerHour",
+    label: "Ticket rate / h",
+    description: "Level-1 Ticket Office Funds per hour.",
+    tip: "Teaches the idle loop — keep snappy.",
+  },
+  {
+    key: "businessEconomy.facilities.TICKET_OFFICE.baseBuildCost",
+    label: "Ticket build cost",
+    description: "Funds to open Ticket Office (0 = free FTUE).",
+    tip: "0 recommended for onboarding.",
+  },
+  {
+    key: "businessEconomy.facilities.TICKET_OFFICE.unlockPlayerLevel",
+    label: "Ticket unlock Lv",
+    description: "Player level required to build Ticket Office.",
+    tip: "Usually 1.",
+    min: 1,
+  },
+  {
+    key: "businessEconomy.facilities.CLUB_SHOP.baseRatePerHour",
+    label: "Shop rate / h",
+    description: "Level-1 Club Shop base Funds/hour (before fans factor).",
+    tip: "Mid-game earner.",
+  },
+  {
+    key: "businessEconomy.facilities.CLUB_SHOP.baseBuildCost",
+    label: "Shop build cost",
+    description: "Funds to open Club Shop.",
+    tip: "Should need play + idle, not idle alone.",
+  },
+  {
+    key: "businessEconomy.facilities.CLUB_SHOP.unlockPlayerLevel",
+    label: "Shop unlock Lv",
+    description: "Player level gate for Club Shop.",
+    tip: "Default 3.",
+    min: 1,
+  },
+  {
+    key: "businessEconomy.facilities.MUSEUM.baseRatePerHour",
+    label: "Museum rate / h",
+    description: "Level-1 Museum Funds per hour.",
+    tip: "Identity building — slower unlock.",
+  },
+  {
+    key: "businessEconomy.facilities.MUSEUM.baseBuildCost",
+    label: "Museum build cost",
+    description: "Funds to open Museum.",
+    tip: "Default 2500.",
+  },
+  {
+    key: "businessEconomy.facilities.MUSEUM.unlockPlayerLevel",
+    label: "Museum unlock Lv",
+    description: "Player level gate for Museum.",
+    tip: "Default 5.",
+    min: 1,
+  },
+];
+
 const ADVANCED_FIELDS: FieldDef[] = [
   {
     key: "helpers.hint",
@@ -489,6 +727,8 @@ function fieldsForTab(tab: TabId): FieldDef[] {
       return DUEL_FIELDS;
     case "gotd":
       return GOTD_FIELDS;
+    case "club":
+      return CLUB_BIZ_FIELDS;
     case "advanced":
       return ADVANCED_FIELDS;
   }
@@ -569,6 +809,7 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
           <Snap label="Match" value={draft.rewards.coinsPerWin} />
           <Snap label="Mystery" value={draft.gotd.mysteryWinCoins} />
           <Snap label="Grid" value={draft.gotd.gridWinCoins} />
+          <Snap label="Funds" value={draft.businessEconomy.seedFunds} />
         </div>
         {dirty ? (
           <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100">
@@ -681,10 +922,94 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
         </div>
       ) : null}
 
+      {tab === "club" ? (
+        <div className="space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50/40 px-3 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="flex items-center gap-1 text-xs font-semibold text-slate-800">
+              Sponsored bank
+              <AdminHelpTip text="Optional interest on spendable Club Funds. Lazy settle — no mint cron." />
+            </span>
+            <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
+              <input
+                type="checkbox"
+                checked={draft.businessEconomy.sponsoredBank.enabled}
+                onChange={(e) =>
+                  setDraft((prev) =>
+                    mergeGameConfig({
+                      ...prev,
+                      businessEconomy: {
+                        ...prev.businessEconomy,
+                        sponsoredBank: {
+                          ...prev.businessEconomy.sponsoredBank,
+                          enabled: e.target.checked,
+                        },
+                      },
+                    }),
+                  )
+                }
+              />
+              Enabled
+            </label>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <label className="flex flex-col gap-1">
+              <span className="text-[11px] font-semibold text-slate-600">
+                Name (EN)
+              </span>
+              <Input
+                value={draft.businessEconomy.sponsoredBank.nameEn}
+                onChange={(e) =>
+                  setDraft((prev) =>
+                    mergeGameConfig({
+                      ...prev,
+                      businessEconomy: {
+                        ...prev.businessEconomy,
+                        sponsoredBank: {
+                          ...prev.businessEconomy.sponsoredBank,
+                          nameEn: e.target.value,
+                        },
+                      },
+                    }),
+                  )
+                }
+                className="h-10 text-sm"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[11px] font-semibold text-slate-600">
+                Name (FA)
+              </span>
+              <Input
+                value={draft.businessEconomy.sponsoredBank.nameFa}
+                onChange={(e) =>
+                  setDraft((prev) =>
+                    mergeGameConfig({
+                      ...prev,
+                      businessEconomy: {
+                        ...prev.businessEconomy,
+                        sponsoredBank: {
+                          ...prev.businessEconomy.sponsoredBank,
+                          nameFa: e.target.value,
+                        },
+                      },
+                    }),
+                  )
+                }
+                className="h-10 text-sm"
+                dir="rtl"
+              />
+            </label>
+          </div>
+        </div>
+      ) : null}
+
       <div
         className={[
           "grid gap-2.5",
-          tab === "live" || tab === "survival" || tab === "gotd"
+          tab === "live" ||
+          tab === "survival" ||
+          tab === "gotd" ||
+          tab === "club"
             ? "sm:grid-cols-2"
             : "sm:grid-cols-2 lg:grid-cols-3",
         ].join(" ")}

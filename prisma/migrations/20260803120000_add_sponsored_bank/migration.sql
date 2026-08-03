@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Club" ADD COLUMN IF NOT EXISTS "sponsoredBankActive" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Club" ADD COLUMN IF NOT EXISTS "lastBankInterestAt" TIMESTAMP(3);

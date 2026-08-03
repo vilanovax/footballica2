@@ -13,6 +13,7 @@ import {
   BUSINESS_FACILITY_KEYS,
   buildCost,
   getFacilityDef,
+  incomeBoostMultiplier,
   rateAtLevel,
   settleFacilityAmount,
   storageCapAtLevel,
@@ -22,7 +23,10 @@ import {
   vaultUpgradeCost,
   type BusinessFacilityKey,
 } from "@/lib/club/businessEconomy";
-import { ensureClubFacilities } from "@/lib/club/businessService";
+import {
+  ensureClubFacilities,
+  settleClubBankInterest,
+} from "@/lib/club/businessService";
 
 export type BusinessActionResult =
   | { ok: true; club: ClubSnapshot; transferred?: number }
@@ -42,7 +46,9 @@ export async function collectFacilities(
     const snapshot = await prisma.$transaction(async (tx) => {
       const pair = await requireUserClub(tx);
       if (!pair) throw new BusinessError("Not authenticated.");
-      const { user, club } = pair;
+      const { user } = pair;
+      let { club } = pair;
+      club = await settleClubBankInterest(club, tx);
       const config = await getGameConfig();
       const playerLevel = calculateLevel(user.xp).level;
       const now = new Date();
@@ -51,11 +57,22 @@ export async function collectFacilities(
       const rows = await tx.clubFacility.findMany({
         where: { clubId: club.id, status: "BUILT" },
       });
+      const rateBoost = incomeBoostMultiplier(
+        club.businessBoostExpiresAt,
+        now,
+        config,
+      );
 
       let totalRate = 0;
       for (const row of rows) {
         const def = getFacilityDef(row.key as BusinessFacilityKey, config);
-        totalRate += rateAtLevel(def, row.level, club.fans, config);
+        totalRate += rateAtLevel(
+          def,
+          row.level,
+          club.fans,
+          config,
+          rateBoost,
+        );
       }
       let vaultBal = club.vaultBalance;
       const vCap = vaultCapacity(club.vaultLevel, totalRate, config);
@@ -69,8 +86,20 @@ export async function collectFacilities(
       for (const row of targets) {
         const fKey = row.key as BusinessFacilityKey;
         const def = getFacilityDef(fKey, config);
-        const rate = rateAtLevel(def, row.level, club.fans, config);
-        const cap = storageCapAtLevel(def, row.level, club.fans, config);
+        const rate = rateAtLevel(
+          def,
+          row.level,
+          club.fans,
+          config,
+          rateBoost,
+        );
+        const cap = storageCapAtLevel(
+          def,
+          row.level,
+          club.fans,
+          config,
+          rateBoost,
+        );
         const settled = settleFacilityAmount(
           row.storedAmount,
           row.lastCalculatedAt,
@@ -130,7 +159,9 @@ export async function withdrawVault(): Promise<BusinessActionResult> {
     const clubSnap = await prisma.$transaction(async (tx) => {
       const pair = await requireUserClub(tx);
       if (!pair) throw new BusinessError("Not authenticated.");
-      const { user, club } = pair;
+      const { user } = pair;
+      let { club } = pair;
+      club = await settleClubBankInterest(club, tx);
       if (club.vaultBalance <= 0) {
         throw new BusinessError("Vault is empty.");
       }
@@ -166,7 +197,9 @@ export async function buildFacility(
     const clubSnap = await prisma.$transaction(async (tx) => {
       const pair = await requireUserClub(tx);
       if (!pair) throw new BusinessError("Not authenticated.");
-      const { user, club } = pair;
+      const { user } = pair;
+      let { club } = pair;
+      club = await settleClubBankInterest(club, tx);
       const config = await getGameConfig();
       const playerLevel = calculateLevel(user.xp).level;
       const def = getFacilityDef(key, config);
@@ -229,7 +262,9 @@ export async function upgradeFacility(
     const clubSnap = await prisma.$transaction(async (tx) => {
       const pair = await requireUserClub(tx);
       if (!pair) throw new BusinessError("Not authenticated.");
-      const { user, club } = pair;
+      const { user } = pair;
+      let { club } = pair;
+      club = await settleClubBankInterest(club, tx);
       const config = await getGameConfig();
       const now = new Date();
 
@@ -247,8 +282,19 @@ export async function upgradeFacility(
         throw new BusinessError("Not enough Club Funds.");
       }
 
-      const rate = rateAtLevel(def, row.level, club.fans, config);
-      const cap = storageCapAtLevel(def, row.level, club.fans, config);
+      const rateBoost = incomeBoostMultiplier(
+        club.businessBoostExpiresAt,
+        now,
+        config,
+      );
+      const rate = rateAtLevel(def, row.level, club.fans, config, rateBoost);
+      const cap = storageCapAtLevel(
+        def,
+        row.level,
+        club.fans,
+        config,
+        rateBoost,
+      );
       const settled = settleFacilityAmount(
         row.storedAmount,
         row.lastCalculatedAt,
@@ -290,7 +336,9 @@ export async function upgradeVault(): Promise<BusinessActionResult> {
     const clubSnap = await prisma.$transaction(async (tx) => {
       const pair = await requireUserClub(tx);
       if (!pair) throw new BusinessError("Not authenticated.");
-      const { user, club } = pair;
+      const { user } = pair;
+      let { club } = pair;
+      club = await settleClubBankInterest(club, tx);
       const config = await getGameConfig();
       const cost = vaultUpgradeCost(club.vaultLevel, config);
       if (cost === null) throw new BusinessError("Vault already maxed.");

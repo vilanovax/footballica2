@@ -197,6 +197,34 @@ export type GameConfig = {
     /** Club Shop: rate *= 1 + min(cap, fans / divisor). */
     shopFansDivisor: number;
     shopFansBonusCap: number;
+    /**
+     * First non-tutorial win of a Tehran day → temporary facility income boost.
+     * `boostBonus` is added to 1.0 (0.2 → +20%).
+     */
+    firstWinBoostBonus: number;
+    firstWinBoostMs: number;
+    /**
+     * Optional sponsored bank — % interest on spendable Club Funds (lazy settle).
+     * Never credits match coins.
+     */
+    sponsoredBank: {
+      /** Master switch from Live-Ops. */
+      enabled: boolean;
+      nameEn: string;
+      nameFa: string;
+      /** Percent per tick, e.g. 1 = 1%. */
+      interestPercent: number;
+      /** Hours between interest ticks. */
+      intervalHours: number;
+      /** Balance must be ≥ this for a non-zero floor(interest). */
+      minBalance: number;
+      /** Cap interest granted in a single tick. */
+      maxInterestPerTick: number;
+      /** Max missed ticks applied on one settle. */
+      maxCatchupTicks: number;
+      /** Spendable Funds cost to activate sponsored bank. */
+      upgradeCost: number;
+    };
     facilities: {
       TICKET_OFFICE: BusinessFacilityConfig;
       CLUB_SHOP: BusinessFacilityConfig;
@@ -312,6 +340,19 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     },
     shopFansDivisor: 2000,
     shopFansBonusCap: 0.5,
+    firstWinBoostBonus: 0.2,
+    firstWinBoostMs: 60 * 60 * 1000,
+    sponsoredBank: {
+      enabled: true,
+      nameEn: "Saman Bank",
+      nameFa: "بانک سامان",
+      interestPercent: 1,
+      intervalHours: 4,
+      minBalance: 100,
+      maxInterestPerTick: 50,
+      maxCatchupTicks: 3,
+      upgradeCost: 200,
+    },
     facilities: {
       TICKET_OFFICE: {
         unlockPlayerLevel: 1,
@@ -376,6 +417,8 @@ export function mergeGameConfig(raw: unknown): GameConfig {
   const be = (src.businessEconomy ?? {}) as Record<string, unknown>;
   const beVault = (be.vault ?? {}) as Record<string, unknown>;
   const beFac = (be.facilities ?? {}) as Record<string, unknown>;
+  const beBank = (be.sponsoredBank ?? {}) as Record<string, unknown>;
+  const DBank = DEFAULT_GAME_CONFIG.businessEconomy.sponsoredBank;
   const D = DEFAULT_GAME_CONFIG;
 
   const mergeFacility = (
@@ -669,6 +712,68 @@ export function mergeGameConfig(raw: unknown): GameConfig {
           num(be.shopFansBonusCap, D.businessEconomy.shopFansBonusCap),
         ),
       ),
+      firstWinBoostBonus: Math.min(
+        1,
+        Math.max(
+          0,
+          num(be.firstWinBoostBonus, D.businessEconomy.firstWinBoostBonus),
+        ),
+      ),
+      firstWinBoostMs: Math.max(
+        60_000,
+        Math.min(
+          24 * 60 * 60 * 1000,
+          Math.round(
+            num(be.firstWinBoostMs, D.businessEconomy.firstWinBoostMs),
+          ),
+        ),
+      ),
+      sponsoredBank: {
+        enabled:
+          typeof beBank.enabled === "boolean"
+            ? beBank.enabled
+            : DBank.enabled,
+        nameEn:
+          typeof beBank.nameEn === "string" && beBank.nameEn.trim()
+            ? beBank.nameEn.trim().slice(0, 48)
+            : DBank.nameEn,
+        nameFa:
+          typeof beBank.nameFa === "string" && beBank.nameFa.trim()
+            ? beBank.nameFa.trim().slice(0, 48)
+            : DBank.nameFa,
+        interestPercent: Math.min(
+          20,
+          Math.max(0, num(beBank.interestPercent, DBank.interestPercent)),
+        ),
+        intervalHours: Math.min(
+          48,
+          Math.max(
+            1,
+            Math.round(num(beBank.intervalHours, DBank.intervalHours)),
+          ),
+        ),
+        minBalance: Math.max(
+          0,
+          Math.round(num(beBank.minBalance, DBank.minBalance)),
+        ),
+        maxInterestPerTick: Math.max(
+          0,
+          Math.round(
+            num(beBank.maxInterestPerTick, DBank.maxInterestPerTick),
+          ),
+        ),
+        maxCatchupTicks: Math.min(
+          12,
+          Math.max(
+            1,
+            Math.round(num(beBank.maxCatchupTicks, DBank.maxCatchupTicks)),
+          ),
+        ),
+        upgradeCost: Math.max(
+          0,
+          Math.round(num(beBank.upgradeCost, DBank.upgradeCost)),
+        ),
+      },
       facilities: {
         TICKET_OFFICE: mergeFacility(
           beFac.TICKET_OFFICE,

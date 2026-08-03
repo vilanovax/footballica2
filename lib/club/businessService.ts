@@ -8,6 +8,7 @@ import type {
 } from "@/generated/prisma/client";
 import { calculateLevel } from "@/lib/game/economy";
 import { getGameConfig } from "@/lib/game/gameConfig";
+import { tehranDayKeyClient } from "@/lib/game/tehranClock";
 import {
   BUSINESS_FACILITY_KEYS,
   buildBusinessSnapshot,
@@ -15,6 +16,7 @@ import {
   type BusinessSnapshot,
   type FacilityRow,
 } from "@/lib/club/businessEconomy";
+import { settleSponsoredInterest } from "@/lib/club/bankInterest";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -90,6 +92,45 @@ export function facilitiesToRows(rows: ClubFacility[]): FacilityRow[] {
   }));
 }
 
+/** Apply due sponsored-bank interest ticks; persist if balance moved. */
+export async function settleClubBankInterest(
+  club: Club,
+  db: Db,
+  now: Date = new Date(),
+): Promise<Club> {
+  const config = await getGameConfig();
+  const settled = settleSponsoredInterest({
+    balance: club.clubFunds,
+    active: club.sponsoredBankActive,
+    lastAt: club.lastBankInterestAt,
+    now,
+    config,
+  });
+  if (settled.gained <= 0 && settled.ticks <= 0) return club;
+  if (
+    settled.gained <= 0 &&
+    club.lastBankInterestAt &&
+    settled.lastAt &&
+    settled.lastAt.getTime() === club.lastBankInterestAt.getTime()
+  ) {
+    return club;
+  }
+  if (settled.gained <= 0 && settled.ticks > 0 && settled.lastAt) {
+    // Advanced clock with zero payout — still persist anchor.
+    return db.club.update({
+      where: { id: club.id },
+      data: { lastBankInterestAt: settled.lastAt },
+    });
+  }
+  return db.club.update({
+    where: { id: club.id },
+    data: {
+      clubFunds: settled.balance,
+      lastBankInterestAt: settled.lastAt,
+    },
+  });
+}
+
 export async function loadBusinessSnapshot(
   club: Club,
   userXp: number,
@@ -98,16 +139,39 @@ export async function loadBusinessSnapshot(
   const playerLevel = calculateLevel(userXp).level;
   await ensureClubFacilities(club.id, playerLevel, db);
   const seeded = await maybeSeedClubFunds(club, playerLevel, db);
-  const rows = await db.clubFacility.findMany({ where: { clubId: seeded.id } });
+  const withInterest = await settleClubBankInterest(seeded, db);
+  const rows = await db.clubFacility.findMany({
+    where: { clubId: withInterest.id },
+  });
   const config = await getGameConfig();
   const business = buildBusinessSnapshot({
-    clubFunds: seeded.clubFunds,
-    vaultBalance: seeded.vaultBalance,
-    vaultLevel: seeded.vaultLevel,
-    fans: seeded.fans,
+    clubFunds: withInterest.clubFunds,
+    vaultBalance: withInterest.vaultBalance,
+    vaultLevel: withInterest.vaultLevel,
+    fans: withInterest.fans,
     playerLevel,
     facilities: facilitiesToRows(rows),
+    businessBoostExpiresAt: withInterest.businessBoostExpiresAt,
+    sponsoredBankActive: withInterest.sponsoredBankActive,
+    lastBankInterestAt: withInterest.lastBankInterestAt,
     config,
   });
-  return { club: seeded, business };
+  return { club: withInterest, business };
+}
+
+/** True when this win should start a fresh Tehran-day business income boost. */
+export function shouldGrantFirstWinBusinessBoost(
+  lastBusinessBoostAt: Date | null | undefined,
+  won: boolean,
+  isTutorial: boolean,
+  now: Date = new Date(),
+): boolean {
+  if (!won || isTutorial) return false;
+  if (
+    lastBusinessBoostAt &&
+    tehranDayKeyClient(lastBusinessBoostAt) === tehranDayKeyClient(now)
+  ) {
+    return false;
+  }
+  return true;
 }

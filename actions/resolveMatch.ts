@@ -28,6 +28,7 @@ import { computeStreakUpdate } from "@/lib/game/streak";
 import { evaluateAllMissionTracks } from "@/lib/game/missionEngine";
 import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
 import { SOLO_STAMINA_COST } from "@/lib/play/modeEconomy";
+import { shouldGrantFirstWinBusinessBoost } from "@/lib/club/businessService";
 
 const STAMINA_COST = SOLO_STAMINA_COST;
 
@@ -105,6 +106,10 @@ export type ResolveMatchResult =
       streak: StreakResult;
       /** LiveOps mission board after this match (progress + chest-ready). */
       missions: EvaluateMissionsResult;
+      /** First win of Tehran day unlocked a temporary Club Funds income boost. */
+      businessBoostGranted: boolean;
+      businessBoostMs: number;
+      businessBoostBonus: number;
     }
   | { ok: false; error: string };
 
@@ -348,6 +353,18 @@ export async function resolveMatch(
       const finalStamina = leveledUp ? club.maxStamina : spentStamina;
       const finalStaminaAnchor = leveledUp ? new Date() : staminaAnchor;
 
+      // First win of Tehran day → temporary Club Funds income boost (ADR 003).
+      const now = new Date();
+      const grantBusinessBoost = shouldGrantFirstWinBusinessBoost(
+        club.lastBusinessBoostAt,
+        finalRewards.won,
+        isTutorial,
+        now,
+      );
+      const businessBoostExpiresAt = grantBusinessBoost
+        ? new Date(now.getTime() + config.businessEconomy.firstWinBoostMs)
+        : undefined;
+
       const updatedClub = await tx.club.update({
         where: { id: club.id },
         data: {
@@ -373,6 +390,12 @@ export async function resolveMatch(
           dailyStreak: streak.dailyStreak,
           longestDailyStreak: streak.longestDailyStreak,
           lastPlayedDate: streak.lastPlayedDate,
+          ...(grantBusinessBoost
+            ? {
+                businessBoostExpiresAt,
+                lastBusinessBoostAt: now,
+              }
+            : {}),
         },
       });
 
@@ -454,6 +477,13 @@ export async function resolveMatch(
           isNewDay: streak.isNewDay,
         },
         missions: missionResult,
+        businessBoostGranted: grantBusinessBoost,
+        businessBoostMs: grantBusinessBoost
+          ? config.businessEconomy.firstWinBoostMs
+          : 0,
+        businessBoostBonus: grantBusinessBoost
+          ? config.businessEconomy.firstWinBoostBonus
+          : 0,
       };
     });
 

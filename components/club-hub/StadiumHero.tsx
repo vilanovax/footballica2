@@ -285,28 +285,150 @@ export function StadiumHero({
         title={t("stadium.sheetTitle")}
         subtitle={t(`stadium.tiers.${tierIndex}`)}
         closeLabel={t("common.close")}
+        tone="dark"
       >
-        <ul className="flex flex-col gap-3">
-          <StatRow
+        {/* Stage — matches Club Business facility sheets */}
+        <div
+          className={[
+            "relative -mx-1 mb-4 overflow-hidden rounded-bubble-xl border border-white/15 bg-gradient-to-br shadow-[0_8px_0_0_rgba(0,0,0,0.35)]",
+            tierIndex >= 3
+              ? "from-[#0c2d4a] via-[#134e75] to-[#1a7a55]"
+              : tierIndex >= 2
+                ? "from-[#14532d] via-[#166534] to-[#15803d]"
+                : tierIndex >= 1
+                  ? "from-[#3d2a08] via-[#7a5410] to-[#a16207]"
+                  : "from-[#292524] via-[#44403c] to-[#57534e]",
+          ].join(" ")}
+        >
+          <div
+            className="pointer-events-none absolute -start-8 top-0 h-32 w-32 rounded-full bg-emerald-400/30 blur-2xl"
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute -end-6 bottom-0 h-24 w-24 rounded-full bg-white/10 blur-xl"
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.07]"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(-12deg, transparent, transparent 12px, #fff 12px, #fff 13px)",
+            }}
+            aria-hidden
+          />
+
+          <div className="relative flex flex-col items-center px-4 pb-5 pt-6">
+            <motion.div
+              className="relative flex h-24 w-24 items-center justify-center rounded-full border-4 border-white/25 bg-black/25 text-5xl shadow-[0_0_40px_rgba(255,255,255,0.15)]"
+              animate={{ y: [0, -6, 0] }}
+              transition={{
+                repeat: Infinity,
+                duration: 2.8,
+                ease: "easeInOut",
+              }}
+              aria-hidden
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/icons/stadium.png"
+                alt=""
+                draggable={false}
+                className="h-14 w-14 object-contain drop-shadow-md"
+              />
+            </motion.div>
+
+            <div className="mt-3 flex items-center gap-1.5">
+              {Array.from({ length: 4 }, (_, i) => (
+                <span
+                  key={i}
+                  className={[
+                    "h-2.5 w-2.5 rounded-full border border-white/30",
+                    i < stadiumLevel
+                      ? "bg-emerald-400 shadow-[0_0_8px_currentColor]"
+                      : "bg-white/10",
+                  ].join(" ")}
+                  aria-hidden
+                />
+              ))}
+            </div>
+
+            <span className="mt-2 rounded-full bg-accent px-3 py-1 font-display text-xs font-black uppercase tracking-wide text-accent-foreground shadow-[0_3px_0_0_hsl(var(--accent-deep))]">
+              {tier.props}{" "}
+              {t("stadium.lvl")} {toLocaleDigits(stadiumLevel, locale)} ·{" "}
+              {t(`stadium.tiers.${tierIndex}`)}
+            </span>
+          </div>
+        </div>
+
+        <p className="text-center font-body text-sm font-semibold leading-relaxed text-white/65">
+          {t("stadium.sheetHint")}
+        </p>
+
+        <div className="mt-4 grid grid-cols-2 gap-2.5">
+          <GameStat
+            emoji="🏟️"
             label={t("stadium.statStadium")}
             value={`${t("stadium.lvl")} ${toLocaleDigits(stadiumLevel, locale)}`}
           />
-          <StatRow
+          <GameStat
+            emoji="👥"
             label={t("stadium.statFans")}
-            value={`${toLocaleDigits(fans, locale)} / ${toLocaleDigits(cap, locale)} (${toLocaleDigits(fillPct, locale)}%)`}
+            value={`${toLocaleDigits(fans, locale)}/${toLocaleDigits(cap, locale)}`}
+            hot={fillPct >= 90}
           />
-          <StatRow
+          <GameStat
+            emoji="🏃"
             label={t("stadium.statTraining")}
-            value={`${t("stadium.lvl")} ${toLocaleDigits(trainingGroundLevel, locale)} · ⚡${toLocaleDigits(maxStamina, locale)}`}
+            value={`${t("stadium.lvl")} ${toLocaleDigits(trainingGroundLevel, locale)}`}
+            sub={`⚡ ${toLocaleDigits(maxStamina, locale)}`}
           />
-          <StatRow
+          <GameStat
+            emoji="🏥"
             label={t("stadium.statMedical")}
-            value={`${t("stadium.lvl")} ${toLocaleDigits(medicalLevel, locale)} · ${t("stadium.regenEvery", { n: toLocaleDigits(regenMinutes, locale) })}`}
+            value={`${t("stadium.lvl")} ${toLocaleDigits(medicalLevel, locale)}`}
+            sub={t("stadium.regenEvery", {
+              n: toLocaleDigits(regenMinutes, locale),
+            })}
           />
-        </ul>
-        <p className="mt-4 font-body text-xs font-semibold leading-relaxed text-muted-foreground">
-          {t("stadium.sheetHint")}
-        </p>
+        </div>
+
+        {/* Fan fill meter */}
+        <div className="mt-4">
+          <div className="mb-1.5 flex items-center justify-between font-display text-[11px] font-bold text-white/55">
+            <span>{t("stadium.crowdFill")}</span>
+            <span dir="ltr" className="tabular-nums text-accent">
+              {toLocaleDigits(fillPct, locale)}%
+            </span>
+          </div>
+          <div className="relative h-4 overflow-hidden rounded-full border-2 border-white/15 bg-black/40 shadow-inner">
+            <motion.div
+              className={[
+                "absolute inset-y-0 start-0 rounded-full",
+                fillPct >= 90
+                  ? "bg-gradient-to-r from-amber-400 to-orange-400"
+                  : "bg-gradient-to-r from-emerald-400 to-lime-300",
+              ].join(" ")}
+              initial={false}
+              animate={{ width: `${fillPct}%` }}
+              transition={{ type: "spring", stiffness: 220, damping: 28 }}
+            />
+            {fillPct > 8 && fillPct < 100 && (
+              <motion.div
+                className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/35 to-transparent"
+                animate={{ opacity: [0.15, 0.55, 0.15] }}
+                transition={{
+                  repeat: Infinity,
+                  duration: 1.4,
+                  ease: "easeInOut",
+                }}
+                aria-hidden
+              />
+            )}
+          </div>
+          <p className="mt-2 text-center font-display text-[11px] font-bold text-white/45">
+            {t("stadium.tapUpgradesHint")}
+          </p>
+        </div>
       </BottomSheet>
     </>
   );
@@ -381,15 +503,46 @@ function FacilityBadge({
   );
 }
 
-function StatRow({ label, value }: { label: string; value: string }) {
+function GameStat({
+  emoji,
+  label,
+  value,
+  sub,
+  hot,
+}: {
+  emoji: string;
+  label: string;
+  value: string;
+  sub?: string;
+  hot?: boolean;
+}) {
   return (
-    <li className="flex items-center justify-between gap-3 rounded-bubble border border-border bg-muted/40 px-3 py-2.5">
-      <span className="font-display text-sm font-semibold text-muted-foreground">
+    <div
+      className={[
+        "rounded-bubble-lg border-2 px-3 py-2.5 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]",
+        hot
+          ? "border-amber-400/70 bg-amber-500/20"
+          : "border-white/12 bg-white/8",
+      ].join(" ")}
+    >
+      <p className="flex items-center gap-1 font-display text-[10px] font-bold uppercase tracking-wide text-white/50">
+        <span aria-hidden>{emoji}</span>
         {label}
-      </span>
-      <span className="font-display text-sm font-bold text-foreground">
+      </p>
+      <p
+        dir="ltr"
+        className={[
+          "mt-1 font-display text-lg font-black tabular-nums tracking-tight",
+          hot ? "text-amber-300" : "text-white",
+        ].join(" ")}
+      >
         {value}
-      </span>
-    </li>
+      </p>
+      {sub ? (
+        <p className="mt-0.5 font-display text-[11px] font-bold text-white/55">
+          {sub}
+        </p>
+      ) : null}
+    </div>
   );
 }

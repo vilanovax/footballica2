@@ -72,10 +72,13 @@ export function BottomNav() {
       const res = await getDuelInboxCount();
       if (cancelled || !res.ok) return;
       if (res.count > prev && prev >= 0) {
+        const href = res.topId
+          ? `/play/duel/${res.topId}`
+          : "/play/duel";
         toast.message(t("duel.inboxToast", { n: String(res.count) }), {
           action: {
-            label: t("duel.inboxCta"),
-            onClick: () => router.push("/play/duel"),
+            label: t("duel.inboxPlayNow"),
+            onClick: () => router.push(href),
           },
         });
         haptic(HAPTIC.tap);

@@ -74,6 +74,8 @@ type MatchCardProps = {
   survivalBest?: number | null;
   /** Live RecordChallenges count — shown on Survival card. */
   liveChallengeCount?: number;
+  /** Your-turn pulse for Draft Duel. */
+  urgentBadge?: string | null;
   tone: MatchCardTone;
 };
 
@@ -89,11 +91,13 @@ export function MatchCard({
   economy,
   survivalBest = null,
   liveChallengeCount = 0,
+  urgentBadge = null,
   tone,
 }: MatchCardProps) {
   const { t, locale } = useTranslation();
   const [infoOpen, setInfoOpen] = useState(false);
   const style = TONE[tone];
+  const urgent = Boolean(urgentBadge);
 
   function openInfo(e: React.MouseEvent) {
     e.preventDefault();
@@ -109,22 +113,35 @@ export function MatchCard({
         className={[
           "rounded-bubble-xl border p-3.5 shadow-fantasy-sm",
           style.tint,
+          urgent ? "border-accent/60 ring-2 ring-accent/35" : "",
         ].join(" ")}
       >
         <div className="flex items-start gap-3">
           <span
             className={[
-              "flex h-12 w-12 shrink-0 items-center justify-center rounded-bubble text-2xl shadow-fantasy-sm",
+              "relative flex h-12 w-12 shrink-0 items-center justify-center rounded-bubble text-2xl shadow-fantasy-sm",
               style.iconBg,
             ].join(" ")}
             aria-hidden
           >
             {style.icon}
+            {urgent ? (
+              <span className="absolute -end-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 font-display text-[10px] font-black text-white shadow-fantasy-sm">
+                !
+              </span>
+            ) : null}
           </span>
           <div className="min-w-0 flex-1">
-            <h3 className="font-display text-lg font-bold text-foreground">
-              {title}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-display text-lg font-bold text-foreground">
+                {title}
+              </h3>
+              {urgentBadge ? (
+                <span className="rounded-full bg-accent px-2 py-0.5 font-display text-[10px] font-black uppercase tracking-wide text-white">
+                  {urgentBadge}
+                </span>
+              ) : null}
+            </div>
             <p className="mt-0.5 font-body text-xs font-semibold text-muted-foreground">
               {blurb}
             </p>

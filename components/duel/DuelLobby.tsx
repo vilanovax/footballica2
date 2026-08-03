@@ -35,14 +35,28 @@ function statusLabel(d: DuelSnapshot, t: (k: string) => string): string {
     return t("duel.finished");
   }
   if (d.status === "MATCHING") return t("duel.matchingBadge");
-  if (d.canAct) return t("duel.yourTurn");
-  if (d.status === "WAITING_A" && d.youAre === "challenger") {
+
+  const yourTurn =
+    d.canAct ||
+    (d.status === "WAITING_A" && d.youAre === "challenger") ||
+    (d.status === "WAITING_B" && d.youAre === "opponent");
+
+  if (yourTurn) {
+    if (d.status === "A_ATTACKING" || d.status === "B_ATTACKING") {
+      return t("duel.inboxActionAttack");
+    }
+    if (
+      d.status === "A_DEFENDING" ||
+      d.status === "B_DEFENDING" ||
+      d.status === "WAITING_A" ||
+      d.status === "WAITING_B"
+    ) {
+      return t("duel.inboxActionDefend");
+    }
     return t("duel.yourTurn");
   }
-  if (d.status === "WAITING_B" && d.youAre === "opponent") {
-    return t("duel.yourTurn");
-  }
-  return t("duel.waiting");
+
+  return t("duel.inboxWaitingRival");
 }
 
 export function DuelLobby({

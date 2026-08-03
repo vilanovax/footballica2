@@ -15,11 +15,11 @@ export default async function AdminGameConfigPage() {
           <AdminHelpTip
             wide
             title="Live rates"
-            text="One Save updates theme week and economy rates for everyone — no redeploy. Use tabs for Match / Survival / Duel / GotD details."
+            text="One Save updates theme week and economy rates for everyone — no redeploy. Club Biz tunes Club Funds idle (never match coins)."
           />
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          نرخ‌ها و تم هفته · یک Save
+          نرخ‌ها، تم هفته، اقتصاد باشگاه · یک Save
         </p>
       </div>
 

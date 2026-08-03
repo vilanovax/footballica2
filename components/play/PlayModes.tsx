@@ -161,12 +161,19 @@ export function PlayModes({
               ? t("play.duelContinueBlurb", {
                   n: toLocaleDigits(inboxCount, locale),
                   name: topDuel?.rivalName ?? "…",
+                  action:
+                    topDuel?.action === "defend"
+                      ? t("duel.inboxActionDefend")
+                      : topDuel?.action === "attack"
+                        ? t("duel.inboxActionAttack")
+                        : t("duel.inboxActionAct"),
                 })
               : t("play.duelDesc")
           }
           ctaLabel={
             hasDuelTurn ? t("play.ctaContinueDuel") : t("play.ctaDuel")
           }
+          urgentBadge={hasDuelTurn ? t("play.duelYourTurnBadge") : null}
           economy={modes.duel}
         />
       </div>

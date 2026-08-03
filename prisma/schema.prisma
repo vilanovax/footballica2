@@ -278,6 +278,14 @@ model Club {
   vaultBalance Int @default(0)
   /// Vault capacity tier (hours of aggregate income). Starts at 1.
   vaultLevel   Int @default(1)
+  /// Temporary income multiplier end (first win of Tehran day).
+  businessBoostExpiresAt DateTime?
+  /// When the daily business boost was last granted (Tehran day gate).
+  lastBusinessBoostAt    DateTime?
+  /// Opt-in sponsored bank — lazy % interest on spendable Club Funds.
+  sponsoredBankActive Boolean   @default(false)
+  /// Anchor for sponsored-bank interest ticks (advanced on settle).
+  lastBankInterestAt  DateTime?
 
   // Infrastructure upgrade levels (0 = ruined start state)
   stadiumLevel        Int @default(0)

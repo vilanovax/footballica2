@@ -3,6 +3,8 @@
 
 import type { GameConfig } from "@/lib/game/economy";
 import { DEFAULT_GAME_CONFIG } from "@/lib/game/economy";
+import type { BankView } from "@/lib/club/bankInterest";
+import { buildBankView } from "@/lib/club/bankInterest";
 
 export type BusinessFacilityKey = "TICKET_OFFICE" | "CLUB_SHOP" | "MUSEUM";
 
@@ -43,6 +45,7 @@ export type FacilityView = {
   status: FacilityStatus;
   level: number;
   unlockPlayerLevel: number;
+  maxLevel: number;
   storedAmount: number;
   ratePerHour: number;
   storageCap: number;
@@ -52,9 +55,20 @@ export type FacilityView = {
   msUntilFull: number;
   buildCost: number | null;
   upgradeCost: number | null;
+  /** Rate/cap at next level (BUILT, not max) or L1 preview when not built. */
+  nextRatePerHour: number | null;
+  nextStorageCap: number | null;
   canBuild: boolean;
   canUpgrade: boolean;
   version: number;
+};
+
+export type IncomeBoostView = {
+  active: boolean;
+  /** e.g. 1.2 while first-win boost is live. */
+  multiplier: number;
+  expiresAt: string | null;
+  msRemaining: number;
 };
 
 export type BusinessSnapshot = {
@@ -62,6 +76,9 @@ export type BusinessSnapshot = {
   vaultBalance: number;
   vaultLevel: number;
   vaultCap: number;
+  /** Cap after next vault upgrade; null if maxed. */
+  nextVaultCap: number | null;
+  vaultMaxLevel: number;
   /** 0..1 */
   vaultFillRatio: number;
   msUntilVaultFull: number;
@@ -70,6 +87,8 @@ export type BusinessSnapshot = {
   collectableTotal: number;
   facilities: FacilityView[];
   playerLevel: number;
+  incomeBoost: IncomeBoostView;
+  bank: BankView;
 };
 
 const MS_PER_HOUR = 3_600_000;
@@ -93,17 +112,52 @@ export function fansFactor(
   return 1 + bonus;
 }
 
+/** Active first-win (or similar) income multiplier; 1 when idle. */
+export function incomeBoostMultiplier(
+  expiresAt: Date | string | null | undefined,
+  now: Date = new Date(),
+  config: GameConfig = DEFAULT_GAME_CONFIG,
+): number {
+  if (!expiresAt) return 1;
+  const end =
+    expiresAt instanceof Date ? expiresAt : new Date(expiresAt);
+  if (Number.isNaN(end.getTime()) || end.getTime() <= now.getTime()) return 1;
+  return 1 + Math.max(0, config.businessEconomy.firstWinBoostBonus);
+}
+
+export function buildIncomeBoostView(
+  expiresAt: Date | string | null | undefined,
+  now: Date = new Date(),
+  config: GameConfig = DEFAULT_GAME_CONFIG,
+): IncomeBoostView {
+  const mult = incomeBoostMultiplier(expiresAt, now, config);
+  const end =
+    expiresAt instanceof Date
+      ? expiresAt
+      : expiresAt
+        ? new Date(expiresAt)
+        : null;
+  const active = mult > 1 && end !== null && !Number.isNaN(end.getTime());
+  return {
+    active,
+    multiplier: mult,
+    expiresAt: active && end ? end.toISOString() : null,
+    msRemaining: active && end ? Math.max(0, end.getTime() - now.getTime()) : 0,
+  };
+}
+
 export function rateAtLevel(
   def: FacilityDefinition,
   level: number,
   fans: number,
   config: GameConfig = DEFAULT_GAME_CONFIG,
+  rateBoost = 1,
 ): number {
   if (level < 1) return 0;
   const base =
     def.baseRatePerHour * Math.pow(def.rateGrowth, Math.max(0, level - 1));
   const factor = def.usesFansFactor ? fansFactor(fans, config) : 1;
-  return Math.max(0, Math.floor(base * factor));
+  return Math.max(0, Math.floor(base * factor * Math.max(1, rateBoost)));
 }
 
 export function storageCapAtLevel(
@@ -111,9 +165,10 @@ export function storageCapAtLevel(
   level: number,
   fans: number,
   config: GameConfig = DEFAULT_GAME_CONFIG,
+  rateBoost = 1,
 ): number {
   if (level < 1) return 0;
-  const rate = rateAtLevel(def, level, fans, config);
+  const rate = rateAtLevel(def, level, fans, config, rateBoost);
   const hours =
     def.baseStorageHours * Math.pow(def.capGrowth, Math.max(0, level - 1));
   return Math.max(1, Math.floor(rate * hours));
@@ -215,11 +270,24 @@ export function buildBusinessSnapshot(input: {
   fans: number;
   playerLevel: number;
   facilities: FacilityRow[];
+  businessBoostExpiresAt?: Date | string | null;
+  sponsoredBankActive?: boolean;
+  lastBankInterestAt?: Date | string | null;
   config?: GameConfig;
   now?: Date;
 }): BusinessSnapshot {
   const config = input.config ?? DEFAULT_GAME_CONFIG;
   const now = input.now ?? new Date();
+  const rateBoost = incomeBoostMultiplier(
+    input.businessBoostExpiresAt,
+    now,
+    config,
+  );
+  const incomeBoost = buildIncomeBoostView(
+    input.businessBoostExpiresAt,
+    now,
+    config,
+  );
   const byKey = new Map(input.facilities.map((f) => [f.key, f]));
 
   let totalRate = 0;
@@ -239,10 +307,12 @@ export function buildBusinessSnapshot(input: {
           : "LOCKED";
 
     const rate =
-      status === "BUILT" ? rateAtLevel(def, level, input.fans, config) : 0;
+      status === "BUILT"
+        ? rateAtLevel(def, level, input.fans, config, rateBoost)
+        : 0;
     const cap =
       status === "BUILT"
-        ? storageCapAtLevel(def, level, input.fans, config)
+        ? storageCapAtLevel(def, level, input.fans, config, rateBoost)
         : 0;
 
     let stored = row?.storedAmount ?? 0;
@@ -264,11 +334,29 @@ export function buildBusinessSnapshot(input: {
     const bCost = buildCost(def);
     const uCost = status === "BUILT" ? upgradeCost(def, level) : null;
 
+    let nextRate: number | null = null;
+    let nextCap: number | null = null;
+    if (status === "BUILT" && level < def.maxLevel) {
+      nextRate = rateAtLevel(def, level + 1, input.fans, config, rateBoost);
+      nextCap = storageCapAtLevel(
+        def,
+        level + 1,
+        input.fans,
+        config,
+        rateBoost,
+      );
+    } else if (status !== "BUILT") {
+      // Teaser at level 1 for locked / ready-to-build cards.
+      nextRate = rateAtLevel(def, 1, input.fans, config, rateBoost);
+      nextCap = storageCapAtLevel(def, 1, input.fans, config, rateBoost);
+    }
+
     views.push({
       key,
       status,
       level: status === "BUILT" ? level : 0,
       unlockPlayerLevel: def.unlockPlayerLevel,
+      maxLevel: def.maxLevel,
       storedAmount: stored,
       ratePerHour: rate,
       storageCap: cap,
@@ -277,6 +365,8 @@ export function buildBusinessSnapshot(input: {
         status === "BUILT" ? msUntilBufferFull(stored, cap, rate) : 0,
       buildCost: status === "AVAILABLE" ? bCost : null,
       upgradeCost: uCost,
+      nextRatePerHour: nextRate,
+      nextStorageCap: nextCap,
       canBuild:
         status === "AVAILABLE" && input.clubFunds >= bCost && bCost >= 0,
       canUpgrade:
@@ -288,6 +378,11 @@ export function buildBusinessSnapshot(input: {
   }
 
   const vCap = vaultCapacity(input.vaultLevel, totalRate, config);
+  const vUpCost = vaultUpgradeCost(input.vaultLevel, config);
+  const nextVCap =
+    vUpCost !== null
+      ? vaultCapacity(input.vaultLevel + 1, totalRate, config)
+      : null;
   const vaultSpace = Math.max(0, vCap - input.vaultBalance);
   const msUntilVaultFull =
     totalRate > 0 && vaultSpace > 0
@@ -299,13 +394,23 @@ export function buildBusinessSnapshot(input: {
     vaultBalance: input.vaultBalance,
     vaultLevel: input.vaultLevel,
     vaultCap: vCap,
+    nextVaultCap: nextVCap,
+    vaultMaxLevel: config.businessEconomy.vault.maxLevel,
     vaultFillRatio: vCap > 0 ? Math.min(1, input.vaultBalance / vCap) : 0,
     msUntilVaultFull,
     totalRatePerHour: totalRate,
-    vaultUpgradeCost: vaultUpgradeCost(input.vaultLevel, config),
+    vaultUpgradeCost: vUpCost,
     collectableTotal,
     facilities: views,
     playerLevel: input.playerLevel,
+    incomeBoost,
+    bank: buildBankView({
+      clubFunds: input.clubFunds,
+      sponsoredActive: Boolean(input.sponsoredBankActive),
+      lastBankInterestAt: input.lastBankInterestAt,
+      config,
+      now,
+    }),
   };
 }
 

@@ -1,8 +1,9 @@
 # ADR 003: Club Tycoon Economy (Phase A) — Business Layer beside Quiz
 
-- **Status:** Accepted
+- **Status:** Accepted (Phase A **implemented**)
 - **Date:** 2026-08-02
 - **Related:** PRD §3–4 (Club Hub / Progression); existing `Club` gameplay upgrades in `lib/club/upgrades.ts`
+- **Living overview (all currencies + shipped work):** [docs/economy.md](../economy.md)
 
 ## Context
 
@@ -301,8 +302,13 @@ Target interaction budget: **under ~60 seconds**.
 
 ## Follow-ups
 
-1. Implement pure math in `lib/club/businessEconomy.ts` + admin-tunable defaults in `lib/game/economy.ts`.
-2. Prisma migration for `Club` fund fields + `ClubFacility`.
-3. Server actions: `collectFacilities`, `withdrawVault`, `buildFacility`, `upgradeFacility`, `upgradeVault`.
-4. Club Hub UI: map pins / cards + Collect All CTA (no spreadsheet of three sliders).
-5. Wire FTUE seed; playtest 7-day spreadsheet against §9 balance target before adding Staff.
+Phase A implementation checklist (done — see [economy.md §11](../economy.md)):
+
+1. ~~Pure math + `GameConfig.businessEconomy` defaults~~
+2. ~~Prisma: Club fund fields + `ClubFacility` + first-win boost columns~~
+3. ~~Server actions: collect / withdraw / build / upgrade / vault~~
+4. ~~Hub `BusinessPanel` + Collect All~~
+5. ~~FTUE seed Funds + free Ticket Office~~
+6. ~~Admin Club Biz tab; first-win +20% income boost~~
+
+Still open (Phase B+): Staff / vault notifications / Museum trophy % / Stadium→Ticket link / branch milestones. Playtest 7-day spreadsheet against §9 before Staff.
