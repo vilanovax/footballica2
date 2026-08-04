@@ -25,21 +25,21 @@ const PLACES: Record<
 > = {
   1: {
     ring: "ring-[#e0a800]",
-    glow: "shadow-[0_0_28px_rgba(224,168,0,0.45)]",
+    glow: "shadow-[0_0_28px_rgba(224,168,0,0.55)]",
     bar: "bg-linear-to-b from-[#ffe07a] to-[#e0a800]",
     barHeight: "h-20",
     avatarSize: "h-[4.5rem] w-[4.5rem]",
   },
   2: {
     ring: "ring-[#9aa4ad]",
-    glow: "shadow-[0_0_18px_rgba(154,164,173,0.35)]",
+    glow: "shadow-[0_0_18px_rgba(154,164,173,0.4)]",
     bar: "bg-linear-to-b from-[#e6ecf1] to-[#9aa4ad]",
     barHeight: "h-14",
     avatarSize: "h-14 w-14",
   },
   3: {
     ring: "ring-[#c08457]",
-    glow: "shadow-[0_0_18px_rgba(192,132,87,0.35)]",
+    glow: "shadow-[0_0_18px_rgba(192,132,87,0.4)]",
     bar: "bg-linear-to-b from-[#f0d3bd] to-[#c08457]",
     barHeight: "h-11",
     avatarSize: "h-14 w-14",
@@ -48,17 +48,29 @@ const PLACES: Record<
 
 const RENDER_ORDER = [2, 1, 3] as const;
 
+/** Top-3 podium — dark game stage matching Club Hub chrome. */
 export function LeaderboardPodium({ rows }: LeaderboardPodiumProps) {
   const { t, locale } = useTranslation();
   const byRank = new Map(rows.map((r) => [r.rank, r] as const));
 
   return (
-    <div className="relative mb-3 overflow-hidden rounded-3xl border border-white/10 bg-[#121820] px-2 pb-1 pt-3 shadow-[0_12px_32px_rgba(0,0,0,0.28)]">
+    <div className="relative mb-3 overflow-hidden rounded-bubble-xl bg-linear-to-br from-[#1c1408] via-[#121820] to-[#022c22] px-2 pb-1 pt-3 shadow-[0_6px_0_0_rgba(0,0,0,0.35),0_0_0_1px_rgba(251,191,36,0.35)]">
       <div
+        className="pointer-events-none absolute inset-0 opacity-[0.06]"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
+        }}
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-linear-to-b from-amber-400/12 via-transparent to-emerald-500/10"
       />
-      <p className="relative mb-2 text-center font-display text-[10px] font-extrabold uppercase tracking-[0.2em] text-amber-200/70">
+      <motion.div
+        aria-hidden
+        className="pointer-events-none absolute -end-8 top-0 h-28 w-28 rounded-full bg-amber-300/25 blur-2xl"
+        animate={{ opacity: [0.2, 0.5, 0.2] }}
+        transition={{ duration: 2.6, repeat: Infinity }}
+      />
+
+      <p className="relative mb-2 text-center font-display text-[10px] font-black uppercase tracking-[0.2em] text-amber-200/75">
         {t("leaderboard.podiumTitle")}
       </p>
 
@@ -80,7 +92,7 @@ export function LeaderboardPodium({ rows }: LeaderboardPodiumProps) {
                 damping: 20,
                 delay: rank === 1 ? 0.08 : rank === 2 ? 0.16 : 0.24,
               }}
-              className="flex flex-1 flex-col items-center"
+              className="flex min-w-0 flex-1 flex-col items-center"
             >
               {isChampion && (
                 <motion.div
@@ -104,7 +116,9 @@ export function LeaderboardPodium({ rows }: LeaderboardPodiumProps) {
                     place.ring,
                     place.glow,
                     place.avatarSize,
-                    row.isCurrentUser ? "outline outline-2 outline-offset-2 outline-primary" : "",
+                    row.isCurrentUser
+                      ? "outline outline-2 outline-offset-2 outline-accent"
+                      : "",
                   ].join(" ")}
                 >
                   <AvatarImage
@@ -124,17 +138,20 @@ export function LeaderboardPodium({ rows }: LeaderboardPodiumProps) {
                 </span>
               </div>
 
-              <p className="mt-2 w-full truncate text-center font-display text-[11px] font-bold text-white">
-                {shortClubName(row.clubName, isChampion ? 16 : 12)}
+              <p
+                className="mt-2 w-full truncate px-0.5 text-center font-display text-[11px] font-black text-white"
+                title={row.clubName}
+              >
+                {shortClubName(row.clubName, isChampion ? 18 : 14)}
               </p>
-              <p className="inline-flex items-center gap-0.5 font-display text-xs font-extrabold tabular-nums text-emerald-300">
+              <p className="inline-flex items-center gap-0.5 rounded-full bg-black/35 px-2 py-0.5 font-display text-xs font-extrabold tabular-nums text-emerald-300 ring-1 ring-white/10">
                 <ResourceIcon kind="xp" size="sm" className="h-3.5 w-3.5" />
                 {formatNumber(row.weeklyXp, locale)}
               </p>
 
               <div
                 className={[
-                  "mt-1.5 flex w-full items-start justify-center rounded-t-2xl pt-1.5 font-display text-xl font-black text-black/65",
+                  "mt-1.5 flex w-full items-start justify-center rounded-t-2xl pt-1.5 font-display text-xl font-black text-black/70 shadow-[inset_0_2px_0_0_rgba(255,255,255,0.25)]",
                   place.bar,
                   place.barHeight,
                 ].join(" ")}

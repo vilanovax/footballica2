@@ -23,34 +23,84 @@ const LOCALE_LABEL: Record<Locale, { native: string; flag: string }> = {
   fa: { native: "فارسی", flag: "🇮🇷" },
 };
 
-/** Section header: tinted icon badge + title + description. */
+function Pinstripe() {
+  return (
+    <div
+      className="pointer-events-none absolute inset-0 opacity-[0.06]"
+      style={{
+        backgroundImage:
+          "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
+      }}
+      aria-hidden
+    />
+  );
+}
+
+function SettingsCard({
+  children,
+  tone = "emerald",
+}: {
+  children: React.ReactNode;
+  tone?: "emerald" | "amber" | "sky" | "rose";
+}) {
+  const rim =
+    tone === "amber"
+      ? "border-amber-400/40"
+      : tone === "sky"
+        ? "border-sky-400/40"
+        : tone === "rose"
+          ? "border-rose-400/40"
+          : "border-emerald-400/40";
+  const wash =
+    tone === "amber"
+      ? "from-[#3d2a08] via-[#5c3d0a] to-[#0f172a]"
+      : tone === "sky"
+        ? "from-[#0c2d4a] via-[#134e75] to-[#0f172a]"
+        : tone === "rose"
+          ? "from-[#4c0519] via-[#7f1d1d] to-[#0f172a]"
+          : "from-[#052e16] via-[#14532d] to-[#0f172a]";
+
+  return (
+    <div
+      className={[
+        "relative overflow-hidden rounded-bubble-xl border-[3px] bg-linear-to-br p-4 shadow-[0_5px_0_0_rgba(0,0,0,0.28)]",
+        rim,
+        wash,
+      ].join(" ")}
+    >
+      <Pinstripe />
+      <div className="relative">{children}</div>
+    </div>
+  );
+}
+
 function CardHeader({
   icon,
-  tint,
   title,
   desc,
   children,
 }: {
   icon: string;
-  tint: string;
   title: string;
   desc: string;
   children?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4">
+    <div className="flex items-start justify-between gap-3">
       <div className="flex min-w-0 items-start gap-3">
         <span
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-bubble text-xl ${tint}`}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border-2 border-white/20 bg-black/30 text-xl shadow-[0_3px_0_0_rgba(0,0,0,0.35)]"
           aria-hidden
         >
           {icon}
         </span>
         <div className="min-w-0">
-          <p className="font-display text-lg font-bold text-surface-foreground">
+          <p className="font-display text-base font-black text-white drop-shadow-sm">
             {title}
           </p>
-          <p className="mt-0.5 text-sm text-muted-foreground">{desc}</p>
+          <p className="mt-0.5 font-display text-[11px] font-bold text-white/55">
+            {desc}
+          </p>
         </div>
       </div>
       {children}
@@ -58,7 +108,6 @@ function CardHeader({
   );
 }
 
-/** Chunky selectable pill with icon + label and a check badge when active. */
 function OptionButton({
   selected,
   onClick,
@@ -76,10 +125,10 @@ function OptionButton({
       onClick={onClick}
       aria-pressed={selected}
       className={[
-        "btn-fantasy min-h-touch relative flex-col gap-1 rounded-bubble border px-3 py-4 font-display text-sm font-bold",
+        "relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl border-2 px-3 py-3 font-display text-sm font-black shadow-[0_3px_0_0_rgba(0,0,0,0.3)] transition-transform active:translate-y-px active:shadow-none",
         selected
-          ? "border-primary bg-primary text-primary-foreground shadow-btn-3d"
-          : "border-border bg-muted text-muted-foreground shadow-fantasy-sm",
+          ? "border-accent bg-accent text-accent-foreground"
+          : "border-white/15 bg-black/30 text-white/70",
       ].join(" ")}
     >
       {selected && (
@@ -87,7 +136,7 @@ function OptionButton({
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: "spring", stiffness: 500, damping: 22 }}
-          className="absolute top-1.5 inset-inline-end-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-background text-[11px] font-black text-primary shadow-fantasy-sm"
+          className="absolute top-1.5 inset-inline-end-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/25 text-[11px] font-black"
           aria-hidden
         >
           ✓
@@ -106,7 +155,6 @@ export default function SettingsPage() {
   const [theme, setTheme] = useState<Theme>("day");
   const { isMuted, toggleMute, play } = useSound();
   const { t, locale, setLocale } = useTranslation();
-  // Avoid hydration mismatch: mute state comes from persisted client storage.
   const [mounted, setMounted] = useState(false);
   const [loggingOut, startLogout] = useTransition();
 
@@ -129,14 +177,12 @@ export default function SettingsPage() {
   function handleToggleMute() {
     const willUnmute = isMuted;
     toggleMute();
-    // Play a confirmation click when turning sound ON.
     if (willUnmute) play("click");
   }
 
   function handleSetLocale(next: Locale) {
     if (next !== locale) play("click");
     setLocale(next);
-    // Server pickers (Survival / Duel) read locale from cookie.
     router.refresh();
   }
 
@@ -152,24 +198,26 @@ export default function SettingsPage() {
   }
 
   return (
-    <section className="flex flex-1 flex-col gap-6">
-      <header className="pt-2">
-        <p className="font-display text-sm font-semibold uppercase tracking-widest text-primary">
-          {t("settings.eyebrow")}
-        </p>
-        <h1 className="mt-1 font-display text-3xl font-bold text-foreground">
-          {t("settings.title")}
-        </h1>
+    <section className="flex flex-1 flex-col gap-3 pb-4">
+      <header className="relative overflow-hidden rounded-bubble-xl border-[3px] border-emerald-400/40 bg-linear-to-br from-[#052e16] via-[#14532d] to-[#0f172a] px-4 py-3.5 shadow-[0_5px_0_0_rgba(0,0,0,0.28)]">
+        <Pinstripe />
+        <div className="relative">
+          <p className="font-display text-[10px] font-black uppercase tracking-widest text-emerald-200/75">
+            {t("settings.eyebrow")}
+          </p>
+          <h1 className="mt-0.5 font-display text-2xl font-black text-white drop-shadow-sm">
+            {t("settings.title")}
+          </h1>
+        </div>
       </header>
 
-      <div className="rounded-bubble-xl border border-border bg-surface p-5 shadow-fantasy">
+      <SettingsCard tone="emerald">
         <CardHeader
           icon="🌐"
-          tint="bg-secondary/15"
           title={t("settings.language")}
           desc={t("settings.languageDesc")}
         />
-        <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="mt-3.5 grid grid-cols-2 gap-2.5">
           {LOCALES.map((code) => (
             <OptionButton
               key={code}
@@ -180,16 +228,15 @@ export default function SettingsPage() {
             />
           ))}
         </div>
-      </div>
+      </SettingsCard>
 
-      <div className="rounded-bubble-xl border border-border bg-surface p-5 shadow-fantasy">
+      <SettingsCard tone="amber">
         <CardHeader
           icon="🎨"
-          tint="bg-accent/15"
           title={t("settings.theme")}
           desc={t("settings.themeDesc")}
         />
-        <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="mt-3.5 grid grid-cols-2 gap-2.5">
           <OptionButton
             selected={theme === "day"}
             onClick={() => applyTheme("day")}
@@ -203,12 +250,11 @@ export default function SettingsPage() {
             label={t("settings.night")}
           />
         </div>
-      </div>
+      </SettingsCard>
 
-      <div className="rounded-bubble-xl border border-border bg-surface p-5 shadow-fantasy">
+      <SettingsCard tone="sky">
         <CardHeader
           icon={soundOn ? "🔊" : "🔇"}
-          tint="bg-primary/15"
           title={t("settings.sound")}
           desc={t("settings.soundDesc")}
         >
@@ -218,16 +264,16 @@ export default function SettingsPage() {
             aria-checked={soundOn}
             onClick={handleToggleMute}
             className={[
-              "relative flex h-11 w-20 shrink-0 items-center rounded-full border px-1 transition-colors",
+              "relative flex h-11 w-20 shrink-0 items-center rounded-full border-2 px-1 shadow-[0_3px_0_0_rgba(0,0,0,0.3)] transition-colors",
               soundOn
-                ? "justify-end border-primary bg-primary shadow-btn-3d"
-                : "justify-start border-border bg-muted shadow-fantasy-sm",
+                ? "justify-end border-accent bg-accent"
+                : "justify-start border-white/15 bg-black/40",
             ].join(" ")}
           >
             <motion.span
               layout
               transition={{ type: "spring", stiffness: 500, damping: 34 }}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-surface text-sm shadow-fantasy-sm"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-black/25 text-sm"
             >
               <span aria-hidden>{soundOn ? "🔊" : "🔇"}</span>
             </motion.span>
@@ -236,20 +282,19 @@ export default function SettingsPage() {
 
         <span
           className={[
-            "mt-4 inline-flex items-center rounded-full px-3 py-1 font-display text-xs font-bold",
+            "mt-3 inline-flex items-center rounded-full px-3 py-1 font-display text-[11px] font-black",
             soundOn
-              ? "bg-primary/15 text-primary"
-              : "bg-muted text-muted-foreground",
+              ? "bg-accent/25 text-amber-100 ring-1 ring-accent/40"
+              : "bg-white/10 text-white/50 ring-1 ring-white/15",
           ].join(" ")}
         >
           {soundOn ? t("settings.on") : t("settings.off")}
         </span>
-      </div>
+      </SettingsCard>
 
-      <div className="rounded-bubble-xl border border-border bg-surface p-5 shadow-fantasy">
+      <SettingsCard tone="rose">
         <CardHeader
           icon="🚪"
-          tint="bg-destructive/10"
           title={t("settings.account")}
           desc={t("settings.accountDesc")}
         />
@@ -257,20 +302,20 @@ export default function SettingsPage() {
           type="button"
           disabled={loggingOut}
           onClick={handleLogout}
-          className="btn-fantasy mt-4 flex min-h-touch w-full items-center justify-center border-2 border-destructive/40 bg-destructive/10 font-display text-base font-bold text-destructive transition-transform active:scale-[0.98] disabled:opacity-60"
+          className="mt-3.5 flex min-h-12 w-full items-center justify-center rounded-2xl border-2 border-rose-300/50 bg-rose-500/25 font-display text-base font-black text-rose-100 shadow-[0_3px_0_0_rgba(0,0,0,0.3)] transition-transform active:translate-y-px active:shadow-none disabled:opacity-60"
         >
           {loggingOut ? t("settings.loggingOut") : t("settings.logout")}
         </button>
-      </div>
+      </SettingsCard>
 
-      <footer className="mt-auto pt-4 text-center">
-        <p className="font-display text-lg font-black tracking-wide text-primary/70">
+      <footer className="mt-auto pt-2 text-center">
+        <p className="font-display text-lg font-black tracking-wide text-emerald-800/70">
           Footballica
         </p>
-        <p className="mt-0.5 text-xs font-semibold text-muted-foreground">
+        <p className="mt-0.5 font-display text-[11px] font-bold text-muted-foreground">
           {t("settings.tagline")}
         </p>
-        <p className="mt-1 text-[11px] font-semibold text-muted-foreground/70 tabular-nums">
+        <p className="mt-1 font-display text-[11px] font-bold tabular-nums text-muted-foreground/70">
           v0.1.0
         </p>
       </footer>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { ChevronRight } from "lucide-react";
 import type { UpgradeDef, UpgradeKey } from "@/lib/club/upgrades";
 import {
   fansSoftCap,
@@ -15,24 +16,30 @@ import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
 import { UpgradeIcon } from "@/components/club-hub/UpgradeIcon";
 
-const UPGRADE_HERO: Record<
+const UPGRADE_SKIN: Record<
   UpgradeKey,
-  { hero: string; glow: string; pip: string }
+  { hero: string; row: string; glow: string; pip: string; rim: string }
 > = {
   STADIUM: {
     hero: "from-[#0d3b2e] via-[#145c45] to-[#1a7a55]",
+    row: "from-[#0f3d2e] via-[#145c45] to-[#0a281c]",
     glow: "bg-emerald-400/40",
     pip: "bg-emerald-400",
+    rim: "border-emerald-400/45",
   },
   TRAINING_GROUND: {
     hero: "from-[#0c2d4a] via-[#134e75] to-[#1d6fa5]",
+    row: "from-[#0c2d4a] via-[#134e75] to-[#081f33]",
     glow: "bg-sky-400/40",
     pip: "bg-sky-400",
+    rim: "border-sky-400/45",
   },
   MEDICAL: {
     hero: "from-[#3d1520] via-[#7a1f3d] to-[#b91c4a]",
+    row: "from-[#3d1520] via-[#7a1f3d] to-[#2a0f16]",
     glow: "bg-rose-400/40",
     pip: "bg-rose-400",
+    rim: "border-rose-400/45",
   },
 };
 
@@ -67,7 +74,7 @@ export function UpgradeCard({
   const impact = isMax
     ? null
     : getUpgradeImpact(def.key, level, maxStamina);
-  const skin = UPGRADE_HERO[def.key];
+  const skin = UPGRADE_SKIN[def.key];
 
   /** Big hero number — current live effect of this track. */
   const heroValue =
@@ -123,93 +130,121 @@ export function UpgradeCard({
         }
         transition={spotlight ? { repeat: Infinity, duration: 1.6 } : undefined}
         className={[
-          "flex cursor-pointer items-center gap-3 rounded-bubble border bg-surface p-3 shadow-fantasy transition-opacity",
-          spotlight
-            ? "relative z-50 border-accent"
-            : affordable
-              ? "border-primary/40"
-              : "border-border",
-          locked ? "pointer-events-none opacity-40" : "",
+          "relative cursor-pointer overflow-hidden rounded-bubble-xl border-[3px] px-3 py-3 shadow-[0_5px_0_0_rgba(0,0,0,0.28)]",
+          spotlight ? "z-50 border-accent" : skin.rim,
+          locked ? "pointer-events-none opacity-45" : "",
         ].join(" ")}
       >
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-bubble bg-muted">
-          <UpgradeIcon upgradeKey={def.key} size="md" />
-        </div>
+        <div
+          className={["absolute inset-0 bg-linear-to-br", skin.row].join(" ")}
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.07]"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
+          }}
+          aria-hidden
+        />
+        {affordable && (
+          <motion.div
+            aria-hidden
+            className={[
+              "pointer-events-none absolute -end-8 top-0 h-24 w-24 rounded-full blur-2xl",
+              skin.glow,
+            ].join(" ")}
+            animate={{ opacity: [0.25, 0.55, 0.25] }}
+            transition={{ duration: 2.4, repeat: Infinity }}
+          />
+        )}
 
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="font-display text-base font-bold text-surface-foreground">
-              {t(`upgrades.${def.key}.name`)}
-            </p>
-            <span className="rounded-full bg-muted px-2 py-0.5 font-display text-[10px] font-bold uppercase text-muted-foreground">
-              {t("stadium.lvl")} {toLocaleDigits(level, locale)}
+        <div className="relative flex items-center gap-3">
+          <div className="relative shrink-0">
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-white/25 bg-black/30 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]">
+              <UpgradeIcon upgradeKey={def.key} size="md" className="h-9 w-9!" />
+            </span>
+            <span className="absolute -bottom-1 -start-1 rounded-full bg-black/55 px-1.5 py-0.5 font-display text-[9px] font-black text-white ring-1 ring-white/25">
+              Lv{toLocaleDigits(level, locale)}
             </span>
           </div>
-          {impact ? (
-            <p className="mt-0.5 font-display text-xs font-bold text-primary">
-              {t(`upgrades.impact.${impact.kind}`, {
-                from: toLocaleDigits(impact.from, locale),
-                to: toLocaleDigits(impact.to, locale),
-              })}
-            </p>
-          ) : (
-            <p className="mt-0.5 font-display text-xs font-bold text-muted-foreground">
-              {t("upgrades.max")}
-            </p>
-          )}
-        </div>
 
-        <motion.button
-          type="button"
-          data-upgrade-buy
-          disabled={disabled}
-          onClick={(e) => {
-            e.stopPropagation();
-            onUpgrade();
-          }}
-          whileTap={disabled || isMax ? undefined : { y: 4 }}
-          aria-label={
-            isMax
-              ? t("upgrades.max")
-              : `${t("upgrades.upgrade")} ${toLocaleDigits(cost ?? 0, locale)}`
-          }
-          className={[
-            "flex min-h-touch items-center justify-center font-display font-bold transition-all active:scale-[0.97]",
-            isMax ? "px-0 py-0" : "gap-1.5 px-1 py-1",
-            !isMax && !canAfford ? "opacity-55" : "",
-          ].join(" ")}
-        >
-          {isMax ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src="/icons/max.png"
-              alt={t("upgrades.max")}
-              draggable={false}
-              className="h-9 w-auto object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)]"
-            />
-          ) : pending ? (
-            <span>…</span>
-          ) : (
-            <span dir="ltr" className="inline-flex items-center gap-1.5">
-              <span
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <p className="font-display text-sm font-black text-white drop-shadow-sm">
+                {t(`upgrades.${def.key}.name`)}
+              </p>
+              {isMax && (
+                <span className="rounded-full bg-amber-400/30 px-2 py-0.5 font-display text-[10px] font-black text-amber-100 ring-1 ring-amber-300/50">
+                  MAX
+                </span>
+              )}
+            </div>
+            {impact ? (
+              <p className="mt-1 truncate font-display text-[11px] font-bold text-lime-300">
+                {t(`upgrades.impact.${impact.kind}`, {
+                  from: toLocaleDigits(impact.from, locale),
+                  to: toLocaleDigits(impact.to, locale),
+                })}
+              </p>
+            ) : (
+              <p className="mt-1 truncate font-display text-[11px] font-bold text-white/55">
+                {t("upgrades.max")}
+              </p>
+            )}
+          </div>
+
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
+            {isMax ? (
+              <span className="rounded-full bg-amber-400/25 px-2.5 py-1.5 font-display text-[11px] font-black text-amber-100 ring-1 ring-amber-300/40">
+                👑 MAX
+              </span>
+            ) : (
+              <motion.button
+                type="button"
+                data-upgrade-buy
+                disabled={disabled}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpgrade();
+                }}
+                whileTap={disabled ? undefined : { y: 2 }}
+                aria-label={`${t("upgrades.upgrade")} ${toLocaleDigits(cost ?? 0, locale)}`}
                 className={[
-                  "font-display text-sm font-black tabular-nums",
-                  canAfford ? "text-accent-deep" : "text-destructive",
+                  "inline-flex min-h-9 items-center gap-1 rounded-bubble px-2.5 py-1.5 font-display text-[11px] font-black shadow-[0_3px_0_0_rgba(0,0,0,0.35)]",
+                  canAfford && !pending && !locked
+                    ? "bg-accent text-accent-foreground"
+                    : "cursor-not-allowed bg-white/15 text-white/55",
                 ].join(" ")}
               >
-                {toLocaleDigits(cost, locale)}
-              </span>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/icons/upgrade.png"
-                alt=""
-                aria-hidden
-                draggable={false}
-                className="h-9 w-auto object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)]"
-              />
-            </span>
-          )}
-        </motion.button>
+                {pending ? (
+                  "…"
+                ) : (
+                  <>
+                    <span>{t("upgrades.upgrade")}</span>
+                    <span
+                      dir="ltr"
+                      className="inline-flex items-center gap-0.5 tabular-nums"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src="/icons/coin.png"
+                        alt=""
+                        aria-hidden
+                        className="h-3.5 w-3.5"
+                      />
+                      {toLocaleDigits(cost, locale)}
+                    </span>
+                  </>
+                )}
+              </motion.button>
+            )}
+            <ChevronRight
+              className="h-4 w-4 text-white/45 rtl:rotate-180"
+              aria-hidden
+            />
+          </div>
+        </div>
       </motion.div>
 
       <BottomSheet
@@ -226,7 +261,7 @@ export function UpgradeCard({
         {/* Hero — one big live stat */}
         <div
           className={[
-            "relative -mx-1 overflow-hidden rounded-bubble-xl border border-white/15 bg-gradient-to-br shadow-[0_8px_0_0_rgba(0,0,0,0.35)]",
+            "relative -mx-1 overflow-hidden rounded-bubble-xl border border-white/15 bg-linear-to-br shadow-[0_8px_0_0_rgba(0,0,0,0.35)]",
             skin.hero,
           ].join(" ")}
         >

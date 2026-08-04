@@ -27,7 +27,7 @@ function formatRemaining(ms: number): string {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
-/** Live Newspaper Event timer — taps reopen today's edition. */
+/** Live Newspaper Event timer — dark game chip matching Club Business chrome. */
 export function ActiveNewsChip({
   booster,
   onExpired,
@@ -69,19 +69,40 @@ export function ActiveNewsChip({
       onClick={onOpen}
       aria-label={t("club.dailyNews")}
       className={[
-        "flex w-full min-h-touch items-center justify-between gap-2 rounded-bubble border px-3 py-2 shadow-fantasy-sm",
-        isCoin
-          ? "border-accent/40 bg-accent/15"
-          : "border-secondary/40 bg-secondary/15",
+        "relative flex w-full min-h-12 items-center justify-between gap-2 overflow-hidden rounded-bubble-xl border-[3px] px-3 py-2.5 shadow-[0_4px_0_0_rgba(0,0,0,0.28)]",
+        isCoin ? "border-amber-300/50" : "border-sky-300/45",
       ].join(" ")}
     >
-      <span className="flex items-center gap-2 font-display text-sm font-bold">
-        <span aria-hidden>{emoji}</span>
-        <span className={isCoin ? "text-accent-deep" : "text-secondary"}>
+      <div
+        className={[
+          "absolute inset-0 bg-linear-to-br",
+          isCoin
+            ? "from-[#5c3d0a] via-[#9a6b12] to-[#2a1c06]"
+            : "from-[#0c2d4a] via-[#134e75] to-[#081f33]",
+        ].join(" ")}
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.07]"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
+        }}
+        aria-hidden
+      />
+
+      <span className="relative flex min-w-0 items-center gap-2 font-display text-sm font-black text-white">
+        <span
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-black/30 text-lg"
+          aria-hidden
+        >
+          {emoji}
+        </span>
+        <span className="truncate">
           {t(labelKey, { mult: formatMultiplier(booster.multiplier) })}
         </span>
       </span>
-      <span className="font-display text-xs font-bold tabular-nums text-muted-foreground">
+      <span className="relative shrink-0 rounded-bubble bg-black/35 px-2.5 py-1 font-display text-xs font-black tabular-nums text-white/90 ring-1 ring-white/15">
         {toLocaleDigits(formatRemaining(remainingMs), locale)}
       </span>
     </motion.button>

@@ -152,8 +152,16 @@ export function LeaderboardList({
         <div
           role="tablist"
           aria-label={t("leaderboard.eyebrow")}
-          className="mt-2.5 grid grid-cols-2 gap-1 rounded-2xl bg-muted/70 p-1"
+          className="relative mt-2.5 grid grid-cols-2 gap-1.5 overflow-hidden rounded-bubble-xl border-[3px] border-emerald-500/35 bg-linear-to-br from-[#052e16] via-[#14532d] to-[#022c22] p-1.5 shadow-[0_4px_0_0_rgba(0,0,0,0.28)]"
         >
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.06]"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
+            }}
+            aria-hidden
+          />
           {(
             [
               { key: "weekly" as const, label: t("leaderboard.tabWeekly") },
@@ -169,19 +177,14 @@ export function LeaderboardList({
                 aria-selected={active}
                 onClick={() => selectTab(item.key)}
                 className={[
-                  "relative z-10 flex min-h-10 items-center justify-center gap-1.5 rounded-xl px-2 font-display text-sm font-bold transition-colors",
-                  active ? "text-foreground" : "text-muted-foreground",
+                  "relative z-10 flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-2 font-display text-sm font-black transition-colors",
+                  active ? "text-emerald-950" : "text-white/65",
                 ].join(" ")}
               >
                 {active && (
                   <motion.span
                     layoutId="leaderboard-tab-pill"
-                    className={[
-                      "absolute inset-0 rounded-xl shadow-fantasy-sm",
-                      item.key === "hof"
-                        ? "border border-accent/40 bg-accent/15"
-                        : "bg-surface",
-                    ].join(" ")}
+                    className="absolute inset-0 rounded-xl bg-accent shadow-[0_3px_0_0_rgba(0,0,0,0.3)]"
                     transition={{ type: "spring", stiffness: 420, damping: 32 }}
                   />
                 )}
@@ -220,15 +223,15 @@ export function LeaderboardList({
                 playSound("click");
                 setPrizesOpen(true);
               }}
-              className="mb-3 flex w-full items-center justify-between gap-2 rounded-2xl border border-amber-400/40 bg-amber-400/10 px-3 py-2.5 text-start transition-transform active:scale-[0.99]"
+              className="relative mb-3 flex w-full items-center justify-between gap-2 overflow-hidden rounded-bubble-xl border-[3px] border-amber-400/45 bg-linear-to-br from-[#5c3d0a] via-[#9a6b12] to-[#2a1c06] px-3 py-3 text-start shadow-[0_4px_0_0_rgba(0,0,0,0.28)] transition-transform active:scale-[0.99]"
             >
-              <span className="inline-flex items-center gap-1.5 font-display text-xs font-bold text-amber-900 dark:text-amber-100">
+              <span className="relative inline-flex items-center gap-1.5 font-display text-xs font-black text-amber-50">
                 <RankArt kind="trophy" size="sm" className="h-5 w-5" />
                 {t("leaderboard.prizeBanner", {
                   n: toLocaleDigits(weeklyChampionCoins(), locale),
                 })}
               </span>
-              <span className="font-display text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <span className="relative rounded-bubble bg-accent px-2.5 py-1 font-display text-[10px] font-black text-accent-foreground shadow-[0_2px_0_0_rgba(0,0,0,0.3)]">
                 {t("leaderboard.prizeTap")}
               </span>
             </button>
@@ -241,10 +244,10 @@ export function LeaderboardList({
           )}
 
           <div className="mb-1.5 flex items-center justify-between px-0.5">
-            <p className="font-display text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground">
+            <p className="font-display text-[10px] font-black uppercase tracking-widest text-emerald-800/70">
               {t("leaderboard.tableTitle")}
             </p>
-            <p className="font-display text-[11px] font-bold text-muted-foreground/80">
+            <p className="font-display text-[10px] font-black text-emerald-800/55">
               {t("leaderboard.xpShort")}
             </p>
           </div>
@@ -254,7 +257,7 @@ export function LeaderboardList({
             initial="hidden"
             animate="visible"
             className={[
-              "flex flex-col gap-1.5",
+              "flex flex-col gap-2",
               showStickyYou ? "pb-36" : "pb-28",
             ].join(" ")}
           >
@@ -276,7 +279,7 @@ export function LeaderboardList({
 
       {showStickyYou && sticky && (
         <div className="pointer-events-none fixed inset-x-0 z-40 mx-auto w-full max-w-mobile px-3 bottom-[calc(10.5rem+env(safe-area-inset-bottom,0px))]">
-          <div className="pointer-events-auto rounded-2xl border-2 border-primary bg-surface/95 p-0.5 shadow-fantasy-lg backdrop-blur-md">
+          <div className="pointer-events-auto rounded-bubble-xl border-[3px] border-accent bg-linear-to-br from-[#052e16] via-[#14532d] to-[#022c22] p-0.5 shadow-[0_6px_0_0_rgba(0,0,0,0.35)]">
             <LeaderboardRowItem row={sticky} sticky />
           </div>
         </div>
@@ -288,14 +291,15 @@ export function LeaderboardList({
         title={t("leaderboard.prizeSheetTitle")}
         subtitle={t("leaderboard.prizeSheetSub")}
         closeLabel={t("common.close")}
+        tone="dark"
       >
         <ul className="flex flex-col gap-2">
           {WEEKLY_PRIZE_TIERS.map((tier) => (
             <li
               key={tier.place}
-              className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-muted/40 px-3 py-2.5"
+              className="flex items-center justify-between gap-3 rounded-2xl border-2 border-white/12 bg-black/30 px-3 py-2.5 shadow-[0_3px_0_0_rgba(0,0,0,0.3)]"
             >
-              <span className="inline-flex items-center gap-2 font-display text-sm font-bold text-foreground">
+              <span className="inline-flex items-center gap-2 font-display text-sm font-black text-white">
                 <RankArt
                   kind={medalKindForPlace(tier.place)}
                   size="md"
@@ -305,12 +309,12 @@ export function LeaderboardList({
                   n: toLocaleDigits(tier.place, locale),
                 })}
               </span>
-              <span className="flex flex-col items-end gap-0.5 font-display text-xs font-bold text-muted-foreground">
+              <span className="flex flex-col items-end gap-0.5 font-display text-xs font-black text-white/70">
                 <span className="inline-flex items-center gap-1">
                   <ResourceIcon kind="coin" size="sm" />
                   {toLocaleDigits(tier.coins, locale)}
                 </span>
-                <span className="inline-flex items-center gap-1">
+                <span className="inline-flex items-center gap-1 text-emerald-300">
                   <ResourceIcon kind="xp" size="sm" className="h-3.5 w-3.5" />
                   {toLocaleDigits(tier.xp, locale)}
                 </span>
@@ -318,7 +322,7 @@ export function LeaderboardList({
             </li>
           ))}
         </ul>
-        <p className="mt-4 font-body text-xs font-semibold text-muted-foreground">
+        <p className="mt-4 font-display text-xs font-bold text-white/50">
           {t("leaderboard.prizeSheetHint")}
         </p>
       </BottomSheet>
@@ -347,24 +351,39 @@ function YourHuntCard({
           : t("leaderboard.tierClimbing");
   const tierTone =
     tier === "elite"
-      ? "bg-amber-400/20 text-amber-900 ring-amber-400/40 dark:text-amber-100"
+      ? "bg-amber-400/30 text-amber-100 ring-amber-300/50"
       : tier === "contender"
-        ? "bg-emerald-400/15 text-emerald-800 ring-emerald-400/35 dark:text-emerald-200"
-        : "bg-white/10 text-foreground/80 ring-border";
+        ? "bg-emerald-400/25 text-emerald-100 ring-emerald-300/45"
+        : "bg-white/10 text-white/80 ring-white/20";
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative mb-3 overflow-hidden rounded-3xl border border-primary/30 bg-linear-to-br from-primary/15 via-surface to-secondary/10 p-3.5 shadow-fantasy-sm"
+      className="relative mb-3 overflow-hidden rounded-bubble-xl border-[3px] border-emerald-400/45 bg-linear-to-br from-[#052e16] via-[#14532d] to-[#022c22] p-3 shadow-[0_5px_0_0_rgba(0,0,0,0.28)]"
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="font-display text-[10px] font-extrabold uppercase tracking-[0.18em] text-primary">
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.07]"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
+        }}
+        aria-hidden
+      />
+      <motion.div
+        aria-hidden
+        className="pointer-events-none absolute -end-8 top-0 h-24 w-24 rounded-full bg-emerald-300/30 blur-2xl"
+        animate={{ opacity: [0.2, 0.5, 0.2] }}
+        transition={{ duration: 2.4, repeat: Infinity }}
+      />
+
+      <div className="relative flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-[10px] font-black uppercase tracking-widest text-emerald-200/75">
             {t("leaderboard.yourHunt")}
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <span className="font-display text-lg font-black text-foreground">
+            <span className="font-display text-lg font-black text-white drop-shadow-sm">
               {you.rank > 0
                 ? t("leaderboard.rankLabel", {
                     n: toLocaleDigits(you.rank, locale),
@@ -373,14 +392,14 @@ function YourHuntCard({
             </span>
             <span
               className={[
-                "rounded-full px-2 py-0.5 font-display text-[10px] font-bold ring-1",
+                "rounded-full px-2 py-0.5 font-display text-[10px] font-black ring-1",
                 tierTone,
               ].join(" ")}
             >
               {tierLabel}
             </span>
           </div>
-          <p className="mt-1 font-display text-xs font-semibold text-muted-foreground">
+          <p className="mt-1 font-display text-[11px] font-bold text-white/65">
             {chase?.kind === "lead"
               ? t("leaderboard.gapLead")
               : chase?.kind === "hunt"
@@ -393,15 +412,16 @@ function YourHuntCard({
                   })}
           </p>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-1">
-          <p className="inline-flex items-center gap-1 font-display text-xl font-black tabular-nums text-primary">
+
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <p className="inline-flex items-center gap-1 rounded-xl border border-white/15 bg-black/30 px-2.5 py-1.5 font-display text-xl font-black tabular-nums text-emerald-200">
             <ResourceIcon kind="xp" size="sm" />
             {formatNumber(you.weeklyXp, locale)}
           </p>
           <button
             type="button"
             onClick={onPrizes}
-            className="inline-flex min-h-8 items-center gap-1 rounded-full bg-amber-400/20 px-2.5 py-1 font-display text-[10px] font-bold text-amber-900 ring-1 ring-amber-400/40 dark:text-amber-100"
+            className="inline-flex min-h-9 items-center gap-1 rounded-bubble bg-accent px-2.5 py-1.5 font-display text-[11px] font-black text-accent-foreground shadow-[0_3px_0_0_rgba(0,0,0,0.35)]"
           >
             <RankArt kind="trophy" size="sm" className="h-3.5 w-3.5" />
             {t("leaderboard.prizeTap")}
@@ -422,35 +442,39 @@ function LeaderboardRowItem({
   const { t, locale } = useTranslation();
   const unplayed = row.playState === "unplayed";
   const hot = !unplayed && row.rank > 0 && row.rank <= 10;
+  const you = row.isCurrentUser;
 
   return (
     <motion.div
       variants={sticky ? undefined : rowVariants}
       className={[
-        "flex items-center gap-2.5 rounded-2xl border px-2.5 py-2 shadow-fantasy-sm",
-        sticky
-          ? "border-transparent bg-primary/10"
-          : row.isCurrentUser
-            ? "border-primary/60 bg-primary/10"
-            : unplayed
-              ? "border-dashed border-border bg-muted/30 opacity-70"
-              : hot
-                ? "border-emerald-500/20 bg-emerald-500/5"
-                : "border-border/80 bg-surface",
+        "relative flex items-center gap-2.5 overflow-hidden rounded-2xl border-[3px] px-2.5 py-2 shadow-[0_3px_0_0_rgba(0,0,0,0.28)]",
+        sticky || you
+          ? "border-accent/70 bg-linear-to-br from-[#14532d] via-[#166534] to-[#052e16]"
+          : unplayed
+            ? "border-white/10 bg-linear-to-br from-[#1e293b] via-[#334155] to-[#0f172a] opacity-75"
+            : hot
+              ? "border-emerald-400/40 bg-linear-to-br from-[#052e16] via-[#14532d] to-[#022c22]"
+              : "border-white/12 bg-linear-to-br from-[#0f172a] via-[#1e293b] to-[#020617]",
       ].join(" ")}
     >
       <div
+        className="pointer-events-none absolute inset-0 opacity-[0.05]"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(-16deg, transparent, transparent 10px, #fff 10px, #fff 11px)",
+        }}
+        aria-hidden
+      />
+
+      <div
         className={[
-          "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl font-display text-xs font-black",
-          row.rank === 1
-            ? "bg-amber-400/25 text-amber-800 dark:text-amber-200"
-            : row.rank === 2
-              ? "bg-slate-300/40 text-slate-700 dark:text-slate-200"
-              : row.rank === 3
-                ? "bg-orange-400/25 text-orange-800 dark:text-orange-200"
-                : row.isCurrentUser
-                  ? "bg-primary/25 text-primary"
-                  : "bg-muted text-muted-foreground",
+          "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border font-display text-xs font-black",
+          you
+            ? "border-accent/60 bg-accent text-accent-foreground"
+            : unplayed
+              ? "border-white/10 bg-black/30 text-white/45"
+              : "border-white/15 bg-black/35 text-white",
         ].join(" ")}
       >
         {unplayed || row.rank <= 0
@@ -461,24 +485,27 @@ function LeaderboardRowItem({
       <AvatarImage
         avatarKey={row.avatarKey}
         className={[
-          "h-10 w-10 shrink-0 rounded-full ring-2",
-          row.isCurrentUser ? "ring-primary/50" : "ring-transparent",
+          "relative h-10 w-10 shrink-0 rounded-full ring-2",
+          you ? "ring-accent/70" : "ring-white/20",
           unplayed ? "grayscale" : "",
         ].join(" ")}
       />
 
-      <div className="min-w-0 flex-1">
+      <div className="relative min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <p className="truncate font-display text-sm font-bold text-surface-foreground">
-            {shortClubName(row.clubName, 22)}
+          <p
+            className="truncate font-display text-sm font-black text-white"
+            title={row.clubName}
+          >
+            {shortClubName(row.clubName, 20)}
           </p>
-          {row.isCurrentUser && (
-            <span className="shrink-0 rounded-full bg-primary px-1.5 py-0.5 font-display text-[9px] font-extrabold uppercase text-primary-foreground">
+          {you && (
+            <span className="shrink-0 rounded-full bg-accent px-1.5 py-0.5 font-display text-[9px] font-extrabold uppercase text-accent-foreground shadow-[0_2px_0_0_rgba(0,0,0,0.3)]">
               {t("leaderboard.you")}
             </span>
           )}
         </div>
-        <p className="truncate font-body text-[11px] font-semibold text-muted-foreground">
+        <p className="truncate font-display text-[11px] font-bold text-white/55">
           {unplayed
             ? t("leaderboard.notPlayed")
             : t("leaderboard.rowMatches", {
@@ -487,11 +514,11 @@ function LeaderboardRowItem({
         </p>
       </div>
 
-      <div className="shrink-0 rounded-xl bg-primary/10 px-2 py-1.5 text-end ring-1 ring-primary/15">
+      <div className="relative shrink-0 rounded-xl border border-white/15 bg-black/35 px-2 py-1.5 text-end">
         <p
           className={[
             "inline-flex items-center gap-1 font-display text-sm font-extrabold tabular-nums leading-none",
-            unplayed ? "text-muted-foreground" : "text-primary",
+            unplayed ? "text-white/45" : "text-emerald-300",
           ].join(" ")}
         >
           <ResourceIcon kind="xp" size="sm" className="h-3.5 w-3.5" />

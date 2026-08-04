@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { Swords } from "lucide-react";
 import type { DuelInboxItem } from "@/actions/duel/getInboxCount";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
@@ -39,7 +40,7 @@ function actionLine(
 }
 
 /**
- * "Your turn" inbox — rival is waiting; deep-link straight into the duel.
+ * "Your turn" inbox — dark game panel matching Club Hub chrome.
  */
 export function DuelInboxBanner({
   count,
@@ -55,91 +56,112 @@ export function DuelInboxBanner({
     ? formatDeadlineLeft(top.turnDeadlineAt, locale, t)
     : null;
   const more = count - 1;
+  const isClub = variant === "club";
 
   return (
     <motion.div
       initial={{ opacity: 0, y: -10, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ type: "spring", stiffness: 380, damping: 28 }}
+      className={[
+        "relative overflow-hidden rounded-bubble-xl border-[3px] shadow-[0_5px_0_0_rgba(0,0,0,0.28)]",
+        isClub ? "border-orange-400/50" : "border-amber-300/55",
+      ].join(" ")}
     >
       <div
         className={[
-          "overflow-hidden rounded-bubble-xl border-2 shadow-fantasy",
-          variant === "club"
-            ? "border-secondary bg-gradient-to-br from-secondary/25 via-secondary/10 to-surface"
-            : "border-accent bg-gradient-to-br from-accent/30 via-accent/10 to-surface",
+          "absolute inset-0 bg-linear-to-br",
+          isClub
+            ? "from-[#431407] via-[#9a3412] to-[#1c0a05]"
+            : "from-[#5c3d0a] via-[#9a6b12] to-[#2a1c06]",
         ].join(" ")}
-      >
-        <div className="flex items-start gap-3 px-3.5 pb-2 pt-3.5">
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.07]"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
+        }}
+        aria-hidden
+      />
+      <motion.div
+        aria-hidden
+        className="pointer-events-none absolute -end-10 top-0 h-28 w-28 rounded-full bg-amber-300/30 blur-2xl"
+        animate={{ opacity: [0.25, 0.55, 0.25] }}
+        transition={{ duration: 2.2, repeat: Infinity }}
+      />
+
+      <div className="relative flex items-center gap-3 px-3 pt-3">
+        <span className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border-2 border-white/25 bg-black/30 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]">
           <motion.span
-            className="text-4xl"
-            aria-hidden
-            animate={{ rotate: [0, -8, 8, 0] }}
-            transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
+            animate={{ rotate: [0, -10, 10, 0] }}
+            transition={{
+              repeat: Infinity,
+              duration: 2.4,
+              ease: "easeInOut",
+            }}
           >
-            ⚔️
+            <Swords className="h-7 w-7 text-amber-100" aria-hidden />
           </motion.span>
-          <div className="min-w-0 flex-1">
-            <p className="font-display text-lg font-bold leading-tight text-foreground">
-              {count === 1
-                ? t("duel.inboxRivalWaiting")
-                : t("duel.inboxRivalWaitingMany", {
-                    n: toLocaleDigits(count, locale),
-                  })}
-            </p>
-            {top ? (
-              <p className="mt-1 truncate font-body text-sm font-semibold text-muted-foreground">
-                {t("duel.inboxVs", { name: top.rivalName })}
-                {" · "}
-                {toLocaleDigits(top.youScore, locale)}–
-                {toLocaleDigits(top.themScore, locale)}
-                {" · "}
-                {actionLine(top, t)}
-              </p>
-            ) : null}
-            {deadline ? (
-              <p className="mt-0.5 font-display text-xs font-bold text-accent-deep">
-                ⏱ {deadline}
-              </p>
-            ) : null}
-          </div>
-          <span
-            className={[
-              "flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full px-2 font-display text-sm font-bold text-white",
-              variant === "club" ? "bg-secondary" : "bg-accent",
-            ].join(" ")}
-            aria-hidden
-          >
+          <span className="absolute -end-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full bg-accent px-1 font-display text-[11px] font-black text-accent-foreground shadow-[0_2px_0_0_rgba(0,0,0,0.35)] ring-2 ring-[#431407]">
             {toLocaleDigits(Math.min(count, 9), locale)}
             {count > 9 ? "+" : ""}
           </span>
-        </div>
+        </span>
 
-        <div className="flex flex-col gap-2 border-t border-border/40 bg-surface/70 px-3 py-3 backdrop-blur-sm">
-          <Link
-            href={href}
-            className="btn-fantasy btn-fantasy-accent flex min-h-touch w-full items-center justify-center font-display text-base font-bold"
-          >
-            {t("duel.inboxPlayNow")}
-          </Link>
-          {more > 0 ? (
-            <Link
-              href="/play/duel"
-              className="flex min-h-11 w-full items-center justify-center rounded-bubble font-display text-sm font-bold text-secondary underline-offset-2 hover:underline"
-            >
-              {t("duel.inboxSeeAll", {
-                n: toLocaleDigits(more, locale),
-              })}
-            </Link>
-          ) : (
-            <Link
-              href="/play/duel"
-              className="flex min-h-11 w-full items-center justify-center rounded-bubble font-display text-xs font-semibold text-muted-foreground"
-            >
-              {t("duel.inboxOpenLobby")}
-            </Link>
-          )}
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-sm font-black leading-tight text-white drop-shadow-sm">
+            {count === 1
+              ? t("duel.inboxRivalWaiting")
+              : t("duel.inboxRivalWaitingMany", {
+                  n: toLocaleDigits(count, locale),
+                })}
+          </p>
+          {top ? (
+            <p className="mt-0.5 truncate font-display text-[11px] font-bold text-white/70">
+              {t("duel.inboxVs", { name: top.rivalName })}
+              {" · "}
+              <span dir="ltr" className="tabular-nums">
+                {toLocaleDigits(top.youScore, locale)}–
+                {toLocaleDigits(top.themScore, locale)}
+              </span>
+              {" · "}
+              {actionLine(top, t)}
+            </p>
+          ) : null}
+          {deadline ? (
+            <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-black/35 px-2 py-0.5 font-display text-[10px] font-black text-amber-200 ring-1 ring-white/15">
+              ⏱ {deadline}
+            </p>
+          ) : null}
         </div>
+      </div>
+
+      <div className="relative flex flex-col gap-2 px-3 pb-3 pt-3">
+        <Link
+          href={href}
+          className="flex min-h-12 w-full items-center justify-center rounded-bubble-xl bg-accent px-4 font-display text-base font-black text-accent-foreground shadow-[0_4px_0_0_rgba(0,0,0,0.35)] transition-transform active:translate-y-px active:shadow-none"
+        >
+          {t("duel.inboxPlayNow")}
+        </Link>
+        {more > 0 ? (
+          <Link
+            href="/play/duel"
+            className="flex min-h-10 w-full items-center justify-center font-display text-xs font-black text-amber-100/85 underline-offset-2 hover:underline"
+          >
+            {t("duel.inboxSeeAll", {
+              n: toLocaleDigits(more, locale),
+            })}
+          </Link>
+        ) : (
+          <Link
+            href="/play/duel"
+            className="flex min-h-10 w-full items-center justify-center font-display text-[11px] font-bold text-white/50"
+          >
+            {t("duel.inboxOpenLobby")}
+          </Link>
+        )}
       </div>
     </motion.div>
   );

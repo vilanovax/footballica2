@@ -47,14 +47,14 @@ const TIER_RING: Record<BadgeTier, string> = {
   gold: "from-yellow-200 to-amber-400 text-yellow-950",
 };
 
-/** Card chrome glow — distinct per tier (not one amber for all). */
+/** Dark game card chrome — distinct per tier. */
 const TIER_CARD: Record<BadgeTier, string> = {
   bronze:
-    "border-amber-700/45 bg-surface shadow-[0_0_14px_rgba(180,83,9,0.35)] ring-1 ring-amber-700/30",
+    "border-amber-600/50 bg-linear-to-br from-[#3d2a08] via-[#5c3d0a] to-[#1c1408] shadow-[0_4px_0_0_rgba(0,0,0,0.35)]",
   silver:
-    "border-slate-300/70 bg-surface shadow-[0_0_14px_rgba(148,163,184,0.4)] ring-1 ring-slate-200/50",
+    "border-slate-300/45 bg-linear-to-br from-[#1e293b] via-[#334155] to-[#0f172a] shadow-[0_4px_0_0_rgba(0,0,0,0.35)]",
   gold:
-    "border-yellow-400/70 bg-surface shadow-[0_0_18px_rgba(250,204,21,0.4)] ring-1 ring-yellow-300/45",
+    "border-amber-300/60 bg-linear-to-br from-[#5c3d0a] via-[#9a6b12] to-[#2a1c06] shadow-[0_4px_0_0_rgba(0,0,0,0.35)]",
 };
 
 const TIER_MEDAL_GLOW: Record<BadgeTier, string> = {
@@ -563,12 +563,20 @@ export function PlayerProfile({
       </motion.div>
 
       {/* ── Trophy cabinet ───────────────────────────────────────────────── */}
-      <div>
-        <div className="mb-2 flex items-baseline justify-between gap-2">
-          <h2 className="font-display text-base font-black text-surface-foreground">
+      <div className="relative overflow-hidden rounded-bubble-xl border-[3px] border-amber-500/40 bg-linear-to-br from-[#1c1408] via-[#2a1c06] to-[#0f172a] p-3 shadow-[0_5px_0_0_rgba(0,0,0,0.28)]">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.06]"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
+          }}
+          aria-hidden
+        />
+        <div className="relative mb-3 flex items-center justify-between gap-2">
+          <h2 className="font-display text-base font-black text-white drop-shadow-sm">
             {t("profile.trophies")}
           </h2>
-          <span className="shrink-0 rounded-full border border-border bg-muted/60 px-2.5 py-0.5 font-display text-[11px] font-bold text-muted-foreground">
+          <span className="shrink-0 rounded-bubble border border-amber-300/40 bg-black/35 px-2.5 py-1 font-display text-[11px] font-black text-amber-100">
             {locale === "fa" ? (
               t("profile.trophiesCountLabel", {
                 unlocked: toLocaleDigits(unlockedHonors.length, locale),
@@ -585,10 +593,10 @@ export function PlayerProfile({
           </span>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="relative flex flex-col gap-4">
           {nearUnlock.length > 0 && (
             <div>
-              <p className="mb-2 font-display text-[11px] font-bold uppercase tracking-wider text-secondary">
+              <p className="mb-2 font-display text-[10px] font-black uppercase tracking-widest text-orange-200/85">
                 {t("profile.trophyNear")}
               </p>
               <div className="grid grid-cols-3 gap-2">
@@ -610,11 +618,11 @@ export function PlayerProfile({
 
           {unlockedHonors.length > 0 && (
             <div>
-              <p className="mb-2 font-display text-[11px] font-bold uppercase tracking-wider text-amber-700">
+              <p className="mb-2 font-display text-[10px] font-black uppercase tracking-widest text-amber-200/85">
                 {t("profile.trophyHonors")}
               </p>
               {honorsUseScroll ? (
-                <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="-mx-0.5 flex gap-2 overflow-x-auto px-0.5 pb-1 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {unlockedHonors.map((a, i) => (
                     <div
                       key={a.slug}
@@ -652,7 +660,7 @@ export function PlayerProfile({
           )}
 
           {otherByCategory.length > 0 && (
-            <div className="rounded-bubble border border-border bg-muted/30">
+            <div className="overflow-hidden rounded-2xl border-2 border-white/12 bg-black/30">
               <button
                 type="button"
                 onClick={() => {
@@ -662,10 +670,10 @@ export function PlayerProfile({
                 className="flex min-h-11 w-full items-center justify-between gap-2 px-3 py-2.5"
                 aria-expanded={othersOpen}
               >
-                <span className="font-display text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                <span className="font-display text-[10px] font-black uppercase tracking-widest text-white/60">
                   {t("profile.trophyOther")}
                 </span>
-                <span className="flex items-center gap-1.5 font-display text-[10px] font-bold text-muted-foreground">
+                <span className="flex items-center gap-1.5 font-display text-[10px] font-bold text-white/55">
                   {othersOpen
                     ? t("profile.trophyOtherHide")
                     : t("profile.trophyOtherShow")}
@@ -689,7 +697,7 @@ export function PlayerProfile({
                     <div className="flex flex-col gap-3 px-3 pb-3">
                       {otherByCategory.map(({ cat, items }) => (
                         <div key={cat}>
-                          <p className="mb-1.5 font-display text-[11px] font-bold text-primary">
+                          <p className="mb-1.5 font-display text-[11px] font-black text-amber-200/80">
                             {t(`profile.cat.${cat}`)}
                           </p>
                           <div className="grid grid-cols-3 gap-2">
@@ -803,9 +811,8 @@ type BadgeTileProps = {
 };
 
 /**
- * Trophy tile with three visual states: locked (inset + silhouette),
- * in-progress (bar + nudge), unlocked (tier-colored glow + date/tier).
- * When custom art exists (e.g. warm_up), the image owns the card — name/stats under it.
+ * Trophy tile — unified dark game card for locked / progress / unlocked.
+ * Custom art sits inside the same chrome so the grid never looks uneven.
  */
 function BadgeTile({
   achievement: a,
@@ -825,7 +832,13 @@ function BadgeTile({
     : 0;
   const stepsLeft = prog ? Math.max(0, prog.target - prog.current) : 0;
   const hasArt = Boolean(imageUrl);
-  const isHeroArt = hasArt; // game card: art as the badge surface
+
+  const shell =
+    state === "unlocked"
+      ? TIER_CARD[a.tier]
+      : state === "progress"
+        ? "border-orange-400/45 bg-linear-to-br from-[#431407] via-[#7c2d12] to-[#1c0a05] shadow-[0_4px_0_0_rgba(0,0,0,0.35)]"
+        : "border-white/12 bg-linear-to-br from-[#1e293b] via-[#334155] to-[#0f172a] shadow-[0_4px_0_0_rgba(0,0,0,0.3)] opacity-90";
 
   return (
     <motion.button
@@ -844,34 +857,37 @@ function BadgeTile({
       }
       whileTap={{ scale: 0.96 }}
       className={[
-        "relative flex w-full flex-col items-center text-center transition-colors",
-        isHeroArt
-          ? "min-h-0 gap-1 bg-transparent p-1"
-          : [
-              "min-h-[7.5rem] gap-1.5 rounded-bubble border p-2.5",
-              state === "unlocked"
-                ? TIER_CARD[a.tier]
-                : state === "progress"
-                  ? "border-primary/40 bg-surface shadow-fantasy-sm"
-                  : "border-black/10 bg-[#c5d0c8]/65 shadow-[inset_0_2px_8px_rgba(0,0,0,0.16)]",
-            ].join(" "),
+        "relative flex min-h-[8.25rem] w-full flex-col items-center gap-1.5 overflow-hidden rounded-2xl border-[3px] px-2 py-2.5 text-center",
+        shell,
       ].join(" ")}
       aria-label={name}
     >
-      {isHeroArt ? (
-        <span className="relative flex h-[5.4rem] w-full items-center justify-center" aria-hidden>
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.06]"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(-16deg, transparent, transparent 10px, #fff 10px, #fff 11px)",
+        }}
+        aria-hidden
+      />
+
+      {hasArt ? (
+        <span
+          className="relative flex h-16 w-full items-center justify-center"
+          aria-hidden
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={imageUrl!}
             alt=""
             className={[
-              "h-full w-auto max-w-full object-contain drop-shadow-[0_4px_14px_rgba(249,115,22,0.5)]",
-              state === "locked" ? "grayscale opacity-50" : "",
+              "h-full w-auto max-w-full object-contain drop-shadow-[0_3px_10px_rgba(0,0,0,0.45)]",
+              state === "locked" ? "grayscale opacity-45" : "",
               state === "progress" ? "opacity-95" : "",
             ].join(" ")}
           />
           {state === "locked" && (
-            <span className="absolute end-1 top-0 flex h-5 w-5 items-center justify-center rounded-full border border-white/40 bg-slate-800 text-[10px] shadow-sm">
+            <span className="absolute end-0 top-0 flex h-5 w-5 items-center justify-center rounded-full border border-white/30 bg-slate-900 text-[10px] shadow-sm">
               🔒
             </span>
           )}
@@ -883,76 +899,49 @@ function BadgeTile({
             state === "unlocked"
               ? `bg-linear-to-b ${TIER_RING[a.tier]} ${TIER_MEDAL_GLOW[a.tier]}`
               : state === "progress"
-                ? "bg-muted/80 grayscale-[0.25]"
-                : "bg-[#a8b5ae]/90 grayscale opacity-60",
+                ? "border border-white/20 bg-black/35"
+                : "border border-white/10 bg-black/40 grayscale opacity-55",
           ].join(" ")}
           aria-hidden
         >
           {a.emoji}
           {state === "locked" && (
-            <span className="absolute -end-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full border border-white/50 bg-slate-800 text-[9px] leading-none shadow-sm">
+            <span className="absolute -end-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full border border-white/40 bg-slate-900 text-[9px] leading-none shadow-sm">
               🔒
             </span>
           )}
         </span>
       )}
 
-      <p
-        className={[
-          "line-clamp-1 w-full font-display text-[11px] font-black",
-          isHeroArt
-            ? "text-surface-foreground"
-            : state === "unlocked"
-              ? "text-surface-foreground"
-              : state === "progress"
-                ? "text-surface-foreground/90"
-                : "text-slate-600",
-        ].join(" ")}
-      >
+      <p className="relative line-clamp-1 w-full font-display text-[11px] font-black text-white drop-shadow-sm">
         {name}
       </p>
 
       {state === "unlocked" ? null : prog ? (
-        <div className="w-full px-0.5">
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]">
+        <div className="relative w-full px-0.5">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/40 ring-1 ring-white/10">
             <div
-              className={[
-                "h-full rounded-full",
-                isHeroArt
-                  ? "bg-linear-to-r from-orange-400 via-amber-300 to-yellow-300"
-                  : "bg-linear-to-r from-primary to-secondary",
-              ].join(" ")}
+              className="h-full rounded-full bg-linear-to-r from-orange-400 via-amber-300 to-yellow-300"
               style={{ width: `${pct}%` }}
             />
           </div>
-          <p
-            className={[
-              "mt-1 font-display text-[10px] font-bold",
-              isHeroArt || state === "progress"
-                ? "text-primary"
-                : "text-slate-500",
-            ].join(" ")}
-          >
+          <p className="mt-1 font-display text-[10px] font-black text-amber-100/90">
             <FractionText
               cur={prog.current}
               next={prog.target}
               locale={locale}
             />
           </p>
-          {/* Hero art: skip "only N left" — let the icon dominate */}
-          {!isHeroArt &&
-            state === "progress" &&
-            stepsLeft > 0 &&
-            stepsLeft <= 3 && (
-              <p className="font-body text-[9px] font-semibold text-accent-deep">
-                {t("profile.trophyStepsLeft", {
-                  n: toLocaleDigits(stepsLeft, locale),
-                })}
-              </p>
-            )}
+          {state === "progress" && stepsLeft > 0 && stepsLeft <= 3 && (
+            <p className="font-display text-[9px] font-bold text-lime-300">
+              {t("profile.trophyStepsLeft", {
+                n: toLocaleDigits(stepsLeft, locale),
+              })}
+            </p>
+          )}
         </div>
       ) : (
-        <span className="font-display text-[10px] font-bold text-slate-500">
+        <span className="relative font-display text-[10px] font-bold text-white/45">
           {t("profile.trophyLocked")}
         </span>
       )}

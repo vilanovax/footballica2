@@ -201,104 +201,117 @@ export function ClubHub({
 
   return (
     <section className="relative flex flex-1 flex-col gap-4">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-36"
-        style={clubAccentWashStyle(colorKey)}
-      />
-      <header className="relative flex items-center justify-between gap-2 pt-2">
-        <div className="flex min-w-0 items-center gap-3">
-          <Link
-            href="/profile"
-            aria-label={t("profile.eyebrow")}
-            className="shrink-0 rounded-full transition-transform active:scale-95"
-            style={clubAccentRingStyle(colorKey)}
-          >
-            <AvatarImage
-              avatarKey={avatarKey}
-              colorKey={colorKey}
-              className="h-14 w-14 rounded-full shadow-fantasy"
-            />
-          </Link>
-          <h1 className="truncate font-display text-xl font-black leading-tight text-foreground sm:text-2xl">
-            {club.name}
-          </h1>
+      {/* Hub top bar — same dark game chrome as campaign / business cards */}
+      <div className="relative overflow-hidden rounded-bubble-xl border-[3px] border-emerald-500/35 bg-linear-to-br from-[#052e16] via-[#14532d] to-[#0f172a] p-2.5 shadow-[0_5px_0_0_rgba(0,0,0,0.28)]">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.06]"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
+          }}
+          aria-hidden
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-16 opacity-40"
+          style={clubAccentWashStyle(colorKey)}
+        />
+
+        <header className="relative flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <Link
+              href="/profile"
+              aria-label={t("profile.eyebrow")}
+              className="shrink-0 rounded-full transition-transform active:scale-95"
+              style={clubAccentRingStyle(colorKey)}
+            >
+              <AvatarImage
+                avatarKey={avatarKey}
+                colorKey={colorKey}
+                className="h-12 w-12 rounded-full shadow-[0_3px_0_0_rgba(0,0,0,0.35)] ring-2 ring-white/20"
+              />
+            </Link>
+            <h1 className="truncate font-display text-lg font-black leading-tight text-white drop-shadow-sm sm:text-xl">
+              {club.name}
+            </h1>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-0.5 rounded-2xl border border-white/12 bg-black/25 p-0.5">
+            {ftueComplete && (
+              <>
+                <motion.button
+                  type="button"
+                  onClick={() => {
+                    haptic(HAPTIC.light);
+                    setMissionsTab("daily");
+                    setMissionsOpen(true);
+                  }}
+                  aria-label={t("missions.openDrawer")}
+                  className="relative flex h-10 w-10 items-center justify-center rounded-xl"
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <HubIcon kind="mission" size="md" />
+                  {missionReadyCount > 0 && (
+                    <span className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 font-display text-[10px] font-black text-accent-foreground shadow-[0_2px_0_0_rgba(0,0,0,0.35)]">
+                      {toLocaleDigits(Math.min(missionReadyCount, 9), locale)}
+                      {missionReadyCount > 9 ? "+" : ""}
+                    </span>
+                  )}
+                </motion.button>
+
+                <Link
+                  href="/shop"
+                  aria-label={t("shop.title")}
+                  onClick={() => playSound("click")}
+                  className="flex h-10 w-10 items-center justify-center rounded-xl active:scale-90"
+                >
+                  <HubIcon kind="shop" size="md" />
+                </Link>
+
+                <motion.button
+                  type="button"
+                  onClick={handleDailyNews}
+                  disabled={newsPending}
+                  aria-label={t("club.dailyNews")}
+                  className={[
+                    "relative flex h-10 w-10 items-center justify-center rounded-xl",
+                    canClaimNews ? "" : "opacity-55",
+                  ].join(" ")}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <HubIcon kind="news" size="md" />
+                  {canClaimNews && (
+                    <span className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 font-display text-[10px] font-black text-accent-foreground shadow-[0_2px_0_0_rgba(0,0,0,0.35)]">
+                      {toLocaleDigits(1, locale)}
+                    </span>
+                  )}
+                </motion.button>
+              </>
+            )}
+
+            <Link
+              href="/settings"
+              aria-label={t("nav.settings")}
+              onClick={() => playSound("click")}
+              className="flex h-10 w-10 items-center justify-center rounded-xl active:scale-90"
+            >
+              <HubIcon kind="settings" size="md" />
+            </Link>
+          </div>
+        </header>
+
+        <div className="relative mt-2.5">
+          <StatusBar
+            coins={club.coins}
+            stamina={club.stamina}
+            maxStamina={club.maxStamina}
+            msUntilNext={club.msUntilNext}
+            medicalLevel={club.medicalLevel}
+            staminaRefillCost={staminaRefillCost}
+            onClubUpdate={setClub}
+          />
         </div>
-
-        {/* Free-floating game utilities — no tray chrome */}
-        <div className="flex shrink-0 items-center gap-0.5">
-          {ftueComplete && (
-            <>
-              <motion.button
-                type="button"
-                onClick={() => {
-                  haptic(HAPTIC.light);
-                  setMissionsTab("daily");
-                  setMissionsOpen(true);
-                }}
-                aria-label={t("missions.openDrawer")}
-                className="relative flex h-11 w-11 items-center justify-center"
-                whileTap={{ scale: 0.9 }}
-              >
-                <HubIcon kind="mission" size="md" />
-                {missionReadyCount > 0 && (
-                  <span className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-secondary px-1 font-display text-[10px] font-bold text-secondary-foreground shadow-fantasy-sm">
-                    {toLocaleDigits(Math.min(missionReadyCount, 9), locale)}
-                    {missionReadyCount > 9 ? "+" : ""}
-                  </span>
-                )}
-              </motion.button>
-
-              <Link
-                href="/shop"
-                aria-label={t("shop.title")}
-                onClick={() => playSound("click")}
-                className="flex h-11 w-11 items-center justify-center active:scale-90"
-              >
-                <HubIcon kind="shop" size="md" />
-              </Link>
-
-              <motion.button
-                type="button"
-                onClick={handleDailyNews}
-                disabled={newsPending}
-                aria-label={t("club.dailyNews")}
-                className={[
-                  "relative flex h-11 w-11 items-center justify-center",
-                  canClaimNews ? "" : "opacity-55",
-                ].join(" ")}
-                whileTap={{ scale: 0.9 }}
-              >
-                <HubIcon kind="news" size="md" />
-                {canClaimNews && (
-                  <span className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 font-display text-[10px] font-bold text-accent-foreground shadow-fantasy-sm">
-                    {toLocaleDigits(1, locale)}
-                  </span>
-                )}
-              </motion.button>
-            </>
-          )}
-
-          <Link
-            href="/settings"
-            aria-label={t("nav.settings")}
-            onClick={() => playSound("click")}
-            className="flex h-11 w-11 items-center justify-center active:scale-90"
-          >
-            <HubIcon kind="settings" size="md" />
-          </Link>
-        </div>
-      </header>
-
-      <StatusBar
-        coins={club.coins}
-        stamina={club.stamina}
-        maxStamina={club.maxStamina}
-        msUntilNext={club.msUntilNext}
-        medicalLevel={club.medicalLevel}
-        staminaRefillCost={staminaRefillCost}
-        onClubUpdate={setClub}
-      />
+      </div>
 
       {ftueComplete && (
         <MysteryDailyChip mysteryStreak={club.mysteryStreak} />
@@ -361,9 +374,9 @@ export function ClubHub({
         <BusinessPanel club={club} onClubUpdate={setClub} />
       )}
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg font-bold text-foreground">
+          <h2 className="font-display text-lg font-black text-foreground">
             {t("club.upgrades")}
           </h2>
           <AnimatePresence>

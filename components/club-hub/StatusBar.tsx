@@ -127,38 +127,42 @@ export function StatusBar({
 
   return (
     <>
-      {/* Resource strip — icon + number are the tap targets (no + chips) */}
-      <div className="flex items-start justify-between gap-3 px-0.5">
+      <div className="grid grid-cols-2 gap-2">
         <motion.div
           id="coin-balance-target"
-          animate={pulse ? { scale: [1, 1.12, 1] } : { scale: 1 }}
+          animate={pulse ? { scale: [1, 1.06, 1] } : { scale: 1 }}
           transition={{ duration: 0.5 }}
         >
           <Link
             href="/shop?tab=coins"
             aria-label={t("status.buyCoins")}
             onClick={() => playSound("click")}
-            className="relative flex min-h-11 items-center gap-1.5 active:scale-95"
+            className="flex min-h-11 items-center gap-2 rounded-2xl border-2 border-amber-400/40 bg-black/35 px-2.5 py-1.5 shadow-[0_3px_0_0_rgba(0,0,0,0.3)] active:translate-y-px active:shadow-none"
           >
-            <ResourceIcon kind="coin" size="lg" />
-            <span className="font-display text-lg font-black tabular-nums text-accent-deep drop-shadow-sm">
+            <ResourceIcon kind="coin" size="md" />
+            <span className="font-display text-base font-black tabular-nums text-amber-100">
               {toLocaleDigits(coins, locale)}
             </span>
           </Link>
         </motion.div>
 
-        <div className="flex flex-col items-end gap-0.5">
+        <div className="flex flex-col gap-0.5">
           <button
             type="button"
             aria-label={t("status.refillStamina")}
             onClick={openRefill}
-            className="relative flex min-h-11 items-center gap-1.5 active:scale-95"
+            className={[
+              "flex min-h-11 w-full items-center gap-2 rounded-2xl border-2 px-2.5 py-1.5 shadow-[0_3px_0_0_rgba(0,0,0,0.3)] active:translate-y-px active:shadow-none",
+              staminaLow
+                ? "border-rose-400/50 bg-rose-950/50"
+                : "border-sky-400/40 bg-black/35",
+            ].join(" ")}
           >
-            <ResourceIcon kind="energy" size="lg" />
+            <ResourceIcon kind="energy" size="md" />
             <span
               className={[
-                "font-display text-lg font-black tabular-nums drop-shadow-sm",
-                staminaLow ? "text-destructive" : "text-primary",
+                "font-display text-base font-black tabular-nums",
+                staminaLow ? "text-rose-200" : "text-sky-100",
               ].join(" ")}
             >
               {toLocaleDigits(localStamina, locale)}/
@@ -166,7 +170,7 @@ export function StatusBar({
             </span>
           </button>
           {regenerating && (
-            <span className="pe-1 font-display text-[11px] font-bold tabular-nums text-muted-foreground">
+            <span className="px-1 text-end font-display text-[10px] font-bold tabular-nums text-white/55">
               {t("status.plusOneIn", {
                 time: toLocaleDigits(formatMMSS(remainingMs), locale),
               })}
@@ -178,7 +182,7 @@ export function StatusBar({
       <AnimatePresence>
         {confirmOpen && (
           <motion.div
-            className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 p-4 sm:items-center"
+            className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-4 sm:items-center"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -193,18 +197,18 @@ export function StatusBar({
               exit={{ y: 24, opacity: 0, scale: 0.96 }}
               transition={{ type: "spring", stiffness: 380, damping: 28 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-sm rounded-3xl border border-border bg-surface p-5 shadow-fantasy"
+              className="w-full max-w-sm overflow-hidden rounded-bubble-xl border-[3px] border-sky-400/40 bg-linear-to-br from-[#0c2d4a] via-[#134e75] to-[#0f172a] p-5 shadow-[0_6px_0_0_rgba(0,0,0,0.35)]"
             >
               <div className="mb-3 flex justify-center" aria-hidden>
                 <ResourceIcon kind="energy" size="lg" className="h-12 w-12" />
               </div>
               <h2
                 id="stamina-refill-title"
-                className="text-center font-display text-xl font-bold text-foreground"
+                className="text-center font-display text-xl font-black text-white"
               >
                 {t("status.refillTitle")}
               </h2>
-              <p className="mt-2 text-center font-body text-sm font-semibold text-muted-foreground">
+              <p className="mt-2 text-center font-display text-sm font-bold text-white/65">
                 {t("status.refillBody", {
                   cost: toLocaleDigits(staminaRefillCost, locale),
                 })}
@@ -214,7 +218,7 @@ export function StatusBar({
                   type="button"
                   disabled={pending}
                   onClick={() => setConfirmOpen(false)}
-                  className="flex min-h-touch items-center justify-center rounded-bubble border border-border bg-muted px-3 font-display text-sm font-bold text-muted-foreground"
+                  className="flex min-h-touch items-center justify-center rounded-bubble border-2 border-white/15 bg-black/30 px-3 font-display text-sm font-black text-white/70"
                 >
                   {t("common.close")}
                 </button>
@@ -224,10 +228,10 @@ export function StatusBar({
                   whileTap={pending ? undefined : { y: 3 }}
                   onClick={confirmRefill}
                   className={[
-                    "flex min-h-touch flex-col items-center justify-center rounded-bubble px-3 font-display text-sm font-bold",
+                    "flex min-h-touch flex-col items-center justify-center rounded-bubble px-3 font-display text-sm font-black shadow-[0_4px_0_0_rgba(0,0,0,0.35)]",
                     coins >= staminaRefillCost
-                      ? "bg-primary text-primary-foreground shadow-btn-3d active:shadow-btn-3d-press"
-                      : "bg-muted text-muted-foreground opacity-50",
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-white/10 text-white/45",
                   ].join(" ")}
                 >
                   {pending ? (

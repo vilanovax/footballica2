@@ -21,58 +21,42 @@ type StadiumHeroProps = {
   celebrating: boolean;
 };
 
-type Tier = {
-  sky: string;
-  pitch: string;
-  stripe: string;
-  props: string;
-};
+/** Visual tiers — dark game wash + stadium art treatment (not emoji scenes). */
+const TIER_SCENE = [
+  {
+    rim: "border-stone-500/50",
+    wash: "from-[#1c1917] via-[#44403c] to-[#0c0a09]",
+    glow: "bg-stone-400/20",
+    art: "grayscale brightness-75 contrast-110",
+    tip: "🪨",
+  },
+  {
+    rim: "border-amber-600/45",
+    wash: "from-[#3d2a08] via-[#7a5410] to-[#1c1408]",
+    glow: "bg-amber-400/25",
+    art: "sepia-[.35] brightness-90 contrast-105",
+    tip: "🚧",
+  },
+  {
+    rim: "border-emerald-400/45",
+    wash: "from-[#052e16] via-[#14532d] to-[#022c22]",
+    glow: "bg-emerald-400/30",
+    art: "brightness-100 saturate-110",
+    tip: "🌱",
+  },
+  {
+    rim: "border-sky-300/50",
+    wash: "from-[#0c2d4a] via-[#134e75] to-[#0a281c]",
+    glow: "bg-sky-300/35",
+    art: "brightness-110 saturate-125 drop-shadow-[0_0_18px_rgba(125,211,252,0.45)]",
+    tip: "💡",
+  },
+] as const;
 
-const TIERS: Tier[] = [
-  {
-    sky: "from-stone-700 via-stone-600 to-amber-900/40",
-    pitch: "from-amber-800 to-yellow-900",
-    stripe: "bg-amber-700/40",
-    props: "🪨",
-  },
-  {
-    sky: "from-orange-300 via-amber-200 to-amber-100",
-    pitch: "from-amber-700 to-orange-800",
-    stripe: "bg-orange-600/40",
-    props: "🚧",
-  },
-  {
-    sky: "from-sky-400 via-sky-300 to-emerald-100",
-    pitch: "from-green-600 to-emerald-800",
-    stripe: "bg-green-500/40",
-    props: "🌱",
-  },
-  {
-    sky: "from-indigo-500 via-sky-500 to-emerald-300",
-    pitch: "from-green-500 to-emerald-700",
-    stripe: "bg-green-400/50",
-    props: "💡",
-  },
-];
-
-/** Crowd size scales with fan fill of soft cap (1…12). */
+/** Crowd seats lit by fan fill (0…18 dots). */
 function crowdCountFor(fans: number, cap: number): number {
   const fill = Math.min(1, Math.max(0, fans / Math.max(1, cap)));
-  return Math.max(1, Math.min(12, Math.round(1 + fill * 11)));
-}
-
-function trainingProp(level: number): string {
-  if (level <= 0) return "cone";
-  if (level === 1) return "🏃";
-  if (level === 2) return "🏋️";
-  return "🎯";
-}
-
-function medicalProp(level: number): string {
-  if (level <= 0) return "🩹";
-  if (level === 1) return "💊";
-  if (level === 2) return "🏥";
-  return "⚕️";
+  return Math.max(2, Math.min(18, Math.round(2 + fill * 16)));
 }
 
 export function StadiumHero({
@@ -86,14 +70,16 @@ export function StadiumHero({
 }: StadiumHeroProps) {
   const { t, locale } = useTranslation();
   const [sheetOpen, setSheetOpen] = useState(false);
-  const tierIndex = Math.min(stadiumLevel, TIERS.length - 1);
-  const tier = TIERS[tierIndex]!;
+  const tierIndex = Math.min(
+    Math.max(0, stadiumLevel),
+    TIER_SCENE.length - 1,
+  );
+  const scene = TIER_SCENE[tierIndex]!;
   const cap = fansSoftCap(stadiumLevel);
   const crowdN = crowdCountFor(fans, cap);
   const fillPct = Math.min(100, Math.round((fans / Math.max(1, cap)) * 100));
-  const trainEmoji = trainingProp(trainingGroundLevel);
-  const medEmoji = medicalProp(medicalLevel);
   const regenMinutes = staminaRegenIntervalMinutes(medicalLevel);
+  const floodlit = stadiumLevel >= 3;
 
   function openSheet() {
     haptic(HAPTIC.tap);
@@ -107,160 +93,187 @@ export function StadiumHero({
         type="button"
         onClick={openSheet}
         aria-label={t("stadium.openDetails")}
-        className="relative aspect-16/11 w-full overflow-hidden rounded-bubble-xl border border-border text-start shadow-fantasy-lg transition-transform active:scale-[0.99]"
+        className={[
+          "relative aspect-16/11 w-full overflow-hidden rounded-bubble-xl border-[3px] text-start shadow-[0_6px_0_0_rgba(0,0,0,0.32)] transition-transform active:translate-y-px active:shadow-[0_4px_0_0_rgba(0,0,0,0.32)]",
+          scene.rim,
+        ].join(" ")}
       >
-        {/* Sky — slow breathing gradient */}
-        <motion.div
-          className={`absolute inset-0 bg-linear-to-b ${tier.sky}`}
-          animate={{ opacity: [1, 0.92, 1] }}
-          transition={{ repeat: Infinity, duration: 8, ease: "easeInOut" }}
-        />
-
-        {/* Soft cloud drift */}
-        <motion.div
-          aria-hidden
-          className="pointer-events-none absolute -start-8 top-[8%] h-10 w-28 rounded-full bg-white/15 blur-md"
-          animate={{ x: [0, 40, 0] }}
-          transition={{ repeat: Infinity, duration: 14, ease: "easeInOut" }}
-        />
-        <motion.div
-          aria-hidden
-          className="pointer-events-none absolute end-4 top-[18%] h-8 w-20 rounded-full bg-white/10 blur-md"
-          animate={{ x: [0, -28, 0] }}
-          transition={{
-            repeat: Infinity,
-            duration: 11,
-            ease: "easeInOut",
-            delay: 1.2,
-          }}
-        />
-
-        {stadiumLevel >= 3 ? (
-          <>
-            <motion.span
-              className="absolute start-4 top-3 text-2xl drop-shadow"
-              animate={{ opacity: [0.55, 1, 0.55], scale: [1, 1.08, 1] }}
-              transition={{ repeat: Infinity, duration: 2.4 }}
-              aria-hidden
-            >
-              💡
-            </motion.span>
-            <motion.span
-              className="absolute end-4 top-3 text-2xl drop-shadow"
-              animate={{ opacity: [0.55, 1, 0.55], scale: [1, 1.08, 1] }}
-              transition={{ repeat: Infinity, duration: 2.4, delay: 0.4 }}
-              aria-hidden
-            >
-              💡
-            </motion.span>
-          </>
-        ) : null}
-
-        {/* Crowd — density from fans */}
         <div
-          className="absolute inset-x-0 top-[12%] flex justify-center gap-0.5 px-2 text-base sm:text-lg"
+          className={["absolute inset-0 bg-linear-to-br", scene.wash].join(" ")}
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.07]"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(-16deg, transparent, transparent 12px, #fff 12px, #fff 13px)",
+          }}
+          aria-hidden
+        />
+        <motion.div
+          aria-hidden
+          className={[
+            "pointer-events-none absolute -end-10 top-0 h-36 w-36 rounded-full blur-3xl",
+            scene.glow,
+          ].join(" ")}
+          animate={{ opacity: [0.25, 0.55, 0.25] }}
+          transition={{ duration: 3.2, repeat: Infinity }}
+        />
+
+        {/* Floodlight beams — level 3+ */}
+        {floodlit && (
+          <>
+            <motion.div
+              aria-hidden
+              className="pointer-events-none absolute start-[12%] top-0 h-[55%] w-10 origin-top bg-linear-to-b from-sky-200/35 to-transparent"
+              style={{ transform: "skewX(-12deg)" }}
+              animate={{ opacity: [0.35, 0.7, 0.35] }}
+              transition={{ duration: 2.2, repeat: Infinity }}
+            />
+            <motion.div
+              aria-hidden
+              className="pointer-events-none absolute end-[12%] top-0 h-[55%] w-10 origin-top bg-linear-to-b from-sky-200/35 to-transparent"
+              style={{ transform: "skewX(12deg)" }}
+              animate={{ opacity: [0.35, 0.7, 0.35] }}
+              transition={{ duration: 2.2, repeat: Infinity, delay: 0.35 }}
+            />
+            <span
+              className="absolute start-3 top-2 h-2.5 w-8 rounded-sm bg-sky-100/90 shadow-[0_0_12px_rgba(186,230,253,0.9)]"
+              aria-hidden
+            />
+            <span
+              className="absolute end-3 top-2 h-2.5 w-8 rounded-sm bg-sky-100/90 shadow-[0_0_12px_rgba(186,230,253,0.9)]"
+              aria-hidden
+            />
+          </>
+        )}
+
+        {/* Stadium art — tier filter treatment */}
+        <div className="absolute inset-x-0 top-[6%] flex justify-center">
+          <motion.div
+            className="relative"
+            animate={{ y: [0, -4, 0] }}
+            transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/stadium.png"
+              alt=""
+              draggable={false}
+              className={[
+                "h-[7.25rem] w-auto max-w-[72%] object-contain sm:h-32",
+                scene.art,
+              ].join(" ")}
+            />
+          </motion.div>
+        </div>
+
+        {/* Crowd seats — CSS dots in stands, density from fans */}
+        <div
+          className="absolute inset-x-[18%] top-[38%] z-[1] flex flex-wrap justify-center gap-1 px-1"
           aria-hidden
         >
           {Array.from({ length: crowdN }).map((_, i) => (
             <motion.span
               key={`${crowdN}-${i}`}
-              className="inline-block drop-shadow-sm"
-              style={{ opacity: 0.55 + (i / crowdN) * 0.45 }}
-              animate={{ y: [0, -3, 0] }}
+              className={[
+                "inline-block h-1.5 w-1.5 rounded-full sm:h-2 sm:w-2",
+                floodlit
+                  ? "bg-sky-200/90"
+                  : stadiumLevel >= 2
+                    ? "bg-emerald-200/85"
+                    : stadiumLevel >= 1
+                      ? "bg-amber-200/80"
+                      : "bg-stone-300/70",
+              ].join(" ")}
+              style={{ opacity: 0.45 + (i / crowdN) * 0.5 }}
+              animate={{ opacity: [0.4, 0.95, 0.4] }}
               transition={{
                 repeat: Infinity,
-                duration: 1.6 + (i % 4) * 0.25,
-                delay: i * 0.08,
-                ease: "easeInOut",
+                duration: 1.4 + (i % 5) * 0.2,
+                delay: i * 0.05,
               }}
-            >
-              {stadiumLevel >= 2 ? "🧑‍🤝‍🧑" : "👤"}
-            </motion.span>
+            />
           ))}
         </div>
 
-        {/* Pitch */}
+        {/* Pitch strip */}
         <div
-          className={`absolute inset-x-0 bottom-0 h-[58%] bg-linear-to-b ${tier.pitch}`}
+          className={[
+            "absolute inset-x-0 bottom-0 h-[42%]",
+            stadiumLevel >= 2
+              ? "bg-linear-to-b from-[#166534] to-[#052e16]"
+              : stadiumLevel >= 1
+                ? "bg-linear-to-b from-[#92400e] to-[#451a03]"
+                : "bg-linear-to-b from-[#57534e] to-[#1c1917]",
+          ].join(" ")}
+          aria-hidden
         >
-          <div className="absolute inset-0 flex flex-col justify-evenly overflow-hidden">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <motion.div
+          <div className="absolute inset-0 flex flex-col justify-evenly opacity-40">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div
                 key={i}
-                className={`h-1/2 ${i % 2 === 0 ? tier.stripe : ""}`}
-                animate={
-                  i % 2 === 0
-                    ? { opacity: [0.55, 0.85, 0.55] }
-                    : undefined
-                }
-                transition={
-                  i % 2 === 0
-                    ? { repeat: Infinity, duration: 5, ease: "easeInOut" }
-                    : undefined
+                className={
+                  i % 2 === 0 ? "h-full bg-white/10" : "h-full bg-transparent"
                 }
               />
             ))}
           </div>
-          <div className="absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/60" />
-          <motion.span
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl"
-            animate={{ y: [0, -6, 0], rotate: [0, 8, -8, 0] }}
-            transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-            aria-hidden
-          >
-            ⚽️
-          </motion.span>
-
-          {/* Training ground — left sideline */}
-          <FacilityBadge
-            emoji={trainEmoji === "cone" ? "🚧" : trainEmoji}
-            iconSrc="/icons/training.png"
-            label={t("stadium.badgeTraining", {
-              n: toLocaleDigits(trainingGroundLevel, locale),
-            })}
-            side="start"
-            level={trainingGroundLevel}
-            pulse={celebrating}
-          />
-
-          {/* Medical bay — right sideline */}
-          <FacilityBadge
-            emoji={medEmoji}
-            iconSrc="/icons/medical.png"
-            label={t("stadium.badgeMedical", {
-              n: toLocaleDigits(regenMinutes, locale),
-            })}
-            side="end"
-            level={medicalLevel}
-            pulse={celebrating}
-          />
+          <div className="absolute left-1/2 top-[42%] h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/35" />
+          <div className="absolute left-1/2 top-[42%] h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/70" />
         </div>
 
-        {/* Fan fill meter */}
-        <div className="absolute inset-x-3 top-[42%] z-10 h-1 overflow-hidden rounded-full bg-black/25">
-          <motion.div
-            className="h-full rounded-full bg-linear-to-r from-amber-200 to-primary"
-            initial={false}
-            animate={{ width: `${fillPct}%` }}
-            transition={{ type: "spring", stiffness: 120, damping: 20 }}
-          />
-        </div>
+        <FacilityBadge
+          iconSrc="/icons/training.png"
+          label={t("stadium.badgeTraining", {
+            n: toLocaleDigits(trainingGroundLevel, locale),
+          })}
+          side="start"
+          level={trainingGroundLevel}
+          pulse={celebrating}
+        />
+        <FacilityBadge
+          iconSrc="/icons/medical.png"
+          label={t("stadium.badgeMedical", {
+            n: toLocaleDigits(regenMinutes, locale),
+          })}
+          side="end"
+          level={medicalLevel}
+          pulse={celebrating}
+        />
 
-        <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/60 to-transparent px-3 pb-3 pt-8">
-          <p className="font-display text-xs font-bold text-white/95">
-            {tier.props} {t("stadium.lvl")}{" "}
+        {/* Bottom HUD */}
+        <div className="absolute inset-x-0 bottom-0 z-10 bg-linear-to-t from-black/85 via-black/55 to-transparent px-3 pb-2.5 pt-10">
+          <div className="mb-1.5 h-1.5 overflow-hidden rounded-full bg-black/50 ring-1 ring-white/15">
+            <motion.div
+              className={[
+                "h-full rounded-full",
+                fillPct >= 90
+                  ? "bg-linear-to-r from-amber-400 to-orange-400"
+                  : "bg-linear-to-r from-emerald-400 to-lime-300",
+              ].join(" ")}
+              initial={false}
+              animate={{ width: `${fillPct}%` }}
+              transition={{ type: "spring", stiffness: 140, damping: 22 }}
+            />
+          </div>
+          <p className="font-display text-[11px] font-black text-white/90">
+            {scene.tip} {t("stadium.lvl")}{" "}
             {toLocaleDigits(stadiumLevel, locale)} ·{" "}
             {t(`stadium.tiers.${tierIndex}`)}
           </p>
-          <p className="mt-0.5 font-display text-sm font-bold text-white">
-            👥 {toLocaleDigits(fans, locale)}/{toLocaleDigits(cap, locale)}{" "}
+          <p className="mt-0.5 font-display text-sm font-black text-white">
+            {toLocaleDigits(fans, locale)}
+            <span className="text-white/45">
+              /{toLocaleDigits(cap, locale)}
+            </span>{" "}
             {t("stadium.fans")}
-            <span className="ms-1.5 text-[11px] font-semibold text-white/70">
-              ({toLocaleDigits(fillPct, locale)}%)
+            <span className="ms-1.5 text-[11px] font-bold text-amber-200/90">
+              {toLocaleDigits(fillPct, locale)}%
             </span>
           </p>
-          <p className="mt-0.5 font-body text-[10px] font-semibold text-white/75">
-            ⚡ {toLocaleDigits(maxStamina, locale)} {t("stadium.maxEnergy")} ·{" "}
+          <p className="mt-0.5 font-display text-[10px] font-bold text-white/55">
+            ⚡ {toLocaleDigits(maxStamina, locale)} ·{" "}
             {t("stadium.regenEvery", {
               n: toLocaleDigits(regenMinutes, locale),
             })}{" "}
@@ -283,49 +296,28 @@ export function StadiumHero({
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
         title={t("stadium.sheetTitle")}
-        subtitle={t(`stadium.tiers.${tierIndex}`)}
+        subtitle={`${t("stadium.lvl")} ${toLocaleDigits(stadiumLevel, locale)} · ${t(`stadium.tiers.${tierIndex}`)}`}
         closeLabel={t("common.close")}
         tone="dark"
       >
-        {/* Stage — matches Club Business facility sheets */}
         <div
           className={[
-            "relative -mx-1 mb-4 overflow-hidden rounded-bubble-xl border border-white/15 bg-gradient-to-br shadow-[0_8px_0_0_rgba(0,0,0,0.35)]",
-            tierIndex >= 3
-              ? "from-[#0c2d4a] via-[#134e75] to-[#1a7a55]"
-              : tierIndex >= 2
-                ? "from-[#14532d] via-[#166534] to-[#15803d]"
-                : tierIndex >= 1
-                  ? "from-[#3d2a08] via-[#7a5410] to-[#a16207]"
-                  : "from-[#292524] via-[#44403c] to-[#57534e]",
+            "relative -mx-1 overflow-hidden rounded-bubble-xl border-2 border-white/15 bg-linear-to-br shadow-[0_5px_0_0_rgba(0,0,0,0.35)]",
+            scene.wash,
           ].join(" ")}
         >
           <div
-            className="pointer-events-none absolute -start-8 top-0 h-32 w-32 rounded-full bg-emerald-400/30 blur-2xl"
-            aria-hidden
-          />
-          <div
-            className="pointer-events-none absolute -end-6 bottom-0 h-24 w-24 rounded-full bg-white/10 blur-xl"
-            aria-hidden
-          />
-          <div
-            className="pointer-events-none absolute inset-0 opacity-[0.07]"
+            className="pointer-events-none absolute inset-0 opacity-[0.06]"
             style={{
               backgroundImage:
-                "repeating-linear-gradient(-12deg, transparent, transparent 12px, #fff 12px, #fff 13px)",
+                "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
             }}
             aria-hidden
           />
 
-          <div className="relative flex flex-col items-center px-4 pb-5 pt-6">
-            <motion.div
-              className="relative flex h-24 w-24 items-center justify-center rounded-full border-4 border-white/25 bg-black/25 text-5xl shadow-[0_0_40px_rgba(255,255,255,0.15)]"
-              animate={{ y: [0, -6, 0] }}
-              transition={{
-                repeat: Infinity,
-                duration: 2.8,
-                ease: "easeInOut",
-              }}
+          <div className="relative flex items-center gap-3 px-3 py-3.5">
+            <span
+              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border-2 border-white/25 bg-black/30 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]"
               aria-hidden
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -333,56 +325,67 @@ export function StadiumHero({
                 src="/icons/stadium.png"
                 alt=""
                 draggable={false}
-                className="h-14 w-14 object-contain drop-shadow-md"
+                className={["h-12 w-12 object-contain", scene.art].join(" ")}
               />
-            </motion.div>
-
-            <div className="mt-3 flex items-center gap-1.5">
-              {Array.from({ length: 4 }, (_, i) => (
-                <span
-                  key={i}
-                  className={[
-                    "h-2.5 w-2.5 rounded-full border border-white/30",
-                    i < stadiumLevel
-                      ? "bg-emerald-400 shadow-[0_0_8px_currentColor]"
-                      : "bg-white/10",
-                  ].join(" ")}
-                  aria-hidden
-                />
-              ))}
-            </div>
-
-            <span className="mt-2 rounded-full bg-accent px-3 py-1 font-display text-xs font-black uppercase tracking-wide text-accent-foreground shadow-[0_3px_0_0_hsl(var(--accent-deep))]">
-              {tier.props}{" "}
-              {t("stadium.lvl")} {toLocaleDigits(stadiumLevel, locale)} ·{" "}
-              {t(`stadium.tiers.${tierIndex}`)}
             </span>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1">
+                {Array.from({ length: 4 }, (_, i) => (
+                  <span
+                    key={i}
+                    className={[
+                      "h-2 w-2 rounded-full",
+                      i < stadiumLevel
+                        ? "bg-accent shadow-[0_0_6px_hsl(var(--accent))]"
+                        : "bg-white/15",
+                    ].join(" ")}
+                    aria-hidden
+                  />
+                ))}
+              </div>
+              <p className="mt-1.5 font-display text-sm font-black text-white">
+                {toLocaleDigits(fans, locale)}
+                <span className="text-white/50">
+                  /{toLocaleDigits(cap, locale)}
+                </span>
+              </p>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-black/40 ring-1 ring-white/15">
+                <motion.div
+                  className={[
+                    "h-full rounded-full",
+                    fillPct >= 90
+                      ? "bg-linear-to-r from-amber-400 to-orange-400"
+                      : "bg-linear-to-r from-emerald-400 to-lime-300",
+                  ].join(" ")}
+                  initial={false}
+                  animate={{ width: `${fillPct}%` }}
+                />
+              </div>
+              <p className="mt-1 font-display text-[10px] font-bold text-white/55">
+                {t("stadium.crowdFill")} ·{" "}
+                <span dir="ltr" className="tabular-nums text-amber-200">
+                  {toLocaleDigits(fillPct, locale)}%
+                </span>
+              </p>
+            </div>
           </div>
         </div>
 
-        <p className="text-center font-body text-sm font-semibold leading-relaxed text-white/65">
-          {t("stadium.sheetHint")}
-        </p>
-
-        <div className="mt-4 grid grid-cols-2 gap-2.5">
-          <GameStat
+        <ul className="mt-3 flex flex-col gap-2">
+          <FacilityRow
             emoji="🏟️"
             label={t("stadium.statStadium")}
             value={`${t("stadium.lvl")} ${toLocaleDigits(stadiumLevel, locale)}`}
+            hot={stadiumLevel >= 3}
           />
-          <GameStat
-            emoji="👥"
-            label={t("stadium.statFans")}
-            value={`${toLocaleDigits(fans, locale)}/${toLocaleDigits(cap, locale)}`}
-            hot={fillPct >= 90}
-          />
-          <GameStat
+          <FacilityRow
             emoji="🏃"
             label={t("stadium.statTraining")}
             value={`${t("stadium.lvl")} ${toLocaleDigits(trainingGroundLevel, locale)}`}
             sub={`⚡ ${toLocaleDigits(maxStamina, locale)}`}
           />
-          <GameStat
+          <FacilityRow
             emoji="🏥"
             label={t("stadium.statMedical")}
             value={`${t("stadium.lvl")} ${toLocaleDigits(medicalLevel, locale)}`}
@@ -390,60 +393,24 @@ export function StadiumHero({
               n: toLocaleDigits(regenMinutes, locale),
             })}
           />
-        </div>
+        </ul>
 
-        {/* Fan fill meter */}
-        <div className="mt-4">
-          <div className="mb-1.5 flex items-center justify-between font-display text-[11px] font-bold text-white/55">
-            <span>{t("stadium.crowdFill")}</span>
-            <span dir="ltr" className="tabular-nums text-accent">
-              {toLocaleDigits(fillPct, locale)}%
-            </span>
-          </div>
-          <div className="relative h-4 overflow-hidden rounded-full border-2 border-white/15 bg-black/40 shadow-inner">
-            <motion.div
-              className={[
-                "absolute inset-y-0 start-0 rounded-full",
-                fillPct >= 90
-                  ? "bg-gradient-to-r from-amber-400 to-orange-400"
-                  : "bg-gradient-to-r from-emerald-400 to-lime-300",
-              ].join(" ")}
-              initial={false}
-              animate={{ width: `${fillPct}%` }}
-              transition={{ type: "spring", stiffness: 220, damping: 28 }}
-            />
-            {fillPct > 8 && fillPct < 100 && (
-              <motion.div
-                className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/35 to-transparent"
-                animate={{ opacity: [0.15, 0.55, 0.15] }}
-                transition={{
-                  repeat: Infinity,
-                  duration: 1.4,
-                  ease: "easeInOut",
-                }}
-                aria-hidden
-              />
-            )}
-          </div>
-          <p className="mt-2 text-center font-display text-[11px] font-bold text-white/45">
-            {t("stadium.tapUpgradesHint")}
-          </p>
-        </div>
+        <p className="mt-3 text-center font-display text-[11px] font-bold text-white/40">
+          {t("stadium.tapUpgradesHint")}
+        </p>
       </BottomSheet>
     </>
   );
 }
 
 function FacilityBadge({
-  emoji,
   iconSrc,
   label,
   side,
   level,
   pulse,
 }: {
-  emoji: string;
-  iconSrc?: string;
+  iconSrc: string;
   label: string;
   side: "start" | "end";
   level: number;
@@ -453,11 +420,11 @@ function FacilityBadge({
   return (
     <motion.div
       className={[
-        "absolute bottom-3 z-10 flex items-center gap-1 rounded-xl border px-1.5 py-1 shadow-md backdrop-blur-sm",
+        "absolute bottom-[44%] z-10 flex items-center gap-1 rounded-xl border-2 px-1.5 py-1 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]",
         side === "start" ? "start-2" : "end-2",
         grown
-          ? "border-white/50 bg-white/90"
-          : "border-white/25 bg-black/35",
+          ? "border-white/25 bg-black/55"
+          : "border-white/10 bg-black/40 opacity-70",
       ].join(" ")}
       animate={
         pulse
@@ -475,35 +442,24 @@ function FacilityBadge({
       }
       aria-hidden
     >
-      {iconSrc ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={iconSrc}
-          alt=""
-          draggable={false}
-          className={[
-            "object-contain",
-            grown ? "h-5 w-5" : "h-4 w-4 opacity-70",
-          ].join(" ")}
-        />
-      ) : (
-        <span className={grown ? "text-base" : "text-sm opacity-70"}>
-          {emoji}
-        </span>
-      )}
-      <span
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={iconSrc}
+        alt=""
+        draggable={false}
         className={[
-          "font-display text-[9px] font-extrabold leading-none",
-          grown ? "text-slate-800" : "text-white/80",
+          "object-contain",
+          grown ? "h-5 w-5" : "h-4 w-4 opacity-70",
         ].join(" ")}
-      >
+      />
+      <span className="font-display text-[9px] font-extrabold leading-none text-white">
         {label}
       </span>
     </motion.div>
   );
 }
 
-function GameStat({
+function FacilityRow({
   emoji,
   label,
   value,
@@ -517,32 +473,38 @@ function GameStat({
   hot?: boolean;
 }) {
   return (
-    <div
+    <li
       className={[
-        "rounded-bubble-lg border-2 px-3 py-2.5 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]",
+        "flex items-center gap-3 rounded-2xl border-2 px-3 py-2.5 shadow-[0_3px_0_0_rgba(0,0,0,0.3)]",
         hot
-          ? "border-amber-400/70 bg-amber-500/20"
-          : "border-white/12 bg-white/8",
+          ? "border-amber-400/55 bg-amber-500/15"
+          : "border-white/12 bg-black/25",
       ].join(" ")}
     >
-      <p className="flex items-center gap-1 font-display text-[10px] font-bold uppercase tracking-wide text-white/50">
-        <span aria-hidden>{emoji}</span>
-        {label}
-      </p>
-      <p
-        dir="ltr"
-        className={[
-          "mt-1 font-display text-lg font-black tabular-nums tracking-tight",
-          hot ? "text-amber-300" : "text-white",
-        ].join(" ")}
+      <span
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-black/30 text-xl"
+        aria-hidden
       >
-        {value}
-      </p>
-      {sub ? (
-        <p className="mt-0.5 font-display text-[11px] font-bold text-white/55">
-          {sub}
+        {emoji}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-display text-[11px] font-bold text-white/55">
+          {label}
         </p>
-      ) : null}
-    </div>
+        <p
+          className={[
+            "font-display text-base font-black",
+            hot ? "text-amber-200" : "text-white",
+          ].join(" ")}
+        >
+          {value}
+          {sub ? (
+            <span className="ms-1.5 text-[11px] font-bold text-white/55">
+              · {sub}
+            </span>
+          ) : null}
+        </p>
+      </div>
+    </li>
   );
 }
