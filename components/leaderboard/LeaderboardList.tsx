@@ -127,33 +127,8 @@ export function LeaderboardList({
 
   return (
     <section className="relative flex flex-1 flex-col">
-      <header className="sticky top-0 z-20 -mx-1 bg-background/90 pb-2.5 pt-2 backdrop-blur-md">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="font-display text-[11px] font-semibold uppercase tracking-widest text-primary">
-              {t("leaderboard.eyebrow")}
-            </p>
-            <h1 className="font-display text-2xl font-bold text-foreground">
-              {tab === "weekly"
-                ? t("leaderboard.title")
-                : t("leaderboard.hofTitle")}
-            </h1>
-          </div>
-          {tab === "weekly" && (
-            <span className="shrink-0 rounded-full bg-amber-400/15 px-2.5 py-1 font-display text-[11px] font-bold text-amber-800 ring-1 ring-amber-400/35 dark:text-amber-200">
-              ⏳{" "}
-              {t("leaderboard.resetsIn", {
-                n: toLocaleDigits(resetsInDays, locale),
-              })}
-            </span>
-          )}
-        </div>
-
-        <div
-          role="tablist"
-          aria-label={t("leaderboard.eyebrow")}
-          className="relative mt-2.5 grid grid-cols-2 gap-1.5 overflow-hidden rounded-bubble-xl border-[3px] border-emerald-500/35 bg-linear-to-br from-[#052e16] via-[#14532d] to-[#022c22] p-1.5 shadow-[0_4px_0_0_rgba(0,0,0,0.28)]"
-        >
+      <header className="sticky top-0 z-20 -mx-1 bg-background/85 pb-2.5 pt-2 backdrop-blur-md">
+        <div className="relative overflow-hidden rounded-bubble-xl border-[3px] border-emerald-400/40 bg-linear-to-br from-[#052e16] via-[#14532d] to-[#0f172a] p-3 shadow-[0_5px_0_0_rgba(0,0,0,0.28)]">
           <div
             className="pointer-events-none absolute inset-0 opacity-[0.06]"
             style={{
@@ -162,39 +137,77 @@ export function LeaderboardList({
             }}
             aria-hidden
           />
-          {(
-            [
-              { key: "weekly" as const, label: t("leaderboard.tabWeekly") },
-              { key: "hof" as const, label: t("leaderboard.tabHof") },
-            ] as const
-          ).map((item) => {
-            const active = tab === item.key;
-            return (
-              <button
-                key={item.key}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => selectTab(item.key)}
-                className={[
-                  "relative z-10 flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-2 font-display text-sm font-black transition-colors",
-                  active ? "text-emerald-950" : "text-white/65",
-                ].join(" ")}
-              >
-                {active && (
-                  <motion.span
-                    layoutId="leaderboard-tab-pill"
-                    className="absolute inset-0 rounded-xl bg-accent shadow-[0_3px_0_0_rgba(0,0,0,0.3)]"
-                    transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                  />
-                )}
-                <span className="relative z-10">
-                  {item.key === "hof" ? "🏛️ " : "⚽ "}
-                  {item.label}
-                </span>
-              </button>
-            );
-          })}
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute -end-8 top-0 h-24 w-24 rounded-full bg-emerald-300/25 blur-2xl"
+            animate={{ opacity: [0.2, 0.45, 0.2] }}
+            transition={{ duration: 2.6, repeat: Infinity }}
+          />
+
+          <div className="relative flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="font-display text-[10px] font-black uppercase tracking-widest text-emerald-200/75">
+                {t("leaderboard.eyebrow")}
+              </p>
+              <h1 className="mt-0.5 font-display text-2xl font-black text-white drop-shadow-sm">
+                {tab === "weekly"
+                  ? t("leaderboard.title")
+                  : t("leaderboard.hofTitle")}
+              </h1>
+            </div>
+            {tab === "weekly" && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-bubble border-2 border-amber-300/45 bg-black/35 px-2.5 py-1.5 font-display text-[11px] font-black text-amber-100 shadow-[0_3px_0_0_rgba(0,0,0,0.3)]">
+                ⏳{" "}
+                {t("leaderboard.resetsIn", {
+                  n: toLocaleDigits(resetsInDays, locale),
+                })}
+              </span>
+            )}
+          </div>
+
+          <div
+            role="tablist"
+            aria-label={t("leaderboard.eyebrow")}
+            className="relative mt-3 grid grid-cols-2 gap-1.5 rounded-2xl border border-white/12 bg-black/30 p-1"
+          >
+            {(
+              [
+                { key: "weekly" as const, label: t("leaderboard.tabWeekly") },
+                { key: "hof" as const, label: t("leaderboard.tabHof") },
+              ] as const
+            ).map((item) => {
+              const active = tab === item.key;
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => selectTab(item.key)}
+                  className={[
+                    "relative z-10 flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-2 font-display text-sm font-black transition-colors",
+                    active ? "text-emerald-950" : "text-white/65",
+                  ].join(" ")}
+                >
+                  {active && (
+                    <motion.span
+                      layoutId="leaderboard-tab-pill"
+                      className="absolute inset-0 rounded-xl bg-accent shadow-[0_3px_0_0_rgba(0,0,0,0.3)]"
+                      transition={{
+                        type: "spring",
+                        stiffness: 420,
+                        damping: 32,
+                      }}
+                    />
+                  )}
+                  <span className="relative z-10">
+                    {item.key === "hof" ? "🏛️ " : "⚽ "}
+                    {item.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </header>
 
