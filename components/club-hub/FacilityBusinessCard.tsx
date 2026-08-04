@@ -87,6 +87,8 @@ type FacilityBusinessCardProps = {
   pending: boolean;
   onBuild: () => void;
   onUpgrade: () => void;
+  /** Open staff sheet focused on this facility desk. */
+  onManageStaff?: () => void;
 };
 
 /**
@@ -98,6 +100,7 @@ export function FacilityBusinessCard({
   pending,
   onBuild,
   onUpgrade,
+  onManageStaff,
 }: FacilityBusinessCardProps) {
   const { t, locale } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -185,6 +188,11 @@ export function FacilityBusinessCard({
               {f.status === "AVAILABLE" && (
                 <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-950">
                   {t("club.biz.readyToBuild")}
+                </span>
+              )}
+              {f.staff && (
+                <span className="rounded-full bg-indigo-200 px-2 py-0.5 text-[10px] font-bold text-indigo-950">
+                  👔 +{toLocaleDigits(f.staff.rateBonusPercent, locale)}%
                 </span>
               )}
             </div>
@@ -399,6 +407,47 @@ export function FacilityBusinessCard({
         <p className="mt-3 text-center font-display text-xs font-bold text-white/55">
           {t(meta.descKey)}
         </p>
+
+        {f.status === "BUILT" && onManageStaff && (
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              onManageStaff();
+            }}
+            className="mt-3 flex w-full items-center justify-between rounded-bubble-xl border-2 border-white/12 bg-white/8 px-3 py-3 text-start shadow-[0_3px_0_0_rgba(0,0,0,0.35)]"
+          >
+            <span className="flex items-center gap-2">
+              {f.staff ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={f.staff.avatarImage}
+                  alt=""
+                  className="h-9 w-9 rounded-lg object-cover"
+                />
+              ) : (
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-lg">
+                  👔
+                </span>
+              )}
+              <span>
+                <span className="block font-display text-xs font-black text-white">
+                  {f.staff
+                    ? t(`club.staff.templates.${f.staff.nameKey}`)
+                    : t("club.staff.emptyDesk")}
+                </span>
+                <span className="block font-display text-[11px] font-bold text-white/55">
+                  {f.staff
+                    ? t("club.staff.perkRate", {
+                        pct: toLocaleDigits(f.staff.rateBonusPercent, locale),
+                      })
+                    : t("club.staff.assignHint")}
+                </span>
+              </span>
+            </span>
+            <ChevronRight className="h-4 w-4 text-white/45 rtl:rotate-180" />
+          </button>
+        )}
 
         {/* Built: two key numbers only */}
         {f.status === "BUILT" && (

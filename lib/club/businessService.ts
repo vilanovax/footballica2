@@ -17,6 +17,10 @@ import {
   type FacilityRow,
 } from "@/lib/club/businessEconomy";
 import { settleSponsoredInterest } from "@/lib/club/bankInterest";
+import {
+  loadClubStaffViews,
+  settleStaffAutoCollect,
+} from "@/lib/club/staffService";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -140,23 +144,28 @@ export async function loadBusinessSnapshot(
   await ensureClubFacilities(club.id, playerLevel, db);
   const seeded = await maybeSeedClubFunds(club, playerLevel, db);
   const withInterest = await settleClubBankInterest(seeded, db);
+  const withStaffCollect = await settleStaffAutoCollect(withInterest, db);
   const rows = await db.clubFacility.findMany({
-    where: { clubId: withInterest.id },
+    where: { clubId: withStaffCollect.id },
   });
+  const staffMembers = await loadClubStaffViews(withStaffCollect.id, db);
   const config = await getGameConfig();
   const business = buildBusinessSnapshot({
-    clubFunds: withInterest.clubFunds,
-    vaultBalance: withInterest.vaultBalance,
-    vaultLevel: withInterest.vaultLevel,
-    fans: withInterest.fans,
+    clubId: withStaffCollect.id,
+    clubFunds: withStaffCollect.clubFunds,
+    vaultBalance: withStaffCollect.vaultBalance,
+    vaultLevel: withStaffCollect.vaultLevel,
+    fans: withStaffCollect.fans,
     playerLevel,
     facilities: facilitiesToRows(rows),
-    businessBoostExpiresAt: withInterest.businessBoostExpiresAt,
-    sponsoredBankActive: withInterest.sponsoredBankActive,
-    lastBankInterestAt: withInterest.lastBankInterestAt,
+    businessBoostExpiresAt: withStaffCollect.businessBoostExpiresAt,
+    sponsoredBankActive: withStaffCollect.sponsoredBankActive,
+    lastBankInterestAt: withStaffCollect.lastBankInterestAt,
+    dayKey: tehranDayKeyClient(new Date()),
+    staffMembers,
     config,
   });
-  return { club: withInterest, business };
+  return { club: withStaffCollect, business };
 }
 
 /** True when this win should start a fresh Tehran-day business income boost. */

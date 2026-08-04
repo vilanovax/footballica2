@@ -5,6 +5,12 @@ import type { GameConfig } from "@/lib/game/economy";
 import { DEFAULT_GAME_CONFIG } from "@/lib/game/economy";
 import type { BankView } from "@/lib/club/bankInterest";
 import { buildBankView } from "@/lib/club/bankInterest";
+import type { StaffMemberView, StaffSnapshot } from "@/lib/club/staff";
+import {
+  buildStaffSnapshot,
+  staffBonusByFacility,
+  staffRateMultiplier,
+} from "@/lib/club/staff";
 
 export type BusinessFacilityKey = "TICKET_OFFICE" | "CLUB_SHOP" | "MUSEUM";
 
@@ -61,6 +67,8 @@ export type FacilityView = {
   canBuild: boolean;
   canUpgrade: boolean;
   version: number;
+  /** Assigned staff preview (null = empty desk). */
+  staff: StaffMemberView | null;
 };
 
 export type IncomeBoostView = {
@@ -82,6 +90,11 @@ export type BusinessSnapshot = {
   /** 0..1 */
   vaultFillRatio: number;
   msUntilVaultFull: number;
+  /**
+   * Phase A: withdraw only when Safe is full (balance ≥ cap).
+   * Phase B: Treasurer (hired) unlocks withdraw anytime.
+   */
+  canWithdraw: boolean;
   totalRatePerHour: number;
   vaultUpgradeCost: number | null;
   collectableTotal: number;
@@ -89,7 +102,19 @@ export type BusinessSnapshot = {
   playerLevel: number;
   incomeBoost: IncomeBoostView;
   bank: BankView;
+  staff: StaffSnapshot;
 };
+
+/** Safe → Bank: full vault, or hired Treasurer. */
+export function canWithdrawVault(
+  vaultBalance: number,
+  vaultCap: number,
+  opts?: { hasTreasurer?: boolean },
+): boolean {
+  if (vaultBalance <= 0 || vaultCap <= 0) return false;
+  if (opts?.hasTreasurer) return true;
+  return vaultBalance >= vaultCap;
+}
 
 const MS_PER_HOUR = 3_600_000;
 
@@ -273,11 +298,23 @@ export function buildBusinessSnapshot(input: {
   businessBoostExpiresAt?: Date | string | null;
   sponsoredBankActive?: boolean;
   lastBankInterestAt?: Date | string | null;
+  /** Club id for deterministic staff offers. */
+  clubId?: string;
+  /** Tehran day key for staff offer seed. */
+  dayKey?: string;
+  staffMembers?: StaffMemberView[];
   config?: GameConfig;
   now?: Date;
 }): BusinessSnapshot {
   const config = input.config ?? DEFAULT_GAME_CONFIG;
   const now = input.now ?? new Date();
+  const members = input.staffMembers ?? [];
+  const bonusByFacility = staffBonusByFacility(members);
+  const staffByFacility = new Map(
+    members
+      .filter((m) => m.assignedFacilityKey)
+      .map((m) => [m.assignedFacilityKey!, m]),
+  );
   const rateBoost = incomeBoostMultiplier(
     input.businessBoostExpiresAt,
     now,
@@ -306,13 +343,17 @@ export function buildBusinessSnapshot(input: {
           ? "AVAILABLE"
           : "LOCKED";
 
+    const staffBonus = bonusByFacility[key] ?? 0;
+    const staffMult = staffRateMultiplier(staffBonus);
+    const effectiveBoost = rateBoost * staffMult;
+
     const rate =
       status === "BUILT"
-        ? rateAtLevel(def, level, input.fans, config, rateBoost)
+        ? rateAtLevel(def, level, input.fans, config, effectiveBoost)
         : 0;
     const cap =
       status === "BUILT"
-        ? storageCapAtLevel(def, level, input.fans, config, rateBoost)
+        ? storageCapAtLevel(def, level, input.fans, config, effectiveBoost)
         : 0;
 
     let stored = row?.storedAmount ?? 0;
@@ -337,13 +378,19 @@ export function buildBusinessSnapshot(input: {
     let nextRate: number | null = null;
     let nextCap: number | null = null;
     if (status === "BUILT" && level < def.maxLevel) {
-      nextRate = rateAtLevel(def, level + 1, input.fans, config, rateBoost);
+      nextRate = rateAtLevel(
+        def,
+        level + 1,
+        input.fans,
+        config,
+        effectiveBoost,
+      );
       nextCap = storageCapAtLevel(
         def,
         level + 1,
         input.fans,
         config,
-        rateBoost,
+        effectiveBoost,
       );
     } else if (status !== "BUILT") {
       // Teaser at level 1 for locked / ready-to-build cards.
@@ -374,6 +421,7 @@ export function buildBusinessSnapshot(input: {
         uCost !== null &&
         input.clubFunds >= uCost,
       version: row?.version ?? 0,
+      staff: staffByFacility.get(key) ?? null,
     });
   }
 
@@ -389,6 +437,14 @@ export function buildBusinessSnapshot(input: {
       ? Math.ceil((vaultSpace / totalRate) * MS_PER_HOUR)
       : 0;
 
+  const staff = buildStaffSnapshot({
+    clubId: input.clubId ?? "unknown",
+    clubFunds: input.clubFunds,
+    dayKey: input.dayKey ?? "0",
+    members,
+    config,
+  });
+
   return {
     clubFunds: input.clubFunds,
     vaultBalance: input.vaultBalance,
@@ -398,6 +454,9 @@ export function buildBusinessSnapshot(input: {
     vaultMaxLevel: config.businessEconomy.vault.maxLevel,
     vaultFillRatio: vCap > 0 ? Math.min(1, input.vaultBalance / vCap) : 0,
     msUntilVaultFull,
+    canWithdraw: canWithdrawVault(input.vaultBalance, vCap, {
+      hasTreasurer: staff.hasTreasurer,
+    }),
     totalRatePerHour: totalRate,
     vaultUpgradeCost: vUpCost,
     collectableTotal,
@@ -411,6 +470,7 @@ export function buildBusinessSnapshot(input: {
       config,
       now,
     }),
+    staff,
   };
 }
 

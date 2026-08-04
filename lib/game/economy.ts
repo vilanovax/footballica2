@@ -225,6 +225,15 @@ export type GameConfig = {
       /** Spendable Funds cost to activate sponsored bank. */
       upgradeCost: number;
     };
+    /** Hireable staff pool (ADR 004 Phase B). */
+    staff: {
+      enabled: boolean;
+      maxHired: number;
+      hireCostBase: number;
+      hireCostGrowth: number;
+      /** Candidates shown in the hire sheet. */
+      offerCount: number;
+    };
     facilities: {
       TICKET_OFFICE: BusinessFacilityConfig;
       CLUB_SHOP: BusinessFacilityConfig;
@@ -353,6 +362,13 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
       maxCatchupTicks: 3,
       upgradeCost: 200,
     },
+    staff: {
+      enabled: true,
+      maxHired: 3,
+      hireCostBase: 250,
+      hireCostGrowth: 1.6,
+      offerCount: 3,
+    },
     facilities: {
       TICKET_OFFICE: {
         unlockPlayerLevel: 1,
@@ -418,7 +434,9 @@ export function mergeGameConfig(raw: unknown): GameConfig {
   const beVault = (be.vault ?? {}) as Record<string, unknown>;
   const beFac = (be.facilities ?? {}) as Record<string, unknown>;
   const beBank = (be.sponsoredBank ?? {}) as Record<string, unknown>;
+  const beStaff = (be.staff ?? {}) as Record<string, unknown>;
   const DBank = DEFAULT_GAME_CONFIG.businessEconomy.sponsoredBank;
+  const DStaff = DEFAULT_GAME_CONFIG.businessEconomy.staff;
   const D = DEFAULT_GAME_CONFIG;
 
   const mergeFacility = (
@@ -772,6 +790,28 @@ export function mergeGameConfig(raw: unknown): GameConfig {
         upgradeCost: Math.max(
           0,
           Math.round(num(beBank.upgradeCost, DBank.upgradeCost)),
+        ),
+      },
+      staff: {
+        enabled:
+          typeof beStaff.enabled === "boolean"
+            ? beStaff.enabled
+            : DStaff.enabled,
+        maxHired: Math.min(
+          6,
+          Math.max(1, Math.round(num(beStaff.maxHired, DStaff.maxHired))),
+        ),
+        hireCostBase: Math.max(
+          1,
+          Math.round(num(beStaff.hireCostBase, DStaff.hireCostBase)),
+        ),
+        hireCostGrowth: Math.max(
+          1,
+          num(beStaff.hireCostGrowth, DStaff.hireCostGrowth),
+        ),
+        offerCount: Math.min(
+          4,
+          Math.max(1, Math.round(num(beStaff.offerCount, DStaff.offerCount))),
         ),
       },
       facilities: {

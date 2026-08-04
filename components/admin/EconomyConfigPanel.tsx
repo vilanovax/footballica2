@@ -584,6 +584,35 @@ const CLUB_BIZ_FIELDS: FieldDef[] = [
     min: 1,
   },
   {
+    key: "businessEconomy.staff.maxHired",
+    label: "Staff max hired",
+    description: "Max staff on the club roster (Phase B).",
+    tip: "Default 3 — one per facility.",
+    min: 1,
+  },
+  {
+    key: "businessEconomy.staff.hireCostBase",
+    label: "Staff hire base cost",
+    description: "Funds cost of the first hire.",
+    tip: "Grows with hireCostGrowth^n.",
+    min: 1,
+  },
+  {
+    key: "businessEconomy.staff.hireCostGrowth",
+    label: "Staff hire cost growth",
+    description: "Multiplier per already-hired staff.",
+    tip: "1.6 default.",
+    min: 1,
+    step: 0.05,
+  },
+  {
+    key: "businessEconomy.staff.offerCount",
+    label: "Staff offer count",
+    description: "Candidates shown in the hire sheet.",
+    tip: "1–4.",
+    min: 1,
+  },
+  {
     key: "businessEconomy.facilities.TICKET_OFFICE.baseRatePerHour",
     label: "Ticket rate / h",
     description: "Level-1 Ticket Office Funds per hour.",
@@ -998,6 +1027,38 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
                 className="h-10 text-sm"
                 dir="rtl"
               />
+            </label>
+          </div>
+        </div>
+      ) : null}
+
+      {tab === "club" ? (
+        <div className="space-y-2 rounded-2xl border border-indigo-200 bg-indigo-50/40 px-3 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="flex items-center gap-1 text-xs font-semibold text-slate-800">
+              Club Staff (Phase B)
+              <AdminHelpTip text="Shared hire pool. Assigned staff boost rate + auto-collect when full. Treasurer unlocks Safe→Bank anytime." />
+            </span>
+            <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
+              <input
+                type="checkbox"
+                checked={draft.businessEconomy.staff.enabled}
+                onChange={(e) =>
+                  setDraft((prev) =>
+                    mergeGameConfig({
+                      ...prev,
+                      businessEconomy: {
+                        ...prev.businessEconomy,
+                        staff: {
+                          ...prev.businessEconomy.staff,
+                          enabled: e.target.checked,
+                        },
+                      },
+                    }),
+                  )
+                }
+              />
+              Enabled
             </label>
           </div>
         </div>

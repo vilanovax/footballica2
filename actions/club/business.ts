@@ -18,6 +18,7 @@ import {
   settleFacilityAmount,
   storageCapAtLevel,
   upgradeCost,
+  canWithdrawVault,
   vaultAccepts,
   vaultCapacity,
   vaultUpgradeCost,
@@ -27,6 +28,12 @@ import {
   ensureClubFacilities,
   settleClubBankInterest,
 } from "@/lib/club/businessService";
+import {
+  clubHasTreasurer,
+  loadClubStaffViews,
+  settleStaffAutoCollect,
+} from "@/lib/club/staffService";
+import { staffBonusByFacility, staffRateMultiplier } from "@/lib/club/staff";
 
 export type BusinessActionResult =
   | { ok: true; club: ClubSnapshot; transferred?: number }
@@ -49,6 +56,7 @@ export async function collectFacilities(
       const { user } = pair;
       let { club } = pair;
       club = await settleClubBankInterest(club, tx);
+      club = await settleStaffAutoCollect(club, tx);
       const config = await getGameConfig();
       const playerLevel = calculateLevel(user.xp).level;
       const now = new Date();
@@ -57,6 +65,8 @@ export async function collectFacilities(
       const rows = await tx.clubFacility.findMany({
         where: { clubId: club.id, status: "BUILT" },
       });
+      const staffMembers = await loadClubStaffViews(club.id, tx);
+      const bonusBy = staffBonusByFacility(staffMembers);
       const rateBoost = incomeBoostMultiplier(
         club.businessBoostExpiresAt,
         now,
@@ -65,13 +75,15 @@ export async function collectFacilities(
 
       let totalRate = 0;
       for (const row of rows) {
-        const def = getFacilityDef(row.key as BusinessFacilityKey, config);
+        const fKey = row.key as BusinessFacilityKey;
+        const def = getFacilityDef(fKey, config);
+        const mult = staffRateMultiplier(bonusBy[fKey] ?? 0);
         totalRate += rateAtLevel(
           def,
           row.level,
           club.fans,
           config,
-          rateBoost,
+          rateBoost * mult,
         );
       }
       let vaultBal = club.vaultBalance;
@@ -86,19 +98,20 @@ export async function collectFacilities(
       for (const row of targets) {
         const fKey = row.key as BusinessFacilityKey;
         const def = getFacilityDef(fKey, config);
+        const mult = staffRateMultiplier(bonusBy[fKey] ?? 0);
         const rate = rateAtLevel(
           def,
           row.level,
           club.fans,
           config,
-          rateBoost,
+          rateBoost * mult,
         );
         const cap = storageCapAtLevel(
           def,
           row.level,
           club.fans,
           config,
-          rateBoost,
+          rateBoost * mult,
         );
         const settled = settleFacilityAmount(
           row.storedAmount,
@@ -153,7 +166,7 @@ export async function collectFacilities(
   }
 }
 
-/** Move vault balance into spendable Club Funds. */
+/** Move vault balance into spendable Club Funds — only when Safe is full (Phase A). */
 export async function withdrawVault(): Promise<BusinessActionResult> {
   try {
     const clubSnap = await prisma.$transaction(async (tx) => {
@@ -162,9 +175,48 @@ export async function withdrawVault(): Promise<BusinessActionResult> {
       const { user } = pair;
       let { club } = pair;
       club = await settleClubBankInterest(club, tx);
+      club = await settleStaffAutoCollect(club, tx);
       if (club.vaultBalance <= 0) {
         throw new BusinessError("Vault is empty.");
       }
+
+      const config = await getGameConfig();
+      const now = new Date();
+      const staffRows = await tx.clubStaff.findMany({
+        where: { clubId: club.id },
+      });
+      const staffMembers = await loadClubStaffViews(club.id, tx);
+      const bonusBy = staffBonusByFacility(staffMembers);
+      const rateBoost = incomeBoostMultiplier(
+        club.businessBoostExpiresAt,
+        now,
+        config,
+      );
+      const rows = await tx.clubFacility.findMany({
+        where: { clubId: club.id, status: "BUILT" },
+      });
+      let totalRate = 0;
+      for (const row of rows) {
+        const fKey = row.key as BusinessFacilityKey;
+        const def = getFacilityDef(fKey, config);
+        const mult = staffRateMultiplier(bonusBy[fKey] ?? 0);
+        totalRate += rateAtLevel(
+          def,
+          row.level,
+          club.fans,
+          config,
+          rateBoost * mult,
+        );
+      }
+      const vCap = vaultCapacity(club.vaultLevel, totalRate, config);
+      if (
+        !canWithdrawVault(club.vaultBalance, vCap, {
+          hasTreasurer: clubHasTreasurer(staffRows),
+        })
+      ) {
+        throw new BusinessError("VAULT_NOT_FULL");
+      }
+
       const amount = club.vaultBalance;
       const updated = await tx.club.update({
         where: { id: club.id },

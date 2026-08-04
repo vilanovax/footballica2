@@ -211,7 +211,8 @@ Facility buffer (storedAmount ≤ storageCap)
 ```
 
 - **Vault full:** stop accepting new collect into vault (no burn). Copy explains income pauses until withdraw.
-- **UX:** primary CTA = Collect All; secondary = Withdraw; show time-to-vault-full.
+- **Withdraw gate (Phase A):** Safe → Bank only when `vaultBalance >= vaultCap`. Partial drip withdraw is blocked (server + UI). Phase B finance manager may relax this.
+- **UX:** primary CTA = Collect All; Withdraw appears only when Safe is full; show time-to-vault-full.
 
 ### 6.2 Facilities
 
@@ -402,9 +403,17 @@ Missions / campaign → claim coins/XP
 - [x] Admin Club Biz: names, %, interval hours, costs, enable flag
 - [x] Never credits match coins; no interest mint cron
 
-### Explicitly not shipped (Phase B+)
+### Club Staff (ADR 004 Phase B) ✅
 
-- [ ] Staff / Treasurer / auto-collect
+- [x] Shared staff pool (avatars + rate %) — not per-facility specialist trees
+- [x] Hire / assign / bench / fire (`ClubStaff`)
+- [x] Assigned staff: rate bonus + lazy auto-collect when buffer full
+- [x] Treasurer (hired): Safe → Bank withdraw anytime
+- [x] Hub chip + staff sheet + facility desk row
+- [x] Admin knobs: enabled, maxHired, hireCostBase/Growth, offerCount
+
+### Explicitly not shipped (later)
+
 - [ ] Out-of-app notifications (duel your-turn, vault nearly full)
 - [ ] Museum trophy % multipliers
 - [ ] Stadium → Ticket Office capacity link
@@ -455,6 +464,6 @@ Useful when balancing without opening Admin:
 Documented for planning; not commitments:
 
 1. **Re-engagement:** duel your-turn + vault-nearly-full notifications (PWA / SMS / Telegram).
-2. **Club Phase B:** Staff auto-collect + small rate bonus.
-3. **Museum trophies:** badge taxonomy → rate multipliers.
-4. Dogfood pass: 24h idle vs one Match Day session — confirm 60/40 pressure still holds after Admin tweaks.
+2. **Museum trophies:** badge taxonomy → rate multipliers.
+3. Dogfood pass: Staff + Safe-full withdraw — confirm hire costs and Treasurer feel fair.
+4. Stadium → Ticket capacity link / branch milestones (later).

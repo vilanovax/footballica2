@@ -69,7 +69,7 @@ Facility buffer (storedAmount, capped)
 UX must not require opening every bottom sheet:
 
 - Primary CTA when any buffer > 0: **Collect All → Vault**
-- Secondary when vault high: **Withdraw to spendable**
+- Secondary **only when vault is full**: **Withdraw to spendable** (Phase A gate — no partial drip)
 - Show “time until vault full”
 
 **Vault full policy:** stop new accrual into vault (and/or facility buffers that feed it — product: stop at vault). **Never burn** existing balance. Soft copy only («خزانه پر است؛ بعد از تخلیه درآمد ادامه پیدا می‌کند»).
@@ -288,7 +288,7 @@ Target interaction budget: **under ~60 seconds**.
 - Competitive quiz buffs from funds
 - Income cron jobs
 
-**Phase B (after loop feels good):** Staff (auto-collect + 5–15% rate), vault notifications, Museum trophy multipliers, Stadium→Ticket capacity link, milestone branch picks.
+**Phase B:** Staff pool + Treasurer — see [ADR 004](./004-club-staff-phase-b.md). Still open after that: vault notifications, Museum trophy multipliers, Stadium→Ticket capacity link, milestone branch picks.
 
 ---
 

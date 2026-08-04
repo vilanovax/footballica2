@@ -180,6 +180,14 @@ enum ClubFacilityStatus {
   BUILT
 }
 
+/// Hireable Club Funds staff (ADR 004 Phase B).
+enum ClubStaffRole {
+  /// Rate bonus + auto-collect on assigned facility.
+  MANAGER
+  /// Same as MANAGER when assigned; unlocks Safe→Bank withdraw anytime while hired.
+  TREASURER
+}
+
 // ─── User (Manager) ──────────────────────────────────────────────────────────
 // Owns auth identity + global progression. Economy currency lives on Club.
 
@@ -361,6 +369,7 @@ model Club {
   starPathAttempts DailyStarPathAttempt[]
   memoryAttempts   DailyMemoryAttempt[]
   facilities       ClubFacility[]
+  staff            ClubStaff[]
 
   @@index([fans])
   @@index([coins])
@@ -386,6 +395,30 @@ model ClubFacility {
 
   @@unique([clubId, key])
   @@index([clubId, status])
+}
+
+/// Hired staff for Club Funds businesses (ADR 004).
+model ClubStaff {
+  id     String @id @default(cuid())
+  clubId String
+  club   Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  /// Catalog template key (see lib/club/staff.ts).
+  templateKey       String
+  /// Avatar catalog key (reuses onboarding avatar art).
+  avatarKey         String
+  role              ClubStaffRole         @default(MANAGER)
+  /// Percent points added to assigned facility rate (e.g. 12 → +12%).
+  rateBonusPercent  Int                   @default(10)
+  /// Null = bench. At most one staff per facility per club.
+  assignedFacilityKey BusinessFacilityKey?
+
+  hiredAt   DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clubId])
+  @@unique([clubId, assignedFacilityKey])
 }
 
 /// Immutable IAP ledger for mock (and future real) coin-pack purchases.
