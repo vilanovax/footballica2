@@ -8,6 +8,7 @@ import {
 } from "@/actions/club/bank";
 import type { ClubSnapshot } from "@/lib/club/upgrades";
 import { BottomSheet } from "@/components/ui/BottomSheet";
+import { FundsCost } from "@/components/club-hub/FundsCost";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 
@@ -242,12 +243,7 @@ export function BankBusinessSheet({
               {bank.canAffordUpgrade ? (
                 <>
                   <span>{t("club.biz.bankActivateShort")}</span>
-                  <span
-                    dir="ltr"
-                    className="inline-flex items-center gap-1 rounded-full bg-black/25 px-2.5 py-0.5 text-sm"
-                  >
-                    💎 {toLocaleDigits(bank.upgradeCost, locale)}
-                  </span>
+                  <FundsCost amount={bank.upgradeCost} />
                 </>
               ) : (
                 t("club.biz.needFunds", {

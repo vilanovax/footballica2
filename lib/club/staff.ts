@@ -45,6 +45,8 @@ export type StaffSnapshot = {
   nextHireCost: number | null;
   canHire: boolean;
   hasTreasurer: boolean;
+  /** Admin catalog keys in display order — hired stay in place in the UI list. */
+  catalogKeys: string[];
   members: StaffMemberView[];
   offers: StaffOfferView[];
 };
@@ -182,6 +184,7 @@ export function buildStaffSnapshot(input: {
     nextHireCost: atCap || !s.enabled ? null : nextHireCost,
     canHire: affordable.length > 0,
     hasTreasurer: input.members.some((m) => m.role === "TREASURER"),
+    catalogKeys: listStaffTemplates(config).map((t) => t.key),
     members: input.members,
     offers,
   };

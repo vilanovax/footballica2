@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   assignStaff,
@@ -9,11 +9,16 @@ import {
 } from "@/actions/club/staff";
 import type { ClubSnapshot } from "@/lib/club/upgrades";
 import type { BusinessFacilityKey } from "@/lib/club/businessEconomy";
-import type { StaffMemberView } from "@/lib/club/staff";
+import type { StaffMemberView, StaffOfferView } from "@/lib/club/staff";
 import { staffDisplayName } from "@/lib/club/staff";
 import { BottomSheet } from "@/components/ui/BottomSheet";
+import { FundsCost } from "@/components/club-hub/FundsCost";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
+
+type StaffListRow =
+  | { kind: "hired"; member: StaffMemberView }
+  | { kind: "offer"; offer: StaffOfferView };
 
 type StaffBusinessSheetProps = {
   open: boolean;
@@ -63,6 +68,42 @@ export function StaffBusinessSheet({
   const [assignTarget, setAssignTarget] = useState<StaffMemberView | null>(
     null,
   );
+
+  /** One list in catalog order — hired stay in place, not shoved to a footer. */
+  const listRows = useMemo((): StaffListRow[] => {
+    const byTemplate = new Map(
+      staff.members.map((m) => [m.templateKey, m] as const),
+    );
+    const offerByKey = new Map(
+      staff.offers.map((o) => [o.templateKey, o] as const),
+    );
+    const keys =
+      staff.catalogKeys.length > 0
+        ? staff.catalogKeys
+        : [
+            ...staff.members.map((m) => m.templateKey),
+            ...staff.offers.map((o) => o.templateKey),
+          ];
+    const rows: StaffListRow[] = [];
+    const seen = new Set<string>();
+    for (const key of keys) {
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const member = byTemplate.get(key);
+      if (member) {
+        rows.push({ kind: "hired", member });
+        continue;
+      }
+      const offer = offerByKey.get(key);
+      if (offer) rows.push({ kind: "offer", offer });
+    }
+    for (const m of staff.members) {
+      if (!seen.has(m.templateKey)) {
+        rows.push({ kind: "hired", member: m });
+      }
+    }
+    return rows;
+  }, [staff.catalogKeys, staff.members, staff.offers]);
 
   useEffect(() => {
     if (!open) setAssignTarget(null);
@@ -159,84 +200,176 @@ export function StaffBusinessSheet({
           </div>
         </div>
 
-        {staff.enabled && staff.offers.length > 0 && (
+        {staff.enabled && listRows.length > 0 && (
           <div className="mt-4">
             <p className="mb-2 font-display text-[11px] font-black uppercase tracking-widest text-white/50">
               {t("club.staff.hireTitle")}
             </p>
             <div className="flex flex-col gap-2.5">
-              {staff.offers.map((offer) => (
-                <div
-                  key={offer.templateKey}
-                  className={[
-                    "flex items-center gap-3 rounded-bubble-xl border-2 px-3 py-3 transition-all",
-                    offer.canAfford
-                      ? "border-white/12 bg-white/8"
-                      : "border-white/8 bg-white/[0.03] opacity-55 grayscale",
-                  ].join(" ")}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={offer.avatarImage}
-                    alt=""
-                    className={[
-                      "h-12 w-12 rounded-xl object-cover ring-2",
-                      offer.canAfford ? "ring-white/20" : "ring-white/10",
-                    ].join(" ")}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p
+              {listRows.map((row) => {
+                if (row.kind === "offer") {
+                  const offer = row.offer;
+                  return (
+                    <div
+                      key={`offer-${offer.templateKey}`}
                       className={[
-                        "font-display text-sm font-black",
-                        offer.canAfford ? "text-white" : "text-white/70",
+                        "flex items-center gap-3 rounded-bubble-xl border-2 px-3 py-3 transition-all",
+                        offer.canAfford
+                          ? "border-white/12 bg-white/8"
+                          : "border-white/8 bg-white/[0.03] opacity-55 grayscale",
                       ].join(" ")}
                     >
-                      {staffDisplayName(offer, locale)}
-                    </p>
-                    <p
-                      className={[
-                        "font-display text-[11px] font-bold",
-                        offer.canAfford ? "text-lime-300" : "text-white/40",
-                      ].join(" ")}
-                    >
-                      {offer.role === "TREASURER"
-                        ? t("club.staff.perkTreasurer", {
-                            pct: toLocaleDigits(
-                              offer.rateBonusPercent,
-                              locale,
-                            ),
-                          })
-                        : t("club.staff.perkRate", {
-                            pct: toLocaleDigits(
-                              offer.rateBonusPercent,
-                              locale,
-                            ),
-                          })}
-                    </p>
-                    {!offer.canAfford && (
-                      <p className="mt-0.5 font-display text-[10px] font-bold text-white/35">
-                        {t("club.staff.needFunds")}
-                      </p>
-                    )}
-                  </div>
-                  <motion.button
-                    type="button"
-                    disabled={pending || !offer.canAfford}
-                    onClick={() => void hire(offer.templateKey)}
-                    whileTap={
-                      pending || !offer.canAfford ? undefined : { y: 2 }
-                    }
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={offer.avatarImage}
+                        alt=""
+                        className={[
+                          "h-12 w-12 rounded-xl object-cover ring-2",
+                          offer.canAfford ? "ring-white/20" : "ring-white/10",
+                        ].join(" ")}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className={[
+                            "font-display text-sm font-black",
+                            offer.canAfford ? "text-white" : "text-white/70",
+                          ].join(" ")}
+                        >
+                          {staffDisplayName(offer, locale)}
+                        </p>
+                        <p
+                          className={[
+                            "font-display text-[11px] font-bold",
+                            offer.canAfford
+                              ? "text-lime-300"
+                              : "text-white/40",
+                          ].join(" ")}
+                        >
+                          {offer.role === "TREASURER"
+                            ? t("club.staff.perkTreasurer", {
+                                pct: toLocaleDigits(
+                                  offer.rateBonusPercent,
+                                  locale,
+                                ),
+                              })
+                            : t("club.staff.perkRate", {
+                                pct: toLocaleDigits(
+                                  offer.rateBonusPercent,
+                                  locale,
+                                ),
+                              })}
+                        </p>
+                        {!offer.canAfford && (
+                          <p className="mt-0.5 font-display text-[10px] font-bold text-white/35">
+                            {t("club.staff.needFunds")}
+                          </p>
+                        )}
+                      </div>
+                      <motion.button
+                        type="button"
+                        disabled={pending || !offer.canAfford}
+                        onClick={() => void hire(offer.templateKey)}
+                        whileTap={
+                          pending || !offer.canAfford ? undefined : { y: 2 }
+                        }
+                        className={[
+                          "shrink-0 rounded-bubble px-3 py-2 font-display text-xs font-black",
+                          offer.canAfford
+                            ? "bg-accent text-accent-foreground shadow-[0_3px_0_0_hsl(var(--accent-deep))]"
+                            : "cursor-not-allowed bg-white/10 text-white/40",
+                        ].join(" ")}
+                      >
+                        <FundsCost
+                          amount={offer.cost}
+                          variant="plain"
+                          className="font-black"
+                        />
+                      </motion.button>
+                    </div>
+                  );
+                }
+
+                const m = row.member;
+                return (
+                  <div
+                    key={`hired-${m.id}`}
                     className={[
-                      "shrink-0 rounded-bubble px-3 py-2 font-display text-xs font-black",
-                      offer.canAfford
-                        ? "bg-accent text-accent-foreground shadow-[0_3px_0_0_hsl(var(--accent-deep))]"
-                        : "cursor-not-allowed bg-white/10 text-white/40",
+                      "rounded-bubble-xl border-2 px-3 py-3",
+                      focusFacilityKey && !m.assignedFacilityKey
+                        ? "border-accent/60 bg-accent/10"
+                        : "border-emerald-400/35 bg-emerald-500/10",
                     ].join(" ")}
                   >
-                    💎 {toLocaleDigits(offer.cost, locale)}
-                  </motion.button>
-                </div>
-              ))}
+                    <div className="flex items-center gap-3">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={m.avatarImage}
+                        alt=""
+                        className="h-12 w-12 rounded-xl object-cover ring-2 ring-emerald-300/40"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <p className="font-display text-sm font-black text-white">
+                            {staffDisplayName(m, locale)}
+                            {m.role === "TREASURER" ? " 💼" : ""}
+                          </p>
+                          <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 font-display text-[10px] font-black text-emerald-200 ring-1 ring-emerald-300/30">
+                            {t("club.staff.hiredBadge")}
+                          </span>
+                        </div>
+                        <p className="font-display text-[11px] font-bold text-lime-300/90">
+                          +{toLocaleDigits(m.rateBonusPercent, locale)}% ·{" "}
+                          {m.assignedFacilityKey
+                            ? t(FACILITY_NAME[m.assignedFacilityKey])
+                            : t("club.staff.bench")}
+                        </p>
+                      </div>
+                      <motion.button
+                        type="button"
+                        disabled={pending || builtFacilities.length === 0}
+                        onClick={() => setAssignTarget(m)}
+                        whileTap={
+                          pending || builtFacilities.length === 0
+                            ? undefined
+                            : { y: 2 }
+                        }
+                        className={[
+                          "shrink-0 rounded-bubble px-3 py-2 font-display text-[11px] font-black",
+                          builtFacilities.length > 0
+                            ? "border border-white/25 bg-white/10 text-white"
+                            : "cursor-not-allowed bg-white/5 text-white/35",
+                        ].join(" ")}
+                      >
+                        {m.assignedFacilityKey
+                          ? t("club.staff.changeDesk")
+                          : t("club.staff.connectCta")}
+                      </motion.button>
+                    </div>
+
+                    {focusFacilityKey &&
+                      m.assignedFacilityKey !== focusFacilityKey && (
+                        <motion.button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => void assign(m.id, focusFacilityKey)}
+                          whileTap={pending ? undefined : { y: 2 }}
+                          className="mt-2.5 flex min-h-10 w-full items-center justify-center rounded-bubble bg-accent px-3 font-display text-xs font-black text-accent-foreground shadow-[0_3px_0_0_hsl(var(--accent-deep))]"
+                        >
+                          {t("club.staff.putHere")}
+                        </motion.button>
+                      )}
+
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() => void fire(m.id)}
+                      className="mt-1.5 w-full py-1 text-center font-display text-[11px] font-bold text-rose-300/70"
+                    >
+                      {t("club.staff.fire")}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -248,99 +381,6 @@ export function StaffBusinessSheet({
               {t("club.staff.capReached")}
             </p>
           )}
-
-        {staff.members.length > 0 && (
-          <div className="mt-5">
-            <p className="mb-2 font-display text-[11px] font-black uppercase tracking-widest text-white/50">
-              {t("club.staff.rosterTitle")}
-            </p>
-            <div className="flex flex-col gap-2.5">
-              {staff.members.map((m) => (
-                <div
-                  key={m.id}
-                  className={[
-                    "rounded-bubble-xl border-2 px-3 py-3",
-                    focusFacilityKey && !m.assignedFacilityKey
-                      ? "border-accent/60 bg-accent/10"
-                      : "border-white/12 bg-white/8",
-                  ].join(" ")}
-                >
-                  <div className="flex items-center gap-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={m.avatarImage}
-                      alt=""
-                      className="h-11 w-11 rounded-xl object-cover ring-2 ring-white/20"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-display text-sm font-black text-white">
-                        {staffDisplayName(m, locale)}
-                        {m.role === "TREASURER" ? " 💼" : ""}
-                      </p>
-                      <p className="font-display text-[11px] font-bold text-white/55">
-                        +{toLocaleDigits(m.rateBonusPercent, locale)}% ·{" "}
-                        {m.assignedFacilityKey
-                          ? t(FACILITY_NAME[m.assignedFacilityKey])
-                          : t("club.staff.bench")}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 flex flex-col gap-2">
-                    {focusFacilityKey &&
-                      m.assignedFacilityKey !== focusFacilityKey && (
-                        <motion.button
-                          type="button"
-                          disabled={pending}
-                          onClick={() => void assign(m.id, focusFacilityKey)}
-                          whileTap={pending ? undefined : { y: 2 }}
-                          className="flex min-h-11 w-full items-center justify-center rounded-bubble-xl bg-accent px-3 font-display text-sm font-black text-accent-foreground shadow-[0_3px_0_0_hsl(var(--accent-deep))]"
-                        >
-                          {t("club.staff.putHere")}
-                        </motion.button>
-                      )}
-
-                    <motion.button
-                      type="button"
-                      disabled={pending || builtFacilities.length === 0}
-                      onClick={() => setAssignTarget(m)}
-                      whileTap={
-                        pending || builtFacilities.length === 0
-                          ? undefined
-                          : { y: 2 }
-                      }
-                      className={[
-                        "flex min-h-11 w-full items-center justify-center gap-2 rounded-bubble-xl px-3 font-display text-sm font-black",
-                        builtFacilities.length > 0
-                          ? "border-2 border-white/20 bg-white/10 text-white"
-                          : "cursor-not-allowed border-2 border-white/10 bg-white/5 text-white/40",
-                      ].join(" ")}
-                    >
-                      {m.assignedFacilityKey
-                        ? t("club.staff.changeDesk")
-                        : t("club.staff.connectCta")}
-                    </motion.button>
-
-                    {builtFacilities.length === 0 && (
-                      <p className="text-center font-display text-[10px] font-bold text-white/40">
-                        {t("club.staff.noBuiltYet")}
-                      </p>
-                    )}
-
-                    <button
-                      type="button"
-                      disabled={pending}
-                      onClick={() => void fire(m.id)}
-                      className="w-full py-1 text-center font-display text-[11px] font-bold text-rose-300/70"
-                    >
-                      {t("club.staff.fire")}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {!staff.enabled && (
           <p className="mt-4 text-center font-display text-xs font-bold text-white/45">
