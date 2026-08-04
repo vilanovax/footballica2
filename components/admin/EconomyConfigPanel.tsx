@@ -25,7 +25,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AdminHelpTip } from "@/components/admin/AdminHelpTip";
 import { LiveOpsThemesPanel } from "@/components/admin/LiveOpsThemesPanel";
-import { StaffTemplatesEditor } from "@/components/admin/StaffTemplatesEditor";
+import { ClubBizConfigSections } from "@/components/admin/ClubBizConfigSections";
+import { GotDConfigSections } from "@/components/admin/GotDConfigSections";
+import { DuelConfigSections } from "@/components/admin/DuelConfigSections";
+import { SurvivalConfigSections } from "@/components/admin/SurvivalConfigSections";
+import { MatchConfigSections } from "@/components/admin/MatchConfigSections";
+import { AdvancedConfigSections } from "@/components/admin/AdvancedConfigSections";
 
 type EconomyConfigPanelProps = {
   initialConfig: GameConfig;
@@ -104,37 +109,37 @@ const TABS: {
     id: "match",
     label: "Match",
     icon: Target,
-    blurb: "Penalty & Quick rewards",
+    blurb: "Coins · XP · fans · match length",
   },
   {
     id: "survival",
     label: "Survival",
     icon: Heart,
-    blurb: "Per-correct rates & lives",
+    blurb: "Rates · clear-bank · lives / weekly XP",
   },
   {
     id: "duel",
     label: "Duel",
     icon: Swords,
-    blurb: "Pacing, timeout, Memory",
+    blurb: "Rewards · structure · AFK · Memory / Tiki",
   },
   {
     id: "gotd",
     label: "GotD",
     icon: CalendarDays,
-    blurb: "Mystery / Grid payouts",
+    blurb: "Daily modes · Star Path · streak / perfect bonuses",
   },
   {
     id: "club",
     label: "Club Biz",
     icon: Building2,
-    blurb: "Club Funds idle — never touches match coins",
+    blurb: "Managers · Safe · Bank · facilities (Club Funds only)",
   },
   {
     id: "advanced",
     label: "Advanced",
     icon: Settings2,
-    blurb: "Helpers, shop sinks, match length",
+    blurb: "Helpers & shop sinks",
   },
 ];
 
@@ -211,550 +216,17 @@ const LIVE_FIELDS: FieldDef[] = [
   },
 ];
 
-const MATCH_FIELDS: FieldDef[] = [
-  {
-    key: "rewards.baseXp",
-    label: "XP per goal",
-    description: "XP for each correct answer in Penalty / Quick.",
-    tip: "Multiplied later by combo factor.",
-  },
-  {
-    key: "rewards.winBonus",
-    label: "Win XP bonus",
-    description: "Flat XP added only when the match is won (majority goals).",
-    tip: "Not paid on a loss.",
-  },
-  {
-    key: "rewards.coinsPerWin",
-    label: "Coins on win",
-    description: "Base soft coins for winning Penalty / Quick.",
-    tip: "Scaled by combo multiplier.",
-  },
-  {
-    key: "rewards.perfectBonus",
-    label: "Perfect coins",
-    description: "Extra coins when every kick in the match is correct.",
-    tip: "Requires a full clean sheet of goals.",
-  },
-  {
-    key: "rewards.comboMultiplier",
-    label: "Max combo ×",
-    description:
-      "Ceiling multiplier for XP/coins on a full-match goal streak (scales with streak length).",
-    tip: "Minimum 1 = no bonus.",
-    min: 1,
-    step: 0.1,
-  },
-  {
-    key: "rewards.fansPerGoal",
-    label: "Fans per goal",
-    description: "Club fans grown for each correct answer.",
-    tip: "Metagame growth, separate from coins.",
-  },
-  {
-    key: "rewards.fansWinBonus",
-    label: "Fans win bonus",
-    description: "Extra fans granted on a winning match.",
-    tip: "Stacked on top of fans per goal.",
-  },
-  {
-    key: "rewards.levelUpCoins",
-    label: "Level-up coins",
-    description:
-      "Soft coins paid for each manager level gained after a match settles.",
-    tip: "Also used when Survival XP levels the player up.",
-  },
-];
-
-const SURVIVAL_FIELDS: FieldDef[] = [
-  {
-    key: "survival.coinsPerCorrect",
-    label: "Coins / correct",
-    description: "Soft coins × number of verified correct answers in the run.",
-    tip: "Primary Survival earn rate.",
-  },
-  {
-    key: "survival.xpPerCorrect",
-    label: "XP / correct",
-    description: "Lifetime XP × correct answers (feeds manager level).",
-    tip: "Separate from weekly league XP.",
-  },
-  {
-    key: "survival.fansPerCorrect",
-    label: "Fans / correct",
-    description: "Club fans × correct answers in Survival.",
-    tip: "Metagame growth.",
-  },
-  {
-    key: "survival.clearedCoinBonus",
-    label: "Clear-bank coins",
-    description:
-      "Flat coin bonus if the player exhausts the category question bank (cleared).",
-    tip: "Rare — only when the bank runs out before lives.",
-  },
-  {
-    key: "survival.clearedXpBonus",
-    label: "Clear-bank XP",
-    description: "Flat XP bonus when the category bank is cleared.",
-    tip: "Paired with clear-bank coins.",
-  },
-  {
-    key: "survival.weeklyXpDivisor",
-    label: "Weekly XP ÷",
-    description:
-      "Leaderboard XP = max(1, floor(score ÷ this)). Higher = slower weekly climb.",
-    tip: "Must be at least 1.",
-    min: 1,
-  },
-  {
-    key: "survival.staminaCost",
-    label: "Stamina cost",
-    description: "Stamina removed when the run settles successfully.",
-    tip: "Same cost for classic Survival and premium challenges.",
-  },
-  {
-    key: "survival.lives",
-    label: "Lives",
-    description: "Hearts at kickoff. Run ends when misses reach this count.",
-    tip: "Server settle is authoritative; active clients may need a refresh.",
-    min: 1,
-  },
-];
-
-const DUEL_FIELDS: FieldDef[] = [
-  {
-    key: "duel.winWeeklyXp",
-    label: "Win weekly XP",
-    description:
-      "Weekly leaderboard points for the duel winner (including bot / expire walkovers).",
-    tip: "Keep modest vs Survival grind.",
-  },
-  {
-    key: "duel.staminaCost",
-    label: "Stamina cost",
-    description: "Stamina spent when opening / starting a Draft Duel.",
-    tip: "Charged at duel start.",
-  },
-  {
-    key: "duel.questionsPerAttack",
-    label: "Questions / attack",
-    description: "How many questions the attacker answers after picking a category.",
-    tip: "Two rounds × this ≈ total questions.",
-    min: 1,
-  },
-  {
-    key: "duel.draftChoices",
-    label: "Draft choices",
-    description: "Number of categories offered in the draft picker.",
-    tip: "Minimum 2.",
-    min: 2,
-  },
-  {
-    key: "duel.turnHours",
-    label: "Turn hours",
-    description:
-      "Hours before timeout handling (forfeit or Shadow Bot).",
-    tip: "Lazy-evaluated on inbox fetch + cron.",
-    min: 1,
-  },
-  {
-    key: "duel.matchmakingMs",
-    label: "Matchmaking (ms)",
-    description:
-      "Milliseconds to wait for a human opponent before assigning a bot.",
-    tip: "Minimum 5000 ms.",
-    min: 5000,
-  },
-  {
-    key: "duel.memoryPairs",
-    label: "Memory pairs",
-    description: "Pairs on the shared Memory board (round 2).",
-    tip: "v1 locked 2–8; default 8 → 4×4.",
-    min: 2,
-  },
-  {
-    key: "duel.memoryTurnMs",
-    label: "Memory turn (ms)",
-    description: "Server clock for each Memory half.",
-    tip: "Default 20000.",
-    min: 5000,
-  },
-  {
-    key: "duel.memoryRevealMs",
-    label: "Memory reveal (ms)",
-    description: "Client flip-reveal duration hint.",
-    tip: "UX only; server may ignore.",
-    min: 500,
-  },
-];
-
-const GOTD_FIELDS: FieldDef[] = [
-  {
-    key: "gotd.mysteryWinCoins",
-    label: "Mystery win coins (سکه برد بازیکن مرموز)",
-    description:
-      "Base soft coins granted when the player solves Mysterious Player (odd Tehran days).",
-    tip: "Streak multiplies this base; perfect clear is a separate flat bonus.",
-    featured: true,
-  },
-  {
-    key: "gotd.mysteryWinXp",
-    label: "Mystery win XP (XP برد بازیکن مرموز)",
-    description: "Lifetime XP granted on a Mystery Player solve.",
-    tip: "Not scaled by streak — flat XP grant.",
-  },
-  {
-    key: "gotd.gridWinCoins",
-    label: "Grid win coins (سکه برد جدول فوتبال)",
-    description:
-      "Base soft coins granted when the player solves Football Grid (even Tehran days).",
-    tip: "Streak multiplies this base; perfect clear is a separate flat bonus.",
-    featured: true,
-  },
-  {
-    key: "gotd.gridWinXp",
-    label: "Grid win XP (XP برد جدول فوتبال)",
-    description: "Lifetime XP granted on a Football Grid solve.",
-    tip: "Not scaled by streak — flat XP grant.",
-  },
-  {
-    key: "gotd.memoryWinCoins",
-    label: "Memory GotD win coins",
-    description: "Base soft coins when Memory is today's GotD and solved.",
-    tip: "Only paid when liveModes.memory.gotd is on.",
-    featured: true,
-  },
-  {
-    key: "gotd.memoryWinXp",
-    label: "Memory GotD win XP",
-    description: "Lifetime XP on a Memory GotD solve.",
-    tip: "Flat XP grant.",
-  },
-  {
-    key: "gotd.streakMultiplierPerDay",
-    label: "Streak multiplier / day (ضریب استریک روزانه)",
-    description:
-      "Extra coin fraction of the base win coins per consecutive GotD streak day (e.g. 0.1 → +10% per day).",
-    tip: "Clamped 0–1 by mergeGameConfig. FAILED resets streak to 0.",
-    min: 0,
-    step: 0.1,
-  },
-  {
-    key: "gotd.perfectClearBonusCoins",
-    label: "Perfect clear coins (پاداش سکه بدون اشتباه)",
-    description:
-      "Flat coin bonus for a perfect clear — Mystery in 1 guess, or Grid with 0 mistakes.",
-    tip: "Added on top of base + streak-scaled coins.",
-  },
-];
-
-const CLUB_BIZ_FIELDS: FieldDef[] = [
-  {
-    key: "businessEconomy.seedFunds",
-    label: "Seed Funds",
-    description: "Spendable Club Funds granted once on business unlock.",
-    tip: "Existing clubs with 0 funds & no builds also get this.",
-  },
-  {
-    key: "businessEconomy.firstWinBoostBonus",
-    label: "First-win boost +",
-    description: "Added to 1.0 on facility rates after first win of Tehran day.",
-    tip: "0.2 → +20% income while boost is active.",
-    min: 0,
-    step: 0.05,
-  },
-  {
-    key: "businessEconomy.firstWinBoostMs",
-    label: "Boost duration (ms)",
-    description: "How long the first-win income boost lasts.",
-    tip: "Default 3600000 = 1 hour.",
-    min: 60000,
-  },
-  {
-    key: "businessEconomy.vault.baseCost",
-    label: "Vault upgrade cost",
-    description: "Funds cost for vault level 1 → 2 (grows by costGrowth).",
-    tip: "Spendable Funds sink.",
-  },
-  {
-    key: "businessEconomy.vault.costGrowth",
-    label: "Vault cost growth",
-    description: "Multiplier per vault level for upgrade cost.",
-    tip: "2 = doubles each level.",
-    min: 1,
-    step: 0.1,
-  },
-  {
-    key: "businessEconomy.vault.maxLevel",
-    label: "Vault max level",
-    description: "Highest vault tier a club can buy.",
-    tip: "capHours length should cover these levels.",
-    min: 1,
-  },
-  {
-    key: "businessEconomy.vault.capHours.0",
-    label: "Vault L1 hours",
-    description: "Vault capacity as hours of aggregate facility rate at level 1.",
-    tip: "Retention hook — keep early hours short.",
-    min: 1,
-  },
-  {
-    key: "businessEconomy.vault.capHours.1",
-    label: "Vault L2 hours",
-    description: "Capacity hours at vault level 2.",
-    tip: "Usually 6h.",
-    min: 1,
-  },
-  {
-    key: "businessEconomy.vault.capHours.2",
-    label: "Vault L3 hours",
-    description: "Capacity hours at vault level 3.",
-    tip: "Usually 8h.",
-    min: 1,
-  },
-  {
-    key: "businessEconomy.vault.capHours.3",
-    label: "Vault L4 hours",
-    description: "Capacity hours at vault level 4.",
-    tip: "Usually 12h.",
-    min: 1,
-  },
-  {
-    key: "businessEconomy.vault.capHours.4",
-    label: "Vault L5 hours",
-    description: "Capacity hours at vault level 5.",
-    tip: "Usually 24h — sleep-friendly.",
-    min: 1,
-  },
-  {
-    key: "businessEconomy.shopFansDivisor",
-    label: "Shop fans ÷",
-    description: "Club Shop rate bonus = min(cap, fans / this).",
-    tip: "Higher = slower fans scaling.",
-    min: 1,
-  },
-  {
-    key: "businessEconomy.shopFansBonusCap",
-    label: "Shop fans bonus cap",
-    description: "Max bonus fraction from fans on Club Shop rate.",
-    tip: "0.5 → +50% max.",
-    min: 0,
-    step: 0.05,
-  },
-  {
-    key: "businessEconomy.sponsoredBank.interestPercent",
-    label: "Bank interest %",
-    description: "Sponsored bank interest percent per tick (floored).",
-    tip: "1 = 1% every interval.",
-    min: 0,
-    step: 0.5,
-  },
-  {
-    key: "businessEconomy.sponsoredBank.intervalHours",
-    label: "Bank interest hours",
-    description: "Hours between sponsored-bank interest ticks.",
-    tip: "Default 4.",
-    min: 1,
-  },
-  {
-    key: "businessEconomy.sponsoredBank.minBalance",
-    label: "Bank interest min bal",
-    description: "Minimum Bank balance before a tick can pay ≥1.",
-    tip: "At 1%, need 100 for +1.",
-    min: 0,
-  },
-  {
-    key: "businessEconomy.sponsoredBank.maxInterestPerTick",
-    label: "Bank interest cap / tick",
-    description: "Max Funds granted in one interest tick.",
-    tip: "Anti-snowball.",
-    min: 0,
-  },
-  {
-    key: "businessEconomy.sponsoredBank.upgradeCost",
-    label: "Sponsored bank cost",
-    description: "Spendable Funds to activate sponsored bank.",
-    tip: "0 = free switch.",
-    min: 0,
-  },
-  {
-    key: "businessEconomy.sponsoredBank.maxCatchupTicks",
-    label: "Bank catch-up ticks",
-    description: "Max missed interest ticks applied on one settle.",
-    tip: "Default 3.",
-    min: 1,
-  },
-  {
-    key: "businessEconomy.staff.maxHired",
-    label: "Staff max hired",
-    description: "Max staff on the club roster (Phase B).",
-    tip: "Default 3 — one per facility.",
-    min: 1,
-  },
-  {
-    key: "businessEconomy.staff.hireCostGrowth",
-    label: "Staff hire cost growth",
-    description:
-      "Multiplier on each template hireCost by already-hired count (cost × growth^n).",
-    tip: "1.6 default. Per-manager base cost is in the Staff catalog below.",
-    min: 1,
-    step: 0.05,
-  },
-  {
-    key: "businessEconomy.staff.offerCount",
-    label: "Staff offer count",
-    description: "How many catalog rows (in order) appear in the hire sheet.",
-    tip: "Catalog order = display order.",
-    min: 1,
-  },
-  {
-    key: "businessEconomy.facilities.TICKET_OFFICE.baseRatePerHour",
-    label: "Ticket rate / h",
-    description: "Level-1 Ticket Office Funds per hour.",
-    tip: "Teaches the idle loop — keep snappy.",
-  },
-  {
-    key: "businessEconomy.facilities.TICKET_OFFICE.baseBuildCost",
-    label: "Ticket build cost",
-    description: "Funds to open Ticket Office (0 = free FTUE).",
-    tip: "0 recommended for onboarding.",
-  },
-  {
-    key: "businessEconomy.facilities.TICKET_OFFICE.unlockPlayerLevel",
-    label: "Ticket unlock Lv",
-    description: "Player level required to build Ticket Office.",
-    tip: "Usually 1.",
-    min: 1,
-  },
-  {
-    key: "businessEconomy.facilities.CLUB_SHOP.baseRatePerHour",
-    label: "Shop rate / h",
-    description: "Level-1 Club Shop base Funds/hour (before fans factor).",
-    tip: "Mid-game earner.",
-  },
-  {
-    key: "businessEconomy.facilities.CLUB_SHOP.baseBuildCost",
-    label: "Shop build cost",
-    description: "Funds to open Club Shop.",
-    tip: "Should need play + idle, not idle alone.",
-  },
-  {
-    key: "businessEconomy.facilities.CLUB_SHOP.unlockPlayerLevel",
-    label: "Shop unlock Lv",
-    description: "Player level gate for Club Shop.",
-    tip: "Default 3.",
-    min: 1,
-  },
-  {
-    key: "businessEconomy.facilities.MUSEUM.baseRatePerHour",
-    label: "Museum rate / h",
-    description: "Level-1 Museum Funds per hour.",
-    tip: "Identity building — slower unlock.",
-  },
-  {
-    key: "businessEconomy.facilities.MUSEUM.baseBuildCost",
-    label: "Museum build cost",
-    description: "Funds to open Museum.",
-    tip: "Default 2500.",
-  },
-  {
-    key: "businessEconomy.facilities.MUSEUM.unlockPlayerLevel",
-    label: "Museum unlock Lv",
-    description: "Player level gate for Museum.",
-    tip: "Default 5.",
-    min: 1,
-  },
-];
-
-const ADVANCED_FIELDS: FieldDef[] = [
-  {
-    key: "helpers.hint",
-    label: "Hint cost",
-    description: "Coins to remove one wrong option during a quiz.",
-    tip: "In-match sink.",
-  },
-  {
-    key: "helpers.extraTime",
-    label: "Injury Time cost",
-    description: "Coins to add fuse time on the current question.",
-    tip: "Paired with Injury Time (ms) below.",
-  },
-  {
-    key: "helpers.fifty",
-    label: "50/50 cost",
-    description: "Coins to remove two wrong options.",
-    tip: "Stronger helper than Hint.",
-  },
-  {
-    key: "helpers.reroll",
-    label: "Reroll cost",
-    description: "Coins to swap the current question for a new one.",
-    tip: "One of the pricier sinks.",
-  },
-  {
-    key: "helpers.extraTimeMs",
-    label: "Injury Time (ms)",
-    description: "Milliseconds added to the fuse when Injury Time is bought.",
-    tip: "Minimum 1000 ms.",
-    min: 1000,
-  },
-  {
-    key: "costs.staminaRefill",
-    label: "Stamina refill",
-    description: "Coins to refill club stamina to full from the shop / hub.",
-    tip: "Major soft-coin sink.",
-  },
-  {
-    key: "costs.boosterFiftyFifty",
-    label: "Booster 50/50",
-    description: "Shop price for a fifty-fifty inventory booster.",
-    tip: "Inventory item, not the live helper.",
-  },
-  {
-    key: "costs.boosterFreezeTimer",
-    label: "Booster freeze",
-    description: "Shop price for the freeze-timer booster.",
-    tip: "Inventory item.",
-  },
-  {
-    key: "match.questionCount",
-    label: "Penalty kicks",
-    description: "Number of kicks in a full Penalty shootout.",
-    tip: "Changes match length and reward surface area.",
-    min: 1,
-  },
-  {
-    key: "match.tutorialQuestionCount",
-    label: "Tutorial kicks",
-    description: "Shorter FTUE / tutorial match length.",
-    tip: "Keep small for onboarding.",
-    min: 1,
-  },
-  {
-    key: "match.quickQuestionCount",
-    label: "Quick questions",
-    description: "Question count in rapid-fire Quick Match.",
-    tip: "Higher = longer sessions and more XP surface.",
-    min: 1,
-  },
-];
-
 function fieldsForTab(tab: TabId): FieldDef[] {
   switch (tab) {
     case "live":
       return LIVE_FIELDS;
     case "match":
-      return MATCH_FIELDS;
     case "survival":
-      return SURVIVAL_FIELDS;
     case "duel":
-      return DUEL_FIELDS;
     case "gotd":
-      return GOTD_FIELDS;
     case "club":
-      return CLUB_BIZ_FIELDS;
     case "advanced":
-      return ADVANCED_FIELDS;
+      return []; // Dedicated *ConfigSections components
   }
 }
 
@@ -847,12 +319,18 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
       </div>
 
       <div
-        className="flex gap-1 overflow-x-auto rounded-2xl bg-slate-100 p-1 [scrollbar-width:none]"
+        className="flex flex-wrap gap-1.5 rounded-2xl border border-slate-200 bg-slate-50 p-1.5"
         role="tablist"
         aria-label="Game Config sections"
       >
         {TABS.map(({ id, label, icon: Icon }) => {
           const active = tab === id;
+          const club = id === "club";
+          const gotd = id === "gotd";
+          const duel = id === "duel";
+          const survival = id === "survival";
+          const match = id === "match";
+          const advanced = id === "advanced";
           return (
             <button
               key={id}
@@ -861,20 +339,51 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
               aria-selected={active}
               onClick={() => setTab(id)}
               className={[
-                "flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
-                active
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500 hover:text-slate-800",
+                "flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold transition-colors",
+                active && club
+                  ? "bg-indigo-600 text-white shadow-sm"
+                  : active && gotd
+                    ? "bg-violet-600 text-white shadow-sm"
+                    : active && duel
+                      ? "bg-rose-600 text-white shadow-sm"
+                      : active && survival
+                        ? "bg-amber-600 text-white shadow-sm"
+                        : active && match
+                          ? "bg-emerald-600 text-white shadow-sm"
+                          : active && advanced
+                            ? "bg-slate-800 text-white shadow-sm"
+                            : active
+                              ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200"
+                              : club
+                                ? "bg-indigo-50 text-indigo-800 ring-1 ring-indigo-200 hover:bg-indigo-100"
+                                : gotd
+                                  ? "bg-violet-50 text-violet-800 ring-1 ring-violet-200 hover:bg-violet-100"
+                                  : duel
+                                    ? "bg-rose-50 text-rose-800 ring-1 ring-rose-200 hover:bg-rose-100"
+                                    : survival
+                                      ? "bg-amber-50 text-amber-900 ring-1 ring-amber-200 hover:bg-amber-100"
+                                      : match
+                                        ? "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100"
+                                        : advanced
+                                          ? "bg-slate-100 text-slate-700 ring-1 ring-slate-300 hover:bg-slate-200"
+                                          : "text-slate-500 hover:bg-white/80 hover:text-slate-800",
               ].join(" ")}
             >
-              <Icon className="h-3.5 w-3.5" strokeWidth={2} />
+              <Icon className="h-4 w-4" strokeWidth={2} />
               {label}
             </button>
           );
         })}
       </div>
 
-      <p className="text-xs text-slate-500">{activeTab.blurb}</p>
+      {tab === "live" && (
+        <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+          <p className="text-sm font-semibold text-slate-900">
+            {activeTab.label}
+          </p>
+          <p className="text-xs text-slate-500">{activeTab.blurb}</p>
+        </div>
+      )}
 
       {tab === "live" ? (
         <>
@@ -922,179 +431,56 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
         </>
       ) : null}
 
-      {tab === "duel" ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-violet-200 bg-violet-50/40 px-3 py-3">
-          <span className="flex items-center gap-1 text-xs font-semibold text-slate-800">
-            AFK timeout
-            <AdminHelpTip text="Past turnHours: Bot fill answers, or forfeit the match." />
-          </span>
-          <select
-            className="flex h-10 min-w-[12rem] flex-1 rounded-lg border border-slate-200 bg-white px-2.5 text-sm"
-            value={draft.duel.timeoutAction}
-            onChange={(e) => {
-              const v = e.target.value;
-              if (v !== "AUTO_FORFEIT" && v !== "SHADOW_BOT") return;
-              setDraft((prev) => ({
-                ...prev,
-                duel: { ...prev.duel, timeoutAction: v },
-              }));
-            }}
-          >
-            <option value="SHADOW_BOT">Bot fills turn</option>
-            <option value="AUTO_FORFEIT">Auto forfeit</option>
-          </select>
-        </div>
-      ) : null}
-
       {tab === "club" ? (
-        <div className="space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50/40 px-3 py-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="flex items-center gap-1 text-xs font-semibold text-slate-800">
-              Sponsored bank
-              <AdminHelpTip text="Optional interest on spendable Club Funds. Lazy settle — no mint cron." />
-            </span>
-            <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
-              <input
-                type="checkbox"
-                checked={draft.businessEconomy.sponsoredBank.enabled}
-                onChange={(e) =>
-                  setDraft((prev) =>
-                    mergeGameConfig({
-                      ...prev,
-                      businessEconomy: {
-                        ...prev.businessEconomy,
-                        sponsoredBank: {
-                          ...prev.businessEconomy.sponsoredBank,
-                          enabled: e.target.checked,
-                        },
-                      },
-                    }),
-                  )
-                }
-              />
-              Enabled
-            </label>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-semibold text-slate-600">
-                Name (EN)
-              </span>
-              <Input
-                value={draft.businessEconomy.sponsoredBank.nameEn}
-                onChange={(e) =>
-                  setDraft((prev) =>
-                    mergeGameConfig({
-                      ...prev,
-                      businessEconomy: {
-                        ...prev.businessEconomy,
-                        sponsoredBank: {
-                          ...prev.businessEconomy.sponsoredBank,
-                          nameEn: e.target.value,
-                        },
-                      },
-                    }),
-                  )
-                }
-                className="h-10 text-sm"
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-semibold text-slate-600">
-                Name (FA)
-              </span>
-              <Input
-                value={draft.businessEconomy.sponsoredBank.nameFa}
-                onChange={(e) =>
-                  setDraft((prev) =>
-                    mergeGameConfig({
-                      ...prev,
-                      businessEconomy: {
-                        ...prev.businessEconomy,
-                        sponsoredBank: {
-                          ...prev.businessEconomy.sponsoredBank,
-                          nameFa: e.target.value,
-                        },
-                      },
-                    }),
-                  )
-                }
-                className="h-10 text-sm"
-                dir="rtl"
-              />
-            </label>
-          </div>
-        </div>
-      ) : null}
-
-      {tab === "club" ? (
-        <div className="space-y-3">
-          <div className="space-y-2 rounded-2xl border border-indigo-200 bg-indigo-50/40 px-3 py-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="flex items-center gap-1 text-xs font-semibold text-slate-800">
-                Club Staff (Phase B)
-                <AdminHelpTip text="Shared hire pool. Assigned staff boost rate + auto-collect when full. Treasurer unlocks Safe→Bank anytime." />
-              </span>
-              <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={draft.businessEconomy.staff.enabled}
-                  onChange={(e) =>
-                    setDraft((prev) =>
-                      mergeGameConfig({
-                        ...prev,
-                        businessEconomy: {
-                          ...prev.businessEconomy,
-                          staff: {
-                            ...prev.businessEconomy.staff,
-                            enabled: e.target.checked,
-                          },
-                        },
-                      }),
-                    )
-                  }
+        <ClubBizConfigSections
+          draft={draft}
+          setDraft={setDraft}
+          onFieldChange={onFieldChange}
+        />
+      ) : tab === "gotd" ? (
+        <GotDConfigSections draft={draft} onFieldChange={onFieldChange} />
+      ) : tab === "duel" ? (
+        <DuelConfigSections
+          draft={draft}
+          setDraft={setDraft}
+          onFieldChange={onFieldChange}
+        />
+      ) : tab === "survival" ? (
+        <SurvivalConfigSections
+          draft={draft}
+          onFieldChange={onFieldChange}
+          onQuickCoins={quickSurvivalCoins}
+          survivalMult={survivalMult}
+        />
+      ) : tab === "match" ? (
+        <MatchConfigSections draft={draft} onFieldChange={onFieldChange} />
+      ) : tab === "advanced" ? (
+        <AdvancedConfigSections draft={draft} onFieldChange={onFieldChange} />
+      ) : (
+        <div className="grid gap-2.5 sm:grid-cols-2">
+          {fields.map((field) => (
+            <label
+              key={field.key}
+              className="flex flex-col gap-1.5 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm transition focus-within:ring-2 focus-within:ring-emerald-300/50"
+            >
+              <span className="flex items-center justify-between gap-1 text-xs font-semibold text-slate-800">
+                <span className="min-w-0 truncate">{field.label}</span>
+                <AdminHelpTip
+                  text={`${field.description} ${field.tip}`.trim()}
                 />
-                Enabled
-              </label>
-            </div>
-          </div>
-          <StaffTemplatesEditor draft={draft} setDraft={setDraft} />
-        </div>
-      ) : null}
-
-      <div
-        className={[
-          "grid gap-2.5",
-          tab === "live" ||
-          tab === "survival" ||
-          tab === "gotd" ||
-          tab === "club"
-            ? "sm:grid-cols-2"
-            : "sm:grid-cols-2 lg:grid-cols-3",
-        ].join(" ")}
-      >
-        {fields.map((field) => (
-          <label
-            key={field.key}
-            className="flex flex-col gap-1.5 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm transition focus-within:ring-2 focus-within:ring-emerald-300/50"
-          >
-            <span className="flex items-center justify-between gap-1 text-xs font-semibold text-slate-800">
-              <span className="min-w-0 truncate">{field.label}</span>
-              <AdminHelpTip
-                text={`${field.description} ${field.tip}`.trim()}
+              </span>
+              <Input
+                type="number"
+                min={field.min ?? 0}
+                step={field.step ?? 1}
+                value={getPath(draft, field.key)}
+                onChange={(e) => onFieldChange(field.key, e.target.value)}
+                className="h-10 font-mono text-sm font-semibold tabular-nums"
               />
-            </span>
-            <Input
-              type="number"
-              min={field.min ?? 0}
-              step={field.step ?? 1}
-              value={getPath(draft, field.key)}
-              onChange={(e) => onFieldChange(field.key, e.target.value)}
-              className="h-10 font-mono text-sm font-semibold tabular-nums"
-            />
-          </label>
-        ))}
-      </div>
+            </label>
+          ))}
+        </div>
+      )}
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:start-60">
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2">
