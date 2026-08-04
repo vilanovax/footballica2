@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { Club, ClubStaff, Prisma, PrismaClient } from "@/generated/prisma/client";
+import type { GameConfig } from "@/lib/game/economy";
 import { getGameConfig } from "@/lib/game/gameConfig";
 import {
   BUSINESS_FACILITY_KEYS,
@@ -22,16 +23,22 @@ import {
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
-export function staffRowsToViews(rows: ClubStaff[]): StaffMemberView[] {
+export function staffRowsToViews(
+  rows: ClubStaff[],
+  config?: GameConfig,
+): StaffMemberView[] {
   return rows.map((r) =>
-    toStaffMemberView({
-      id: r.id,
-      templateKey: r.templateKey,
-      avatarKey: r.avatarKey,
-      role: r.role as StaffRole,
-      rateBonusPercent: r.rateBonusPercent,
-      assignedFacilityKey: r.assignedFacilityKey as BusinessFacilityKey | null,
-    }),
+    toStaffMemberView(
+      {
+        id: r.id,
+        templateKey: r.templateKey,
+        avatarKey: r.avatarKey,
+        role: r.role as StaffRole,
+        rateBonusPercent: r.rateBonusPercent,
+        assignedFacilityKey: r.assignedFacilityKey as BusinessFacilityKey | null,
+      },
+      config,
+    ),
   );
 }
 
@@ -169,11 +176,12 @@ export async function loadClubStaffViews(
   clubId: string,
   db: Db,
 ): Promise<StaffMemberView[]> {
+  const config = await getGameConfig();
   const rows = await db.clubStaff.findMany({
     where: { clubId },
     orderBy: { hiredAt: "asc" },
   });
-  return staffRowsToViews(rows);
+  return staffRowsToViews(rows, config);
 }
 
 /** True when club has a hired Treasurer (bench or assigned). */

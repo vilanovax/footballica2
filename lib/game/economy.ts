@@ -229,10 +229,15 @@ export type GameConfig = {
     staff: {
       enabled: boolean;
       maxHired: number;
-      hireCostBase: number;
+      /**
+       * Multiplier on each template's hireCost by already-hired count:
+       * cost = round(template.hireCost × growth^hiredCount).
+       */
       hireCostGrowth: number;
-      /** Candidates shown in the hire sheet. */
+      /** Max candidates shown in the hire sheet (in catalog order). */
       offerCount: number;
+      /** Ordered catalog — admin add / edit / reorder. */
+      templates: StaffTemplateConfig[];
     };
     facilities: {
       TICKET_OFFICE: BusinessFacilityConfig;
@@ -252,6 +257,20 @@ export type BusinessFacilityConfig = {
   capGrowth: number;
   maxLevel: number;
   usesFansFactor: boolean;
+};
+
+/** Admin-editable staff catalog row (ADR 004). */
+export type StaffTemplateConfig = {
+  /** Stable id used on ClubStaff.templateKey. */
+  key: string;
+  role: "MANAGER" | "TREASURER";
+  rateBonusPercent: number;
+  /** ManagerAvatar key from onboarding catalog. */
+  avatarKey: string;
+  nameEn: string;
+  nameFa: string;
+  /** Base Funds cost to hire (before hireCostGrowth). */
+  hireCost: number;
 };
 
 export const DEFAULT_GAME_CONFIG: GameConfig = {
@@ -365,9 +384,46 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     staff: {
       enabled: true,
       maxHired: 3,
-      hireCostBase: 250,
       hireCostGrowth: 1.6,
       offerCount: 3,
+      templates: [
+        {
+          key: "ops_junior",
+          role: "MANAGER",
+          rateBonusPercent: 8,
+          avatarKey: "YOUNG_DIRECTOR",
+          nameEn: "Junior Ops",
+          nameFa: "کارمند جوان",
+          hireCost: 200,
+        },
+        {
+          key: "ops_mid",
+          role: "MANAGER",
+          rateBonusPercent: 12,
+          avatarKey: "TACTICAL_COACH",
+          nameEn: "Ops Manager",
+          nameFa: "مدیر عملیات",
+          hireCost: 250,
+        },
+        {
+          key: "ops_star",
+          role: "MANAGER",
+          rateBonusPercent: 18,
+          avatarKey: "STAR_MANAGER",
+          nameEn: "Star Director",
+          nameFa: "ستارهٔ مدیریت",
+          hireCost: 400,
+        },
+        {
+          key: "treasurer",
+          role: "TREASURER",
+          rateBonusPercent: 5,
+          avatarKey: "OLD_GAFFER",
+          nameEn: "Treasurer",
+          nameFa: "خزانه‌دار",
+          hireCost: 350,
+        },
+      ],
     },
     facilities: {
       TICKET_OFFICE: {
@@ -410,6 +466,70 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
 /** Finite-number guard with fallback (rejects NaN/Infinity/non-numbers). */
 function num(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+const AVATAR_KEYS = new Set([
+  "TACTICAL_COACH",
+  "YOUNG_DIRECTOR",
+  "VETERAN_FAN",
+  "GOALKEEPER_LEGEND",
+  "SUPER_FAN",
+  "CLUB_LEGEND",
+  "OLD_GAFFER",
+  "STAR_MANAGER",
+  "COSMIC_COACH",
+]);
+
+function mergeStaffTemplates(
+  raw: unknown,
+  fallback: StaffTemplateConfig[],
+): StaffTemplateConfig[] {
+  if (!Array.isArray(raw) || raw.length === 0) {
+    return fallback.map((t) => ({ ...t }));
+  }
+  const out: StaffTemplateConfig[] = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    const key =
+      typeof o.key === "string"
+        ? o.key
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9_]/g, "_")
+            .slice(0, 40)
+        : "";
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    const role = o.role === "TREASURER" ? "TREASURER" : "MANAGER";
+    const avatarRaw =
+      typeof o.avatarKey === "string" ? o.avatarKey.trim() : "";
+    const avatarKey = AVATAR_KEYS.has(avatarRaw)
+      ? avatarRaw
+      : "TACTICAL_COACH";
+    const nameEn =
+      typeof o.nameEn === "string" && o.nameEn.trim()
+        ? o.nameEn.trim().slice(0, 48)
+        : key;
+    const nameFa =
+      typeof o.nameFa === "string" && o.nameFa.trim()
+        ? o.nameFa.trim().slice(0, 48)
+        : nameEn;
+    out.push({
+      key,
+      role,
+      rateBonusPercent: Math.min(
+        50,
+        Math.max(0, Math.round(num(o.rateBonusPercent, 10))),
+      ),
+      avatarKey,
+      nameEn,
+      nameFa,
+      hireCost: Math.max(1, Math.round(num(o.hireCost, 250))),
+    });
+  }
+  return out.length > 0 ? out : fallback.map((t) => ({ ...t }));
 }
 
 /**
@@ -801,18 +921,15 @@ export function mergeGameConfig(raw: unknown): GameConfig {
           6,
           Math.max(1, Math.round(num(beStaff.maxHired, DStaff.maxHired))),
         ),
-        hireCostBase: Math.max(
-          1,
-          Math.round(num(beStaff.hireCostBase, DStaff.hireCostBase)),
-        ),
         hireCostGrowth: Math.max(
           1,
           num(beStaff.hireCostGrowth, DStaff.hireCostGrowth),
         ),
         offerCount: Math.min(
-          4,
+          8,
           Math.max(1, Math.round(num(beStaff.offerCount, DStaff.offerCount))),
         ),
+        templates: mergeStaffTemplates(beStaff.templates, DStaff.templates),
       },
       facilities: {
         TICKET_OFFICE: mergeFacility(

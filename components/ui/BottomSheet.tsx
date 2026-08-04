@@ -15,6 +15,8 @@ type BottomSheetProps = {
   closeLabel?: string;
   /** `dark` = Locker Room / immersive game sheets. */
   tone?: "default" | "dark";
+  /** `overlay` stacks above another open sheet (e.g. assign picker). */
+  layer?: "default" | "overlay";
 };
 
 /**
@@ -29,27 +31,36 @@ export function BottomSheet({
   children,
   closeLabel = "Close",
   tone = "default",
+  layer = "default",
 }: BottomSheetProps) {
   const dark = tone === "dark";
+  const zClass = layer === "overlay" ? "z-[80]" : "z-[70]";
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
+    // Overlay sheets sit on top of an already-locked body — don't reset overflow.
+    if (layer === "overlay") {
+      return () => window.removeEventListener("keydown", onKey);
+    }
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [open, onClose]);
+  }, [open, onClose, layer]);
 
   return (
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-4"
+          className={[
+            "fixed inset-0 flex items-end justify-center sm:items-center sm:p-4",
+            zClass,
+          ].join(" ")}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

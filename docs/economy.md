@@ -410,7 +410,8 @@ Missions / campaign → claim coins/XP
 - [x] Assigned staff: rate bonus + lazy auto-collect when buffer full
 - [x] Treasurer (hired): Safe → Bank withdraw anytime
 - [x] Hub chip + staff sheet + facility desk row
-- [x] Admin knobs: enabled, maxHired, hireCostBase/Growth, offerCount
+- [x] Admin: enabled, maxHired, hireCostGrowth, offerCount + full staff catalog CRUD/reorder
+- [x] Unaffordable hire offers grayed out in Hub sheet
 
 ### Explicitly not shipped (later)
 

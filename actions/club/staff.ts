@@ -12,14 +12,13 @@ import type { BusinessFacilityKey } from "@/lib/club/businessEconomy";
 import {
   buildStaffOffers,
   getStaffTemplate,
-  hireCostAtCount,
+  hireCostForTemplate,
 } from "@/lib/club/staff";
 import {
   isFacilityKey,
   settleStaffAutoCollect,
 } from "@/lib/club/staffService";
 import { settleClubBankInterest } from "@/lib/club/businessService";
-import { tehranDayKeyClient } from "@/lib/game/tehranClock";
 
 export type StaffActionResult =
   | { ok: true; club: ClubSnapshot }
@@ -44,7 +43,7 @@ export async function hireStaff(
       const staffCfg = config.businessEconomy.staff;
       if (!staffCfg.enabled) throw new StaffError("Staff hiring is offline.");
 
-      const tmpl = getStaffTemplate(templateKey);
+      const tmpl = getStaffTemplate(templateKey, config);
       if (!tmpl) throw new StaffError("Unknown staff candidate.");
 
       const hired = await tx.clubStaff.findMany({ where: { clubId: club.id } });
@@ -56,18 +55,16 @@ export async function hireStaff(
       }
 
       const offers = buildStaffOffers({
-        clubId: club.id,
         hiredTemplateKeys: hired.map((h) => h.templateKey),
         hiredCount: hired.length,
         clubFunds: club.clubFunds,
-        dayKey: tehranDayKeyClient(new Date()),
         config,
       });
       if (!offers.some((o) => o.templateKey === templateKey)) {
         throw new StaffError("Offer expired — refresh and try again.");
       }
 
-      const cost = hireCostAtCount(hired.length, config);
+      const cost = hireCostForTemplate(tmpl, hired.length, config);
       if (club.clubFunds < cost) throw new StaffError("NEED_FUNDS");
 
       await tx.clubStaff.create({

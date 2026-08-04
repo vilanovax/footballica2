@@ -10,6 +10,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
+import { staffDisplayName } from "@/lib/club/staff";
 
 const FACILITY_META: Record<
   BusinessFacilityKey,
@@ -433,7 +434,7 @@ export function FacilityBusinessCard({
               <span>
                 <span className="block font-display text-xs font-black text-white">
                   {f.staff
-                    ? t(`club.staff.templates.${f.staff.nameKey}`)
+                    ? staffDisplayName(f.staff, locale)
                     : t("club.staff.emptyDesk")}
                 </span>
                 <span className="block font-display text-[11px] font-bold text-white/55">

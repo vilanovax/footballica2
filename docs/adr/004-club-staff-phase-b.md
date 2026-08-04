@@ -29,7 +29,10 @@ Phase A taught Collect → Safe → Bank (withdraw only when Safe is full). Play
 
 ## Economics
 
-- Hire cost: `hireCostBase × hireCostGrowth^(hiredCount)` from spendable Bank (`clubFunds`).
+- Catalog in `GameConfig.businessEconomy.staff.templates` (admin add / edit / reorder / delete).
+- Hire cost: `round(template.hireCost × hireCostGrowth^hiredCount)` from spendable Bank.
+- Hire sheet shows first `offerCount` unhired templates **in catalog order**.
+- Unaffordable offers are shown grayed out (not hidden).
 - Max hired: config `maxHired` (default 3 = one per facility).
 - Rate: `floor(baseRate × incomeBoost × (1 + rateBonusPercent/100))`.
 - Auto-collect: lazy on Hub snapshot / business actions — never a mint cron.
@@ -38,6 +41,7 @@ Phase A taught Collect → Safe → Bank (withdraw only when Safe is full). Play
 ## Data
 
 `ClubStaff`: templateKey, avatarKey, role, rateBonusPercent, optional `assignedFacilityKey` (unique per club when set).
+Live-Ops names/avatars/costs live on GameConfig templates, not Prisma rows.
 
 ## Consequences
 
