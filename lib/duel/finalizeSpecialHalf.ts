@@ -3,12 +3,11 @@ import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getGameConfig } from "@/lib/game/gameConfig";
+import { resolveDuelWinner, tallyRoundWins } from "@/lib/duel/scoring";
 import {
-  resolveDuelWinner,
   statusAfterAttackSubmit,
   statusAfterDefendSubmit,
-  tallyRoundWins,
-} from "@/lib/duel";
+} from "@/lib/duel/fsm";
 import { quizRoundCreateData } from "@/lib/duel/createQuizRound";
 import {
   listDuelEligibleCategories,

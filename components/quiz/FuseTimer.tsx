@@ -1,74 +1,87 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Flame } from "lucide-react";
-import { KICK_DURATION_MS } from "@/lib/quiz/scoring";
+import { forwardRef, useImperativeHandle, useRef } from "react";
+
+export type FuseTimerHandle = {
+  /** Drive the fuse bar (0–1) without React re-renders. */
+  setRatio: (ratio: number) => void;
+};
 
 type FuseTimerProps = {
-  timeLeftMs: number;
   paused?: boolean;
 };
 
+const FILL: Record<"safe" | "warning" | "danger", string> = {
+  safe: "linear-gradient(90deg, hsl(96 78% 44%), hsl(52 96% 54%))",
+  warning: "linear-gradient(90deg, hsl(28 96% 52%), hsl(46 100% 52%))",
+  danger: "linear-gradient(90deg, hsl(0 88% 46%), hsl(16 92% 52%))",
+};
+
 /**
- * A burning-fuse timer: the fuse shrinks as time runs out and the flame rides
- * its tip. Turns from primary → accent → destructive as it burns down.
+ * Burning-fuse timer. Progress is applied imperatively via ref (rAF → scaleX)
+ * so the match parent can tick the clock without re-rendering every frame.
  */
-export function FuseTimer({ timeLeftMs, paused = false }: FuseTimerProps) {
-  const ratio = Math.max(0, Math.min(1, timeLeftMs / KICK_DURATION_MS));
-  const danger = ratio <= 0.3;
-  const warning = ratio <= 0.6 && !danger;
+export const FuseTimer = forwardRef<FuseTimerHandle, FuseTimerProps>(
+  function FuseTimer({ paused = false }, ref) {
+    const fillRef = useRef<HTMLDivElement>(null);
+    const flameRef = useRef<HTMLDivElement>(null);
+    const toneRef = useRef<"safe" | "warning" | "danger">("safe");
 
-  // Warning gradient shifts hotter as time drains: lime→yellow, then
-  // yellow→orange, then orange→red for a rising sense of urgency.
-  const fillGradient = danger
-    ? "linear-gradient(90deg, hsl(0 88% 46%), hsl(16 92% 52%))"
-    : warning
-      ? "linear-gradient(90deg, hsl(28 96% 52%), hsl(46 100% 52%))"
-      : "linear-gradient(90deg, hsl(96 78% 44%), hsl(52 96% 54%))";
+    useImperativeHandle(ref, () => ({
+      setRatio: (ratio: number) => {
+        const r = Math.max(0, Math.min(1, ratio));
+        const fill = fillRef.current;
+        const flame = flameRef.current;
+        if (fill) {
+          fill.style.transform = `scaleX(${r})`;
+        }
+        if (flame) {
+          flame.style.left = `calc(${r * 100}% - 12px)`;
+        }
 
-  return (
-    <div className="relative h-5 w-full">
-      <div className="absolute inset-0 overflow-hidden rounded-full border border-border bg-muted shadow-fantasy-sm">
-        <motion.div
-          className="h-full rounded-full"
-          style={{ backgroundImage: fillGradient }}
-          animate={{
-            width: `${ratio * 100}%`,
-            opacity: danger && !paused ? [1, 0.6, 1] : 1,
-          }}
-          transition={{
-            width: { ease: "linear", duration: 0.1 },
-            opacity: { repeat: Infinity, duration: 0.5 },
-          }}
-        />
-      </div>
+        const nextTone: "safe" | "warning" | "danger" =
+          r <= 0.3 ? "danger" : r <= 0.6 ? "warning" : "safe";
+        if (fill && toneRef.current !== nextTone) {
+          toneRef.current = nextTone;
+          fill.style.backgroundImage = FILL[nextTone];
+          fill.dataset.tone = nextTone;
+        }
+      },
+    }));
 
-      <motion.div
-        className="absolute top-1/2 -translate-y-1/2"
-        animate={{ left: `calc(${ratio * 100}% - 12px)` }}
-        transition={{ ease: "linear", duration: 0.1 }}
-      >
-        <motion.div
-          animate={
-            paused
-              ? { scale: 1, rotate: 0 }
-              : { scale: [1, 1.25, 1], rotate: [-8, 8, -8] }
-          }
-          transition={{ repeat: Infinity, duration: 0.4 }}
-        >
-          <Flame
-            className="h-6 w-6 drop-shadow"
+    return (
+      <div className="relative h-5 w-full">
+        <div className="absolute inset-0 overflow-hidden rounded-full border border-border bg-muted shadow-fantasy-sm">
+          <div
+            ref={fillRef}
+            data-tone="safe"
+            className={[
+              "h-full w-full origin-left rounded-full will-change-transform",
+              paused
+                ? "opacity-100"
+                : "data-[tone=danger]:motion-safe:animate-[fuse-pulse_0.55s_ease-in-out_infinite]",
+            ].join(" ")}
             style={{
-              color: danger
-                ? "hsl(0 88% 48%)"
-                : warning
-                  ? "hsl(28 96% 52%)"
-                  : "hsl(var(--accent))",
+              transform: "scaleX(1)",
+              backgroundImage: FILL.safe,
             }}
-            fill="currentColor"
           />
-        </motion.div>
-      </motion.div>
-    </div>
-  );
-}
+        </div>
+
+        <div
+          ref={flameRef}
+          className={[
+            "pointer-events-none absolute top-1/2 text-xl leading-none drop-shadow will-change-[left]",
+            paused
+              ? ""
+              : "motion-safe:animate-[fuse-flicker-flame_0.45s_ease-in-out_infinite]",
+          ].join(" ")}
+          style={{ left: "calc(100% - 12px)", transform: "translateY(-50%)" }}
+          aria-hidden
+        >
+          🔥
+        </div>
+      </div>
+    );
+  },
+);

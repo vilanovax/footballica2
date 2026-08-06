@@ -4,6 +4,10 @@ import { KICK_DURATION_MS, evaluateKick } from "@/lib/quiz/scoring";
 import { computeMatchRewards, type RewardBreakdown } from "@/lib/game/economy";
 import type { GameConfig } from "@/lib/game/economy";
 import type { HelperKey } from "@/lib/game/helpers";
+import {
+  getPenaltyLiveTimeLeftMs,
+  setPenaltyLiveTimeLeftMs,
+} from "@/lib/quiz/liveMatchClock";
 
 export type MatchPhase = "idle" | "playing" | "reveal" | "finished";
 
@@ -112,6 +116,7 @@ export const usePenaltyStore = create<PenaltyState>((set, get) => ({
 
   start: (questions, options = {}) => {
     const duration = options.durationMs ?? KICK_DURATION_MS;
+    setPenaltyLiveTimeLeftMs(duration);
     set({
       ...initialState,
       questions,
@@ -125,7 +130,7 @@ export const usePenaltyStore = create<PenaltyState>((set, get) => ({
   },
 
   tick: (deltaMs) => {
-    const { phase, timeLeftMs, paused } = get();
+    const { phase, paused } = get();
     if (phase !== "playing" || paused) return;
 
     // Clamp the frame delta. When the tab is backgrounded (phone locked, app
@@ -134,22 +139,24 @@ export const usePenaltyStore = create<PenaltyState>((set, get) => ({
     // instant, unfair miss. Capping the step effectively freezes the timer while
     // hidden and resumes it smoothly.
     const step = Math.min(Math.max(0, deltaMs), 200);
-    const next = timeLeftMs - step;
+    const next = getPenaltyLiveTimeLeftMs() - step;
     if (next <= 0) {
+      setPenaltyLiveTimeLeftMs(0);
       set({ timeLeftMs: 0 });
       get().answer(null); // fuse burned out → forced miss
       return;
     }
-    set({ timeLeftMs: next });
+    // Hot path: mutate the live clock only — no Zustand/React re-render.
+    setPenaltyLiveTimeLeftMs(next);
   },
 
   answer: (selectedIndex) => {
-    const { phase, questions, currentIndex, timeLeftMs, goals, log } = get();
+    const { phase, questions, currentIndex, goals, log } = get();
     if (phase !== "playing") return;
 
     const question = questions[currentIndex];
     const evaluation = evaluateKick(question, selectedIndex);
-    const msRemaining = Math.max(0, timeLeftMs);
+    const msRemaining = Math.max(0, getPenaltyLiveTimeLeftMs());
 
     const entry: KickLog = {
       questionId: question.id,
@@ -161,6 +168,7 @@ export const usePenaltyStore = create<PenaltyState>((set, get) => ({
 
     set({
       phase: "reveal",
+      timeLeftMs: msRemaining,
       goals: goals + (evaluation.isCorrect ? 1 : 0),
       log: [...log, entry],
       feedback: {
@@ -184,6 +192,7 @@ export const usePenaltyStore = create<PenaltyState>((set, get) => ({
       return;
     }
 
+    setPenaltyLiveTimeLeftMs(durationMs);
     set({
       phase: "playing",
       currentIndex: currentIndex + 1,
@@ -213,6 +222,7 @@ export const usePenaltyStore = create<PenaltyState>((set, get) => ({
     if (key === "reroll") {
       if (s.bench.length === 0) return;
       const [fresh, ...restBench] = s.bench;
+      setPenaltyLiveTimeLeftMs(s.durationMs);
       set({
         questions: s.questions.map((q, i) =>
           i === s.currentIndex ? fresh : q,
@@ -229,7 +239,11 @@ export const usePenaltyStore = create<PenaltyState>((set, get) => ({
     }
 
     if (key === "extraTime") {
-      const boosted = Math.min(s.durationMs, s.timeLeftMs + s.helpers.extraTimeMs);
+      const boosted = Math.min(
+        s.durationMs,
+        getPenaltyLiveTimeLeftMs() + s.helpers.extraTimeMs,
+      );
+      setPenaltyLiveTimeLeftMs(boosted);
       set({
         timeLeftMs: boosted,
         helpersThisQuestion: [...s.helpersThisQuestion, key],
@@ -256,5 +270,8 @@ export const usePenaltyStore = create<PenaltyState>((set, get) => ({
     });
   },
 
-  reset: () => set({ ...initialState }),
+  reset: () => {
+    setPenaltyLiveTimeLeftMs(initialState.timeLeftMs);
+    set({ ...initialState });
+  },
 }));

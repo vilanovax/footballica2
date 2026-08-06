@@ -11,8 +11,13 @@ export const dynamic = "force-dynamic";
 export default async function QuickPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  if (!user.club) redirect("/onboarding");
 
-  const club = await getClubSnapshot();
+  // Club snapshot + Live-Ops config are independent — run in parallel.
+  const [club, config] = await Promise.all([
+    getClubSnapshot(),
+    getGameConfig(),
+  ]);
   if (!club) redirect("/onboarding");
 
   // Gate: block entry when exhausted (Quick Match spends stamina like Penalty).
@@ -21,7 +26,6 @@ export default async function QuickPage() {
   }
 
   // Rapid-fire length is Live-Ops tunable (PRD §4C: 5–10 questions).
-  const config = await getGameConfig();
   const matchSize = config.match.quickQuestionCount;
   const benchSize = 3;
 

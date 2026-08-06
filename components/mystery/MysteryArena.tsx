@@ -11,7 +11,7 @@ import type {
   AttributeVerdict,
   CompareVerdict,
   MysteryGuessRecord,
-} from "@/lib/mystery";
+} from "@/lib/mystery/types";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { playSound } from "@/lib/audio/SoundManager";

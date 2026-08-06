@@ -4,11 +4,9 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUserClub } from "@/lib/player/current";
-import {
-  buildMysteryShareCode,
-  evaluateMysteryGuess,
-  type MysteryGuessRecord,
-} from "@/lib/mystery";
+import { buildMysteryShareCode } from "@/lib/mystery/share";
+import { evaluateMysteryGuess } from "@/lib/mystery/evaluate";
+import type { MysteryGuessRecord } from "@/lib/mystery/types";
 import { parseMysteryGuesses } from "@/lib/mystery/parse";
 import {
   ensureTodayMysteryPuzzle,

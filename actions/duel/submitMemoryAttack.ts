@@ -7,7 +7,7 @@ import {
   canUserAct,
   describeTurn,
   statusAfterAttackSubmit,
-} from "@/lib/duel";
+} from "@/lib/duel/fsm";
 import { parseMemoryBoard } from "@/lib/duel/memoryBoard";
 import {
   gradeMemoryAttempt,

@@ -3,7 +3,7 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUserClub } from "@/lib/player/current";
-import { canUserAct, describeTurn } from "@/lib/duel";
+import { canUserAct, describeTurn } from "@/lib/duel/fsm";
 import { playerMatchesCell, toGridPlayerAttrs } from "@/lib/grid/rules";
 import { GRID_SIZE, cellKey } from "@/lib/grid/types";
 import {

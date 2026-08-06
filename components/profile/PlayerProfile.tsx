@@ -22,10 +22,8 @@ import { AvatarImage } from "@/components/common/AvatarImage";
 import { ResourceIcon } from "@/components/common/ResourceIcon";
 import { ProfileEditModal } from "./ProfileEditModal";
 import { FlagPickerModal } from "./FlagPickerModal";
-import {
-  countMissionRewardsReady,
-  MissionDrawer,
-} from "@/components/profile/MissionDrawer";
+import { MissionDrawer } from "@/components/profile/MissionDrawer";
+import { countMissionRewardsReady } from "@/lib/game/missionRewards";
 import { calculateLevel, MAX_LEVEL } from "@/lib/game/economy";
 import { playerTitleBand } from "@/lib/game/playerTitle";
 import {

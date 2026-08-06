@@ -12,11 +12,15 @@ import {
   SURVIVAL_LIVES,
   SURVIVAL_PREFETCH_BELOW,
 } from "@/lib/game/survival";
+import { getSurvivalLiveTimeLeftMs } from "@/lib/quiz/liveMatchClock";
 import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
-import { QuickTimer } from "@/components/quiz/QuickTimer";
+import {
+  QuickTimer,
+  type QuickTimerHandle,
+} from "@/components/quiz/QuickTimer";
 import { QuestionCard } from "@/components/quiz/QuestionCard";
 import { AnswerButton } from "@/components/quiz/AnswerButton";
 import { ExplanationFact } from "@/components/quiz/ExplanationFact";
@@ -48,7 +52,6 @@ export function SurvivalMatch({
   const queue = useSurvivalStore((s) => s.queue);
   const lives = useSurvivalStore((s) => s.lives);
   const score = useSurvivalStore((s) => s.score);
-  const timeLeftMs = useSurvivalStore((s) => s.timeLeftMs);
   const durationMs = useSurvivalStore((s) => s.durationMs);
   const feedback = useSurvivalStore((s) => s.feedback);
   const log = useSurvivalStore((s) => s.log);
@@ -70,6 +73,7 @@ export function SurvivalMatch({
   const [shake, setShake] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const prefetchLock = useRef(false);
+  const timerRef = useRef<QuickTimerHandle>(null);
 
   const handleLeaveMatch = useCallback(() => {
     reset();
@@ -122,24 +126,27 @@ export function SurvivalMatch({
     }
   }, [appendBatch, clearBank, setPrefetching, challengeId]);
 
-  // Timer loop
+  // Timer loop — live clock + imperative bar (no per-frame React).
   useEffect(() => {
     if (phase !== "playing") return;
     let frameId = 0;
     let last: number | null = null;
     let cancelled = false;
+    const duration = Math.max(1, durationMs);
     const loop = (ts: number) => {
       if (cancelled) return;
       if (last !== null) tick(ts - last);
       last = ts;
+      timerRef.current?.setRatio(getSurvivalLiveTimeLeftMs() / duration);
       frameId = requestAnimationFrame(loop);
     };
+    timerRef.current?.setRatio(getSurvivalLiveTimeLeftMs() / duration);
     frameId = requestAnimationFrame(loop);
     return () => {
       cancelled = true;
       cancelAnimationFrame(frameId);
     };
-  }, [phase, tick]);
+  }, [phase, tick, durationMs]);
 
   // Reveal → advance / Victory Cap
   useEffect(() => {
@@ -354,11 +361,7 @@ export function SurvivalMatch({
             </motion.span>
           </div>
 
-          <QuickTimer
-            timeLeftMs={timeLeftMs}
-            totalMs={durationMs}
-            paused={locked || paused}
-          />
+          <QuickTimer ref={timerRef} paused={locked || paused} />
         </header>
 
         <QuestionCard

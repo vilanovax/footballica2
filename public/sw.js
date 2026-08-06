@@ -5,28 +5,46 @@
  * Next 16's Turbopack-default build. This vanilla SW is fully Turbopack-safe
  * and gives us exactly the caching we need:
  *   - /sounds/*            → cache-first (SFX play instantly, even offline)
+ *   - /icons/*, /avatars/* → cache-first (hub chrome)
  *   - fonts (_next media)  → cache-first (no FOUT on repeat visits)
  *   - _next/static/*       → stale-while-revalidate
  *   - navigations          → network-first, fall back to cache
  *
- * Bump VERSION to invalidate old caches on deploy.
+ * VERSION comes from the registration query (?v=commitSha) so each Vercel
+ * deploy invalidates old caches without a manual bump.
  */
 
-const VERSION = "v1";
+const SW_URL = new URL(self.location.href);
+const VERSION = SW_URL.searchParams.get("v") || "v2";
 const SOUND_CACHE = `footballica-sounds-${VERSION}`;
 const FONT_CACHE = `footballica-fonts-${VERSION}`;
 const STATIC_CACHE = `footballica-static-${VERSION}`;
 const PAGE_CACHE = `footballica-pages-${VERSION}`;
+const ASSET_CACHE = `footballica-assets-${VERSION}`;
 
-const CURRENT_CACHES = [SOUND_CACHE, FONT_CACHE, STATIC_CACHE, PAGE_CACHE];
+const CURRENT_CACHES = [
+  SOUND_CACHE,
+  FONT_CACHE,
+  STATIC_CACHE,
+  PAGE_CACHE,
+  ASSET_CACHE,
+];
 
-// Precache the SFX + icons + manifest so the game feels snappy from first load.
+// Precache SFX + hub icons + PWA chrome so first Club/Play visit feels snappy.
 const PRECACHE_URLS = [
   "/sounds/goal.mp3",
   "/sounds/miss.mp3",
   "/sounds/whistle.mp3",
   "/sounds/upgrade.mp3",
   "/sounds/click.mp3",
+  "/icons/coin.png",
+  "/icons/energy.png",
+  "/icons/fans.png",
+  "/icons/xp.png",
+  "/icons/hub-mission.png",
+  "/icons/hub-settings.png",
+  "/icons/hub-news.png",
+  "/icons/hub-shop.png",
   "/icon-192x192.png",
   "/icon-512x512.png",
   "/apple-icon.png",
@@ -36,7 +54,7 @@ const PRECACHE_URLS = [
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
-      .open(SOUND_CACHE)
+      .open(ASSET_CACHE)
       // Individual failures shouldn't abort the whole install.
       .then((cache) =>
         Promise.allSettled(PRECACHE_URLS.map((url) => cache.add(url))),
@@ -104,6 +122,14 @@ self.addEventListener("fetch", (event) => {
 
   if (url.pathname.startsWith("/sounds/")) {
     event.respondWith(cacheFirst(request, SOUND_CACHE));
+    return;
+  }
+
+  if (
+    url.pathname.startsWith("/icons/") ||
+    url.pathname.startsWith("/avatars/")
+  ) {
+    event.respondWith(cacheFirst(request, ASSET_CACHE));
     return;
   }
 

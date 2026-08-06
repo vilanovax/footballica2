@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireUserClub } from "@/lib/player/current";
-import { canUserAct, describeTurn } from "@/lib/duel";
+import { canUserAct, describeTurn } from "@/lib/duel/fsm";
 import { drawCategoryQuestions } from "@/lib/duel/draw";
 import { dbQuestionToQuiz } from "@/lib/quiz/questionMapper";
 import type { QuizQuestion } from "@/lib/quiz/types";

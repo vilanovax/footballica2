@@ -3,7 +3,7 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUserClub } from "@/lib/player/current";
-import { canUserAct, describeTurn } from "@/lib/duel";
+import { canUserAct, describeTurn } from "@/lib/duel/fsm";
 import { evaluateMysteryGuess } from "@/lib/mystery/evaluate";
 import { getMysteryPlayer } from "@/lib/mystery/players";
 import {

@@ -6,7 +6,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ADMIN_COOKIE, isValidAdminToken } from "@/lib/admin/auth";
 import { tehranDayKey } from "@/lib/game/dailyMissions";
-import { MYSTERY_MAX_GUESSES } from "@/lib/mystery";
+import { MYSTERY_MAX_GUESSES } from "@/lib/mystery/types";
 import {
   ensureMysterySchedule,
   MYSTERY_SCHEDULE_DAYS,

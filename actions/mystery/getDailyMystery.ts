@@ -6,7 +6,7 @@ import type {
   MysteryAttemptStatus,
   MysteryGuessRecord,
   MysteryPlayerOption,
-} from "@/lib/mystery";
+} from "@/lib/mystery/types";
 import { parseMysteryGuesses } from "@/lib/mystery/parse";
 import {
   ensureTodayMysteryPuzzle,

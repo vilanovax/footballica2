@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import type { Club, Prisma, PrismaClient, User } from "@/generated/prisma/client";
 import type {
@@ -65,17 +66,21 @@ export async function toClubSnapshotWithBooster(
 
 export type UserWithClub = User & { club: Club | null };
 
-/** Current session user (no auto-create). Null when logged out. */
-export async function getCurrentUser(
-  db: Db = prisma,
-): Promise<UserWithClub | null> {
-  const userId = await getSessionUserId();
-  if (!userId) return null;
-  return db.user.findUnique({
-    where: { id: userId },
-    include: { club: true },
-  });
-}
+/**
+ * Current session user (no auto-create). Null when logged out.
+ * Wrapped in React.cache so auth + club joins dedupe within one RSC request
+ * (pages often call this, then getClubSnapshot / hasClub again).
+ */
+export const getCurrentUser = cache(
+  async (db: Db = prisma): Promise<UserWithClub | null> => {
+    const userId = await getSessionUserId();
+    if (!userId) return null;
+    return db.user.findUnique({
+      where: { id: userId },
+      include: { club: true },
+    });
+  },
+);
 
 /** True when the session user has finished onboarding (has a club). */
 export async function hasClub(): Promise<boolean> {

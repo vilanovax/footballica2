@@ -5,23 +5,24 @@ import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistr
 import { LanguageProvider } from "@/components/i18n/LanguageProvider";
 import "./globals.css";
 
+// Trimmed weights: browsers synthesize missing steps; fewer files = faster text.
 const fontDisplay = Fredoka({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  weight: ["600", "700"],
 });
 
 const fontBody = Nunito({
   variable: "--font-body",
   subsets: ["latin"],
-  weight: ["400", "600", "700", "800"],
+  weight: ["400", "700", "800"],
 });
 
 // Persian/Arabic script font — applied automatically for RTL (see globals.css).
 const fontFa = Vazirmatn({
   variable: "--font-fa",
-  subsets: ["arabic", "latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  subsets: ["arabic"],
+  weight: ["400", "700"],
 });
 
 export const metadata: Metadata = {

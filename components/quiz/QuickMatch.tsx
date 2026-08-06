@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { usePenaltyStore } from "@/stores/penaltyStore";
@@ -10,20 +11,29 @@ import type { QuizQuestion } from "@/lib/quiz/types";
 import type { GameConfig } from "@/lib/game/economy";
 import type { HelperKey } from "@/lib/game/helpers";
 import { QUICK_DURATION_MS } from "@/lib/quiz/scoring";
+import { getPenaltyLiveTimeLeftMs } from "@/lib/quiz/liveMatchClock";
 import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
-import { QuickTimer } from "./QuickTimer";
+import { QuickTimer, type QuickTimerHandle } from "./QuickTimer";
 import { QuestionCard } from "./QuestionCard";
 import { AnswerButton } from "./AnswerButton";
 import { ExplanationFact } from "./ExplanationFact";
 import { HelperDock } from "./HelperDock";
-import { MatchResult } from "./MatchResult";
 import { GoalBurst } from "./GoalBurst";
-import { ReportModal } from "./ReportModal";
-import { FormatDevToggle } from "./FormatDevToggle";
 import { MatchLeaveControl } from "./MatchLeaveControl";
+
+// Post-match / rare chrome — keep out of the kickoff JS chunk.
+const MatchResult = dynamic(() =>
+  import("./MatchResult").then((m) => m.MatchResult),
+);
+const ReportModal = dynamic(() =>
+  import("./ReportModal").then((m) => m.ReportModal),
+);
+const FormatDevToggle = dynamic(() =>
+  import("./FormatDevToggle").then((m) => m.FormatDevToggle),
+);
 
 /**
  * Rapid-fire pause after each answer BEFORE auto-advancing. Unlike Penalty
@@ -59,7 +69,6 @@ export function QuickMatch({
   const phase = usePenaltyStore((s) => s.phase);
   const questions = usePenaltyStore((s) => s.questions);
   const currentIndex = usePenaltyStore((s) => s.currentIndex);
-  const timeLeftMs = usePenaltyStore((s) => s.timeLeftMs);
   const durationMs = usePenaltyStore((s) => s.durationMs);
   const goals = usePenaltyStore((s) => s.goals);
   const feedback = usePenaltyStore((s) => s.feedback);
@@ -78,6 +87,7 @@ export function QuickMatch({
   const answer = usePenaltyStore((s) => s.answer);
   const next = usePenaltyStore((s) => s.next);
   const reset = usePenaltyStore((s) => s.reset);
+  const timerRef = useRef<QuickTimerHandle>(null);
   const useHelper = usePenaltyStore((s) => s.useHelper);
   const setPaused = usePenaltyStore((s) => s.setPaused);
 
@@ -129,28 +139,30 @@ export function QuickMatch({
     [useHelper],
   );
 
-  // Timer loop via rAF — isolated per-effect locals + a `cancelled` flag so
-  // loops can never accumulate (which would burn the timer several × too fast).
+  // Timer loop via rAF — clock outside Zustand; bar painted imperatively.
   useEffect(() => {
     if (phase !== "playing") return;
 
     let frameId = 0;
     let last: number | null = null;
     let cancelled = false;
+    const duration = Math.max(1, durationMs);
 
     const loop = (ts: number) => {
       if (cancelled) return;
       if (last !== null) tick(ts - last);
       last = ts;
+      timerRef.current?.setRatio(getPenaltyLiveTimeLeftMs() / duration);
       frameId = requestAnimationFrame(loop);
     };
 
+    timerRef.current?.setRatio(getPenaltyLiveTimeLeftMs() / duration);
     frameId = requestAnimationFrame(loop);
     return () => {
       cancelled = true;
       cancelAnimationFrame(frameId);
     };
-  }, [phase, tick]);
+  }, [phase, tick, durationMs]);
 
   // Reveal reactions: feedback SFX/haptics + shake on miss, then auto-advance
   // for BOTH outcomes — that constant forward motion is the rapid-fire feel.
@@ -209,7 +221,7 @@ export function QuickMatch({
 
   return (
     <section className="relative flex flex-1 flex-col">
-      <FormatDevToggle />
+      {process.env.NODE_ENV === "development" ? <FormatDevToggle /> : null}
       <div
         className={["flex flex-1 flex-col gap-5", shake ? "animate-screen-shake" : ""].join(" ")}
         onAnimationEnd={() => setShake(false)}
@@ -253,7 +265,7 @@ export function QuickMatch({
             <div className="flex-1" />
           </div>
 
-          <QuickTimer timeLeftMs={timeLeftMs} totalMs={durationMs} paused={locked || paused} />
+          <QuickTimer ref={timerRef} paused={locked || paused} />
         </header>
 
         <QuestionCard

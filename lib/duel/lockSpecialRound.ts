@@ -10,7 +10,7 @@ import {
   LIVE_MODE_TO_DUEL_TYPE,
 } from "@/lib/game/liveModes";
 import { requireUserClub } from "@/lib/player/current";
-import { canUserAct, describeTurn } from "@/lib/duel";
+import { canUserAct, describeTurn } from "@/lib/duel/fsm";
 import { duelHasSpecialRound } from "@/lib/duel/specialRounds";
 import { memoryRoundCreateData } from "@/lib/duel/createMemoryRound";
 import { starPathRoundCreateData } from "@/lib/duel/createStarPathRound";

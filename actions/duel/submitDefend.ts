@@ -5,13 +5,15 @@ import { getGameConfig } from "@/lib/game/gameConfig";
 import { requireUserClub } from "@/lib/player/current";
 import {
   canUserAct,
-  countCorrect,
   describeTurn,
-  resolveDuelWinner,
-  tallyRoundWins,
   statusAfterDefendSubmit,
   statusWhenStartingDefend,
-} from "@/lib/duel";
+} from "@/lib/duel/fsm";
+import {
+  countCorrect,
+  resolveDuelWinner,
+  tallyRoundWins,
+} from "@/lib/duel/scoring";
 import { gradeDuelAnswers } from "@/lib/duel/grade";
 import { assertNoDuelBoosters } from "@/lib/duel/fairPlay";
 import type { DuelAnswerSubmission } from "@/lib/duel/types";

@@ -5,7 +5,8 @@ import type {
   Category,
   User,
 } from "@/generated/prisma/client";
-import { describeTurn, isDuelTerminal, type DuelTurnView } from "@/lib/duel";
+import { describeTurn } from "@/lib/duel/fsm";
+import { isDuelTerminal, type DuelTurnView } from "@/lib/duel/types";
 import type { DuelAnswerLogEntry, DuelCategoryOption } from "@/lib/duel/types";
 import {
   isMemoryAttemptLog,

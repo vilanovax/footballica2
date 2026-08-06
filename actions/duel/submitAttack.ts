@@ -5,10 +5,10 @@ import { getGameConfig } from "@/lib/game/gameConfig";
 import { requireUserClub } from "@/lib/player/current";
 import {
   canUserAct,
-  countCorrect,
   describeTurn,
   statusAfterAttackSubmit,
-} from "@/lib/duel";
+} from "@/lib/duel/fsm";
+import { countCorrect } from "@/lib/duel/scoring";
 import { gradeDuelAnswers } from "@/lib/duel/grade";
 import { assertNoDuelBoosters } from "@/lib/duel/fairPlay";
 import type { DuelAnswerSubmission } from "@/lib/duel/types";

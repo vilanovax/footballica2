@@ -3,11 +3,8 @@ import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getGameConfig } from "@/lib/game/gameConfig";
-import {
-  resolveDuelWinner,
-  statusAfterDefendSubmit,
-  tallyRoundWins,
-} from "@/lib/duel";
+import { resolveDuelWinner, tallyRoundWins } from "@/lib/duel/scoring";
+import { statusAfterDefendSubmit } from "@/lib/duel/fsm";
 import { playerMatchesCell, toGridPlayerAttrs } from "@/lib/grid/rules";
 import { GRID_SIZE, cellKey } from "@/lib/grid/types";
 import {

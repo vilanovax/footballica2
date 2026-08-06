@@ -3,11 +3,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLanguageStore } from "@/stores/languageStore";
 import {
-  DICTIONARIES,
   DEFAULT_LOCALE,
   getDirection,
   type Locale,
 } from "./config";
+import {
+  getEnglishDictionary,
+  loadDictionary,
+  peekDictionary,
+} from "./dictionaries";
 
 type Params = Record<string, string | number>;
 
@@ -34,12 +38,15 @@ function interpolate(template: string, params?: Params): string {
  * fatal to render.
  *
  * Locale from persist is applied only after mount so SSR + first paint match
- * (avoids hydration mismatches when the user saved `fa`).
+ * (avoids hydration mismatches when the user saved `fa`). Persian dictionary
+ * is lazy-loaded — English is used until that chunk arrives.
  */
 export function useTranslation() {
   const storeLocale = useLanguageStore((s) => s.locale);
   const setLocale = useLanguageStore((s) => s.setLocale);
   const [hydrated, setHydrated] = useState(false);
+  // Bump when a lazy dictionary finishes loading so `t` rebinds.
+  const [dictVersion, setDictVersion] = useState(0);
 
   useEffect(() => {
     setHydrated(true);
@@ -47,17 +54,31 @@ export function useTranslation() {
 
   const locale = (hydrated ? storeLocale : DEFAULT_LOCALE) as Locale;
 
+  useEffect(() => {
+    if (locale === DEFAULT_LOCALE) return;
+    if (peekDictionary(locale)) return;
+    let cancelled = false;
+    void loadDictionary(locale).then(() => {
+      if (!cancelled) setDictVersion((v) => v + 1);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [locale]);
+
   const t = useCallback(
     (key: string, params?: Params): string => {
-      const active = resolve(DICTIONARIES[locale], key);
+      const en = getEnglishDictionary();
+      const activeDict = peekDictionary(locale) ?? en;
+      const active = resolve(activeDict, key);
       const value =
-        typeof active === "string"
-          ? active
-          : resolve(DICTIONARIES[DEFAULT_LOCALE], key);
+        typeof active === "string" ? active : resolve(en, key);
       if (typeof value !== "string") return key;
       return interpolate(value, params);
     },
-    [locale],
+    // dictVersion forces refresh after lazy fa chunk lands
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
+    [locale, dictVersion],
   );
 
   return { t, locale, dir: getDirection(locale), setLocale };

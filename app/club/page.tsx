@@ -13,16 +13,18 @@ export const dynamic = "force-dynamic";
 export default async function ClubPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  if (!user.club) redirect("/onboarding");
 
-  const club = await getClubSnapshot();
-  if (!club) redirect("/onboarding");
-
-  const [inbox, missions, config, challenges] = await Promise.all([
+  // Snapshot + hub side-panels share one round-trip (auth is request-cached).
+  const [club, inbox, missions, config, challenges] = await Promise.all([
+    getClubSnapshot(),
     getDuelInbox(),
     getMyMissions(),
     getGameConfig(),
     listRecordChallenges(),
   ]);
+  if (!club) redirect("/onboarding");
+
   const duelInboxCount = inbox.ok ? inbox.count : 0;
   const duelInboxItems = inbox.ok ? inbox.items : [];
   const missionBoard = missions.ok ? missions.board : null;

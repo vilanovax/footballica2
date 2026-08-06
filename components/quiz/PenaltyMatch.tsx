@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { usePenaltyStore } from "@/stores/penaltyStore";
@@ -9,22 +10,31 @@ import { getMatchDraw } from "@/actions/getMatchDraw";
 import type { QuizQuestion } from "@/lib/quiz/types";
 import type { GameConfig } from "@/lib/game/economy";
 import type { HelperKey } from "@/lib/game/helpers";
+import { getPenaltyLiveTimeLeftMs } from "@/lib/quiz/liveMatchClock";
 import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
-import { FuseTimer } from "./FuseTimer";
+import { FuseTimer, type FuseTimerHandle } from "./FuseTimer";
 import { QuestionCard } from "./QuestionCard";
 import { AnswerButton } from "./AnswerButton";
 import { ExplanationFact } from "./ExplanationFact";
 import { HelperDock } from "./HelperDock";
 import { Scoreboard } from "./Scoreboard";
-import { MatchResult } from "./MatchResult";
 import { GoalBurst } from "./GoalBurst";
 import { MissedPopup } from "./MissedPopup";
-import { ReportModal } from "./ReportModal";
-import { FormatDevToggle } from "./FormatDevToggle";
 import { MatchLeaveControl } from "./MatchLeaveControl";
+
+// Post-match / rare chrome — keep out of the kickoff JS chunk.
+const MatchResult = dynamic(() =>
+  import("./MatchResult").then((m) => m.MatchResult),
+);
+const ReportModal = dynamic(() =>
+  import("./ReportModal").then((m) => m.ReportModal),
+);
+const FormatDevToggle = dynamic(() =>
+  import("./FormatDevToggle").then((m) => m.FormatDevToggle),
+);
 
 /** Auto-advance delay after a scored goal (miss waits for Continue tap). */
 const GOAL_REVEAL_MS = 1500;
@@ -60,7 +70,7 @@ export function PenaltyMatch({
   const phase = usePenaltyStore((s) => s.phase);
   const questions = usePenaltyStore((s) => s.questions);
   const currentIndex = usePenaltyStore((s) => s.currentIndex);
-  const timeLeftMs = usePenaltyStore((s) => s.timeLeftMs);
+  const durationMs = usePenaltyStore((s) => s.durationMs);
   const goals = usePenaltyStore((s) => s.goals);
   const feedback = usePenaltyStore((s) => s.feedback);
   const rewards = usePenaltyStore((s) => s.rewards);
@@ -83,6 +93,7 @@ export function PenaltyMatch({
 
   const [shake, setShake] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const fuseRef = useRef<FuseTimerHandle>(null);
 
   const handleLeaveMatch = useCallback(() => {
     reset();
@@ -134,30 +145,31 @@ export function PenaltyMatch({
   );
 
   // Timer loop via rAF — only runs while playing (paused on reveal).
-  // State is kept in locals (not refs) so every effect run owns an isolated
-  // loop; a `cancelled` flag hard-stops any frame that fires after teardown.
-  // This prevents loop accumulation under Strict Mode / Fast Refresh, which
-  // would otherwise run several rAF loops at once and burn the fuse N× too fast.
+  // Clock lives outside Zustand; the fuse bar is painted imperatively so the
+  // match tree does not re-render every frame.
   useEffect(() => {
     if (phase !== "playing") return;
 
     let frameId = 0;
     let last: number | null = null;
     let cancelled = false;
+    const duration = Math.max(1, durationMs);
 
     const loop = (ts: number) => {
       if (cancelled) return;
       if (last !== null) tick(ts - last);
       last = ts;
+      fuseRef.current?.setRatio(getPenaltyLiveTimeLeftMs() / duration);
       frameId = requestAnimationFrame(loop);
     };
 
+    fuseRef.current?.setRatio(getPenaltyLiveTimeLeftMs() / duration);
     frameId = requestAnimationFrame(loop);
     return () => {
       cancelled = true;
       cancelAnimationFrame(frameId);
     };
-  }, [phase, tick]);
+  }, [phase, tick, durationMs]);
 
   // Reveal reactions: haptics, screen shake on miss, auto-advance on goal.
   useEffect(() => {
@@ -209,7 +221,7 @@ export function PenaltyMatch({
 
   return (
     <section className="relative flex flex-1 flex-col">
-      <FormatDevToggle />
+      {process.env.NODE_ENV === "development" ? <FormatDevToggle /> : null}
       <div
         className={[
           "flex flex-1 flex-col gap-5",
@@ -238,7 +250,7 @@ export function PenaltyMatch({
             totalKicks={questions.length}
             goals={goals}
           />
-          <FuseTimer timeLeftMs={timeLeftMs} paused={locked || paused} />
+          <FuseTimer ref={fuseRef} paused={locked || paused} />
         </header>
 
         <AnimatePresence mode="wait">

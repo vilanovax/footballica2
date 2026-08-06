@@ -1,7 +1,7 @@
 "use server";
 
 import { requireUserClub } from "@/lib/player/current";
-import { canUserAct, describeTurn, statusWhenStartingDefend } from "@/lib/duel";
+import { canUserAct, describeTurn, statusWhenStartingDefend } from "@/lib/duel/fsm";
 import { prisma } from "@/lib/prisma";
 import { duelSnapshotInclude } from "@/lib/duel/include";
 import { tickDuelJobs } from "@/lib/duel/jobs";

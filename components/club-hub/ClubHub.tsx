@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { upgradeClub } from "@/actions/upgradeClub";
@@ -28,17 +29,13 @@ import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
+import { countMissionRewardsReady } from "@/lib/game/missionRewards";
 import { StatusBar } from "./StatusBar";
 import { StadiumHero } from "./StadiumHero";
 import { UpgradeCard } from "./UpgradeCard";
 import { NewspaperModal } from "./NewspaperModal";
 import { ActiveNewsChip } from "./ActiveNewsChip";
 import { FtueCoach } from "./FtueCoach";
-import { Confetti } from "./Confetti";
-import {
-  countMissionRewardsReady,
-  MissionDrawer,
-} from "@/components/profile/MissionDrawer";
 import { DuelInboxBanner } from "@/components/duel/DuelInboxBanner";
 import type { DuelInboxItem } from "@/actions/duel/getInboxCount";
 import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
@@ -46,7 +43,17 @@ import type { CampaignSeasonView } from "@/lib/game/campaignSeason";
 import { NextGoalCard } from "@/components/club-hub/NextGoalCard";
 import { MysteryDailyChip } from "@/components/club-hub/MysteryDailyChip";
 import { CampaignSeasonCard } from "@/components/club-hub/CampaignSeasonCard";
-import { BusinessPanel } from "@/components/club-hub/BusinessPanel";
+
+// Heavy / deferred hub panels — keep first Club paint lean.
+const BusinessPanel = dynamic(() =>
+  import("@/components/club-hub/BusinessPanel").then((m) => m.BusinessPanel),
+);
+const MissionDrawer = dynamic(() =>
+  import("@/components/profile/MissionDrawer").then((m) => m.MissionDrawer),
+);
+const Confetti = dynamic(() =>
+  import("./Confetti").then((m) => m.Confetti),
+);
 
 type ClubHubProps = {
   initialClub: ClubSnapshot;
@@ -97,9 +104,18 @@ export function ClubHub({
   } | null>(null);
   const [newsPending, setNewsPending] = useState(false);
   const [missionsOpen, setMissionsOpen] = useState(false);
+  // Keep drawer mounted after first open so exit animation works, but skip
+  // downloading the MissionDrawer chunk until the manager taps missions.
+  const [missionsMounted, setMissionsMounted] = useState(false);
   const [missionsTab, setMissionsTab] = useState<"daily" | "campaign">(
     "daily",
   );
+
+  const openMissions = (tab: "daily" | "campaign") => {
+    setMissionsTab(tab);
+    setMissionsMounted(true);
+    setMissionsOpen(true);
+  };
 
   const canClaimNews = club.newsClaimable;
   const missionReadyCount = countMissionRewardsReady(dailyBoard, missionBoard);
@@ -228,6 +244,8 @@ export function ClubHub({
               <AvatarImage
                 avatarKey={avatarKey}
                 colorKey={colorKey}
+                priority
+                sizes="48px"
                 className="h-12 w-12 rounded-full shadow-[0_3px_0_0_rgba(0,0,0,0.35)] ring-2 ring-white/20"
               />
             </Link>
@@ -243,14 +261,13 @@ export function ClubHub({
                   type="button"
                   onClick={() => {
                     haptic(HAPTIC.light);
-                    setMissionsTab("daily");
-                    setMissionsOpen(true);
+                    openMissions("daily");
                   }}
                   aria-label={t("missions.openDrawer")}
                   className="relative flex h-10 w-10 items-center justify-center rounded-xl"
                   whileTap={{ scale: 0.9 }}
                 >
-                  <HubIcon kind="mission" size="md" />
+                  <HubIcon kind="mission" size="md" priority />
                   {missionReadyCount > 0 && (
                     <span className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 font-display text-[10px] font-black text-accent-foreground shadow-[0_2px_0_0_rgba(0,0,0,0.35)]">
                       {toLocaleDigits(Math.min(missionReadyCount, 9), locale)}
@@ -320,10 +337,7 @@ export function ClubHub({
       {ftueComplete && campaignSeason && (
         <CampaignSeasonCard
           season={campaignSeason}
-          onOpenMissions={() => {
-            setMissionsTab("campaign");
-            setMissionsOpen(true);
-          }}
+          onOpenMissions={() => openMissions("campaign")}
         />
       )}
 
@@ -428,7 +442,7 @@ export function ClubHub({
         )}
       </AnimatePresence>
 
-      {ftueComplete && (
+      {ftueComplete && missionsMounted && (
         <MissionDrawer
           open={missionsOpen}
           onOpenChange={setMissionsOpen}

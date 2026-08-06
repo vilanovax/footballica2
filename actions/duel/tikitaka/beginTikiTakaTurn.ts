@@ -4,7 +4,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getGameConfig } from "@/lib/game/gameConfig";
 import { requireUserClub } from "@/lib/player/current";
-import { canUserAct, statusWhenStartingDefend } from "@/lib/duel";
+import { canUserAct, statusWhenStartingDefend } from "@/lib/duel/fsm";
 import {
   parseTikiTakaBoard,
   tikiEndsAt,

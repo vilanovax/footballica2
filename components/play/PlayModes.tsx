@@ -1,19 +1,14 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { DuelSnapshot } from "@/lib/duel/snapshot";
 import type { DuelInboxItem } from "@/actions/duel/getInboxCount";
-import type { DailyMysterySnapshot } from "@/actions/mystery/getDailyMystery";
-import type { DailyGridSnapshot } from "@/actions/grid/getDailyGrid";
-import type { DailyStarPathSnapshot } from "@/actions/starpath/getDailyStarPath";
-import type { DailyMemorySnapshot } from "@/actions/memorygotd/getDailyMemory";
-import type { GameConfig } from "@/lib/game/economy";
 import type { PlayModeEconomy } from "@/lib/play/modeEconomy";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { RecentDuelHistory } from "@/components/duel/RecentDuelHistory";
 import { DuelInboxBanner } from "@/components/duel/DuelInboxBanner";
 import { MatchCard } from "@/components/play/MatchCard";
-import { GameOfTheDayCard } from "@/components/play/GameOfTheDayCard";
 import { ResourceIcon } from "@/components/common/ResourceIcon";
 
 type PlayModesProps = {
@@ -26,18 +21,8 @@ type PlayModesProps = {
   modes: Record<"penalty" | "quick" | "survival" | "duel", PlayModeEconomy>;
   /** Live premium challenges — chip on Survival card only. */
   liveChallengeCount?: number;
-  /** Rotating daily slot (Mysterious Player). */
-  mystery?: DailyMysterySnapshot | null;
-  /** Rotating daily slot (Football Grid — ADR 002). */
-  grid?: DailyGridSnapshot | null;
-  /** Rotating daily slot (Star Path — GotD #3). */
-  starPath?: DailyStarPathSnapshot | null;
-  /** Rotating daily slot (Memory Pairs — GotD #4). */
-  memory?: DailyMemorySnapshot | null;
-  /** Drives GotD rotator + liveModes gates. */
-  gameConfig?: GameConfig;
-  /** ISO — next Tehran midnight when GotD kind rotates. */
-  gotdRotatesAt?: string | null;
+  /** Streamed Game of the Day slot (Suspense from the server page). */
+  gotd?: ReactNode;
 };
 
 /**
@@ -54,12 +39,7 @@ export function PlayModes({
   survivalBest,
   modes,
   liveChallengeCount = 0,
-  mystery = null,
-  grid = null,
-  starPath = null,
-  memory = null,
-  gameConfig,
-  gotdRotatesAt = null,
+  gotd = null,
 }: PlayModesProps) {
   const { t, locale } = useTranslation();
   const staminaLow = stamina <= 1;
@@ -101,14 +81,7 @@ export function PlayModes({
         variant="play"
       />
 
-      <GameOfTheDayCard
-        mystery={mystery}
-        grid={grid}
-        starPath={starPath}
-        memory={memory}
-        config={gameConfig}
-        rotatesAt={gotdRotatesAt}
-      />
+      {gotd}
 
       <div className="flex flex-col gap-3">
         <h2 className="font-display text-xs font-bold uppercase tracking-widest text-muted-foreground">

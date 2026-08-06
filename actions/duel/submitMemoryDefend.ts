@@ -6,10 +6,9 @@ import { requireUserClub } from "@/lib/player/current";
 import {
   canUserAct,
   describeTurn,
-  resolveDuelWinner,
-  tallyRoundWins,
   statusAfterDefendSubmit,
-} from "@/lib/duel";
+} from "@/lib/duel/fsm";
+import { resolveDuelWinner, tallyRoundWins } from "@/lib/duel/scoring";
 import { parseMemoryBoard } from "@/lib/duel/memoryBoard";
 import {
   gradeMemoryAttempt,

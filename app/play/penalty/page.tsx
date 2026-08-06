@@ -18,8 +18,14 @@ export default async function PenaltyPage({
 
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  if (!user.club) redirect("/onboarding");
 
-  const club = await getClubSnapshot();
+  // Club snapshot (stamina regen) + Live-Ops config are independent — run in parallel.
+  // getCurrentUser is React.cache'd so getClubSnapshot does not re-hit the DB for auth.
+  const [club, config] = await Promise.all([
+    getClubSnapshot(),
+    getGameConfig(),
+  ]);
   if (!club) redirect("/onboarding");
 
   // Gate: block entry when exhausted — but the FTUE tutorial is stamina-free.
@@ -28,7 +34,6 @@ export default async function PenaltyPage({
   }
 
   // Match size is Live-Ops tunable (full shootout vs. shorter easy-only tutorial).
-  const config = await getGameConfig();
   const matchSize = isTutorial
     ? config.match.tutorialQuestionCount
     : config.match.questionCount;
@@ -37,6 +42,7 @@ export default async function PenaltyPage({
   const benchSize = isTutorial ? 0 : 3;
 
   // Draw the authoritative question set server-side from the DB (+ bench).
+  // getGameConfig inside the action is request-cached.
   const drawn = await getMatchQuestions(
     isTutorial
       ? { count: matchSize, difficulties: ["easy"] }

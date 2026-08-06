@@ -15,10 +15,16 @@ import {
 } from "@/actions/missions";
 import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
 import type { CampaignChapterView } from "@/lib/game/campaignSeason";
+import {
+  countMissionRewardsReady,
+  hasMissionRewardReady,
+} from "@/lib/game/missionRewards";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
+
+export { countMissionRewardsReady, hasMissionRewardReady };
 
 type TabKey = "daily" | "campaign";
 
@@ -38,26 +44,6 @@ function hasUnclaimedDrip(board?: EvaluateMissionsResult | null): boolean {
   return Boolean(
     board?.missions.some((m) => m.isCompleted && !m.isClaimed),
   );
-}
-
-export function hasMissionRewardReady(
-  daily?: EvaluateMissionsResult | null,
-  campaign?: EvaluateMissionsResult | null,
-): boolean {
-  return countMissionRewardsReady(daily, campaign) > 0;
-}
-
-export function countMissionRewardsReady(
-  daily?: EvaluateMissionsResult | null,
-  campaign?: EvaluateMissionsResult | null,
-): number {
-  let n = 0;
-  for (const board of [daily, campaign]) {
-    if (!board) continue;
-    if (board.chestReady) n += 1;
-    n += board.missions.filter((m) => m.isCompleted && !m.isClaimed).length;
-  }
-  return n;
 }
 
 function boardStats(board?: EvaluateMissionsResult | null) {

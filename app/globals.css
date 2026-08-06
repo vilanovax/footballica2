@@ -380,3 +380,75 @@ body {
     border-color: hsl(var(--border));
   }
 }
+
+/* Route loading ball — smooth lift (no bounce easing). */
+@keyframes route-ball {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-14px);
+  }
+}
+
+/* Match timer accents — opacity/scale only (GPU-friendly, no layout). */
+@keyframes fuse-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.62;
+  }
+}
+
+/* Flame sits with translateY(-50%); keep that in the keyframes. */
+@keyframes fuse-flicker-flame {
+  0%,
+  100% {
+    transform: translateY(-50%) scale(1);
+  }
+  50% {
+    transform: translateY(-50%) scale(1.14);
+  }
+}
+
+/* Zap icon is in normal flow. */
+@keyframes fuse-flicker-zap {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.14);
+  }
+}
+
+/* Progressive REVEAL_IMAGE — CSS-driven, no per-frame React/blur. */
+@keyframes reveal-sharp {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes reveal-fog {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes reveal-meter {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}

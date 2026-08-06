@@ -6,6 +6,10 @@ import {
   SURVIVAL_LIVES,
   type SurvivalEndReason,
 } from "@/lib/game/survival";
+import {
+  getSurvivalLiveTimeLeftMs,
+  setSurvivalLiveTimeLeftMs,
+} from "@/lib/quiz/liveMatchClock";
 
 export type SurvivalPhase = "idle" | "playing" | "reveal" | "finished";
 
@@ -66,6 +70,7 @@ export const useSurvivalStore = create<SurvivalState>((set, get) => ({
 
   start: (categoryId, initialBatch) => {
     if (initialBatch.length === 0) return;
+    setSurvivalLiveTimeLeftMs(SURVIVAL_DURATION_MS);
     set({
       ...initialState,
       phase: "playing",
@@ -81,13 +86,18 @@ export const useSurvivalStore = create<SurvivalState>((set, get) => ({
   tick: (deltaMs) => {
     const s = get();
     if (s.phase !== "playing" || s.paused) return;
-    const next = Math.max(0, s.timeLeftMs - deltaMs);
+    // Same background-tab clamp as Penalty — avoid burning the whole fuse on resume.
+    const step = Math.min(Math.max(0, deltaMs), 200);
+    const next = getSurvivalLiveTimeLeftMs() - step;
     if (next <= 0) {
+      setSurvivalLiveTimeLeftMs(0);
+      set({ timeLeftMs: 0 });
       // Timeout = miss
       get().answer(null);
       return;
     }
-    set({ timeLeftMs: next });
+    // Hot path: mutate the live clock only — no Zustand/React re-render.
+    setSurvivalLiveTimeLeftMs(next);
   },
 
   answer: (selectedIndex) => {
@@ -97,12 +107,13 @@ export const useSurvivalStore = create<SurvivalState>((set, get) => ({
     // Guard double-fire (tap + timer timeout in the same tick window).
     if (s.log.some((e) => e.questionId === question.id)) return;
     const evaluation = evaluateKick(question, selectedIndex);
+    const msRemaining = Math.max(0, getSurvivalLiveTimeLeftMs());
     const entry: KickLog = {
       questionId: question.id,
       selectedIndex,
       correctIndex: evaluation.correctIndex,
       result: evaluation.result,
-      msRemaining: Math.round(s.timeLeftMs),
+      msRemaining: Math.round(msRemaining),
     };
 
     const seenQuestionIds = s.seenQuestionIds.includes(question.id)
@@ -112,6 +123,7 @@ export const useSurvivalStore = create<SurvivalState>((set, get) => ({
     if (evaluation.isCorrect) {
       set({
         phase: "reveal",
+        timeLeftMs: msRemaining,
         feedback: {
           selectedIndex,
           correctIndex: evaluation.correctIndex,
@@ -127,6 +139,7 @@ export const useSurvivalStore = create<SurvivalState>((set, get) => ({
     const lives = Math.max(0, s.lives - 1);
     set({
       phase: "reveal",
+      timeLeftMs: msRemaining,
       feedback: {
         selectedIndex,
         correctIndex: evaluation.correctIndex,
@@ -164,6 +177,7 @@ export const useSurvivalStore = create<SurvivalState>((set, get) => ({
 
     if (rest.length === 0) {
       // Queue empty after a correct answer — client must fetch; if empty → Victory Cap.
+      setSurvivalLiveTimeLeftMs(s.durationMs);
       set({
         phase: "playing",
         queue: [],
@@ -173,6 +187,7 @@ export const useSurvivalStore = create<SurvivalState>((set, get) => ({
       return { needPrefetch: true, finished: false };
     }
 
+    setSurvivalLiveTimeLeftMs(s.durationMs);
     set({
       phase: "playing",
       queue: rest,
@@ -218,5 +233,8 @@ export const useSurvivalStore = create<SurvivalState>((set, get) => ({
 
   setPrefetching: (v) => set({ prefetching: v }),
   setPaused: (paused) => set({ paused }),
-  reset: () => set({ ...initialState }),
+  reset: () => {
+    setSurvivalLiveTimeLeftMs(initialState.timeLeftMs);
+    set({ ...initialState });
+  },
 }));

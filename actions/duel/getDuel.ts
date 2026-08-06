@@ -15,7 +15,7 @@ import { duelSnapshotInclude } from "@/lib/duel/include";
 import { listDuelEligibleCategories } from "@/lib/duel/draw";
 import { dbQuestionToQuiz } from "@/lib/quiz/questionMapper";
 import type { QuizQuestion } from "@/lib/quiz/types";
-import { describeTurn } from "@/lib/duel";
+import { describeTurn } from "@/lib/duel/fsm";
 import { beginDuelDefend } from "@/actions/duel/submitDefend";
 import { beginMemoryTurn } from "@/actions/duel/beginMemoryTurn";
 import { beginTikiTakaTurn } from "@/actions/duel/tikitaka/beginTikiTakaTurn";

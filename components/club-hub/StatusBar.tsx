@@ -139,7 +139,7 @@ export function StatusBar({
             onClick={() => playSound("click")}
             className="flex min-h-11 items-center gap-2 rounded-2xl border-2 border-amber-400/40 bg-black/35 px-2.5 py-1.5 shadow-[0_3px_0_0_rgba(0,0,0,0.3)] active:translate-y-px active:shadow-none"
           >
-            <ResourceIcon kind="coin" size="md" />
+            <ResourceIcon kind="coin" size="md" priority />
             <span className="font-display text-base font-black tabular-nums text-amber-100">
               {toLocaleDigits(coins, locale)}
             </span>
@@ -158,7 +158,7 @@ export function StatusBar({
                 : "border-sky-400/40 bg-black/35",
             ].join(" ")}
           >
-            <ResourceIcon kind="energy" size="md" />
+            <ResourceIcon kind="energy" size="md" priority />
             <span
               className={[
                 "font-display text-base font-black tabular-nums",

@@ -7,7 +7,7 @@ import {
   canUserAct,
   describeTurn,
   statusWhenStartingDefend,
-} from "@/lib/duel";
+} from "@/lib/duel/fsm";
 import { parseMemoryBoard } from "@/lib/duel/memoryBoard";
 import { memoryEndsAt } from "@/lib/duel/memoryGrade";
 import type { MemoryBoardJson } from "@/lib/duel/memoryTypes";

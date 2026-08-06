@@ -60,15 +60,17 @@ export function BottomNav() {
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const [duelInbox, setDuelInbox] = useState(0);
 
-  // Refresh badge on route change + poll so bot/human turns surface quickly.
+  // Refresh badge on route change + visibility-aware poll (pause in background).
   useEffect(() => {
     let cancelled = false;
+    let timer: number | undefined;
     let prev =
       typeof window !== "undefined"
         ? Number(sessionStorage.getItem("fb_duel_inbox") ?? "0")
         : 0;
 
     async function refresh() {
+      if (document.visibilityState === "hidden") return;
       const res = await getDuelInboxCount();
       if (cancelled || !res.ok) return;
       if (res.count > prev && prev >= 0) {
@@ -88,11 +90,36 @@ export function BottomNav() {
       setDuelInbox(res.count);
     }
 
-    void refresh();
-    const id = window.setInterval(() => void refresh(), 25_000);
+    function arm() {
+      window.clearTimeout(timer);
+      if (cancelled || document.visibilityState === "hidden") return;
+      // Slower than the old 25s tick — toast still fires on count increase.
+      timer = window.setTimeout(() => {
+        void refresh().finally(() => {
+          if (!cancelled) arm();
+        });
+      }, 45_000);
+    }
+
+    void refresh().finally(() => {
+      if (!cancelled) arm();
+    });
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void refresh().finally(() => {
+          if (!cancelled) arm();
+        });
+      } else {
+        window.clearTimeout(timer);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
     return () => {
       cancelled = true;
-      window.clearInterval(id);
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [pathname, router, t]);
 

@@ -18,10 +18,12 @@ import { gradeDuelAnswers } from "@/lib/duel/grade";
 import {
   countCorrect,
   resolveDuelWinner,
+  tallyRoundWins,
+} from "@/lib/duel/scoring";
+import {
   statusAfterAttackSubmit,
   statusAfterDefendSubmit,
-  tallyRoundWins,
-} from "@/lib/duel";
+} from "@/lib/duel/fsm";
 import { creditDuelMissions } from "@/lib/game/missionEngine";
 import {
   duelHasMemoryRound,

@@ -5,7 +5,7 @@ import type { BotDifficulty, Prisma } from "@/generated/prisma/client";
 import { getGameConfig } from "@/lib/game/gameConfig";
 import { normalizeClubName } from "@/lib/auth/blacklist";
 import { botAccuracy } from "@/lib/bots/difficulty";
-import { countCorrect } from "@/lib/duel";
+import { countCorrect } from "@/lib/duel/scoring";
 import type { DuelAnswerLogEntry } from "@/lib/duel/types";
 import {
   duelHasMemoryRound,

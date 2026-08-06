@@ -1,9 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
-import { Confetti } from "./Confetti";
 import { BottomSheet } from "@/components/ui/BottomSheet";
+
+const Confetti = dynamic(() =>
+  import("./Confetti").then((m) => m.Confetti),
+);
 import { fansSoftCap } from "@/lib/club/upgradeEffects";
 import { staminaRegenIntervalMinutes } from "@/lib/club/stamina";
 import { useTranslation } from "@/lib/i18n/useTranslation";
