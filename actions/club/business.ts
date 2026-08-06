@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@/generated/prisma/client";
 import {
   requireUserClub,
   toClubSnapshotWithBooster,
@@ -23,6 +24,7 @@ import {
   vaultCapacity,
   vaultUpgradeCost,
   type BusinessFacilityKey,
+  type FacilitySoftLinks,
 } from "@/lib/club/businessEconomy";
 import {
   ensureClubFacilities,
@@ -43,6 +45,15 @@ class BusinessError extends Error {}
 
 function isFacilityKey(raw: string): raw is BusinessFacilityKey {
   return (BUSINESS_FACILITY_KEYS as string[]).includes(raw);
+}
+
+async function softLinksForClub(
+  clubId: string,
+  stadiumLevel: number,
+  db: Prisma.TransactionClient,
+): Promise<FacilitySoftLinks> {
+  const badgeCount = await db.clubBadge.count({ where: { clubId } });
+  return { badgeCount, stadiumLevel };
 }
 
 /** Collect one facility buffer (or all) into the vault. */
@@ -67,6 +78,11 @@ export async function collectFacilities(
       });
       const staffMembers = await loadClubStaffViews(club.id, tx);
       const bonusBy = staffBonusByFacility(staffMembers);
+      const links = await softLinksForClub(
+        club.id,
+        club.stadiumLevel,
+        tx,
+      );
       const rateBoost = incomeBoostMultiplier(
         club.businessBoostExpiresAt,
         now,
@@ -84,6 +100,7 @@ export async function collectFacilities(
           club.fans,
           config,
           rateBoost * mult,
+          links,
         );
       }
       let vaultBal = club.vaultBalance;
@@ -105,6 +122,7 @@ export async function collectFacilities(
           club.fans,
           config,
           rateBoost * mult,
+          links,
         );
         const cap = storageCapAtLevel(
           def,
@@ -112,6 +130,7 @@ export async function collectFacilities(
           club.fans,
           config,
           rateBoost * mult,
+          links,
         );
         const settled = settleFacilityAmount(
           row.storedAmount,
@@ -187,6 +206,11 @@ export async function withdrawVault(): Promise<BusinessActionResult> {
       });
       const staffMembers = await loadClubStaffViews(club.id, tx);
       const bonusBy = staffBonusByFacility(staffMembers);
+      const links = await softLinksForClub(
+        club.id,
+        club.stadiumLevel,
+        tx,
+      );
       const rateBoost = incomeBoostMultiplier(
         club.businessBoostExpiresAt,
         now,
@@ -206,6 +230,7 @@ export async function withdrawVault(): Promise<BusinessActionResult> {
           club.fans,
           config,
           rateBoost * mult,
+          links,
         );
       }
       const vCap = vaultCapacity(club.vaultLevel, totalRate, config);
@@ -339,13 +364,26 @@ export async function upgradeFacility(
         now,
         config,
       );
-      const rate = rateAtLevel(def, row.level, club.fans, config, rateBoost);
+      const links = await softLinksForClub(
+        club.id,
+        club.stadiumLevel,
+        tx,
+      );
+      const rate = rateAtLevel(
+        def,
+        row.level,
+        club.fans,
+        config,
+        rateBoost,
+        links,
+      );
       const cap = storageCapAtLevel(
         def,
         row.level,
         club.fans,
         config,
         rateBoost,
+        links,
       );
       const settled = settleFacilityAmount(
         row.storedAmount,

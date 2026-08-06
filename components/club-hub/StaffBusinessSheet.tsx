@@ -124,7 +124,14 @@ export function StaffBusinessSheet({
       return;
     }
     onClubUpdate(res.club);
-    onSuccess(t("club.staff.hired"));
+    const hired = res.club.business.staff.members.find(
+      (m) => m.templateKey === templateKey,
+    );
+    onSuccess(
+      hired?.role === "TREASURER"
+        ? t("club.staff.hiredTreasurer")
+        : t("club.staff.hired"),
+    );
   }
 
   async function assign(staffId: string, key: string | null) {

@@ -216,6 +216,7 @@ model User {
   club       Club?
   matches    Match[]
   hallOfFame HallOfFame[]
+  pushSubscriptions PushSubscription[]
 
   duelsAsChallenger DuelMatch[] @relation("DuelChallenger")
   duelsAsOpponent   DuelMatch[] @relation("DuelOpponent")
@@ -223,6 +224,29 @@ model User {
   @@index([weeklyXp])
   @@index([xp])
   @@index([isBot, botEnabled, botDifficulty])
+}
+
+/// Web Push endpoint for re-engagement (duel your-turn + vault nearly full).
+model PushSubscription {
+  id        String @id @default(cuid())
+  userId    String
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Browser push endpoint (unique across users).
+  endpoint  String @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+
+  duelYourTurn    Boolean @default(true)
+  vaultNearlyFull Boolean @default(true)
+  /// Dedup / rate-limit anchors.
+  lastDuelPushAt  DateTime?
+  lastVaultPushAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 /// Archived weekly league podium (top 3 humans) snapshot before `weeklyXp` reset.

@@ -220,7 +220,7 @@ Facility buffer (storedAmount ≤ storageCap)
 |-----|----------------------|---------------|--------|
 | `TICKET_OFFICE` | 1 | **0** (free) | Teaches the loop |
 | `CLUB_SHOP` | 3 | 500 | `rate *= fansFactor(fans)` |
-| `MUSEUM` | 5 | 2500 | Flat rate in Phase A; trophy % later |
+| `MUSEUM` | 5 | 2500 | Rate × museum trophies (badges → +% capped) |
 
 Each built facility has `level`, `storedAmount`, `lastCalculatedAt`, `version` (optimistic lock).
 
@@ -413,15 +413,20 @@ Missions / campaign → claim coins/XP
 - [x] Admin: enabled, maxHired, hireCostGrowth, offerCount + full staff catalog CRUD/reorder
 - [x] Unaffordable hire offers grayed out in Hub sheet
 
+### Shipped — soft links & re-engagement
+
+- [x] PWA Web Push: duel your-turn + vault nearly full (notify-only; VAPID optional)
+- [x] Museum trophies: owned `ClubBadge` count → Museum rate % (capped)
+- [x] Stadium → Ticket Office buffer capacity (`ticketStadiumCapPerLevel`)
+- [x] Dogfood polish: Treasurer early withdraw CTA + hire celebration copy
+
 ### Explicitly not shipped (later)
 
-- [ ] Out-of-app notifications (duel your-turn, vault nearly full)
-- [ ] Museum trophy % multipliers
-- [ ] Stadium → Ticket Office capacity link
+- [ ] SMS / Telegram re-engagement channels
 - [ ] Milestone branch upgrades (speed vs warehouse vs premium)
 - [ ] Sponsor Office as a broader system (beyond bank branding)
 - [ ] Competitive buffs from Funds (forbidden by design)
-- [ ] Income minting cron (forbidden — notify-only cron OK later)
+- [ ] Income minting cron (forbidden — notify-only cron OK)
 
 ---
 
@@ -446,6 +451,8 @@ Useful when balancing without opening Admin:
 | Ticket Office rate L1 | 40 Funds/h · 2h buffer |
 | Club Shop rate L1 | 80 Funds/h · fans factor |
 | Museum rate L1 | 100 Funds/h |
+| Museum trophies | +2% rate / badge · cap 50% |
+| Ticket←Stadium | buffer hours × (1 + stadiumLv × 0.1) |
 | First-win boost | +20% for 1h |
 | Vault cap hours L1–5 | 3 / 6 / 8 / 12 / 24 |
 
@@ -462,9 +469,10 @@ Useful when balancing without opening Admin:
 
 ## 14. Suggested next product steps (economy-adjacent)
 
-Documented for planning; not commitments:
+Shipped in this pass (PWA + soft links). Remaining ideas:
 
-1. **Re-engagement:** duel your-turn + vault-nearly-full notifications (PWA / SMS / Telegram).
-2. **Museum trophies:** badge taxonomy → rate multipliers.
-3. Dogfood pass: Staff + Safe-full withdraw — confirm hire costs and Treasurer feel fair.
-4. Stadium → Ticket capacity link / branch milestones (later).
+1. ~~Re-engagement PWA push~~ — SMS / Telegram still open.
+2. ~~Museum trophies (badge count → rate %)~~ — richer badge taxonomy later.
+3. ~~Dogfood Staff / Treasurer withdraw feel~~ — keep tuning hire costs in Live-Ops.
+4. ~~Stadium → Ticket capacity~~ — branch milestones still later.
+5. Milestone branch upgrades (speed vs warehouse vs premium).

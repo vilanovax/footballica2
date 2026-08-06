@@ -8,6 +8,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { LOCALES, type Locale } from "@/lib/i18n/config";
 import { logout } from "@/actions/auth";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
+import { PushOptIn } from "@/components/pwa/PushOptIn";
 
 type Theme = "day" | "dark";
 
@@ -290,6 +291,15 @@ export default function SettingsPage() {
         >
           {soundOn ? t("settings.on") : t("settings.off")}
         </span>
+      </SettingsCard>
+
+      <SettingsCard tone="sky">
+        <CardHeader
+          icon="🔔"
+          title={t("settings.push")}
+          desc={t("settings.pushDesc")}
+        />
+        <PushOptIn />
       </SettingsCard>
 
       <SettingsCard tone="rose">

@@ -198,6 +198,18 @@ export type GameConfig = {
     shopFansDivisor: number;
     shopFansBonusCap: number;
     /**
+     * Stadium Lv → Ticket Office buffer capacity:
+     * hours *= 1 + stadiumLevel × ticketStadiumCapPerLevel.
+     */
+    ticketStadiumCapPerLevel: number;
+    /** Museum trophies from owned ClubBadge count. */
+    museumTrophy: {
+      /** +% rate per owned badge. */
+      percentPerBadge: number;
+      /** Cap on total trophy bonus %. */
+      bonusCapPercent: number;
+    };
+    /**
      * First non-tutorial win of a Tehran day → temporary facility income boost.
      * `boostBonus` is added to 1.0 (0.2 → +20%).
      */
@@ -368,6 +380,11 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     },
     shopFansDivisor: 2000,
     shopFansBonusCap: 0.5,
+    ticketStadiumCapPerLevel: 0.1,
+    museumTrophy: {
+      percentPerBadge: 2,
+      bonusCapPercent: 50,
+    },
     firstWinBoostBonus: 0.2,
     firstWinBoostMs: 60 * 60 * 1000,
     sponsoredBank: {
@@ -850,6 +867,40 @@ export function mergeGameConfig(raw: unknown): GameConfig {
           num(be.shopFansBonusCap, D.businessEconomy.shopFansBonusCap),
         ),
       ),
+      ticketStadiumCapPerLevel: Math.min(
+        0.5,
+        Math.max(
+          0,
+          num(
+            be.ticketStadiumCapPerLevel,
+            D.businessEconomy.ticketStadiumCapPerLevel,
+          ),
+        ),
+      ),
+      museumTrophy: {
+        percentPerBadge: Math.min(
+          20,
+          Math.max(
+            0,
+            num(
+              (be.museumTrophy as { percentPerBadge?: unknown } | undefined)
+                ?.percentPerBadge,
+              D.businessEconomy.museumTrophy.percentPerBadge,
+            ),
+          ),
+        ),
+        bonusCapPercent: Math.min(
+          200,
+          Math.max(
+            0,
+            num(
+              (be.museumTrophy as { bonusCapPercent?: unknown } | undefined)
+                ?.bonusCapPercent,
+              D.businessEconomy.museumTrophy.bonusCapPercent,
+            ),
+          ),
+        ),
+      },
       firstWinBoostBonus: Math.min(
         1,
         Math.max(

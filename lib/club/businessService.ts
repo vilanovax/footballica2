@@ -149,6 +149,9 @@ export async function loadBusinessSnapshot(
     where: { clubId: withStaffCollect.id },
   });
   const staffMembers = await loadClubStaffViews(withStaffCollect.id, db);
+  const badgeCount = await db.clubBadge.count({
+    where: { clubId: withStaffCollect.id },
+  });
   const config = await getGameConfig();
   const business = buildBusinessSnapshot({
     clubId: withStaffCollect.id,
@@ -163,6 +166,8 @@ export async function loadBusinessSnapshot(
     lastBankInterestAt: withStaffCollect.lastBankInterestAt,
     dayKey: tehranDayKeyClient(new Date()),
     staffMembers,
+    badgeCount,
+    stadiumLevel: withStaffCollect.stadiumLevel,
     config,
   });
   return { club: withStaffCollect, business };

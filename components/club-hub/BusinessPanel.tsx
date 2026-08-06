@@ -87,7 +87,13 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
   }
 
   const primaryCollect = biz.collectableTotal > 0;
-  const vaultFull = biz.canWithdraw;
+  const vaultIsFull =
+    biz.vaultCap > 0 && biz.vaultBalance >= biz.vaultCap;
+  const canWithdraw = biz.canWithdraw;
+  /** Treasurer: withdraw allowed before Safe is literally full. */
+  const treasurerEarly =
+    canWithdraw && !vaultIsFull && biz.staff.hasTreasurer;
+  const vaultFull = vaultIsFull;
   const vaultHigh = biz.vaultFillRatio >= 0.8 && biz.vaultBalance > 0;
   const boost = biz.incomeBoost;
   const vaultMaxed = biz.vaultUpgradeCost === null;
@@ -480,7 +486,7 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
         </button>
 
         <div className="relative flex flex-col gap-2 p-3 pt-3">
-          {vaultFull ? (
+          {canWithdraw ? (
             <>
               <button
                 type="button"
@@ -495,10 +501,19 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
                 <ArrowLeftRight className="h-4 w-4 shrink-0" aria-hidden />
                 {busy === "withdraw"
                   ? "…"
-                  : t("club.biz.withdrawCta", {
-                      n: toLocaleDigits(biz.vaultBalance, locale),
-                    })}
+                  : treasurerEarly
+                    ? t("club.biz.withdrawTreasurerCta", {
+                        n: toLocaleDigits(biz.vaultBalance, locale),
+                      })
+                    : t("club.biz.withdrawCta", {
+                        n: toLocaleDigits(biz.vaultBalance, locale),
+                      })}
               </button>
+              {treasurerEarly && (
+                <p className="text-center font-display text-[10px] font-bold text-emerald-100/70">
+                  {t("club.staff.treasurerActive")}
+                </p>
+              )}
               {primaryCollect && (
                 <button
                   type="button"
@@ -524,31 +539,49 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
               )}
             </>
           ) : primaryCollect ? (
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() =>
-                run(
-                  "collect",
-                  () => collectFacilities("ALL"),
-                  (n) =>
-                    t("club.biz.collected", {
-                      n: toLocaleDigits(n ?? 0, locale),
-                    }),
-                )
-              }
-              className="btn-fantasy btn-fantasy-accent w-full"
-            >
-              {busy === "collect"
-                ? "…"
-                : t("club.biz.collectShort", {
-                    n: toLocaleDigits(biz.collectableTotal, locale),
-                  })}
-            </button>
+            <>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() =>
+                  run(
+                    "collect",
+                    () => collectFacilities("ALL"),
+                    (n) =>
+                      t("club.biz.collected", {
+                        n: toLocaleDigits(n ?? 0, locale),
+                      }),
+                  )
+                }
+                className="btn-fantasy btn-fantasy-accent w-full"
+              >
+                {busy === "collect"
+                  ? "…"
+                  : t("club.biz.collectShort", {
+                      n: toLocaleDigits(biz.collectableTotal, locale),
+                    })}
+              </button>
+              {vaultHigh &&
+                biz.staff.enabled &&
+                !biz.staff.hasTreasurer && (
+                  <p className="text-center font-display text-[10px] font-bold text-amber-100/75">
+                    {t("club.staff.treasurerHint")}
+                  </p>
+                )}
+            </>
           ) : (
-            <p className="pb-0.5 text-center font-display text-[10px] font-bold text-white/40">
-              {t("club.biz.vaultTapHint")}
-            </p>
+            <>
+              <p className="pb-0.5 text-center font-display text-[10px] font-bold text-white/40">
+                {t("club.biz.vaultTapHint")}
+              </p>
+              {vaultHigh &&
+                biz.staff.enabled &&
+                !biz.staff.hasTreasurer && (
+                  <p className="text-center font-display text-[10px] font-bold text-amber-100/75">
+                    {t("club.staff.treasurerHint")}
+                  </p>
+                )}
+            </>
           )}
         </div>
       </div>
@@ -676,7 +709,7 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
         </div>
 
         <div className="mt-4 flex flex-col gap-2.5">
-          {vaultFull && (
+          {canWithdraw && (
             <button
               type="button"
               disabled={pending}
@@ -689,10 +722,24 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
               className="btn-fantasy btn-fantasy-primary w-full gap-2"
             >
               <ArrowLeftRight className="h-4 w-4 shrink-0" aria-hidden />
-              {t("club.biz.withdrawCta", {
-                n: toLocaleDigits(biz.vaultBalance, locale),
-              })}
+              {treasurerEarly
+                ? t("club.biz.withdrawTreasurerCta", {
+                    n: toLocaleDigits(biz.vaultBalance, locale),
+                  })
+                : t("club.biz.withdrawCta", {
+                    n: toLocaleDigits(biz.vaultBalance, locale),
+                  })}
             </button>
+          )}
+          {vaultFull && !biz.staff.hasTreasurer && biz.staff.enabled && (
+            <p className="text-center font-display text-[11px] font-bold text-white/65">
+              {t("club.biz.vaultFullHireTip")}
+            </p>
+          )}
+          {treasurerEarly && (
+            <p className="text-center font-display text-[11px] font-bold text-emerald-200/80">
+              {t("club.staff.treasurerActive")}
+            </p>
           )}
 
           {!vaultMaxed &&

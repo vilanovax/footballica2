@@ -5,12 +5,22 @@ import type { GameConfig } from "@/lib/game/economy";
 import { DEFAULT_GAME_CONFIG } from "@/lib/game/economy";
 import type { BankView } from "@/lib/club/bankInterest";
 import { buildBankView } from "@/lib/club/bankInterest";
+import {
+  museumTrophyBonusPercent,
+  museumTrophyFactor,
+} from "@/lib/club/museumTrophies";
 import type { StaffMemberView, StaffSnapshot } from "@/lib/club/staff";
 import {
   buildStaffSnapshot,
   staffBonusByFacility,
   staffRateMultiplier,
 } from "@/lib/club/staff";
+
+/** Optional soft links into facility math (Museum trophies / Stadium→Ticket). */
+export type FacilitySoftLinks = {
+  badgeCount?: number;
+  stadiumLevel?: number;
+};
 
 export type BusinessFacilityKey = "TICKET_OFFICE" | "CLUB_SHOP" | "MUSEUM";
 
@@ -69,6 +79,14 @@ export type FacilityView = {
   version: number;
   /** Assigned staff preview (null = empty desk). */
   staff: StaffMemberView | null;
+  /** Museum: capped trophy bonus % from owned badges (0 if N/A). */
+  trophyBonusPercent: number;
+  /** Ticket Office: buffer-hours bonus % from Stadium level (0 if N/A). */
+  stadiumCapBonusPercent: number;
+  /** Owned badge count (Museum copy). */
+  badgeCount: number;
+  /** Gameplay Stadium level (Ticket Office copy). */
+  stadiumLevel: number;
 };
 
 export type IncomeBoostView = {
@@ -103,6 +121,12 @@ export type BusinessSnapshot = {
   incomeBoost: IncomeBoostView;
   bank: BankView;
   staff: StaffSnapshot;
+  /** Owned ClubBadge count (Museum trophies). */
+  badgeCount: number;
+  /** Applied Museum trophy bonus % after cap. */
+  museumTrophyBonusPercent: number;
+  /** Gameplay Stadium level (Ticket Office capacity link). */
+  stadiumLevel: number;
 };
 
 /** Safe → Bank: full vault, or hired Treasurer. */
@@ -177,12 +201,32 @@ export function rateAtLevel(
   fans: number,
   config: GameConfig = DEFAULT_GAME_CONFIG,
   rateBoost = 1,
+  links: FacilitySoftLinks = {},
 ): number {
   if (level < 1) return 0;
   const base =
     def.baseRatePerHour * Math.pow(def.rateGrowth, Math.max(0, level - 1));
   const factor = def.usesFansFactor ? fansFactor(fans, config) : 1;
-  return Math.max(0, Math.floor(base * factor * Math.max(1, rateBoost)));
+  const trophy =
+    def.key === "MUSEUM"
+      ? museumTrophyFactor(links.badgeCount ?? 0, config)
+      : 1;
+  return Math.max(
+    0,
+    Math.floor(base * factor * Math.max(1, rateBoost) * trophy),
+  );
+}
+
+/** Stadium Lv → Ticket Office buffer hours multiplier (1.0 = no bonus). */
+export function ticketStadiumCapFactor(
+  stadiumLevel: number,
+  config: GameConfig = DEFAULT_GAME_CONFIG,
+): number {
+  return (
+    1 +
+    Math.max(0, stadiumLevel) *
+      config.businessEconomy.ticketStadiumCapPerLevel
+  );
 }
 
 export function storageCapAtLevel(
@@ -191,11 +235,15 @@ export function storageCapAtLevel(
   fans: number,
   config: GameConfig = DEFAULT_GAME_CONFIG,
   rateBoost = 1,
+  links: FacilitySoftLinks = {},
 ): number {
   if (level < 1) return 0;
-  const rate = rateAtLevel(def, level, fans, config, rateBoost);
-  const hours =
+  const rate = rateAtLevel(def, level, fans, config, rateBoost, links);
+  let hours =
     def.baseStorageHours * Math.pow(def.capGrowth, Math.max(0, level - 1));
+  if (def.key === "TICKET_OFFICE") {
+    hours *= ticketStadiumCapFactor(links.stadiumLevel ?? 0, config);
+  }
   return Math.max(1, Math.floor(rate * hours));
 }
 
@@ -303,12 +351,25 @@ export function buildBusinessSnapshot(input: {
   /** Tehran day key for staff offer seed. */
   dayKey?: string;
   staffMembers?: StaffMemberView[];
+  /** Owned ClubBadge count for Museum trophies. */
+  badgeCount?: number;
+  /** Gameplay Stadium level for Ticket Office capacity. */
+  stadiumLevel?: number;
   config?: GameConfig;
   now?: Date;
 }): BusinessSnapshot {
   const config = input.config ?? DEFAULT_GAME_CONFIG;
   const now = input.now ?? new Date();
   const members = input.staffMembers ?? [];
+  const badgeCount = Math.max(0, input.badgeCount ?? 0);
+  const stadiumLevel = Math.max(0, input.stadiumLevel ?? 0);
+  const links: FacilitySoftLinks = { badgeCount, stadiumLevel };
+  const trophyPct = museumTrophyBonusPercent(badgeCount, config);
+  const stadiumCapPct = Math.round(
+    Math.max(0, stadiumLevel) *
+      config.businessEconomy.ticketStadiumCapPerLevel *
+      100,
+  );
   const bonusByFacility = staffBonusByFacility(members);
   const staffByFacility = new Map(
     members
@@ -349,11 +410,18 @@ export function buildBusinessSnapshot(input: {
 
     const rate =
       status === "BUILT"
-        ? rateAtLevel(def, level, input.fans, config, effectiveBoost)
+        ? rateAtLevel(def, level, input.fans, config, effectiveBoost, links)
         : 0;
     const cap =
       status === "BUILT"
-        ? storageCapAtLevel(def, level, input.fans, config, effectiveBoost)
+        ? storageCapAtLevel(
+            def,
+            level,
+            input.fans,
+            config,
+            effectiveBoost,
+            links,
+          )
         : 0;
 
     let stored = row?.storedAmount ?? 0;
@@ -384,6 +452,7 @@ export function buildBusinessSnapshot(input: {
         input.fans,
         config,
         effectiveBoost,
+        links,
       );
       nextCap = storageCapAtLevel(
         def,
@@ -391,11 +460,19 @@ export function buildBusinessSnapshot(input: {
         input.fans,
         config,
         effectiveBoost,
+        links,
       );
     } else if (status !== "BUILT") {
       // Teaser at level 1 for locked / ready-to-build cards.
-      nextRate = rateAtLevel(def, 1, input.fans, config, rateBoost);
-      nextCap = storageCapAtLevel(def, 1, input.fans, config, rateBoost);
+      nextRate = rateAtLevel(def, 1, input.fans, config, rateBoost, links);
+      nextCap = storageCapAtLevel(
+        def,
+        1,
+        input.fans,
+        config,
+        rateBoost,
+        links,
+      );
     }
 
     views.push({
@@ -422,6 +499,10 @@ export function buildBusinessSnapshot(input: {
         input.clubFunds >= uCost,
       version: row?.version ?? 0,
       staff: staffByFacility.get(key) ?? null,
+      trophyBonusPercent: key === "MUSEUM" ? trophyPct : 0,
+      stadiumCapBonusPercent: key === "TICKET_OFFICE" ? stadiumCapPct : 0,
+      badgeCount,
+      stadiumLevel,
     });
   }
 
@@ -471,6 +552,9 @@ export function buildBusinessSnapshot(input: {
       now,
     }),
     staff,
+    badgeCount,
+    museumTrophyBonusPercent: trophyPct,
+    stadiumLevel,
   };
 }
 

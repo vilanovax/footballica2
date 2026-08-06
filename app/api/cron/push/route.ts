@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { tickDuelJobs } from "@/lib/duel/jobs";
 import { isProduction, secretsEqual } from "@/lib/env";
-import { scanDuelYourTurnPushes } from "@/lib/push/scanNotify";
+import {
+  scanDuelYourTurnPushes,
+  scanVaultNearlyFullPushes,
+} from "@/lib/push/scanNotify";
 
 /**
- * Vercel Cron / external scheduler entry.
+ * Notify-only re-engagement cron (PWA web push).
  * Auth: `Authorization: Bearer $CRON_SECRET`
- * Local smoke only: `?secret=` is accepted when NODE_ENV !== production.
  */
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET?.trim();
@@ -29,15 +30,13 @@ export async function GET(request: Request) {
   }
 
   try {
-    const stats = await tickDuelJobs(100);
-    // Best-effort push after job tick (no-op when VAPID unset).
-    const push = await scanDuelYourTurnPushes(40).catch(() => ({
-      candidates: 0,
-      sent: 0,
-    }));
-    return NextResponse.json({ ok: true, ...stats, push });
+    const [duel, vault] = await Promise.all([
+      scanDuelYourTurnPushes(50),
+      scanVaultNearlyFullPushes(40),
+    ]);
+    return NextResponse.json({ ok: true, duel, vault });
   } catch (err) {
-    console.error("cron/duels failed", err);
+    console.error("cron/push failed", err);
     return NextResponse.json({ ok: false, error: "server_error" }, { status: 500 });
   }
 }

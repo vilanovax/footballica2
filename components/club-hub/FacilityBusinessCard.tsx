@@ -227,6 +227,16 @@ export function FacilityBusinessCard({
                   👔 +{toLocaleDigits(f.staff.rateBonusPercent, locale)}%
                 </span>
               )}
+              {f.trophyBonusPercent > 0 && (
+                <span className="rounded-full bg-amber-400/25 px-2 py-0.5 font-display text-[10px] font-black text-amber-100 ring-1 ring-amber-300/40">
+                  🏆 +{toLocaleDigits(f.trophyBonusPercent, locale)}%
+                </span>
+              )}
+              {f.stadiumCapBonusPercent > 0 && (
+                <span className="rounded-full bg-emerald-400/25 px-2 py-0.5 font-display text-[10px] font-black text-emerald-100 ring-1 ring-emerald-300/40">
+                  🏟️ +{toLocaleDigits(f.stadiumCapBonusPercent, locale)}%
+                </span>
+              )}
               {isMax && (
                 <span className="rounded-full bg-amber-400/30 px-2 py-0.5 font-display text-[10px] font-black text-amber-100 ring-1 ring-amber-300/50">
                   MAX
@@ -478,6 +488,22 @@ export function FacilityBusinessCard({
                     rate: toLocaleDigits(f.ratePerHour, locale),
                   })}
                 </p>
+                {f.trophyBonusPercent > 0 && (
+                  <p className="mt-1 font-display text-[11px] font-bold text-amber-200/90">
+                    {t("club.biz.museumTrophyLine", {
+                      pct: toLocaleDigits(f.trophyBonusPercent, locale),
+                      n: toLocaleDigits(f.badgeCount, locale),
+                    })}
+                  </p>
+                )}
+                {f.stadiumCapBonusPercent > 0 && (
+                  <p className="mt-1 font-display text-[11px] font-bold text-emerald-200/90">
+                    {t("club.biz.ticketStadiumLine", {
+                      n: toLocaleDigits(f.stadiumLevel, locale),
+                      pct: toLocaleDigits(f.stadiumCapBonusPercent, locale),
+                    })}
+                  </p>
+                )}
                 {f.storageCap > 0 && (
                   <div className="mt-3 w-full max-w-56">
                     <div className="mb-1 flex justify-between font-display text-[10px] font-bold text-white/50">

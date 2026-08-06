@@ -13,6 +13,7 @@ import {
   vaultAccepts,
   vaultCapacity,
   type BusinessFacilityKey,
+  type FacilitySoftLinks,
 } from "@/lib/club/businessEconomy";
 import {
   staffRateMultiplier,
@@ -69,6 +70,13 @@ export async function settleStaffAutoCollect(
   const facilities = await db.clubFacility.findMany({
     where: { clubId: club.id, status: "BUILT" },
   });
+  const badgeCount = await db.clubBadge.count({
+    where: { clubId: club.id },
+  });
+  const links: FacilitySoftLinks = {
+    badgeCount,
+    stadiumLevel: club.stadiumLevel,
+  };
   const rateBoost = incomeBoostMultiplier(
     club.businessBoostExpiresAt,
     now,
@@ -86,6 +94,7 @@ export async function settleStaffAutoCollect(
       club.fans,
       config,
       rateBoost * mult,
+      links,
     );
   }
 
@@ -105,6 +114,7 @@ export async function settleStaffAutoCollect(
       club.fans,
       config,
       rateBoost * mult,
+      links,
     );
     const cap = storageCapAtLevel(
       def,
@@ -112,6 +122,7 @@ export async function settleStaffAutoCollect(
       club.fans,
       config,
       rateBoost * mult,
+      links,
     );
     const settled = settleFacilityAmount(
       row.storedAmount,
