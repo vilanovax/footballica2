@@ -266,6 +266,7 @@ const fa: Dictionary = {
     outcomeLose: "باخت",
     outcomeDraw: "مساوی",
     lobbyActive: "فعال",
+    lobbyAllWaiting: "همه منتظر حریف‌اند",
     lobbyNeedsYou: "{n} منتظر تو",
     start: "پیدا کردن حریف",
     starting: "در حال مچ…",

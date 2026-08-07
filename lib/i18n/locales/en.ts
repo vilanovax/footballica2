@@ -265,6 +265,7 @@ const en = {
     outcomeLose: "Loss",
     outcomeDraw: "Draw",
     lobbyActive: "active",
+    lobbyAllWaiting: "All waiting on rivals",
     lobbyNeedsYou: "{n} need you",
     start: "Find Opponent",
     starting: "Matching…",
