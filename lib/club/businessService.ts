@@ -21,6 +21,8 @@ import {
   loadClubStaffViews,
   settleStaffAutoCollect,
 } from "@/lib/club/staffService";
+import { settleSponsorPayouts } from "@/lib/club/sponsorOffice";
+import { loadMuseumBadgeRefs } from "@/lib/club/loadMuseumBadges";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -136,6 +138,64 @@ export async function settleClubBankInterest(
   });
 }
 
+/** Lazy sponsor-deal payouts + prune expired deals. */
+export async function settleSponsorOffice(
+  club: Club,
+  db: Db,
+  now: Date = new Date(),
+): Promise<Club> {
+  const config = await getGameConfig();
+  const dealRows = await db.clubSponsorDeal.findMany({
+    where: { clubId: club.id },
+  });
+  const settled = settleSponsorPayouts({
+    clubFunds: club.clubFunds,
+    officeLevel: club.sponsorOfficeLevel,
+    deals: dealRows.map((d) => ({
+      slotIndex: d.slotIndex,
+      sponsorKey: d.sponsorKey,
+      signedAt: d.signedAt,
+      expiresAt: d.expiresAt,
+    })),
+    lastPayoutAt: club.lastSponsorPayoutAt,
+    now,
+    config,
+  });
+
+  if (settled.expiredSlotIndexes.length > 0) {
+    await db.clubSponsorDeal.deleteMany({
+      where: {
+        clubId: club.id,
+        slotIndex: { in: settled.expiredSlotIndexes },
+      },
+    });
+  }
+
+  if (
+    settled.gained <= 0 &&
+    settled.ticks <= 0 &&
+    settled.expiredSlotIndexes.length === 0
+  ) {
+    return club;
+  }
+
+  if (
+    settled.balance === club.clubFunds &&
+    settled.lastAt?.getTime() === club.lastSponsorPayoutAt?.getTime() &&
+    settled.expiredSlotIndexes.length === 0
+  ) {
+    return club;
+  }
+
+  return db.club.update({
+    where: { id: club.id },
+    data: {
+      clubFunds: settled.balance,
+      lastSponsorPayoutAt: settled.lastAt,
+    },
+  });
+}
+
 export async function loadBusinessSnapshot(
   club: Club,
   userXp: number,
@@ -145,12 +205,14 @@ export async function loadBusinessSnapshot(
   await ensureClubFacilities(club.id, playerLevel, db);
   const seeded = await maybeSeedClubFunds(club, playerLevel, db);
   const withInterest = await settleClubBankInterest(seeded, db);
-  const withStaffCollect = await settleStaffAutoCollect(withInterest, db);
+  const withSponsors = await settleSponsorOffice(withInterest, db);
+  const withStaffCollect = await settleStaffAutoCollect(withSponsors, db);
   const rows = await db.clubFacility.findMany({
     where: { clubId: withStaffCollect.id },
   });
   const staffMembers = await loadClubStaffViews(withStaffCollect.id, db);
-  const badgeCount = await db.clubBadge.count({
+  const museumBadges = await loadMuseumBadgeRefs(withStaffCollect.id, db);
+  const sponsorDeals = await db.clubSponsorDeal.findMany({
     where: { clubId: withStaffCollect.id },
   });
   const config = await getGameConfig();
@@ -167,8 +229,17 @@ export async function loadBusinessSnapshot(
     lastBankInterestAt: withStaffCollect.lastBankInterestAt,
     dayKey: tehranDayKeyClient(new Date()),
     staffMembers,
-    badgeCount,
+    museumBadges,
+    badgeCount: museumBadges.length,
     stadiumLevel: withStaffCollect.stadiumLevel,
+    sponsorOfficeLevel: withStaffCollect.sponsorOfficeLevel,
+    sponsorDeals: sponsorDeals.map((d) => ({
+      slotIndex: d.slotIndex,
+      sponsorKey: d.sponsorKey,
+      signedAt: d.signedAt,
+      expiresAt: d.expiresAt,
+    })),
+    lastSponsorPayoutAt: withStaffCollect.lastSponsorPayoutAt,
     config,
   });
   return { club: withStaffCollect, business };

@@ -416,15 +416,22 @@ Missions / campaign → claim coins/XP
 ### Shipped — soft links & re-engagement
 
 - [x] PWA Web Push: duel your-turn + vault nearly full (notify-only; VAPID optional)
-- [x] Museum trophies: owned `ClubBadge` count → Museum rate % (capped)
+- [x] Museum trophies: badge taxonomy (tier / showcase / category sets) → weighted Museum rate %
 - [x] Stadium → Ticket Office buffer capacity (`ticketStadiumCapPerLevel`)
 - [x] Dogfood polish: Treasurer early withdraw CTA + hire celebration copy
 - [x] Milestone branch upgrades (Speed / Warehouse / Premium at Lv 5 / 10 / 15)
 
+### Phase — Sponsor Office ✅
+
+- [x] Build / upgrade Sponsor Office (slots by level)
+- [x] Catalog deals (Bronze → Gold) with fans / Stadium / Player Level gates
+- [x] Lazy payout ticks → spendable Club Funds (no mint cron)
+- [x] Soft facility rate bonus from active deals (capped)
+- [x] Hub chip + sheet; sponsored bank stays separate interest opt-in
+
 ### Explicitly not shipped (later)
 
 - [ ] SMS / Telegram re-engagement channels
-- [ ] Sponsor Office as a broader system (beyond bank branding)
 - [ ] Competitive buffs from Funds (forbidden by design)
 - [ ] Income minting cron (forbidden — notify-only cron OK)
 
@@ -451,7 +458,7 @@ Useful when balancing without opening Admin:
 | Ticket Office rate L1 | 40 Funds/h · 2h buffer |
 | Club Shop rate L1 | 80 Funds/h · fans factor |
 | Museum rate L1 | 100 Funds/h |
-| Museum trophies | +2% rate / badge · cap 50% |
+| Museum trophies | Weighted by tier (bronze×1 / silver×1.75 / gold×3) + showcase +2% · set of 3 in a category +3% · cap 60% |
 | Ticket←Stadium | buffer hours × (1 + stadiumLv × 0.1) |
 | Facility max level | 15 |
 | Branch milestones | Lv 5 / 10 / 15 |
@@ -477,8 +484,8 @@ Useful when balancing without opening Admin:
 Shipped in this pass (PWA + soft links). Remaining ideas:
 
 1. ~~Re-engagement PWA push~~ — SMS / Telegram still open.
-2. ~~Museum trophies (badge count → rate %)~~ — richer badge taxonomy later.
+2. ~~Museum trophies (badge taxonomy → weighted rate %)~~
 3. ~~Dogfood Staff / Treasurer withdraw feel~~ — keep tuning hire costs in Live-Ops.
 4. ~~Stadium → Ticket capacity~~
 5. ~~Milestone branch upgrades (Speed / Warehouse / Premium)~~
-6. Sponsor Office as a broader system / SMS–Telegram re-engagement.
+6. ~~Sponsor Office~~ — SMS / Telegram re-engagement still open.

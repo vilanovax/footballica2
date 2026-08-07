@@ -568,12 +568,54 @@ export function FacilityBusinessCard({
                   })}
                 </p>
                 {f.trophyBonusPercent > 0 && (
-                  <p className="mt-1 font-display text-[11px] font-bold text-amber-200/90">
-                    {t("club.biz.museumTrophyLine", {
-                      pct: toLocaleDigits(f.trophyBonusPercent, locale),
-                      n: toLocaleDigits(f.badgeCount, locale),
-                    })}
-                  </p>
+                  <div className="mt-1 flex flex-col gap-0.5">
+                    <p className="font-display text-[11px] font-bold text-amber-200/90">
+                      {t("club.biz.museumTrophyLine", {
+                        pct: toLocaleDigits(f.trophyBonusPercent, locale),
+                        n: toLocaleDigits(f.badgeCount, locale),
+                      })}
+                    </p>
+                    {f.museumTrophy && (
+                      <>
+                        <p className="font-display text-[10px] font-bold text-amber-100/70">
+                          {t("club.biz.museumTrophyTiers", {
+                            gold: toLocaleDigits(
+                              f.museumTrophy.byTier.gold,
+                              locale,
+                            ),
+                            silver: toLocaleDigits(
+                              f.museumTrophy.byTier.silver,
+                              locale,
+                            ),
+                            bronze: toLocaleDigits(
+                              f.museumTrophy.byTier.bronze,
+                              locale,
+                            ),
+                          })}
+                        </p>
+                        {f.museumTrophy.showcaseCount > 0 && (
+                          <p className="font-display text-[10px] font-bold text-amber-100/60">
+                            {t("club.biz.museumTrophyShowcase", {
+                              n: toLocaleDigits(
+                                f.museumTrophy.showcaseCount,
+                                locale,
+                              ),
+                            })}
+                          </p>
+                        )}
+                        {f.museumTrophy.setBonusCount > 0 && (
+                          <p className="font-display text-[10px] font-bold text-lime-200/75">
+                            {t("club.biz.museumTrophySets", {
+                              n: toLocaleDigits(
+                                f.museumTrophy.setBonusCount,
+                                locale,
+                              ),
+                            })}
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </div>
                 )}
                 {f.stadiumCapBonusPercent > 0 && (
                   <p className="mt-1 font-display text-[11px] font-bold text-emerald-200/90">

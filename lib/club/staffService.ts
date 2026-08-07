@@ -16,6 +16,9 @@ import {
   type FacilitySoftLinks,
 } from "@/lib/club/businessEconomy";
 import { parseBranchPicks } from "@/lib/club/facilityBranches";
+import { sponsorFacilityRateMult } from "@/lib/club/sponsorOffice";
+import { loadMuseumBadgeRefs } from "@/lib/club/loadMuseumBadges";
+import { museumTrophyFactorFromBadges } from "@/lib/club/museumTrophies";
 import {
   staffRateMultiplier,
   toStaffMemberView,
@@ -71,12 +74,23 @@ export async function settleStaffAutoCollect(
   const facilities = await db.clubFacility.findMany({
     where: { clubId: club.id, status: "BUILT" },
   });
-  const badgeCount = await db.clubBadge.count({
+  const museumBadges = await loadMuseumBadgeRefs(club.id, db);
+  const sponsorDeals = await db.clubSponsorDeal.findMany({
     where: { clubId: club.id },
   });
   const links: FacilitySoftLinks = {
-    badgeCount,
+    badgeCount: museumBadges.length,
+    museumTrophyMult: museumTrophyFactorFromBadges(museumBadges, config),
     stadiumLevel: club.stadiumLevel,
+    sponsorRateMult: sponsorFacilityRateMult(
+      sponsorDeals.map((d) => ({
+        slotIndex: d.slotIndex,
+        sponsorKey: d.sponsorKey,
+        signedAt: d.signedAt,
+        expiresAt: d.expiresAt,
+      })),
+      config,
+    ),
   };
   const rateBoost = incomeBoostMultiplier(
     club.businessBoostExpiresAt,

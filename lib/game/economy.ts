@@ -202,12 +202,34 @@ export type GameConfig = {
      * hours *= 1 + stadiumLevel × ticketStadiumCapPerLevel.
      */
     ticketStadiumCapPerLevel: number;
-    /** Museum trophies from owned ClubBadge count. */
+    /**
+     * Museum trophies from owned ClubBadge taxonomy.
+     * Weighted: base% × tierWeight + categoryBonus; optional set bonus.
+     */
     museumTrophy: {
-      /** +% rate per owned badge. */
+      /** Base +% per badge before tier weight (bronze ≈ this). */
       percentPerBadge: number;
       /** Cap on total trophy bonus %. */
       bonusCapPercent: number;
+      /** Multipliers on percentPerBadge by BadgeDefinition.tier. */
+      tierWeights: {
+        bronze: number;
+        silver: number;
+        gold: number;
+      };
+      /**
+       * Extra flat % points per badge in that category
+       * (keys: skill | purity | dedication | volume | showcase).
+       */
+      categoryBonusPercent: Record<string, number>;
+      /**
+       * Once per category that has ≥ threshold owned badges,
+       * add bonusPercent (set completion).
+       */
+      categorySetBonus: {
+        threshold: number;
+        bonusPercent: number;
+      };
     };
     /**
      * Facility levels that require a permanent branch pick on upgrade
@@ -262,12 +284,46 @@ export type GameConfig = {
       /** Ordered catalog — admin add / edit / reorder. */
       templates: StaffTemplateConfig[];
     };
+    /**
+     * Sponsor Office — commercial deals paying Club Funds (lazy settle).
+     * Soft facility rate bonus only; never competitive quiz buffs.
+     */
+    sponsorOffice: {
+      enabled: boolean;
+      unlockPlayerLevel: number;
+      buildCost: number;
+      upgradeBaseCost: number;
+      upgradeCostGrowth: number;
+      maxLevel: number;
+      /** Deal slots unlocked at office levels 1..N. */
+      slotsByLevel: number[];
+      payoutIntervalHours: number;
+      maxCatchupTicks: number;
+      /** Cap on summed facilityRateBonusPercent from active deals. */
+      facilityBonusCapPercent: number;
+      sponsors: SponsorTemplateConfig[];
+    };
     facilities: {
       TICKET_OFFICE: BusinessFacilityConfig;
       CLUB_SHOP: BusinessFacilityConfig;
       MUSEUM: BusinessFacilityConfig;
     };
   };
+};
+
+/** Live-Ops sponsor catalog row. */
+export type SponsorTemplateConfig = {
+  key: string;
+  nameEn: string;
+  nameFa: string;
+  tier: "BRONZE" | "SILVER" | "GOLD";
+  signCost: number;
+  payoutPerTick: number;
+  requiresFans: number;
+  requiresStadiumLevel: number;
+  requiresPlayerLevel: number;
+  durationHours: number | null;
+  facilityRateBonusPercent: number;
 };
 
 export type BusinessFacilityConfig = {
@@ -394,7 +450,23 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     ticketStadiumCapPerLevel: 0.1,
     museumTrophy: {
       percentPerBadge: 2,
-      bonusCapPercent: 50,
+      bonusCapPercent: 60,
+      tierWeights: {
+        bronze: 1,
+        silver: 1.75,
+        gold: 3,
+      },
+      categoryBonusPercent: {
+        skill: 0,
+        purity: 0,
+        dedication: 0,
+        volume: 0,
+        showcase: 2,
+      },
+      categorySetBonus: {
+        threshold: 3,
+        bonusPercent: 3,
+      },
     },
     branchMilestones: [5, 10, 15],
     branchPerks: {
@@ -459,6 +531,85 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
           nameEn: "Treasurer",
           nameFa: "خزانه‌دار",
           hireCost: 350,
+        },
+      ],
+    },
+    sponsorOffice: {
+      enabled: true,
+      unlockPlayerLevel: 4,
+      buildCost: 400,
+      upgradeBaseCost: 800,
+      upgradeCostGrowth: 1.7,
+      maxLevel: 5,
+      slotsByLevel: [1, 1, 2, 2, 3],
+      payoutIntervalHours: 4,
+      maxCatchupTicks: 3,
+      facilityBonusCapPercent: 25,
+      sponsors: [
+        {
+          key: "local_cafe",
+          nameEn: "Corner Cafe",
+          nameFa: "کافه محله",
+          tier: "BRONZE",
+          signCost: 120,
+          payoutPerTick: 15,
+          requiresFans: 0,
+          requiresStadiumLevel: 0,
+          requiresPlayerLevel: 4,
+          durationHours: 72,
+          facilityRateBonusPercent: 2,
+        },
+        {
+          key: "kit_supplier",
+          nameEn: "Kit House",
+          nameFa: "خانه کیت",
+          tier: "BRONZE",
+          signCost: 200,
+          payoutPerTick: 25,
+          requiresFans: 40,
+          requiresStadiumLevel: 1,
+          requiresPlayerLevel: 4,
+          durationHours: 96,
+          facilityRateBonusPercent: 3,
+        },
+        {
+          key: "energy_drink",
+          nameEn: "Volt Energy",
+          nameFa: "ولت انرژی",
+          tier: "SILVER",
+          signCost: 450,
+          payoutPerTick: 45,
+          requiresFans: 120,
+          requiresStadiumLevel: 2,
+          requiresPlayerLevel: 6,
+          durationHours: 120,
+          facilityRateBonusPercent: 5,
+        },
+        {
+          key: "telecom",
+          nameEn: "Arena Mobile",
+          nameFa: "آرنا موبایل",
+          tier: "SILVER",
+          signCost: 700,
+          payoutPerTick: 70,
+          requiresFans: 250,
+          requiresStadiumLevel: 2,
+          requiresPlayerLevel: 7,
+          durationHours: null,
+          facilityRateBonusPercent: 6,
+        },
+        {
+          key: "airline",
+          nameEn: "Sky Wings",
+          nameFa: "اسکای وینگز",
+          tier: "GOLD",
+          signCost: 1500,
+          payoutPerTick: 140,
+          requiresFans: 500,
+          requiresStadiumLevel: 3,
+          requiresPlayerLevel: 9,
+          durationHours: null,
+          facilityRateBonusPercent: 10,
         },
       ],
     },
@@ -569,6 +720,72 @@ function mergeStaffTemplates(
   return out.length > 0 ? out : fallback.map((t) => ({ ...t }));
 }
 
+function mergeSponsorTemplates(
+  raw: unknown,
+  fallback: SponsorTemplateConfig[],
+): SponsorTemplateConfig[] {
+  if (!Array.isArray(raw) || raw.length === 0) {
+    return fallback.map((t) => ({ ...t }));
+  }
+  const out: SponsorTemplateConfig[] = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    const key =
+      typeof o.key === "string"
+        ? o.key
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9_]/g, "_")
+            .slice(0, 40)
+        : "";
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    const tierRaw = typeof o.tier === "string" ? o.tier.toUpperCase() : "";
+    const tier =
+      tierRaw === "GOLD" || tierRaw === "SILVER" || tierRaw === "BRONZE"
+        ? tierRaw
+        : "BRONZE";
+    const nameEn =
+      typeof o.nameEn === "string" && o.nameEn.trim()
+        ? o.nameEn.trim().slice(0, 48)
+        : key;
+    const nameFa =
+      typeof o.nameFa === "string" && o.nameFa.trim()
+        ? o.nameFa.trim().slice(0, 48)
+        : nameEn;
+    const durationRaw = o.durationHours;
+    const durationHours =
+      durationRaw === null || durationRaw === undefined
+        ? null
+        : Math.max(1, Math.round(num(durationRaw, 72)));
+    out.push({
+      key,
+      nameEn,
+      nameFa,
+      tier,
+      signCost: Math.max(0, Math.round(num(o.signCost, 100))),
+      payoutPerTick: Math.max(0, Math.round(num(o.payoutPerTick, 10))),
+      requiresFans: Math.max(0, Math.round(num(o.requiresFans, 0))),
+      requiresStadiumLevel: Math.max(
+        0,
+        Math.round(num(o.requiresStadiumLevel, 0)),
+      ),
+      requiresPlayerLevel: Math.max(
+        1,
+        Math.round(num(o.requiresPlayerLevel, 1)),
+      ),
+      durationHours,
+      facilityRateBonusPercent: Math.min(
+        30,
+        Math.max(0, Math.round(num(o.facilityRateBonusPercent, 0))),
+      ),
+    });
+  }
+  return out.length > 0 ? out : fallback.map((t) => ({ ...t }));
+}
+
 /**
  * Merge a raw (partial/untrusted) config object over the defaults. Every field
  * is coerced + validated so the returned config is always complete and safe.
@@ -592,8 +809,10 @@ export function mergeGameConfig(raw: unknown): GameConfig {
   const beFac = (be.facilities ?? {}) as Record<string, unknown>;
   const beBank = (be.sponsoredBank ?? {}) as Record<string, unknown>;
   const beStaff = (be.staff ?? {}) as Record<string, unknown>;
+  const beSponsor = (be.sponsorOffice ?? {}) as Record<string, unknown>;
   const DBank = DEFAULT_GAME_CONFIG.businessEconomy.sponsoredBank;
   const DStaff = DEFAULT_GAME_CONFIG.businessEconomy.staff;
+  const DSponsor = DEFAULT_GAME_CONFIG.businessEconomy.sponsorOffice;
   const D = DEFAULT_GAME_CONFIG;
 
   const mergeFacility = (
@@ -897,30 +1116,65 @@ export function mergeGameConfig(raw: unknown): GameConfig {
           ),
         ),
       ),
-      museumTrophy: {
-        percentPerBadge: Math.min(
-          20,
-          Math.max(
-            0,
-            num(
-              (be.museumTrophy as { percentPerBadge?: unknown } | undefined)
-                ?.percentPerBadge,
-              D.businessEconomy.museumTrophy.percentPerBadge,
-            ),
+      museumTrophy: (() => {
+        const raw = (be.museumTrophy ?? {}) as Record<string, unknown>;
+        const Dmt = D.businessEconomy.museumTrophy;
+        const tw = (raw.tierWeights ?? {}) as Record<string, unknown>;
+        const cb = (raw.categoryBonusPercent ?? {}) as Record<string, unknown>;
+        const cs = (raw.categorySetBonus ?? {}) as Record<string, unknown>;
+        const categoryBonusPercent: Record<string, number> = {
+          ...Dmt.categoryBonusPercent,
+        };
+        for (const [k, v] of Object.entries(cb)) {
+          if (typeof k === "string" && k.trim()) {
+            categoryBonusPercent[k.trim().toLowerCase()] = Math.min(
+              20,
+              Math.max(0, num(v, 0)),
+            );
+          }
+        }
+        return {
+          percentPerBadge: Math.min(
+            20,
+            Math.max(0, num(raw.percentPerBadge, Dmt.percentPerBadge)),
           ),
-        ),
-        bonusCapPercent: Math.min(
-          200,
-          Math.max(
-            0,
-            num(
-              (be.museumTrophy as { bonusCapPercent?: unknown } | undefined)
-                ?.bonusCapPercent,
-              D.businessEconomy.museumTrophy.bonusCapPercent,
-            ),
+          bonusCapPercent: Math.min(
+            200,
+            Math.max(0, num(raw.bonusCapPercent, Dmt.bonusCapPercent)),
           ),
-        ),
-      },
+          tierWeights: {
+            bronze: Math.min(
+              5,
+              Math.max(0, num(tw.bronze, Dmt.tierWeights.bronze)),
+            ),
+            silver: Math.min(
+              5,
+              Math.max(0, num(tw.silver, Dmt.tierWeights.silver)),
+            ),
+            gold: Math.min(
+              5,
+              Math.max(0, num(tw.gold, Dmt.tierWeights.gold)),
+            ),
+          },
+          categoryBonusPercent,
+          categorySetBonus: {
+            threshold: Math.min(
+              20,
+              Math.max(
+                0,
+                Math.round(num(cs.threshold, Dmt.categorySetBonus.threshold)),
+              ),
+            ),
+            bonusPercent: Math.min(
+              50,
+              Math.max(
+                0,
+                num(cs.bonusPercent, Dmt.categorySetBonus.bonusPercent),
+              ),
+            ),
+          },
+        };
+      })(),
       branchMilestones: (() => {
         if (!Array.isArray(be.branchMilestones)) {
           return [...D.businessEconomy.branchMilestones];
@@ -1038,6 +1292,88 @@ export function mergeGameConfig(raw: unknown): GameConfig {
           Math.max(1, Math.round(num(beStaff.offerCount, DStaff.offerCount))),
         ),
         templates: mergeStaffTemplates(beStaff.templates, DStaff.templates),
+      },
+      sponsorOffice: {
+        enabled:
+          typeof beSponsor.enabled === "boolean"
+            ? beSponsor.enabled
+            : DSponsor.enabled,
+        unlockPlayerLevel: Math.min(
+          50,
+          Math.max(
+            1,
+            Math.round(
+              num(beSponsor.unlockPlayerLevel, DSponsor.unlockPlayerLevel),
+            ),
+          ),
+        ),
+        buildCost: Math.max(
+          0,
+          Math.round(num(beSponsor.buildCost, DSponsor.buildCost)),
+        ),
+        upgradeBaseCost: Math.max(
+          1,
+          Math.round(
+            num(beSponsor.upgradeBaseCost, DSponsor.upgradeBaseCost),
+          ),
+        ),
+        upgradeCostGrowth: Math.max(
+          1,
+          num(beSponsor.upgradeCostGrowth, DSponsor.upgradeCostGrowth),
+        ),
+        maxLevel: Math.min(
+          10,
+          Math.max(1, Math.round(num(beSponsor.maxLevel, DSponsor.maxLevel))),
+        ),
+        slotsByLevel: Array.isArray(beSponsor.slotsByLevel)
+          ? (beSponsor.slotsByLevel as unknown[])
+              .map((s, i) =>
+                Math.max(
+                  0,
+                  Math.min(
+                    5,
+                    Math.round(
+                      num(s, DSponsor.slotsByLevel[i] ?? 1),
+                    ),
+                  ),
+                ),
+              )
+              .slice(0, 10)
+          : [...DSponsor.slotsByLevel],
+        payoutIntervalHours: Math.min(
+          48,
+          Math.max(
+            1,
+            Math.round(
+              num(beSponsor.payoutIntervalHours, DSponsor.payoutIntervalHours),
+            ),
+          ),
+        ),
+        maxCatchupTicks: Math.min(
+          12,
+          Math.max(
+            1,
+            Math.round(
+              num(beSponsor.maxCatchupTicks, DSponsor.maxCatchupTicks),
+            ),
+          ),
+        ),
+        facilityBonusCapPercent: Math.min(
+          100,
+          Math.max(
+            0,
+            Math.round(
+              num(
+                beSponsor.facilityBonusCapPercent,
+                DSponsor.facilityBonusCapPercent,
+              ),
+            ),
+          ),
+        ),
+        sponsors: mergeSponsorTemplates(
+          beSponsor.sponsors,
+          DSponsor.sponsors,
+        ),
       },
       facilities: {
         TICKET_OFFICE: mergeFacility(

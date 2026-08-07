@@ -12,8 +12,10 @@ import {
   type FacilityBranch,
 } from "@/lib/club/facilityBranches";
 import {
-  museumTrophyBonusPercent,
+  museumTrophyBreakdown,
   museumTrophyFactor,
+  type MuseumBadgeRef,
+  type MuseumTrophyBreakdown,
 } from "@/lib/club/museumTrophies";
 import type { StaffMemberView, StaffSnapshot } from "@/lib/club/staff";
 import {
@@ -21,13 +23,23 @@ import {
   staffBonusByFacility,
   staffRateMultiplier,
 } from "@/lib/club/staff";
+import type {
+  SponsorDealRow,
+  SponsorOfficeView,
+} from "@/lib/club/sponsorOffice";
+import { buildSponsorOfficeView } from "@/lib/club/sponsorOffice";
 
-/** Optional soft links into facility math (Museum / Stadium / branches). */
+/** Optional soft links into facility math (Museum / Stadium / branches / sponsors). */
 export type FacilitySoftLinks = {
+  /** @deprecated Prefer museumTrophyMult (taxonomy-weighted). */
   badgeCount?: number;
+  /** Museum rate multiplier from weighted badge trophies (1 = none). */
+  museumTrophyMult?: number;
   stadiumLevel?: number;
   /** Per-facility milestone picks (SPEED / WAREHOUSE / PREMIUM). */
   branchPicks?: FacilityBranch[];
+  /** Aggregate Sponsor Office facility rate multiplier (1 = none). */
+  sponsorRateMult?: number;
 };
 
 export type BusinessFacilityKey = "TICKET_OFFICE" | "CLUB_SHOP" | "MUSEUM";
@@ -94,6 +106,8 @@ export type FacilityView = {
   stadiumCapBonusPercent: number;
   /** Owned badge count (Museum copy). */
   badgeCount: number;
+  /** Weighted Museum trophy breakdown (null when N/A). */
+  museumTrophy: MuseumTrophyBreakdown | null;
   /** Gameplay Stadium level (Ticket Office copy). */
   stadiumLevel: number;
   /** Locked-in milestone branch picks. */
@@ -134,10 +148,14 @@ export type BusinessSnapshot = {
   incomeBoost: IncomeBoostView;
   bank: BankView;
   staff: StaffSnapshot;
+  /** Sponsor Office deals + build state. */
+  sponsor: SponsorOfficeView;
   /** Owned ClubBadge count (Museum trophies). */
   badgeCount: number;
   /** Applied Museum trophy bonus % after cap. */
   museumTrophyBonusPercent: number;
+  /** Weighted taxonomy breakdown for Hub copy. */
+  museumTrophy: MuseumTrophyBreakdown;
   /** Gameplay Stadium level (Ticket Office capacity link). */
   stadiumLevel: number;
 };
@@ -222,12 +240,16 @@ export function rateAtLevel(
   const factor = def.usesFansFactor ? fansFactor(fans, config) : 1;
   const trophy =
     def.key === "MUSEUM"
-      ? museumTrophyFactor(links.badgeCount ?? 0, config)
+      ? (links.museumTrophyMult ??
+        museumTrophyFactor(links.badgeCount ?? 0, config))
       : 1;
   const { rateMult } = branchModifiers(links.branchPicks ?? [], config);
+  const sponsorMult = Math.max(1, links.sponsorRateMult ?? 1);
   return Math.max(
     0,
-    Math.floor(base * factor * Math.max(1, rateBoost) * trophy * rateMult),
+    Math.floor(
+      base * factor * Math.max(1, rateBoost) * trophy * rateMult * sponsorMult,
+    ),
   );
 }
 
@@ -370,18 +392,52 @@ export function buildBusinessSnapshot(input: {
   staffMembers?: StaffMemberView[];
   /** Owned ClubBadge count for Museum trophies. */
   badgeCount?: number;
+  /** Resolved badge refs for taxonomy-weighted Museum rate. */
+  museumBadges?: MuseumBadgeRef[];
   /** Gameplay Stadium level for Ticket Office capacity. */
   stadiumLevel?: number;
+  sponsorOfficeLevel?: number;
+  sponsorDeals?: SponsorDealRow[];
+  lastSponsorPayoutAt?: Date | string | null;
   config?: GameConfig;
   now?: Date;
 }): BusinessSnapshot {
   const config = input.config ?? DEFAULT_GAME_CONFIG;
   const now = input.now ?? new Date();
   const members = input.staffMembers ?? [];
-  const badgeCount = Math.max(0, input.badgeCount ?? 0);
+  const museumBadges = input.museumBadges ?? [];
+  const flatCount = Math.max(0, input.badgeCount ?? 0);
+  const trophyRefs: MuseumBadgeRef[] =
+    museumBadges.length > 0
+      ? museumBadges
+      : Array.from({ length: flatCount }, (_, i) => ({
+          slug: `flat_${i}`,
+          tier: "bronze",
+          category: "skill",
+        }));
+  const trophy = museumTrophyBreakdown(trophyRefs, config);
+  const badgeCount = trophy.badgeCount;
+  const trophyPct = trophy.bonusPercent;
+  const museumTrophyMult = 1 + trophyPct / 100;
   const stadiumLevel = Math.max(0, input.stadiumLevel ?? 0);
-  const baseLinks: FacilitySoftLinks = { badgeCount, stadiumLevel };
-  const trophyPct = museumTrophyBonusPercent(badgeCount, config);
+  const sponsorDeals = input.sponsorDeals ?? [];
+  const sponsor = buildSponsorOfficeView({
+    clubFunds: input.clubFunds,
+    officeLevel: input.sponsorOfficeLevel ?? 0,
+    playerLevel: input.playerLevel,
+    fans: input.fans,
+    stadiumLevel,
+    deals: sponsorDeals,
+    lastPayoutAt: input.lastSponsorPayoutAt,
+    config,
+    now,
+  });
+  const baseLinks: FacilitySoftLinks = {
+    badgeCount,
+    museumTrophyMult,
+    stadiumLevel,
+    sponsorRateMult: sponsor.facilityRateMult,
+  };
   const stadiumCapPct = Math.round(
     Math.max(0, stadiumLevel) *
       config.businessEconomy.ticketStadiumCapPerLevel *
@@ -529,6 +585,7 @@ export function buildBusinessSnapshot(input: {
       trophyBonusPercent: key === "MUSEUM" ? trophyPct : 0,
       stadiumCapBonusPercent: key === "TICKET_OFFICE" ? stadiumCapPct : 0,
       badgeCount,
+      museumTrophy: key === "MUSEUM" ? trophy : null,
       stadiumLevel,
       branchPicks: picks,
       nextBranchMilestone,
@@ -581,8 +638,10 @@ export function buildBusinessSnapshot(input: {
       now,
     }),
     staff,
+    sponsor,
     badgeCount,
     museumTrophyBonusPercent: trophyPct,
+    museumTrophy: trophy,
     stadiumLevel,
   };
 }

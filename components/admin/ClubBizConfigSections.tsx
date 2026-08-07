@@ -188,6 +188,51 @@ const VAULT_HOUR_KEYS = [
   "businessEconomy.vault.capHours.4",
 ] as const;
 
+const SPONSOR_FIELDS: FieldDef[] = [
+  {
+    key: "businessEconomy.sponsorOffice.unlockPlayerLevel",
+    label: "Unlock PL",
+    description: "Player Level to build Sponsor Office.",
+    tip: "Default 4.",
+    min: 1,
+  },
+  {
+    key: "businessEconomy.sponsorOffice.buildCost",
+    label: "Build cost",
+    description: "Funds to open the office.",
+    tip: "Default 400.",
+    min: 0,
+  },
+  {
+    key: "businessEconomy.sponsorOffice.upgradeBaseCost",
+    label: "Upgrade base",
+    description: "First office upgrade cost.",
+    tip: "Default 800.",
+    min: 1,
+  },
+  {
+    key: "businessEconomy.sponsorOffice.payoutIntervalHours",
+    label: "Payout hours",
+    description: "Hours between deal payout ticks.",
+    tip: "Default 4.",
+    min: 1,
+  },
+  {
+    key: "businessEconomy.sponsorOffice.facilityBonusCapPercent",
+    label: "Facility bonus cap %",
+    description: "Max summed soft rate bonus from deals.",
+    tip: "Default 25.",
+    min: 0,
+  },
+  {
+    key: "businessEconomy.sponsorOffice.maxCatchupTicks",
+    label: "Catch-up ticks",
+    description: "Max missed payout ticks on one settle.",
+    tip: "Default 3.",
+    min: 1,
+  },
+];
+
 const BANK_FIELDS: FieldDef[] = [
   {
     key: "businessEconomy.sponsoredBank.interestPercent",
@@ -610,6 +655,43 @@ export function ClubBizConfigSections({
 
       <Section
         step="5"
+        title="Sponsor Office"
+        titleFa="دفتر اسپانسر"
+        hint="Commercial deals → Funds ticks + soft facility rate bonus. Catalog lives in GameConfig defaults / JSON."
+        accent="sky"
+      >
+        <div className="space-y-3">
+          <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <input
+              type="checkbox"
+              checked={Boolean(draft.businessEconomy.sponsorOffice?.enabled)}
+              onChange={(e) =>
+                setDraft((prev) =>
+                  mergeGameConfig({
+                    ...prev,
+                    businessEconomy: {
+                      ...prev.businessEconomy,
+                      sponsorOffice: {
+                        ...prev.businessEconomy.sponsorOffice,
+                        enabled: e.target.checked,
+                      },
+                    },
+                  }),
+                )
+              }
+            />
+            Enabled
+          </label>
+          <FieldGrid
+            fields={SPONSOR_FIELDS}
+            draft={draft}
+            onFieldChange={onFieldChange}
+          />
+        </div>
+      </Section>
+
+      <Section
+        step="6"
         title="Facilities"
         titleFa="واحدها"
         hint="Ticket Office, Club Shop, Museum rates and unlocks."

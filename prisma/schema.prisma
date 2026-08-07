@@ -318,6 +318,10 @@ model Club {
   sponsoredBankActive Boolean   @default(false)
   /// Anchor for sponsored-bank interest ticks (advanced on settle).
   lastBankInterestAt  DateTime?
+  /// Sponsor Office level (0 = not built). Commercial deals → Club Funds.
+  sponsorOfficeLevel  Int       @default(0)
+  /// Anchor for sponsor-deal payout ticks (lazy settle).
+  lastSponsorPayoutAt DateTime?
 
   // Infrastructure upgrade levels (0 = ruined start state)
   stadiumLevel        Int @default(0)
@@ -394,9 +398,31 @@ model Club {
   memoryAttempts   DailyMemoryAttempt[]
   facilities       ClubFacility[]
   staff            ClubStaff[]
+  sponsorDeals     ClubSponsorDeal[]
 
   @@index([fans])
   @@index([coins])
+}
+
+/// Active commercial sponsor deal in a Sponsor Office slot.
+model ClubSponsorDeal {
+  id     String @id @default(cuid())
+  clubId String
+  club   Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  /// 0-based slot index within the office capacity.
+  slotIndex  Int
+  /// Catalog key from GameConfig.businessEconomy.sponsorOffice.sponsors.
+  sponsorKey String
+  signedAt   DateTime  @default(now())
+  /// Null = until replaced; otherwise auto-cleared on settle after expiry.
+  expiresAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clubId, slotIndex])
+  @@index([clubId])
 }
 
 /// Per-club business facility state (lazy income — ADR 003).

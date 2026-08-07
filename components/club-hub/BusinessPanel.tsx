@@ -14,6 +14,7 @@ import {
 import type { ClubSnapshot } from "@/lib/club/upgrades";
 import { FacilityBusinessCard } from "@/components/club-hub/FacilityBusinessCard";
 import { BankBusinessSheet } from "@/components/club-hub/BankBusinessSheet";
+import { SponsorOfficeSheet } from "@/components/club-hub/SponsorOfficeSheet";
 import { StaffBusinessSheet } from "@/components/club-hub/StaffBusinessSheet";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import {
@@ -59,6 +60,7 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
   const [busy, setBusy] = useState<string | null>(null);
   const [vaultOpen, setVaultOpen] = useState(false);
   const [bankOpen, setBankOpen] = useState(false);
+  const [sponsorOpen, setSponsorOpen] = useState(false);
   const [staffOpen, setStaffOpen] = useState(false);
   const [staffFocus, setStaffFocus] = useState<BusinessFacilityKey | null>(
     null,
@@ -120,13 +122,8 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
             {t("club.biz.title")}
           </h2>
         </div>
-        {/* Full-width equal chips — no dead space beside the strip */}
-        <div
-          className={[
-            "grid w-full gap-2",
-            biz.staff.enabled ? "grid-cols-3" : "grid-cols-2",
-          ].join(" ")}
-        >
+        {/* Full-width equal chips — 2-col wrap keeps touch targets ≥44px */}
+        <div className="grid w-full grid-cols-2 gap-2">
           {/* Bank */}
           <button
             type="button"
@@ -280,6 +277,38 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
                   <span className="text-[10px] opacity-60">
                     /{toLocaleDigits(biz.staff.maxHired, locale)}
                   </span>
+                </span>
+              </span>
+            </button>
+          )}
+
+          {biz.sponsor.enabled && (
+            <button
+              type="button"
+              onClick={() => {
+                haptic(HAPTIC.light);
+                playSound("click");
+                setSponsorOpen(true);
+              }}
+              title={t("club.sponsor.title")}
+              className={[
+                "flex min-h-12 min-w-0 items-center gap-1.5 rounded-2xl border-[3px] px-2 py-1.5 shadow-[0_3px_0_0_rgba(0,0,0,0.28)] ring-1 ring-white/10 transition-transform active:translate-y-px active:shadow-none",
+                biz.sponsor.built
+                  ? "border-sky-200 bg-linear-to-b from-sky-400 to-indigo-600 text-white"
+                  : "border-sky-400/50 bg-linear-to-b from-[#0c4a6e] to-[#082f49] text-sky-50",
+              ].join(" ")}
+            >
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black/25 text-sm ring-1 ring-white/25">
+                🤝
+              </span>
+              <span className="min-w-0 flex-1 leading-tight">
+                <span className="block truncate font-display text-[9px] font-bold uppercase tracking-wide text-white/70">
+                  {t("club.sponsor.chipLabel")}
+                </span>
+                <span className="block truncate font-display text-sm font-black tabular-nums">
+                  {biz.sponsor.built
+                    ? `${toLocaleDigits(biz.sponsor.deals.length, locale)}/${toLocaleDigits(biz.sponsor.slots, locale)}`
+                    : t("club.sponsor.chipBuild")}
                 </span>
               </span>
             </button>
@@ -627,6 +656,24 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
       <BankBusinessSheet
         open={bankOpen}
         onClose={() => setBankOpen(false)}
+        club={club}
+        pending={pending || busy !== null}
+        onClubUpdate={onClubUpdate}
+        onBusy={setBusy}
+        onError={(msg) => {
+          toast.error(msg);
+          haptic(HAPTIC.miss);
+        }}
+        onSuccess={(msg) => {
+          toast.success(msg);
+          playSound("upgrade");
+          haptic(HAPTIC.tap);
+        }}
+      />
+
+      <SponsorOfficeSheet
+        open={sponsorOpen}
+        onClose={() => setSponsorOpen(false)}
         club={club}
         pending={pending || busy !== null}
         onClubUpdate={onClubUpdate}

@@ -29,6 +29,7 @@ import {
 import {
   ensureClubFacilities,
   settleClubBankInterest,
+  settleSponsorOffice,
 } from "@/lib/club/businessService";
 import {
   isBranchMilestone,
@@ -42,6 +43,9 @@ import {
   settleStaffAutoCollect,
 } from "@/lib/club/staffService";
 import { staffBonusByFacility, staffRateMultiplier } from "@/lib/club/staff";
+import { sponsorFacilityRateMult } from "@/lib/club/sponsorOffice";
+import { loadMuseumBadgeRefs } from "@/lib/club/loadMuseumBadges";
+import { museumTrophyFactorFromBadges } from "@/lib/club/museumTrophies";
 
 export type BusinessActionResult =
   | { ok: true; club: ClubSnapshot; transferred?: number }
@@ -58,8 +62,24 @@ async function softLinksForClub(
   stadiumLevel: number,
   db: Prisma.TransactionClient,
 ): Promise<FacilitySoftLinks> {
-  const badgeCount = await db.clubBadge.count({ where: { clubId } });
-  return { badgeCount, stadiumLevel };
+  const museumBadges = await loadMuseumBadgeRefs(clubId, db);
+  const deals = await db.clubSponsorDeal.findMany({ where: { clubId } });
+  const config = await getGameConfig();
+  const sponsorRateMult = sponsorFacilityRateMult(
+    deals.map((d) => ({
+      slotIndex: d.slotIndex,
+      sponsorKey: d.sponsorKey,
+      signedAt: d.signedAt,
+      expiresAt: d.expiresAt,
+    })),
+    config,
+  );
+  return {
+    badgeCount: museumBadges.length,
+    museumTrophyMult: museumTrophyFactorFromBadges(museumBadges, config),
+    stadiumLevel,
+    sponsorRateMult,
+  };
 }
 
 /** Collect one facility buffer (or all) into the vault. */
@@ -73,6 +93,7 @@ export async function collectFacilities(
       const { user } = pair;
       let { club } = pair;
       club = await settleClubBankInterest(club, tx);
+      club = await settleSponsorOffice(club, tx);
       club = await settleStaffAutoCollect(club, tx);
       const config = await getGameConfig();
       const playerLevel = calculateLevel(user.xp).level;
@@ -208,6 +229,7 @@ export async function withdrawVault(): Promise<BusinessActionResult> {
       const { user } = pair;
       let { club } = pair;
       club = await settleClubBankInterest(club, tx);
+      club = await settleSponsorOffice(club, tx);
       club = await settleStaffAutoCollect(club, tx);
       if (club.vaultBalance <= 0) {
         throw new BusinessError("Vault is empty.");

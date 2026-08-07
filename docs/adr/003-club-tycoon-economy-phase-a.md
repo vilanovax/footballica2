@@ -284,7 +284,7 @@ Target interaction budget: **under ~60 seconds**.
 - Staff / auto-collect / Treasurer
 - Loot / rarity / card merge
 - Branch upgrades (speed vs warehouse vs premium)
-- Sponsor Office as a system
+- ~~Sponsor Office as a system~~ (shipped: deals + lazy payout + soft facility bonus)
 - Separate “bank” capacity beyond vault
 - Burning overflow
 - Competitive quiz buffs from funds
