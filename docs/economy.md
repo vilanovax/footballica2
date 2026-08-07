@@ -419,11 +419,11 @@ Missions / campaign → claim coins/XP
 - [x] Museum trophies: owned `ClubBadge` count → Museum rate % (capped)
 - [x] Stadium → Ticket Office buffer capacity (`ticketStadiumCapPerLevel`)
 - [x] Dogfood polish: Treasurer early withdraw CTA + hire celebration copy
+- [x] Milestone branch upgrades (Speed / Warehouse / Premium at Lv 5 / 10 / 15)
 
 ### Explicitly not shipped (later)
 
 - [ ] SMS / Telegram re-engagement channels
-- [ ] Milestone branch upgrades (speed vs warehouse vs premium)
 - [ ] Sponsor Office as a broader system (beyond bank branding)
 - [ ] Competitive buffs from Funds (forbidden by design)
 - [ ] Income minting cron (forbidden — notify-only cron OK)
@@ -453,6 +453,11 @@ Useful when balancing without opening Admin:
 | Museum rate L1 | 100 Funds/h |
 | Museum trophies | +2% rate / badge · cap 50% |
 | Ticket←Stadium | buffer hours × (1 + stadiumLv × 0.1) |
+| Facility max level | 15 |
+| Branch milestones | Lv 5 / 10 / 15 |
+| Branch Speed | ×1.15 rate · ×0.95 hours |
+| Branch Warehouse | ×1.25 hours |
+| Branch Premium | ×1.08 rate · ×1.10 hours |
 | First-win boost | +20% for 1h |
 | Vault cap hours L1–5 | 3 / 6 / 8 / 12 / 24 |
 
@@ -474,5 +479,6 @@ Shipped in this pass (PWA + soft links). Remaining ideas:
 1. ~~Re-engagement PWA push~~ — SMS / Telegram still open.
 2. ~~Museum trophies (badge count → rate %)~~ — richer badge taxonomy later.
 3. ~~Dogfood Staff / Treasurer withdraw feel~~ — keep tuning hire costs in Live-Ops.
-4. ~~Stadium → Ticket capacity~~ — branch milestones still later.
-5. Milestone branch upgrades (speed vs warehouse vs premium).
+4. ~~Stadium → Ticket capacity~~
+5. ~~Milestone branch upgrades (Speed / Warehouse / Premium)~~
+6. Sponsor Office as a broader system / SMS–Telegram re-engagement.

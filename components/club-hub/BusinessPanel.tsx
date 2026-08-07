@@ -80,7 +80,9 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
         toast.error(
           res.error === "VAULT_NOT_FULL"
             ? t("club.biz.vaultWithdrawLocked")
-            : res.error,
+            : res.error === "BRANCH_REQUIRED"
+              ? t("club.biz.branchRequired")
+              : res.error,
         );
         haptic(HAPTIC.miss);
         return;
@@ -603,9 +605,11 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
                 t("club.biz.built"),
               )
             }
-            onUpgrade={() =>
-              run(`up-${f.key}`, () => upgradeFacility(f.key), () =>
-                t("club.biz.upgraded"),
+            onUpgrade={(branch) =>
+              run(
+                `up-${f.key}`,
+                () => upgradeFacility(f.key, branch),
+                () => t("club.biz.upgraded"),
               )
             }
             onManageStaff={

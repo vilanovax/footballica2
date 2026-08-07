@@ -15,6 +15,7 @@ import {
   type BusinessFacilityKey,
   type FacilitySoftLinks,
 } from "@/lib/club/businessEconomy";
+import { parseBranchPicks } from "@/lib/club/facilityBranches";
 import {
   staffRateMultiplier,
   toStaffMemberView,
@@ -88,13 +89,17 @@ export async function settleStaffAutoCollect(
     const key = row.key as BusinessFacilityKey;
     const def = getFacilityDef(key, config);
     const mult = staffRateMultiplier(bonusByKey.get(key) ?? 0);
+    const fLinks: FacilitySoftLinks = {
+      ...links,
+      branchPicks: parseBranchPicks(row.branchPicks),
+    };
     totalRate += rateAtLevel(
       def,
       row.level,
       club.fans,
       config,
       rateBoost * mult,
-      links,
+      fLinks,
     );
   }
 
@@ -108,13 +113,17 @@ export async function settleStaffAutoCollect(
 
     const def = getFacilityDef(key, config);
     const mult = staffRateMultiplier(bonusByKey.get(key) ?? 0);
+    const fLinks: FacilitySoftLinks = {
+      ...links,
+      branchPicks: parseBranchPicks(row.branchPicks),
+    };
     const rate = rateAtLevel(
       def,
       row.level,
       club.fans,
       config,
       rateBoost * mult,
-      links,
+      fLinks,
     );
     const cap = storageCapAtLevel(
       def,
@@ -122,7 +131,7 @@ export async function settleStaffAutoCollect(
       club.fans,
       config,
       rateBoost * mult,
-      links,
+      fLinks,
     );
     const settled = settleFacilityAmount(
       row.storedAmount,

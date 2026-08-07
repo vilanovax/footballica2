@@ -210,6 +210,17 @@ export type GameConfig = {
       bonusCapPercent: number;
     };
     /**
+     * Facility levels that require a permanent branch pick on upgrade
+     * (SPEED / WAREHOUSE / PREMIUM). ADR 003 follow-up.
+     */
+    branchMilestones: number[];
+    /** Per-pick multipliers stacked multiplicatively. */
+    branchPerks: {
+      speed: { rateBonus: number; hoursBonus: number };
+      warehouse: { rateBonus: number; hoursBonus: number };
+      premium: { rateBonus: number; hoursBonus: number };
+    };
+    /**
      * First non-tutorial win of a Tehran day → temporary facility income boost.
      * `boostBonus` is added to 1.0 (0.2 → +20%).
      */
@@ -385,6 +396,15 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
       percentPerBadge: 2,
       bonusCapPercent: 50,
     },
+    branchMilestones: [5, 10, 15],
+    branchPerks: {
+      /** Faster income; slightly tighter buffer (fills sooner). */
+      speed: { rateBonus: 0.15, hoursBonus: -0.05 },
+      /** Bigger warehouse; rate unchanged. */
+      warehouse: { rateBonus: 0, hoursBonus: 0.25 },
+      /** Balanced quality bump. */
+      premium: { rateBonus: 0.08, hoursBonus: 0.1 },
+    },
     firstWinBoostBonus: 0.2,
     firstWinBoostMs: 60 * 60 * 1000,
     sponsoredBank: {
@@ -451,7 +471,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
         costGrowth: 2,
         rateGrowth: 1.5,
         capGrowth: 1.15,
-        maxLevel: 5,
+        maxLevel: 15,
         usesFansFactor: false,
       },
       CLUB_SHOP: {
@@ -462,7 +482,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
         costGrowth: 1.75,
         rateGrowth: 1.5,
         capGrowth: 1.1,
-        maxLevel: 5,
+        maxLevel: 15,
         usesFansFactor: true,
       },
       MUSEUM: {
@@ -473,7 +493,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
         costGrowth: 1.55,
         rateGrowth: 1.5,
         capGrowth: 1.08,
-        maxLevel: 5,
+        maxLevel: 15,
         usesFansFactor: false,
       },
     },
@@ -901,6 +921,43 @@ export function mergeGameConfig(raw: unknown): GameConfig {
           ),
         ),
       },
+      branchMilestones: (() => {
+        if (!Array.isArray(be.branchMilestones)) {
+          return [...D.businessEconomy.branchMilestones];
+        }
+        const parsed = (be.branchMilestones as unknown[])
+          .map((m) => Math.round(num(m, 0)))
+          .filter((m) => m >= 2 && m <= 20)
+          .slice(0, 6);
+        return parsed.length > 0
+          ? parsed
+          : [...D.businessEconomy.branchMilestones];
+      })(),
+      branchPerks: (() => {
+        const raw = (be.branchPerks ?? {}) as Record<string, unknown>;
+        const Dbp = D.businessEconomy.branchPerks;
+        const mergePerk = (
+          key: "speed" | "warehouse" | "premium",
+          fallback: { rateBonus: number; hoursBonus: number },
+        ) => {
+          const o = (raw[key] ?? {}) as Record<string, unknown>;
+          return {
+            rateBonus: Math.min(
+              1,
+              Math.max(-0.5, num(o.rateBonus, fallback.rateBonus)),
+            ),
+            hoursBonus: Math.min(
+              1,
+              Math.max(-0.5, num(o.hoursBonus, fallback.hoursBonus)),
+            ),
+          };
+        };
+        return {
+          speed: mergePerk("speed", Dbp.speed),
+          warehouse: mergePerk("warehouse", Dbp.warehouse),
+          premium: mergePerk("premium", Dbp.premium),
+        };
+      })(),
       firstWinBoostBonus: Math.min(
         1,
         Math.max(

@@ -20,8 +20,33 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
+import {
+  FACILITY_BRANCHES,
+  type FacilityBranch,
+} from "@/lib/club/facilityBranches";
 import { staffDisplayName } from "@/lib/club/staff";
 import { useLiveFacilityFill } from "@/lib/club/useLiveFacilityFill";
+
+const BRANCH_META: Record<
+  FacilityBranch,
+  { icon: string; nameKey: string; descKey: string }
+> = {
+  SPEED: {
+    icon: "⚡",
+    nameKey: "club.biz.branchSpeed",
+    descKey: "club.biz.branchSpeedDesc",
+  },
+  WAREHOUSE: {
+    icon: "📦",
+    nameKey: "club.biz.branchWarehouse",
+    descKey: "club.biz.branchWarehouseDesc",
+  },
+  PREMIUM: {
+    icon: "✨",
+    nameKey: "club.biz.branchPremium",
+    descKey: "club.biz.branchPremiumDesc",
+  },
+};
 
 const FACILITY_PANEL_TONE: Record<BusinessFacilityKey, GamePanelTone> = {
   TICKET_OFFICE: "emerald",
@@ -101,7 +126,7 @@ type FacilityBusinessCardProps = {
   clubFunds: number;
   pending: boolean;
   onBuild: () => void;
-  onUpgrade: () => void;
+  onUpgrade: (branch?: FacilityBranch) => void;
   /** Open staff sheet focused on this facility desk. */
   onManageStaff?: () => void;
 };
@@ -119,8 +144,14 @@ export function FacilityBusinessCard({
 }: FacilityBusinessCardProps) {
   const { t, locale } = useTranslation();
   const [open, setOpen] = useState(false);
+  const [pickedBranch, setPickedBranch] = useState<FacilityBranch | null>(
+    null,
+  );
   const meta = FACILITY_META[f.key];
   const isMax = f.status === "BUILT" && f.upgradeCost === null;
+  const needsBranch = f.nextBranchMilestone != null;
+  const canConfirmUpgrade =
+    f.canUpgrade && (!needsBranch || pickedBranch != null);
   const rateDelta =
     f.status === "BUILT" && f.nextRatePerHour != null
       ? f.nextRatePerHour - f.ratePerHour
@@ -130,6 +161,7 @@ export function FacilityBusinessCard({
   function openSheet() {
     haptic(HAPTIC.light);
     playSound("click");
+    setPickedBranch(null);
     setOpen(true);
   }
 
@@ -255,6 +287,11 @@ export function FacilityBusinessCard({
                     className="h-3 w-3 object-contain"
                   />
                   +{toLocaleDigits(f.stadiumCapBonusPercent, locale)}%
+                </span>
+              )}
+              {f.branchPicks.length > 0 && (
+                <span className="rounded-full bg-violet-400/25 px-2 py-0.5 font-display text-[10px] font-black text-violet-100 ring-1 ring-violet-300/40">
+                  {f.branchPicks.map((b) => BRANCH_META[b].icon).join("")}
                 </span>
               )}
               {isMax && (
@@ -735,7 +772,14 @@ export function FacilityBusinessCard({
                 />
                 <div className="min-w-0 flex-1">
                   <p className="font-display text-[10px] font-black uppercase tracking-widest text-accent">
-                    {t("club.biz.nextUpgrade")}
+                    {needsBranch
+                      ? t("club.biz.branchMilestoneTitle", {
+                          n: toLocaleDigits(
+                            f.nextBranchMilestone ?? f.level + 1,
+                            locale,
+                          ),
+                        })
+                      : t("club.biz.nextUpgrade")}
                   </p>
                   <p className="font-display text-lg font-black text-white">
                     {t("club.biz.level", {
@@ -751,20 +795,78 @@ export function FacilityBusinessCard({
                   </p>
                 </div>
               </div>
+
+              {needsBranch && (
+                <div className="mt-3 flex flex-col gap-2">
+                  <p className="font-display text-[11px] font-bold text-white/65">
+                    {t("club.biz.branchPickHint")}
+                  </p>
+                  {FACILITY_BRANCHES.map((branch) => {
+                    const bm = BRANCH_META[branch];
+                    const selected = pickedBranch === branch;
+                    return (
+                      <button
+                        key={branch}
+                        type="button"
+                        onClick={() => {
+                          haptic(HAPTIC.light);
+                          playSound("click");
+                          setPickedBranch(branch);
+                        }}
+                        className={[
+                          "flex min-h-12 w-full items-center gap-3 rounded-2xl border-2 px-3 py-2.5 text-start transition-transform active:translate-y-px",
+                          selected
+                            ? "border-accent bg-accent/20 shadow-[0_3px_0_0_hsl(var(--accent-deep))]"
+                            : "border-white/15 bg-black/25",
+                        ].join(" ")}
+                      >
+                        <span className="text-xl" aria-hidden>
+                          {bm.icon}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-display text-sm font-black text-white">
+                            {t(bm.nameKey)}
+                          </span>
+                          <span className="block font-display text-[11px] font-bold text-white/60">
+                            {t(bm.descKey)}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {f.branchPicks.length > 0 && (
+                <p className="mt-2 font-display text-[10px] font-bold text-white/45">
+                  {t("club.biz.branchHistory", {
+                    list: f.branchPicks
+                      .map((b) => t(BRANCH_META[b].nameKey))
+                      .join(" · "),
+                  })}
+                </p>
+              )}
+
               <GameCta
                 variant="accent"
                 block
                 className="mt-3"
-                disabled={pending || !f.canUpgrade}
+                disabled={pending || !canConfirmUpgrade}
                 onClick={() => {
                   setOpen(false);
-                  onUpgrade();
+                  onUpgrade(pickedBranch ?? undefined);
                 }}
               >
                 {f.canUpgrade ? (
                   <>
-                    <span>{t("club.biz.upgradeShort")}</span>
-                    <FundsCost amount={f.upgradeCost} />
+                    <span>
+                      {needsBranch && !pickedBranch
+                        ? t("club.biz.branchPickFirst")
+                        : t("club.biz.upgradeShort")}
+                    </span>
+                    {(canConfirmUpgrade || !needsBranch) && (
+                      <FundsCost amount={f.upgradeCost} />
+                    )}
                   </>
                 ) : (
                   t("club.biz.needFunds", {

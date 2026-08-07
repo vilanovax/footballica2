@@ -93,6 +93,7 @@ export function facilitiesToRows(rows: ClubFacility[]): FacilityRow[] {
     storedAmount: r.storedAmount,
     lastCalculatedAt: r.lastCalculatedAt,
     version: r.version,
+    branchPicks: r.branchPicks,
   }));
 }
 

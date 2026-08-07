@@ -78,7 +78,9 @@ UX must not require opening every bottom sheet:
 
 One ladder per facility: `level → level+1` increases **rate** and **storageCap** together (and optionally shortens cycle flavor in copy only).
 
-**Deferred:** separate sliders for speed / rate / cap; branch perks at milestones 5 / 10 / 15; Staff auto-collect; Treasurer; rarity / loot; sponsors as systems.
+**Deferred (historical):** separate sliders for speed / rate / cap; rarity / loot; sponsors as systems.
+
+**Shipped later:** Staff / Treasurer (ADR 004); branch perks at milestones 5 / 10 / 15 (`ClubFacility.branchPicks`).
 
 **Server rules (mandatory):**
 

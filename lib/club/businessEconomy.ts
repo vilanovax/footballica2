@@ -6,6 +6,12 @@ import { DEFAULT_GAME_CONFIG } from "@/lib/game/economy";
 import type { BankView } from "@/lib/club/bankInterest";
 import { buildBankView } from "@/lib/club/bankInterest";
 import {
+  branchModifiers,
+  isBranchMilestone,
+  parseBranchPicks,
+  type FacilityBranch,
+} from "@/lib/club/facilityBranches";
+import {
   museumTrophyBonusPercent,
   museumTrophyFactor,
 } from "@/lib/club/museumTrophies";
@@ -16,10 +22,12 @@ import {
   staffRateMultiplier,
 } from "@/lib/club/staff";
 
-/** Optional soft links into facility math (Museum trophies / Stadium→Ticket). */
+/** Optional soft links into facility math (Museum / Stadium / branches). */
 export type FacilitySoftLinks = {
   badgeCount?: number;
   stadiumLevel?: number;
+  /** Per-facility milestone picks (SPEED / WAREHOUSE / PREMIUM). */
+  branchPicks?: FacilityBranch[];
 };
 
 export type BusinessFacilityKey = "TICKET_OFFICE" | "CLUB_SHOP" | "MUSEUM";
@@ -54,6 +62,7 @@ export type FacilityRow = {
   storedAmount: number;
   lastCalculatedAt: Date | string;
   version: number;
+  branchPicks?: FacilityBranch[] | unknown;
 };
 
 export type FacilityView = {
@@ -87,6 +96,10 @@ export type FacilityView = {
   badgeCount: number;
   /** Gameplay Stadium level (Ticket Office copy). */
   stadiumLevel: number;
+  /** Locked-in milestone branch picks. */
+  branchPicks: FacilityBranch[];
+  /** Upgrading to this level requires a branch pick (null if not a milestone). */
+  nextBranchMilestone: number | null;
 };
 
 export type IncomeBoostView = {
@@ -211,9 +224,10 @@ export function rateAtLevel(
     def.key === "MUSEUM"
       ? museumTrophyFactor(links.badgeCount ?? 0, config)
       : 1;
+  const { rateMult } = branchModifiers(links.branchPicks ?? [], config);
   return Math.max(
     0,
-    Math.floor(base * factor * Math.max(1, rateBoost) * trophy),
+    Math.floor(base * factor * Math.max(1, rateBoost) * trophy * rateMult),
   );
 }
 
@@ -239,8 +253,11 @@ export function storageCapAtLevel(
 ): number {
   if (level < 1) return 0;
   const rate = rateAtLevel(def, level, fans, config, rateBoost, links);
+  const { hoursMult } = branchModifiers(links.branchPicks ?? [], config);
   let hours =
-    def.baseStorageHours * Math.pow(def.capGrowth, Math.max(0, level - 1));
+    def.baseStorageHours *
+    Math.pow(def.capGrowth, Math.max(0, level - 1)) *
+    hoursMult;
   if (def.key === "TICKET_OFFICE") {
     hours *= ticketStadiumCapFactor(links.stadiumLevel ?? 0, config);
   }
@@ -363,7 +380,7 @@ export function buildBusinessSnapshot(input: {
   const members = input.staffMembers ?? [];
   const badgeCount = Math.max(0, input.badgeCount ?? 0);
   const stadiumLevel = Math.max(0, input.stadiumLevel ?? 0);
-  const links: FacilitySoftLinks = { badgeCount, stadiumLevel };
+  const baseLinks: FacilitySoftLinks = { badgeCount, stadiumLevel };
   const trophyPct = museumTrophyBonusPercent(badgeCount, config);
   const stadiumCapPct = Math.round(
     Math.max(0, stadiumLevel) *
@@ -407,6 +424,8 @@ export function buildBusinessSnapshot(input: {
     const staffBonus = bonusByFacility[key] ?? 0;
     const staffMult = staffRateMultiplier(staffBonus);
     const effectiveBoost = rateBoost * staffMult;
+    const picks = parseBranchPicks(row?.branchPicks);
+    const links: FacilitySoftLinks = { ...baseLinks, branchPicks: picks };
 
     const rate =
       status === "BUILT"
@@ -442,13 +461,21 @@ export function buildBusinessSnapshot(input: {
 
     const bCost = buildCost(def);
     const uCost = status === "BUILT" ? upgradeCost(def, level) : null;
+    const nextLevel = level + 1;
+    const nextBranchMilestone =
+      status === "BUILT" &&
+      level < def.maxLevel &&
+      isBranchMilestone(nextLevel, config)
+        ? nextLevel
+        : null;
 
     let nextRate: number | null = null;
     let nextCap: number | null = null;
     if (status === "BUILT" && level < def.maxLevel) {
+      // Preview without the pending pick (client re-previews after selection).
       nextRate = rateAtLevel(
         def,
-        level + 1,
+        nextLevel,
         input.fans,
         config,
         effectiveBoost,
@@ -456,7 +483,7 @@ export function buildBusinessSnapshot(input: {
       );
       nextCap = storageCapAtLevel(
         def,
-        level + 1,
+        nextLevel,
         input.fans,
         config,
         effectiveBoost,
@@ -503,6 +530,8 @@ export function buildBusinessSnapshot(input: {
       stadiumCapBonusPercent: key === "TICKET_OFFICE" ? stadiumCapPct : 0,
       badgeCount,
       stadiumLevel,
+      branchPicks: picks,
+      nextBranchMilestone,
     });
   }
 

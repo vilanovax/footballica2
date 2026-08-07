@@ -413,6 +413,8 @@ model ClubFacility {
   lastCalculatedAt DateTime           @default(now())
   /// Optimistic lock for collect / upgrade double-taps.
   version          Int                @default(0)
+  /// Ordered milestone picks: "SPEED" | "WAREHOUSE" | "PREMIUM" (JSON string[]).
+  branchPicks      Json               @default("[]")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

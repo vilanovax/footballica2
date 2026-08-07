@@ -31,6 +31,12 @@ import {
   settleClubBankInterest,
 } from "@/lib/club/businessService";
 import {
+  isBranchMilestone,
+  isFacilityBranch,
+  parseBranchPicks,
+  type FacilityBranch,
+} from "@/lib/club/facilityBranches";
+import {
   clubHasTreasurer,
   loadClubStaffViews,
   settleStaffAutoCollect,
@@ -94,13 +100,17 @@ export async function collectFacilities(
         const fKey = row.key as BusinessFacilityKey;
         const def = getFacilityDef(fKey, config);
         const mult = staffRateMultiplier(bonusBy[fKey] ?? 0);
+        const fLinks: FacilitySoftLinks = {
+          ...links,
+          branchPicks: parseBranchPicks(row.branchPicks),
+        };
         totalRate += rateAtLevel(
           def,
           row.level,
           club.fans,
           config,
           rateBoost * mult,
-          links,
+          fLinks,
         );
       }
       let vaultBal = club.vaultBalance;
@@ -116,13 +126,17 @@ export async function collectFacilities(
         const fKey = row.key as BusinessFacilityKey;
         const def = getFacilityDef(fKey, config);
         const mult = staffRateMultiplier(bonusBy[fKey] ?? 0);
+        const fLinks: FacilitySoftLinks = {
+          ...links,
+          branchPicks: parseBranchPicks(row.branchPicks),
+        };
         const rate = rateAtLevel(
           def,
           row.level,
           club.fans,
           config,
           rateBoost * mult,
-          links,
+          fLinks,
         );
         const cap = storageCapAtLevel(
           def,
@@ -130,7 +144,7 @@ export async function collectFacilities(
           club.fans,
           config,
           rateBoost * mult,
-          links,
+          fLinks,
         );
         const settled = settleFacilityAmount(
           row.storedAmount,
@@ -224,13 +238,17 @@ export async function withdrawVault(): Promise<BusinessActionResult> {
         const fKey = row.key as BusinessFacilityKey;
         const def = getFacilityDef(fKey, config);
         const mult = staffRateMultiplier(bonusBy[fKey] ?? 0);
+        const fLinks: FacilitySoftLinks = {
+          ...links,
+          branchPicks: parseBranchPicks(row.branchPicks),
+        };
         totalRate += rateAtLevel(
           def,
           row.level,
           club.fans,
           config,
           rateBoost * mult,
-          links,
+          fLinks,
         );
       }
       const vCap = vaultCapacity(club.vaultLevel, totalRate, config);
@@ -328,9 +346,10 @@ export async function buildFacility(
   }
 }
 
-/** Settle buffer at old rate, then level++. */
+/** Settle buffer at old rate, then level++. Milestone levels need a branch. */
 export async function upgradeFacility(
   key: string,
+  branch?: string | null,
 ): Promise<BusinessActionResult> {
   if (!isFacilityKey(key)) {
     return { ok: false, error: "Unknown facility." };
@@ -359,6 +378,16 @@ export async function upgradeFacility(
         throw new BusinessError("Not enough Club Funds.");
       }
 
+      const nextLevel = row.level + 1;
+      const picks = parseBranchPicks(row.branchPicks);
+      let nextPicks: FacilityBranch[] = picks;
+      if (isBranchMilestone(nextLevel, config)) {
+        if (!isFacilityBranch(branch)) {
+          throw new BusinessError("BRANCH_REQUIRED");
+        }
+        nextPicks = [...picks, branch];
+      }
+
       const rateBoost = incomeBoostMultiplier(
         club.businessBoostExpiresAt,
         now,
@@ -369,13 +398,17 @@ export async function upgradeFacility(
         club.stadiumLevel,
         tx,
       );
+      const fLinks: FacilitySoftLinks = {
+        ...links,
+        branchPicks: picks,
+      };
       const rate = rateAtLevel(
         def,
         row.level,
         club.fans,
         config,
         rateBoost,
-        links,
+        fLinks,
       );
       const cap = storageCapAtLevel(
         def,
@@ -383,7 +416,7 @@ export async function upgradeFacility(
         club.fans,
         config,
         rateBoost,
-        links,
+        fLinks,
       );
       const settled = settleFacilityAmount(
         row.storedAmount,
@@ -399,6 +432,7 @@ export async function upgradeFacility(
           level: { increment: 1 },
           storedAmount: settled.storedAmount,
           lastCalculatedAt: now,
+          branchPicks: nextPicks,
           version: { increment: 1 },
         },
       });
