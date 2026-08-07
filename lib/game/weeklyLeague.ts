@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { GAME_CONFIG_ID } from "@/lib/game/gameConfig";
 import { DEFAULT_GAME_CONFIG } from "@/lib/game/economy";
+import { WEEKLY_PRIZE_TIERS } from "@/lib/game/weeklyPrizes";
 
 const weekFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Tehran",
@@ -53,19 +54,19 @@ type ConfigBag = Record<string, unknown> & { leagueWeekKey?: string };
 
 /**
  * If the Tehran week rolled over, archive the human podium to Hall of Fame,
- * zero human `weeklyXp` (bots + mock emails keep scores), and stamp the new
- * week on GameConfig.
+ * pay `WEEKLY_PRIZE_TIERS` (coins → club, XP → user), zero human `weeklyXp`
+ * (bots + mock emails keep scores), and stamp the new week on GameConfig.
  */
 export async function ensureWeeklyLeagueReset(
   now = new Date(),
-): Promise<{ reset: boolean; weekKey: string }> {
+): Promise<{ reset: boolean; weekKey: string; prizesPaid: number }> {
   const weekKey = tehranWeekKey(now);
   const row = await prisma.gameConfig.findUnique({
     where: { id: GAME_CONFIG_ID },
   });
   const prev = (row?.config ?? {}) as ConfigBag;
   if (prev.leagueWeekKey === weekKey) {
-    return { reset: false, weekKey };
+    return { reset: false, weekKey, prizesPaid: 0 };
   }
 
   const previousWeekKey =
@@ -73,8 +74,10 @@ export async function ensureWeeklyLeagueReset(
       ? prev.leagueWeekKey
       : null;
 
+  let prizesPaid = 0;
+
   await prisma.$transaction(async (tx) => {
-    // Hall of Fame: freeze last week's top 3 humans before wiping scores.
+    // Hall of Fame + prize payout before wiping scores.
     if (previousWeekKey) {
       const podium = await tx.user.findMany({
         where: {
@@ -84,7 +87,7 @@ export async function ensureWeeklyLeagueReset(
         },
         orderBy: [{ weeklyXp: "desc" }, { createdAt: "asc" }],
         take: 3,
-        select: { id: true, weeklyXp: true },
+        select: { id: true, weeklyXp: true, club: { select: { id: true } } },
       });
 
       if (podium.length > 0) {
@@ -97,6 +100,30 @@ export async function ensureWeeklyLeagueReset(
           })),
           skipDuplicates: true,
         });
+
+        // Idempotent vs re-archive: only pay if HoF row was new for this week+rank.
+        // createMany skipDuplicates means we still pay once per reset run —
+        // leagueWeekKey stamp prevents a second reset in the same week.
+        for (let i = 0; i < podium.length; i++) {
+          const place = (i + 1) as 1 | 2 | 3;
+          const tier = WEEKLY_PRIZE_TIERS.find((t) => t.place === place);
+          const u = podium[i]!;
+          if (!tier || !u.club) continue;
+
+          if (tier.coins > 0) {
+            await tx.club.update({
+              where: { id: u.club.id },
+              data: { coins: { increment: tier.coins } },
+            });
+          }
+          if (tier.xp > 0) {
+            await tx.user.update({
+              where: { id: u.id },
+              data: { xp: { increment: tier.xp } },
+            });
+          }
+          prizesPaid += 1;
+        }
       }
     }
 
@@ -133,5 +160,5 @@ export async function ensureWeeklyLeagueReset(
     });
   });
 
-  return { reset: true, weekKey };
+  return { reset: true, weekKey, prizesPaid };
 }

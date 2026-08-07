@@ -6,6 +6,22 @@ import type { PushPayload } from "@/lib/push/types";
 
 const DUEL_COOLDOWN_MS = 2 * 60_000;
 const VAULT_COOLDOWN_MS = 12 * 60 * 60_000;
+/** Once per Tehran day is enough — newspaper is a daily claim. */
+const NEWSPAPER_COOLDOWN_MS = 20 * 60 * 60_000;
+/** Avoid spam while stamina sits at max. */
+const STAMINA_COOLDOWN_MS = 8 * 60 * 60_000;
+
+type PrefField =
+  | "duelYourTurn"
+  | "vaultNearlyFull"
+  | "newspaperReady"
+  | "staminaFull";
+
+type CooldownField =
+  | "lastDuelPushAt"
+  | "lastVaultPushAt"
+  | "lastNewspaperPushAt"
+  | "lastStaminaPushAt";
 
 type SendResult = { sent: number; pruned: number };
 
@@ -13,8 +29,8 @@ async function deliver(
   userId: string,
   payload: PushPayload,
   filter: {
-    prefer: "duelYourTurn" | "vaultNearlyFull";
-    cooldownField: "lastDuelPushAt" | "lastVaultPushAt";
+    prefer: PrefField;
+    cooldownField: CooldownField;
     cooldownMs: number;
   },
 ): Promise<SendResult> {
@@ -24,9 +40,7 @@ async function deliver(
   const subs = await prisma.pushSubscription.findMany({
     where: {
       userId,
-      ...(filter.prefer === "duelYourTurn"
-        ? { duelYourTurn: true }
-        : { vaultNearlyFull: true }),
+      [filter.prefer]: true,
     },
   });
 
@@ -35,10 +49,7 @@ async function deliver(
   const body = JSON.stringify(payload);
 
   for (const sub of subs) {
-    const last =
-      filter.cooldownField === "lastDuelPushAt"
-        ? sub.lastDuelPushAt
-        : sub.lastVaultPushAt;
+    const last = sub[filter.cooldownField];
     if (last && now.getTime() - last.getTime() < filter.cooldownMs) continue;
 
     try {
@@ -70,17 +81,20 @@ async function deliver(
   return { sent, pruned };
 }
 
+async function assertHuman(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { isBot: true },
+  });
+  return Boolean(user && !user.isBot);
+}
+
 /** Notify a human that it is their Draft Duel turn. */
 export async function notifyDuelYourTurn(
   userId: string,
   duelId: string,
 ): Promise<SendResult> {
-  // Never push bots.
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { isBot: true },
-  });
-  if (!user || user.isBot) return { sent: 0, pruned: 0 };
+  if (!(await assertHuman(userId))) return { sent: 0, pruned: 0 };
 
   return deliver(
     userId,
@@ -103,6 +117,8 @@ export async function notifyDuelYourTurn(
 export async function notifyVaultNearlyFull(
   userId: string,
 ): Promise<SendResult> {
+  if (!(await assertHuman(userId))) return { sent: 0, pruned: 0 };
+
   return deliver(
     userId,
     {
@@ -115,6 +131,48 @@ export async function notifyVaultNearlyFull(
       prefer: "vaultNearlyFull",
       cooldownField: "lastVaultPushAt",
       cooldownMs: VAULT_COOLDOWN_MS,
+    },
+  );
+}
+
+/** Daily newspaper claim is available again. */
+export async function notifyNewspaperReady(
+  userId: string,
+): Promise<SendResult> {
+  if (!(await assertHuman(userId))) return { sent: 0, pruned: 0 };
+
+  return deliver(
+    userId,
+    {
+      type: "newspaper_ready",
+      title: "Fresh edition!",
+      body: "Today's Footballica Times is on the stand — claim your booster.",
+      url: "/club",
+    },
+    {
+      prefer: "newspaperReady",
+      cooldownField: "lastNewspaperPushAt",
+      cooldownMs: NEWSPAPER_COOLDOWN_MS,
+    },
+  );
+}
+
+/** Stamina bar is full — ready for another match. */
+export async function notifyStaminaFull(userId: string): Promise<SendResult> {
+  if (!(await assertHuman(userId))) return { sent: 0, pruned: 0 };
+
+  return deliver(
+    userId,
+    {
+      type: "stamina_full",
+      title: "Squad rested",
+      body: "Stamina is full — kick off a match from Play.",
+      url: "/play",
+    },
+    {
+      prefer: "staminaFull",
+      cooldownField: "lastStaminaPushAt",
+      cooldownMs: STAMINA_COOLDOWN_MS,
     },
   );
 }

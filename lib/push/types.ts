@@ -11,4 +11,16 @@ export type PushPayload =
       title: string;
       body: string;
       url: string;
+    }
+  | {
+      type: "newspaper_ready";
+      title: string;
+      body: string;
+      url: string;
+    }
+  | {
+      type: "stamina_full";
+      title: string;
+      body: string;
+      url: string;
     };

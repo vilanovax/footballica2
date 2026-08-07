@@ -72,7 +72,7 @@ export function LeaveMatchDialog({
               <button
                 type="button"
                 onClick={onStay}
-                className="btn-fantasy btn-fantasy-primary w-full"
+                className="game-cta game-cta-primary w-full"
               >
                 {t("quiz.leaveStay")}
               </button>

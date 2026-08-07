@@ -1,5 +1,6 @@
 /**
- * Weekly league prize tiers — single source of truth for UI + future payouts.
+ * Weekly league prize tiers — single source of truth for UI + reset payouts.
+ * Paid in `ensureWeeklyLeagueReset` (coins → Club, XP → User).
  * Framework-free so Hub/Leaderboard client components can import safely.
  */
 

@@ -71,7 +71,7 @@ function useAttackTheme(isAttack: boolean): AttackTheme {
             ringTrack: "stroke-orange-400/20",
             score: "text-orange-300",
             accent: "text-orange-300",
-            cta: "btn-fantasy-primary",
+            cta: "game-cta-accent",
             dockRing: "focus:ring-orange-400/50",
           }
         : {
@@ -81,7 +81,7 @@ function useAttackTheme(isAttack: boolean): AttackTheme {
             ringTrack: "stroke-sky-400/20",
             score: "text-sky-300",
             accent: "text-sky-300",
-            cta: "btn-fantasy-secondary",
+            cta: "game-cta-primary",
             dockRing: "focus:ring-sky-400/50",
           },
     [isAttack],
@@ -919,7 +919,7 @@ function PlayerDock({
         disabled={pending || !selectedId}
         onClick={onSubmit}
         className={[
-          "btn-fantasy mt-2 flex min-h-touch w-full items-center justify-center disabled:opacity-40",
+          "game-cta mt-2 flex min-h-touch w-full items-center justify-center disabled:opacity-40",
           theme.cta,
         ].join(" ")}
       >

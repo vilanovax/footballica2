@@ -764,7 +764,7 @@ export function DuelArena({
         type="button"
         disabled={pending}
         onClick={() => startTransition(() => void refresh())}
-        className="btn-fantasy btn-fantasy-primary min-h-touch px-8"
+        className="game-cta game-cta-primary min-h-touch px-8"
       >
         {pending ? "…" : t("duel.continue")}
       </button>

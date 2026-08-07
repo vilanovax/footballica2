@@ -1,3 +1,4 @@
+import { SlidersHorizontal } from "lucide-react";
 import { getGameConfig } from "@/lib/game/gameConfig";
 import { EconomyConfigPanel } from "@/components/admin/EconomyConfigPanel";
 import { AdminHelpTip } from "@/components/admin/AdminHelpTip";
@@ -8,26 +9,83 @@ export default async function AdminGameConfigPage() {
   const config = await getGameConfig();
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4">
-      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-        <h1 className="flex items-center gap-1.5 text-xl font-semibold text-slate-900">
-          Game Config
-          <AdminHelpTip
-            wide
-            title="Live rates"
-            text="One Save updates theme week and economy rates for everyone — no redeploy. Open the indigo Club Biz tab for Managers, Safe, Bank, and facilities."
-          />
-        </h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Match rates · Live Ops ·{" "}
-          <span className="font-semibold text-indigo-700">
-            Club Biz (Managers)
-          </span>{" "}
-          · یک Save برای همه
-        </p>
+    <div className="space-y-4">
+      <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 px-5 py-4 text-white shadow-sm">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -end-12 -top-16 h-40 w-40 rounded-full bg-emerald-400/20 blur-3xl"
+        />
+        <div className="relative">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/15 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-emerald-300 ring-1 ring-emerald-400/30">
+              <SlidersHorizontal className="h-3 w-3" strokeWidth={2.5} />
+              Rates
+            </span>
+            <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/85 ring-1 ring-white/15">
+              One Save · live for everyone
+            </span>
+          </div>
+          <h1 className="mt-2 flex items-center gap-1.5 text-2xl font-bold tracking-tight text-white">
+            Game Config
+            <AdminHelpTip
+              wide
+              title="Live rates"
+              text="One Save updates theme week and economy rates for everyone — no redeploy. Open the Club Biz tab for Managers, Safe, Bank, and facilities."
+            />
+          </h1>
+          <p className="mt-1 text-sm font-medium text-white/70">
+            Match · Live Ops ·{" "}
+            <span className="font-semibold text-indigo-300">Club Biz</span> ·
+            GotD · Duel
+          </p>
+          <div className="mt-3 grid max-w-2xl grid-cols-2 gap-2 sm:grid-cols-5">
+            <HeroStat
+              label="Surv coins"
+              value={config.survival.coinsPerCorrect}
+            />
+            <HeroStat label="Match win" value={config.rewards.coinsPerWin} />
+            <HeroStat
+              label="Mystery"
+              value={config.gotd.mysteryWinCoins}
+              muted
+            />
+            <HeroStat label="Grid" value={config.gotd.gridWinCoins} muted />
+            <HeroStat
+              label="Seed funds"
+              value={config.businessEconomy.seedFunds}
+              muted
+            />
+          </div>
+        </div>
       </div>
 
       <EconomyConfigPanel initialConfig={config} />
+    </div>
+  );
+}
+
+function HeroStat({
+  label,
+  value,
+  muted,
+}: {
+  label: string;
+  value: number;
+  muted?: boolean;
+}) {
+  return (
+    <div className="rounded-lg bg-white/5 px-2.5 py-1.5 ring-1 ring-white/10">
+      <p
+        className={[
+          "text-sm font-bold tabular-nums",
+          muted ? "text-white/85" : "text-white",
+        ].join(" ")}
+      >
+        {value.toLocaleString("en-US")}
+      </p>
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-white/65">
+        {label}
+      </p>
     </div>
   );
 }

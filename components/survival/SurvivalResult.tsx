@@ -14,6 +14,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { PostMatchSummary } from "@/components/match/PostMatchSummary";
 import type { PostMatchTrophy } from "@/components/match/postMatchTypes";
+import { GameCta } from "@/components/ui/game";
 
 type SurvivalResultProps = {
   categoryId: string;
@@ -95,13 +96,9 @@ export function SurvivalResult({
           {t("survival.settleError")}
         </p>
         <p className="text-sm text-muted-foreground">{save.message}</p>
-        <button
-          type="button"
-          onClick={onExit}
-          className="btn-fantasy btn-fantasy-primary"
-        >
+        <GameCta variant="primary" onClick={onExit}>
           {t("survival.backLobby")}
-        </button>
+        </GameCta>
       </section>
     );
   }

@@ -9,6 +9,13 @@ export type PushSubscriptionInput = {
   keys: { p256dh: string; auth: string };
 };
 
+export type PushPrefsInput = {
+  duelYourTurn?: boolean;
+  vaultNearlyFull?: boolean;
+  newspaperReady?: boolean;
+  staminaFull?: boolean;
+};
+
 export async function getPushPublicKey(): Promise<
   { ok: true; publicKey: string } | { ok: false; error: string }
 > {
@@ -25,17 +32,22 @@ export async function getPushStatus(): Promise<{
   subscribed: boolean;
   duelYourTurn: boolean;
   vaultNearlyFull: boolean;
+  newspaperReady: boolean;
+  staminaFull: boolean;
 }> {
+  const defaults = {
+    ok: true as const,
+    configured: isWebPushReady(),
+    subscribed: false,
+    duelYourTurn: true,
+    vaultNearlyFull: true,
+    newspaperReady: true,
+    staminaFull: true,
+  };
+
   const user = await getCurrentUser();
-  if (!user) {
-    return {
-      ok: true,
-      configured: isWebPushReady(),
-      subscribed: false,
-      duelYourTurn: true,
-      vaultNearlyFull: true,
-    };
-  }
+  if (!user) return defaults;
+
   try {
     const sub = await prisma.pushSubscription.findFirst({
       where: { userId: user.id },
@@ -47,16 +59,12 @@ export async function getPushStatus(): Promise<{
       subscribed: Boolean(sub),
       duelYourTurn: sub?.duelYourTurn ?? true,
       vaultNearlyFull: sub?.vaultNearlyFull ?? true,
+      newspaperReady: sub?.newspaperReady ?? true,
+      staminaFull: sub?.staminaFull ?? true,
     };
   } catch {
     // Table missing / migrate pending — keep Settings usable.
-    return {
-      ok: true,
-      configured: isWebPushReady(),
-      subscribed: false,
-      duelYourTurn: true,
-      vaultNearlyFull: true,
-    };
+    return defaults;
   }
 }
 
@@ -108,19 +116,24 @@ export async function removePushSubscription(
   return { ok: true };
 }
 
-export async function updatePushPrefs(input: {
-  duelYourTurn?: boolean;
-  vaultNearlyFull?: boolean;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function updatePushPrefs(
+  input: PushPrefsInput,
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "unauthorized" };
 
-  const data: { duelYourTurn?: boolean; vaultNearlyFull?: boolean } = {};
+  const data: PushPrefsInput = {};
   if (typeof input.duelYourTurn === "boolean") {
     data.duelYourTurn = input.duelYourTurn;
   }
   if (typeof input.vaultNearlyFull === "boolean") {
     data.vaultNearlyFull = input.vaultNearlyFull;
+  }
+  if (typeof input.newspaperReady === "boolean") {
+    data.newspaperReady = input.newspaperReady;
+  }
+  if (typeof input.staminaFull === "boolean") {
+    data.staminaFull = input.staminaFull;
   }
   if (Object.keys(data).length === 0) return { ok: true };
 

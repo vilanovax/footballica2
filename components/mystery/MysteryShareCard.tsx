@@ -123,7 +123,7 @@ export function MysteryShareCard(props: Props) {
           type="button"
           disabled={busy}
           onClick={nativeShare}
-          className="btn-fantasy btn-fantasy-primary min-h-touch"
+          className="game-cta game-cta-primary min-h-touch"
         >
           {t("mystery.shareNative")}
         </button>

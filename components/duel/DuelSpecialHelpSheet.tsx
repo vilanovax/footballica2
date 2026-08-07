@@ -306,7 +306,7 @@ function GotItButton({ t, onClose }: { t: TFn; onClose: () => void }) {
         haptic(HAPTIC.tap);
         onClose();
       }}
-      className="btn-fantasy-primary mt-0.5 min-h-12 w-full"
+      className="game-cta game-cta-primary mt-0.5 min-h-12 w-full"
     >
       {t("duel.help.gotIt")}
     </button>

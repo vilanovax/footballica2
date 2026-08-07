@@ -13,6 +13,12 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
+import {
+  GameChip,
+  GameCta,
+  GameIconWell,
+  GamePanel,
+} from "@/components/ui/game";
 
 type Props = {
   initial: DailyMemorySnapshot;
@@ -67,48 +73,83 @@ export function MemoryGotdArena({ initial }: Props) {
   }
 
   if (done) {
+    const solved = memory.status === "SOLVED";
     return (
       <section className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-[#071410]" />
-          <div className="absolute inset-x-0 top-0 h-40 bg-linear-to-b from-teal-400/25 to-transparent" />
+          <div className="absolute inset-0 bg-arena" />
+          <div className="absolute inset-x-0 top-0 h-44 bg-linear-to-b from-teal-400/28 via-emerald-500/10 to-transparent" />
+          <div
+            className="absolute inset-0 opacity-[0.08]"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
+            }}
+          />
         </div>
 
-        <header className="relative z-10 px-3 pt-3">
-          <p className="inline-flex items-center rounded-full bg-teal-400 px-2.5 py-1 font-display text-[11px] font-extrabold text-teal-950">
-            {t("memoryGotd.badge")}
-          </p>
-          <h1 className="mt-2 font-display text-2xl font-black text-white">
-            {t("memoryGotd.title")}
-          </h1>
+        <header className="relative z-10 mx-3 mt-[max(0.5rem,env(safe-area-inset-top))]">
+          <GamePanel tone="sky" className="p-3.5">
+            <div className="relative flex items-center gap-3">
+              <GameIconWell
+                size="md"
+                src="/icons/memory-ball.png"
+                className="h-12 w-12"
+                iconClassName="h-7 w-7"
+              />
+              <div className="min-w-0 flex-1">
+                <GameChip tone="emerald">{t("memoryGotd.badge")}</GameChip>
+                <h1 className="mt-1.5 font-display text-2xl font-black text-white">
+                  {t("memoryGotd.title")}
+                </h1>
+              </div>
+            </div>
+          </GamePanel>
         </header>
 
-        <div className="relative z-10 mt-8 flex flex-1 flex-col items-center gap-4 px-4">
-          <p className="font-display text-xl font-black text-white">
-            {memory.status === "SOLVED"
-              ? t("memoryGotd.solved")
-              : t("memoryGotd.failed")}
-          </p>
-          <p className="font-display text-base font-bold text-teal-200">
-            {t("memoryGotd.pairsResult", {
-              n: toLocaleDigits(memory.pairsFound, locale),
-              total: toLocaleDigits(memory.pairCount, locale),
-            })}
-          </p>
-          <p className="font-display text-sm font-bold text-amber-200/90">
-            🔥{" "}
-            {t("memoryGotd.streak", {
-              n: toLocaleDigits(memory.memoryStreak, locale),
-            })}
-          </p>
-          {memory.shareCode && (
-            <pre className="rounded-2xl bg-black/35 px-4 py-3 font-display text-lg text-white/85 ring-1 ring-white/10">
-              {memory.shareCode}
-            </pre>
-          )}
+        <div className="relative z-10 mt-6 flex flex-1 flex-col items-center gap-3 px-4">
+          <GamePanel
+            tone={solved ? "emerald" : "rose"}
+            className="w-full max-w-sm p-5 text-center"
+          >
+            <GameIconWell
+              size="lg"
+              amber={solved}
+              src={solved ? "/icons/done.png" : "/icons/broken-heart.png"}
+              className="mx-auto h-16 w-16"
+              iconClassName="h-9 w-9"
+            />
+            <p className="mt-3 font-display text-xl font-black text-white">
+              {solved ? t("memoryGotd.solved") : t("memoryGotd.failed")}
+            </p>
+            <p className="mt-1 font-display text-base font-bold text-teal-100/90">
+              {t("memoryGotd.pairsResult", {
+                n: toLocaleDigits(memory.pairsFound, locale),
+                total: toLocaleDigits(memory.pairCount, locale),
+              })}
+            </p>
+            <GameChip tone="amber" className="mt-3 gap-1">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/icons/streak.png"
+                alt=""
+                draggable={false}
+                className="h-3.5 w-3.5 object-contain"
+              />
+              {t("memoryGotd.streak", {
+                n: toLocaleDigits(memory.memoryStreak, locale),
+              })}
+            </GameChip>
+            {memory.shareCode ? (
+              <pre className="mt-3 rounded-2xl bg-black/35 px-4 py-3 font-display text-lg text-white/85 shadow-[0_0_0_1px_rgba(255,255,255,0.12)]">
+                {memory.shareCode}
+              </pre>
+            ) : null}
+          </GamePanel>
+
           <Link
             href="/play"
-            className="btn-fantasy btn-fantasy-primary mt-4 flex min-h-touch w-full max-w-sm items-center justify-center"
+            className="game-cta game-cta-primary mt-2 flex min-h-touch w-full max-w-sm items-center justify-center"
           >
             {t("memoryGotd.backPlay")}
           </Link>
@@ -116,7 +157,7 @@ export function MemoryGotdArena({ initial }: Props) {
 
         <GotdResultModal
           open={showResult && done}
-          outcome={memory.status === "SOLVED" ? "SOLVED" : "FAILED"}
+          outcome={solved ? "SOLVED" : "FAILED"}
           kind="memory"
           rewards={rewards}
           previousStreak={previousStreak}
@@ -132,52 +173,76 @@ export function MemoryGotdArena({ initial }: Props) {
     return (
       <section className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-[#071410]" />
-          <div className="absolute inset-x-0 top-0 h-48 bg-linear-to-b from-teal-400/30 to-transparent" />
+          <div className="absolute inset-0 bg-arena" />
+          <div className="absolute inset-x-0 top-0 h-52 bg-linear-to-b from-teal-400/32 via-sky-500/10 to-transparent" />
+          <div
+            className="absolute inset-0 opacity-[0.08]"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
+            }}
+          />
         </div>
 
-        <header className="relative z-10 px-3 pt-3">
-          <p className="inline-flex items-center rounded-full bg-teal-400 px-2.5 py-1 font-display text-[11px] font-extrabold text-teal-950">
-            {t("memoryGotd.badge")}
-          </p>
-          <h1 className="mt-2 font-display text-2xl font-black text-white">
-            {t("memoryGotd.title")}
-          </h1>
-          <p className="mt-1 font-body text-sm font-bold text-white/70">
-            {t("memoryGotd.hint", {
-              n: toLocaleDigits(memory.pairCount, locale),
-              s: toLocaleDigits(Math.round(memory.turnMs / 1000), locale),
-            })}
-          </p>
+        <header className="relative z-10 mx-3 mt-[max(0.5rem,env(safe-area-inset-top))]">
+          <GamePanel tone="sky" className="p-3.5">
+            <div className="relative flex items-center gap-3">
+              <GameIconWell
+                size="md"
+                src="/icons/memory-ball.png"
+                className="h-12 w-12"
+                iconClassName="h-7 w-7"
+              />
+              <div className="min-w-0 flex-1">
+                <GameChip tone="emerald">{t("memoryGotd.badge")}</GameChip>
+                <h1 className="mt-1.5 font-display text-2xl font-black text-white">
+                  {t("memoryGotd.title")}
+                </h1>
+                <p className="mt-1 font-display text-xs font-bold text-white/65">
+                  {t("memoryGotd.hint", {
+                    n: toLocaleDigits(memory.pairCount, locale),
+                    s: toLocaleDigits(Math.round(memory.turnMs / 1000), locale),
+                  })}
+                </p>
+              </div>
+            </div>
+          </GamePanel>
         </header>
 
         <div className="relative z-10 mt-8 flex flex-1 flex-col items-center justify-center gap-4 px-4 pb-8">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <GameIconWell
+            size="xl"
             src="/icons/memory-ball.png"
-            alt=""
-            draggable={false}
-            className="h-24 w-24 object-contain drop-shadow-[0_8px_24px_rgba(45,212,191,0.35)]"
+            className="h-24 w-24"
+            iconClassName="h-14 w-14"
           />
-          <p className="text-center font-display text-sm font-bold text-white/55">
+          <p className="max-w-xs text-center font-display text-sm font-bold text-white/60">
             {t("memoryGotd.readyBlurb")}
           </p>
-          <p className="font-display text-xs font-bold text-amber-200/80">
-            🔥{" "}
+          <GameChip tone="amber" className="gap-1">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/streak.png"
+              alt=""
+              draggable={false}
+              className="h-3.5 w-3.5 object-contain"
+            />
             {t("memoryGotd.streak", {
               n: toLocaleDigits(memory.memoryStreak, locale),
             })}
-          </p>
-          <button
-            type="button"
+          </GameChip>
+          <GameCta
+            variant="accent"
+            block
             onClick={() => {
               playSound("click");
+              haptic(HAPTIC.tap);
               setStarted(true);
             }}
-            className="btn-fantasy btn-fantasy-accent mt-2 flex min-h-12 w-full max-w-sm items-center justify-center font-display text-base font-extrabold"
+            className="mt-2 max-w-sm text-base"
           >
             {t("memoryGotd.startCta")}
-          </button>
+          </GameCta>
           <Link
             href="/play"
             className="font-display text-sm font-bold text-white/45 underline-offset-2 hover:underline"

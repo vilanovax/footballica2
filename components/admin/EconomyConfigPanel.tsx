@@ -22,7 +22,6 @@ import {
 import { updateGameConfig } from "@/actions/admin/config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { AdminHelpTip } from "@/components/admin/AdminHelpTip";
 import { LiveOpsThemesPanel } from "@/components/admin/LiveOpsThemesPanel";
 import { ClubBizConfigSections } from "@/components/admin/ClubBizConfigSections";
@@ -298,92 +297,98 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
   }
 
   return (
-    <div className="space-y-4 pb-24">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Snap label="Surv" value={draft.survival.coinsPerCorrect} />
-          <Snap label="Match" value={draft.rewards.coinsPerWin} />
-          <Snap label="Mystery" value={draft.gotd.mysteryWinCoins} />
-          <Snap label="Grid" value={draft.gotd.gridWinCoins} />
-          <Snap label="Funds" value={draft.businessEconomy.seedFunds} />
-        </div>
-        {dirty ? (
-          <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100">
-            Unsaved
-          </Badge>
-        ) : (
-          <Badge variant="secondary" className="bg-emerald-50 text-emerald-800">
-            Live
-          </Badge>
-        )}
-      </div>
-
-      <div
-        className="flex flex-wrap gap-1.5 rounded-2xl border border-slate-200 bg-slate-50 p-1.5"
-        role="tablist"
-        aria-label="Game Config sections"
+    <div className="space-y-3 pb-24">
+      <section
+        className={[
+          "sticky top-2 z-10 overflow-hidden rounded-xl border bg-white shadow-sm",
+          dirty ? "border-amber-300" : "border-slate-200/90",
+        ].join(" ")}
       >
-        {TABS.map(({ id, label, icon: Icon }) => {
-          const active = tab === id;
-          const club = id === "club";
-          const gotd = id === "gotd";
-          const duel = id === "duel";
-          const survival = id === "survival";
-          const match = id === "match";
-          const advanced = id === "advanced";
-          return (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => setTab(id)}
-              className={[
-                "flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold transition-colors",
-                active && club
-                  ? "bg-indigo-600 text-white shadow-sm"
-                  : active && gotd
-                    ? "bg-violet-600 text-white shadow-sm"
-                    : active && duel
-                      ? "bg-rose-600 text-white shadow-sm"
-                      : active && survival
-                        ? "bg-amber-600 text-white shadow-sm"
-                        : active && match
-                          ? "bg-emerald-600 text-white shadow-sm"
-                          : active && advanced
-                            ? "bg-slate-800 text-white shadow-sm"
-                            : active
-                              ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200"
-                              : club
-                                ? "bg-indigo-50 text-indigo-800 ring-1 ring-indigo-200 hover:bg-indigo-100"
-                                : gotd
-                                  ? "bg-violet-50 text-violet-800 ring-1 ring-violet-200 hover:bg-violet-100"
-                                  : duel
-                                    ? "bg-rose-50 text-rose-800 ring-1 ring-rose-200 hover:bg-rose-100"
-                                    : survival
-                                      ? "bg-amber-50 text-amber-900 ring-1 ring-amber-200 hover:bg-amber-100"
-                                      : match
-                                        ? "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100"
-                                        : advanced
-                                          ? "bg-slate-100 text-slate-700 ring-1 ring-slate-300 hover:bg-slate-200"
-                                          : "text-slate-500 hover:bg-white/80 hover:text-slate-800",
-              ].join(" ")}
-            >
-              <Icon className="h-4 w-4" strokeWidth={2} />
-              {label}
-            </button>
-          );
-        })}
-      </div>
-
-      {tab === "live" && (
-        <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
-          <p className="text-sm font-semibold text-slate-900">
-            {activeTab.label}
-          </p>
-          <p className="text-xs text-slate-500">{activeTab.blurb}</p>
+        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-3.5 py-2.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Snap label="Surv" value={draft.survival.coinsPerCorrect} />
+            <Snap label="Match" value={draft.rewards.coinsPerWin} />
+            <Snap label="Mystery" value={draft.gotd.mysteryWinCoins} />
+            <Snap label="Grid" value={draft.gotd.gridWinCoins} />
+            <Snap label="Funds" value={draft.businessEconomy.seedFunds} />
+          </div>
+          {dirty ? (
+            <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-950 ring-1 ring-amber-200">
+              Unsaved
+            </span>
+          ) : (
+            <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-950 ring-1 ring-emerald-200">
+              Live
+            </span>
+          )}
+        </header>
+        <div
+          className="flex flex-wrap gap-1 p-2"
+          role="tablist"
+          aria-label="Game Config sections"
+        >
+          {TABS.map(({ id, label, icon: Icon }) => {
+            const active = tab === id;
+            const club = id === "club";
+            const gotd = id === "gotd";
+            const duel = id === "duel";
+            const survival = id === "survival";
+            const match = id === "match";
+            const advanced = id === "advanced";
+            return (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setTab(id)}
+                className={[
+                  "flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3 text-xs font-bold transition-colors",
+                  active && club
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : active && gotd
+                      ? "bg-violet-600 text-white shadow-sm"
+                      : active && duel
+                        ? "bg-rose-600 text-white shadow-sm"
+                        : active && survival
+                          ? "bg-amber-600 text-white shadow-sm"
+                          : active && match
+                            ? "bg-emerald-600 text-white shadow-sm"
+                            : active && advanced
+                              ? "bg-slate-900 text-white shadow-sm"
+                              : active
+                                ? "bg-slate-900 text-white shadow-sm"
+                                : club
+                                  ? "bg-indigo-50 text-indigo-950 ring-1 ring-indigo-200 hover:bg-indigo-100"
+                                  : gotd
+                                    ? "bg-violet-50 text-violet-950 ring-1 ring-violet-200 hover:bg-violet-100"
+                                    : duel
+                                      ? "bg-rose-50 text-rose-950 ring-1 ring-rose-200 hover:bg-rose-100"
+                                      : survival
+                                        ? "bg-amber-50 text-amber-950 ring-1 ring-amber-200 hover:bg-amber-100"
+                                        : match
+                                          ? "bg-emerald-50 text-emerald-950 ring-1 ring-emerald-200 hover:bg-emerald-100"
+                                          : advanced
+                                            ? "bg-white text-slate-800 ring-1 ring-slate-200 hover:bg-slate-50"
+                                            : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50",
+                ].join(" ")}
+              >
+                <Icon className="h-3.5 w-3.5" strokeWidth={2.25} />
+                {label}
+              </button>
+            );
+          })}
         </div>
-      )}
+      </section>
+
+      <div className="rounded-xl border border-slate-200/90 bg-white px-3.5 py-2.5 shadow-sm">
+        <p className="text-sm font-semibold text-slate-900">
+          {activeTab.label}
+        </p>
+        <p className="text-[11px] font-medium text-slate-700">
+          {activeTab.blurb}
+        </p>
+      </div>
 
       {tab === "live" ? (
         <>
@@ -392,16 +397,16 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
             onChange={(next) => setDraft(mergeGameConfig(next))}
           />
 
-          <div className="rounded-2xl border border-amber-200 bg-amber-50/40 p-3">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 shadow-sm">
             <div className="mb-2 flex items-center justify-between gap-2">
-              <p className="text-xs font-bold uppercase tracking-wide text-amber-900">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-amber-950">
                 Survival coins event
               </p>
               <span className="font-mono text-xs font-bold text-amber-950">
                 {draft.survival.coinsPerCorrect}
               </span>
             </div>
-            <div className="grid grid-cols-3 gap-1 rounded-xl bg-white/80 p-1 ring-1 ring-amber-100">
+            <div className="grid grid-cols-3 gap-1 rounded-lg bg-white p-1 ring-1 ring-amber-200">
               {(
                 [
                   { m: 0.5, label: "½×" },
@@ -416,10 +421,10 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
                     type="button"
                     onClick={() => quickSurvivalCoins(m)}
                     className={[
-                      "rounded-lg px-2 py-2 text-xs font-bold transition",
+                      "rounded-md px-2 py-2 text-xs font-bold transition",
                       on
-                        ? "bg-amber-500 text-white shadow-sm"
-                        : "text-amber-950/70 hover:bg-amber-100",
+                        ? "bg-amber-600 text-white shadow-sm"
+                        : "text-amber-950 hover:bg-amber-100",
                     ].join(" ")}
                   >
                     {label}
@@ -457,13 +462,13 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
       ) : tab === "advanced" ? (
         <AdvancedConfigSections draft={draft} onFieldChange={onFieldChange} />
       ) : (
-        <div className="grid gap-2.5 sm:grid-cols-2">
+        <div className="grid gap-2 sm:grid-cols-2">
           {fields.map((field) => (
             <label
               key={field.key}
-              className="flex flex-col gap-1.5 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm transition focus-within:ring-2 focus-within:ring-emerald-300/50"
+              className="flex flex-col gap-1.5 rounded-xl border border-slate-200/90 bg-white px-3 py-2.5 shadow-sm transition focus-within:ring-2 focus-within:ring-emerald-300/50"
             >
-              <span className="flex items-center justify-between gap-1 text-xs font-semibold text-slate-800">
+              <span className="flex items-center justify-between gap-1 text-xs font-semibold text-slate-900">
                 <span className="min-w-0 truncate">{field.label}</span>
                 <AdminHelpTip
                   text={`${field.description} ${field.tip}`.trim()}
@@ -482,9 +487,14 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
         </div>
       )}
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:start-60">
+      <div
+        className={[
+          "fixed inset-x-0 bottom-0 z-40 border-t bg-white/95 px-4 py-2.5 backdrop-blur sm:start-60",
+          dirty ? "border-amber-300" : "border-slate-200",
+        ].join(" ")}
+      >
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2">
-          <p className="text-xs text-slate-500">
+          <p className="text-xs font-semibold text-slate-800">
             {dirty ? "Unsaved — Save to go live" : "Live for all players"}
           </p>
           <div className="flex gap-2">
@@ -494,7 +504,7 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
               size="sm"
               disabled={pending}
               onClick={resetDefaults}
-              className="gap-1.5"
+              className="h-8 gap-1.5 border-slate-200 bg-white"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               Defaults
@@ -504,7 +514,12 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
               size="sm"
               disabled={pending || !dirty}
               onClick={save}
-              className="min-w-24 gap-1.5"
+              className={[
+                "h-8 min-w-24 gap-1.5",
+                dirty
+                  ? "bg-emerald-600 text-white hover:bg-emerald-500"
+                  : "",
+              ].join(" ")}
             >
               <Save className="h-3.5 w-3.5" />
               {pending ? "Saving…" : "Save"}
@@ -518,8 +533,8 @@ export function EconomyConfigPanel({ initialConfig }: EconomyConfigPanelProps) {
 
 function Snap({ label, value }: { label: string; value: number }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] shadow-sm">
-      <span className="font-medium text-slate-500">{label}</span>
+    <span className="inline-flex items-center gap-1.5 rounded-md bg-white px-2 py-0.5 text-[11px] ring-1 ring-slate-200">
+      <span className="font-semibold text-slate-700">{label}</span>
       <span className="font-mono text-xs font-bold tabular-nums text-slate-900">
         {value}
       </span>

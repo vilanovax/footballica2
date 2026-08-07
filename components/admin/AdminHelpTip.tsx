@@ -74,7 +74,7 @@ export function FieldLabel({
   );
 }
 
-/** Soft callout used at the top of admin sections. */
+/** Soft callout used at the top of admin sections. Collapsed by default to keep tables above the fold. */
 export function AdminHowItWorks({
   title,
   steps,
@@ -83,9 +83,22 @@ export function AdminHowItWorks({
   steps: string[];
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3.5 shadow-sm">
-      <p className="text-sm font-semibold text-slate-900">{title}</p>
-      <ol className="mt-2 space-y-1.5 text-xs leading-relaxed text-slate-600">
+    <details className="group rounded-xl border border-slate-200 bg-white shadow-sm open:shadow-md">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-2.5 text-sm font-semibold text-slate-800 marker:content-none [&::-webkit-details-marker]:hidden">
+        <span className="flex items-center gap-2">
+          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-sky-50 text-[11px] font-bold text-sky-700 ring-1 ring-sky-100">
+            ?
+          </span>
+          {title}
+        </span>
+        <span className="text-[11px] font-semibold text-slate-400 group-open:hidden">
+          Show
+        </span>
+        <span className="hidden text-[11px] font-semibold text-slate-400 group-open:inline">
+          Hide
+        </span>
+      </summary>
+      <ol className="space-y-1.5 border-t border-slate-100 px-4 py-3 text-xs leading-relaxed text-slate-600">
         {steps.map((step, i) => (
           <li key={i} className="flex gap-2">
             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-500">
@@ -95,6 +108,6 @@ export function AdminHowItWorks({
           </li>
         ))}
       </ol>
-    </div>
+    </details>
   );
 }

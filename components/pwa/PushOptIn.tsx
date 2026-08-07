@@ -8,6 +8,7 @@ import {
   removePushSubscription,
   savePushSubscription,
   updatePushPrefs,
+  type PushPrefsInput,
 } from "@/actions/push/subscribe";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
@@ -22,8 +23,10 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return out;
 }
 
+type PrefKey = keyof PushPrefsInput;
+
 /**
- * Settings card — opt into Web Push for duel turns + vault-nearly-full.
+ * Settings card — opt into Web Push for duel / vault / newspaper / stamina.
  */
 export function PushOptIn() {
   const { t } = useTranslation();
@@ -32,6 +35,8 @@ export function PushOptIn() {
   const [subscribed, setSubscribed] = useState(false);
   const [duelOn, setDuelOn] = useState(true);
   const [vaultOn, setVaultOn] = useState(true);
+  const [newsOn, setNewsOn] = useState(true);
+  const [staminaOn, setStaminaOn] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [supported, setSupported] = useState(true);
 
@@ -49,6 +54,8 @@ export function PushOptIn() {
       setSubscribed(status.subscribed);
       setDuelOn(status.duelYourTurn);
       setVaultOn(status.vaultNearlyFull);
+      setNewsOn(status.newspaperReady);
+      setStaminaOn(status.staminaFull);
     });
   }, []);
 
@@ -106,13 +113,12 @@ export function PushOptIn() {
     setSubscribed(false);
   }
 
-  function togglePref(
-    key: "duelYourTurn" | "vaultNearlyFull",
-    value: boolean,
-  ) {
+  function togglePref(key: PrefKey, value: boolean) {
     haptic(HAPTIC.light);
     if (key === "duelYourTurn") setDuelOn(value);
-    else setVaultOn(value);
+    else if (key === "vaultNearlyFull") setVaultOn(value);
+    else if (key === "newspaperReady") setNewsOn(value);
+    else if (key === "staminaFull") setStaminaOn(value);
     startTransition(async () => {
       await updatePushPrefs({ [key]: value });
     });
@@ -161,6 +167,16 @@ export function PushOptIn() {
             label={t("settings.pushVault")}
             checked={vaultOn}
             onChange={(v) => togglePref("vaultNearlyFull", v)}
+          />
+          <PrefSwitch
+            label={t("settings.pushNewspaper")}
+            checked={newsOn}
+            onChange={(v) => togglePref("newspaperReady", v)}
+          />
+          <PrefSwitch
+            label={t("settings.pushStamina")}
+            checked={staminaOn}
+            onChange={(v) => togglePref("staminaFull", v)}
           />
         </div>
       )}

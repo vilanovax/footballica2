@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Flag } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { AdminHelpTip } from "@/components/admin/AdminHelpTip";
@@ -96,10 +97,33 @@ export default async function AdminReportsPage({
     .slice(0, 4);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-1.5 text-xl font-semibold text-slate-900">
+    <div className="space-y-4">
+      <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 px-5 py-4 text-white shadow-sm">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -end-12 -top-16 h-40 w-40 rounded-full bg-rose-400/20 blur-3xl"
+        />
+        <div className="relative">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-400/15 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-rose-300 ring-1 ring-rose-400/30">
+                <Flag className="h-3 w-3" strokeWidth={2.5} />
+                Triage
+              </span>
+              <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/85 ring-1 ring-white/15">
+                {counts.PENDING > 0
+                  ? `${counts.PENDING} new in queue`
+                  : "Queue clear"}
+              </span>
+            </div>
+            <Link
+              href="/admin/questions"
+              className="text-sm font-semibold text-rose-300 underline-offset-2 hover:underline"
+            >
+              Question bank
+            </Link>
+          </div>
+          <h1 className="mt-2 flex items-center gap-1.5 text-2xl font-bold tracking-tight text-white">
             Reports
             <AdminHelpTip
               wide
@@ -107,105 +131,77 @@ export default async function AdminReportsPage({
               text="Players flag questions in-quiz. New = needs action. Resolve after you fix (or accept). Reject if the report is wrong. Edit opens the question bank."
             />
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            گزارش سوالات · triage queue
+          <p className="mt-1 text-sm font-medium text-white/70">
+            گزارش سوالات · triage queue · dates Shamsi
           </p>
+          <div className="mt-3 grid max-w-xl grid-cols-2 gap-2 sm:grid-cols-4">
+            <HeroStat label="New" value={counts.PENDING} />
+            <HeroStat label="Resolved" value={counts.RESOLVED} />
+            <HeroStat label="Rejected" value={counts.REJECTED} muted />
+            <HeroStat label="Total" value={counts.ALL} muted />
+          </div>
         </div>
-        <Link
-          href="/admin/questions"
-          className="text-sm font-medium text-emerald-700 underline-offset-2 hover:underline"
-        >
-          Question bank
-        </Link>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Stat
-          label="New"
-          value={counts.PENDING}
-          hint={counts.PENDING > 0 ? "Needs triage" : "Queue clear"}
-          tone={counts.PENDING > 0 ? "rose" : "emerald"}
-        />
-        <Stat
-          label="Resolved"
-          value={counts.RESOLVED}
-          hint="Handled"
-          tone="emerald"
-        />
-        <Stat
-          label="Rejected"
-          value={counts.REJECTED}
-          hint="No change"
-          tone="slate"
-        />
       </div>
 
       {topReasons.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
-          <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white px-3.5 py-2.5 shadow-sm">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-slate-700">
             Open by reason
           </span>
           {topReasons.map((r) => (
             <span
               key={r.code}
-              className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-900 ring-1 ring-amber-100"
+              className="inline-flex items-center gap-1.5 rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-950 ring-1 ring-amber-200"
             >
               {r.label}
-              <span className="tabular-nums text-amber-700">{r.count}</span>
+              <span className="tabular-nums">{r.count}</span>
             </span>
           ))}
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <ReportFilters active={active} counts={counts} />
-        <p className="text-xs text-slate-500">
-          Showing {items.length}
-          {active === "ALL" ? ` of ${counts.ALL}` : ""} · dates Shamsi
-        </p>
-      </div>
-
-      <ReportsQueue
-        items={items}
-        active={active}
-        pendingCount={counts.PENDING}
-      />
+      <section className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm">
+        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-3.5 py-2.5">
+          <ReportFilters active={active} counts={counts} />
+          <p className="text-[11px] font-semibold text-slate-700">
+            Showing {items.length}
+            {active === "ALL" ? ` of ${counts.ALL}` : ""}
+          </p>
+        </header>
+        <div className="p-3">
+          <ReportsQueue
+            items={items}
+            active={active}
+            pendingCount={counts.PENDING}
+          />
+        </div>
+      </section>
     </div>
   );
 }
 
-function Stat({
+function HeroStat({
   label,
   value,
-  hint,
-  tone,
+  muted,
 }: {
   label: string;
   value: number;
-  hint: string;
-  tone: "rose" | "emerald" | "slate";
+  muted?: boolean;
 }) {
-  const border =
-    tone === "rose"
-      ? "border-rose-200"
-      : tone === "emerald"
-        ? "border-emerald-200"
-        : "border-slate-200";
-  const valueCls =
-    tone === "rose"
-      ? "text-rose-700"
-      : tone === "emerald"
-        ? "text-emerald-800"
-        : "text-slate-900";
   return (
-    <div className={`rounded-2xl border bg-white p-4 shadow-sm ${border}`}>
-      <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+    <div className="rounded-lg bg-white/5 px-2.5 py-1.5 ring-1 ring-white/10">
+      <p
+        className={[
+          "text-sm font-bold tabular-nums",
+          muted ? "text-white/85" : "text-white",
+        ].join(" ")}
+      >
+        {value.toLocaleString("en-US")}
+      </p>
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-white/65">
         {label}
       </p>
-      <p className={`mt-1 text-2xl font-bold tabular-nums ${valueCls}`}>
-        {value}
-      </p>
-      <p className="mt-0.5 text-xs text-slate-500">{hint}</p>
     </div>
   );
 }

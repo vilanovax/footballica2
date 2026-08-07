@@ -8,6 +8,13 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
+import {
+  GameChip,
+  GameCta,
+  GameIconWell,
+  GamePanel,
+  GameTile,
+} from "@/components/ui/game";
 
 type SurvivalCategoryPickerProps = {
   categories: DuelCategoryOption[];
@@ -29,44 +36,60 @@ export function SurvivalCategoryPicker({
 
   if (categories.length === 0) {
     return (
-      <section className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
-        <div className="text-5xl" aria-hidden>
-          📚
-        </div>
-        <h1 className="font-display text-xl font-bold text-foreground">
-          {t("survival.noCategories")}
-        </h1>
-        <p className="max-w-xs text-sm text-muted-foreground">
-          {t("survival.noCategoriesHint")}
-        </p>
-        <button
-          type="button"
-          onClick={() => router.push("/play/survival")}
-          className="btn-fantasy btn-fantasy-secondary"
-        >
-          {t("survival.backLobby")}
-        </button>
+      <section className="flex flex-1 flex-col items-center justify-center gap-4 px-4 text-center">
+        <GamePanel tone="rose" className="w-full max-w-sm p-6">
+          <GameIconWell
+            size="lg"
+            src="/icons/target.png"
+            className="mx-auto h-16 w-16"
+            iconClassName="h-9 w-9"
+          />
+          <h1 className="mt-3 font-display text-xl font-bold text-white">
+            {t("survival.noCategories")}
+          </h1>
+          <p className="mt-1 font-display text-sm font-bold text-white/60">
+            {t("survival.noCategoriesHint")}
+          </p>
+          <GameCta
+            variant="ghost"
+            block
+            className="mt-4"
+            onClick={() => router.push("/play/survival")}
+          >
+            {t("survival.backLobby")}
+          </GameCta>
+        </GamePanel>
       </section>
     );
   }
 
   return (
-    <section className="flex flex-1 flex-col gap-5">
-      <header className="text-center">
-        <p className="font-display text-sm font-semibold uppercase tracking-widest text-secondary">
-          {t("survival.eyebrow")}
-        </p>
-        <h1 className="mt-1 font-display text-2xl font-bold text-foreground">
-          {t("survival.pickTitle")}
-        </h1>
-        <p className="mt-1 font-body text-sm font-semibold text-muted-foreground">
-          {challengeId
-            ? t("survival.pickSubChallenge")
-            : t("survival.pickSub")}
-        </p>
-      </header>
+    <section className="flex flex-1 flex-col gap-4 pb-4">
+      <GamePanel tone="rose" className="p-3.5 text-start">
+        <div className="relative flex items-center gap-3">
+          <GameIconWell
+            size="md"
+            src="/icons/heart.png"
+            className="h-12 w-12"
+            iconClassName="h-7 w-7"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-[11px] font-bold uppercase tracking-widest text-rose-200/70">
+              {t("survival.eyebrow")}
+            </p>
+            <h1 className="mt-0.5 font-display text-2xl font-black text-white">
+              {t("survival.pickTitle")}
+            </h1>
+            <p className="mt-1 font-display text-xs font-bold text-white/65">
+              {challengeId
+                ? t("survival.pickSubChallenge")
+                : t("survival.pickSub")}
+            </p>
+          </div>
+        </div>
+      </GamePanel>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2.5">
         {categories.map((c, i) => {
           const name = locale === "fa" ? c.nameFa : c.nameEn;
           const best = records[c.id] ?? 0;
@@ -76,15 +99,15 @@ export function SurvivalCategoryPicker({
               key={c.id}
               type="button"
               disabled={pending}
-              initial={{ y: 14 }}
-              animate={{ y: 0 }}
+              initial={{ y: 14, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
               transition={{
                 delay: i * 0.04,
                 type: "spring",
                 stiffness: 300,
                 damping: 22,
               }}
-              whileTap={{ scale: 0.97 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => {
                 haptic(HAPTIC.tap);
                 playSound("click");
@@ -96,42 +119,55 @@ export function SurvivalCategoryPicker({
                   router.push(`/play/survival?${qs.toString()}`);
                 });
               }}
-              className="flex min-h-touch items-center gap-4 rounded-bubble-lg border-2 border-border bg-surface p-4 text-start opacity-100 shadow-fantasy transition-colors active:border-secondary disabled:opacity-50"
+              className="text-start disabled:opacity-50"
             >
-              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-bubble bg-secondary/15 text-3xl">
-                {c.icon || "❤️"}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block font-display text-lg font-bold text-surface-foreground">
-                  {busy ? t("survival.starting") : name}
+              <GameTile className="flex min-h-touch items-center gap-3 bg-arena/90 px-3 py-3 text-white shadow-arena-ring">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-2xl shadow-[0_0_0_1px_rgba(255,255,255,0.12)]">
+                  {c.icon || "❤️"}
                 </span>
-                <span className="mt-0.5 block font-body text-xs font-semibold text-muted-foreground">
-                  {t("survival.questions", {
-                    n: toLocaleDigits(c.questionCount, locale),
-                  })}
-                  {best > 0
-                    ? ` · ${t("survival.yourBest", {
-                        n: toLocaleDigits(best, locale),
-                      })}`
-                    : ""}
+                <span className="min-w-0 flex-1">
+                  <span className="block font-display text-lg font-bold text-white">
+                    {busy ? t("survival.starting") : name}
+                  </span>
+                  <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                    <GameChip className="tabular-nums">
+                      {t("survival.questions", {
+                        n: toLocaleDigits(c.questionCount, locale),
+                      })}
+                    </GameChip>
+                    {best > 0 ? (
+                      <GameChip tone="amber" className="gap-1 tabular-nums">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src="/icons/trophy.png"
+                          alt=""
+                          draggable={false}
+                          className="h-3 w-3 object-contain"
+                        />
+                        {t("survival.yourBest", {
+                          n: toLocaleDigits(best, locale),
+                        })}
+                      </GameChip>
+                    ) : null}
+                  </span>
                 </span>
-              </span>
+              </GameTile>
             </motion.button>
           );
         })}
       </div>
 
-      <button
-        type="button"
+      <GameCta
+        variant="ghost"
+        className="mx-auto mt-1 min-h-11 px-6"
         onClick={() => {
           playSound("click");
           haptic(HAPTIC.tap);
           router.push("/play/survival");
         }}
-        className="btn-fantasy btn-fantasy-secondary mx-auto mt-2 min-h-11 px-6 text-sm"
       >
         {t("survival.backLobby")}
-      </button>
+      </GameCta>
     </section>
   );
 }

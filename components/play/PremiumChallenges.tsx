@@ -205,7 +205,7 @@ export function PremiumChallenges({
                   <button
                     type="button"
                     onClick={() => playChallenge(c)}
-                    className="btn-fantasy btn-fantasy-accent w-full min-h-12! py-2.5! text-sm"
+                    className="game-cta game-cta-accent w-full min-h-12 py-2.5 text-sm"
                   >
                     {c.conquered
                       ? t("play.challengeReplay")
@@ -216,7 +216,7 @@ export function PremiumChallenges({
                     type="button"
                     disabled={busy}
                     onClick={() => unlock(c)}
-                    className="btn-fantasy btn-fantasy-accent w-full min-h-12! py-2.5! text-sm disabled:opacity-60"
+                    className="game-cta game-cta-accent w-full min-h-12 py-2.5 text-sm disabled:opacity-60"
                   >
                     {busy
                       ? t("play.challengeUnlocking")

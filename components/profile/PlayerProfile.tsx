@@ -770,39 +770,33 @@ export function PlayerProfile({
         />
       )}
 
-      <AnimatePresence>
-        {editing && (
-          <ProfileEditModal
-            initial={{
-              managerName: profile.managerName,
-              clubName: profile.clubName,
-              stadiumName: profile.stadiumName ?? "",
-              avatar: avatarKey,
-              colorKey,
-            }}
-            ownedBadgeSlugs={ownedSlugs}
-            onClose={() => setEditing(false)}
-            onSaved={() => {
-              setEditing(false);
-              router.refresh();
-            }}
-          />
-        )}
-      </AnimatePresence>
+      <ProfileEditModal
+        open={editing}
+        initial={{
+          managerName: profile.managerName,
+          clubName: profile.clubName,
+          stadiumName: profile.stadiumName ?? "",
+          avatar: avatarKey,
+          colorKey,
+        }}
+        ownedBadgeSlugs={ownedSlugs}
+        onClose={() => setEditing(false)}
+        onSaved={() => {
+          setEditing(false);
+          router.refresh();
+        }}
+      />
 
-      <AnimatePresence>
-        {pickingFlag && (
-          <FlagPickerModal
-            current={flag.key as FlagKey}
-            level={level.level}
-            onClose={() => setPickingFlag(false)}
-            onSaved={() => {
-              setPickingFlag(false);
-              router.refresh();
-            }}
-          />
-        )}
-      </AnimatePresence>
+      <FlagPickerModal
+        open={pickingFlag}
+        current={flag.key as FlagKey}
+        level={level.level}
+        onClose={() => setPickingFlag(false)}
+        onSaved={() => {
+          setPickingFlag(false);
+          router.refresh();
+        }}
+      />
 
       <AnimatePresence>
         {inspectAchievement && (

@@ -986,6 +986,8 @@ const en = {
     pushDisable: "Turn off alerts",
     pushDuel: "Duel — your turn",
     pushVault: "Safe nearly full",
+    pushNewspaper: "Newspaper ready",
+    pushStamina: "Stamina full",
     pushUnsupported: "This browser does not support push alerts.",
     pushNotConfigured: "Push is not configured on this server yet.",
     pushDenied: "Permission denied — enable notifications in browser settings.",
@@ -1125,6 +1127,7 @@ const en = {
     edit: {
       button: "Edit Profile",
       title: "Edit Profile",
+      subtitle: "Lock in your club identity",
       managerName: "Manager Name",
       clubName: "Club Name",
       stadiumName: "Stadium Name",
@@ -1144,6 +1147,11 @@ const en = {
     flag: {
       title: "Club Flag",
       subtitle: "Fly your colours",
+      sectionFree: "National colours",
+      sectionPremium: "Prestige crests",
+      freeBadge: "Free",
+      premiumBadge: "Prestige",
+      equipped: "Equipped",
       lvl: "Lvl {n}",
       premiumHint: "Premium flags unlock as you level up.",
       save: "Equip Flag",

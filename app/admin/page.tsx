@@ -14,16 +14,16 @@ import {
   Trophy,
   Target,
   Coins,
+  Radio,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getGameConfig } from "@/lib/game/gameConfig";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   DifficultyBadge,
   QuestionStatusBadge,
 } from "@/components/admin/AdminBadge";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -56,38 +56,94 @@ function KpiCard({
   label,
   value,
   icon: Icon,
-  accent,
+  tone,
   hint,
   href,
+  alert,
 }: {
   label: string;
   value: number;
   icon: LucideIcon;
-  accent: string;
+  tone: "sky" | "violet" | "amber" | "indigo" | "emerald" | "rose";
   hint?: string;
   href?: string;
+  alert?: boolean;
 }) {
+  const tones = {
+    sky: {
+      bar: "bg-sky-500",
+      icon: "bg-sky-50 text-sky-700 ring-sky-100",
+      wash: "from-sky-50/80",
+    },
+    violet: {
+      bar: "bg-violet-500",
+      icon: "bg-violet-50 text-violet-700 ring-violet-100",
+      wash: "from-violet-50/80",
+    },
+    amber: {
+      bar: "bg-amber-500",
+      icon: "bg-amber-50 text-amber-800 ring-amber-100",
+      wash: "from-amber-50/80",
+    },
+    indigo: {
+      bar: "bg-indigo-500",
+      icon: "bg-indigo-50 text-indigo-700 ring-indigo-100",
+      wash: "from-indigo-50/80",
+    },
+    emerald: {
+      bar: "bg-emerald-500",
+      icon: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+      wash: "from-emerald-50/80",
+    },
+    rose: {
+      bar: "bg-rose-500",
+      icon: "bg-rose-50 text-rose-700 ring-rose-100",
+      wash: "from-rose-50/80",
+    },
+  }[tone];
+
   const body = (
-    <Card className={href ? "transition-shadow hover:shadow-md" : undefined}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {label}
-        </CardTitle>
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-xl border bg-white shadow-sm",
+        alert
+          ? "border-rose-200 ring-1 ring-rose-100"
+          : "border-slate-200/90",
+        href && "transition-[box-shadow,transform] hover:-translate-y-0.5 hover:shadow-md",
+      )}
+    >
+      <div
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute inset-x-0 top-0 h-16 bg-linear-to-b to-transparent",
+          tones.wash,
+        )}
+      />
+      <div className={cn("absolute inset-y-0 start-0 w-1", tones.bar)} />
+      <div className="relative flex items-start justify-between gap-2 px-4 pb-3.5 pt-3.5 ps-4">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            {label}
+          </p>
+          <p className="mt-1 text-3xl font-bold tracking-tight tabular-nums text-slate-900">
+            {n(value)}
+          </p>
+          {hint ? (
+            <p className="mt-1 truncate text-xs font-medium text-slate-500">
+              {hint}
+            </p>
+          ) : null}
+        </div>
         <span
-          className={`flex h-9 w-9 items-center justify-center rounded-lg ${accent}`}
+          className={cn(
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1",
+            tones.icon,
+          )}
         >
-          <Icon className="h-4 w-4" strokeWidth={2} />
+          <Icon className="h-4 w-4" strokeWidth={2.25} />
         </span>
-      </CardHeader>
-      <CardContent>
-        <p className="text-3xl font-semibold tabular-nums text-slate-900">
-          {n(value)}
-        </p>
-        {hint ? (
-          <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
-        ) : null}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
   return href ? <Link href={href}>{body}</Link> : body;
 }
@@ -97,31 +153,40 @@ function Panel({
   icon: Icon,
   action,
   children,
+  className,
 }: {
   title: string;
   icon: LucideIcon;
   action?: { label: string; href: string };
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-          <Icon className="h-4 w-4 text-slate-400" strokeWidth={2} />
+    <section
+      className={cn(
+        "overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm",
+        className,
+      )}
+    >
+      <header className="flex items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/70 px-4 py-3">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-slate-500 shadow-sm ring-1 ring-slate-200/80">
+            <Icon className="h-3.5 w-3.5" strokeWidth={2.25} />
+          </span>
           {title}
-        </CardTitle>
+        </h2>
         {action ? (
           <Link
             href={action.href}
-            className="inline-flex items-center gap-0.5 text-xs font-medium text-slate-500 hover:text-slate-800"
+            className="inline-flex items-center gap-0.5 rounded-md px-2 py-1 text-xs font-semibold text-slate-500 transition-colors hover:bg-white hover:text-slate-900"
           >
             {action.label}
-            <ArrowUpRight className="h-3 w-3" />
+            <ArrowUpRight className="h-3.5 w-3.5" />
           </Link>
         ) : null}
-      </CardHeader>
-      <CardContent>{children}</CardContent>
-    </Card>
+      </header>
+      <div className="p-4">{children}</div>
+    </section>
   );
 }
 
@@ -131,32 +196,39 @@ function StatBar({
   value,
   max,
   color,
+  badge,
 }: {
   label: string;
   sublabel?: string;
   value: number;
   max: number;
   color: string;
+  badge?: string;
 }) {
-  const width = max > 0 ? Math.max(2, Math.round((value / max) * 100)) : 0;
+  const width = max > 0 ? Math.max(3, Math.round((value / max) * 100)) : 0;
   return (
     <div>
-      <div className="flex items-center justify-between text-sm">
-        <span className="flex items-baseline gap-2 text-slate-600">
-          {label}
+      <div className="flex items-center justify-between gap-2 text-sm">
+        <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <span className="font-medium text-slate-700">{label}</span>
           {sublabel ? (
             <span dir="rtl" className="text-xs text-slate-400">
               {sublabel}
             </span>
           ) : null}
+          {badge ? (
+            <span className="rounded-full bg-amber-50 px-1.5 py-px text-[10px] font-bold text-amber-800 ring-1 ring-amber-100">
+              {badge}
+            </span>
+          ) : null}
         </span>
-        <span className="font-medium tabular-nums text-slate-800">
+        <span className="shrink-0 font-semibold tabular-nums text-slate-900">
           {n(value)}
         </span>
       </div>
       <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100">
         <div
-          className={`h-full rounded-full ${color}`}
+          className={cn("h-full rounded-full transition-[width]", color)}
           style={{ width: `${width}%` }}
         />
       </div>
@@ -164,7 +236,7 @@ function StatBar({
   );
 }
 
-function SnapChip({
+function RateTile({
   label,
   value,
   unit,
@@ -174,12 +246,45 @@ function SnapChip({
   unit?: string;
 }) {
   return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs shadow-sm">
-      <span className="font-medium text-slate-500">{label}</span>
-      <span className="font-mono text-sm font-bold tabular-nums text-slate-900">
-        {value}
-      </span>
-      {unit ? <span className="text-slate-400">{unit}</span> : null}
+    <div className="rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2.5">
+      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+        {label}
+      </p>
+      <p className="mt-0.5 flex items-baseline gap-1">
+        <span className="font-mono text-lg font-bold tabular-nums text-slate-900">
+          {value}
+        </span>
+        {unit ? (
+          <span className="text-xs font-medium text-slate-400">{unit}</span>
+        ) : null}
+      </p>
+    </div>
+  );
+}
+
+function MiniStat({
+  value,
+  label,
+  emphasize,
+}: {
+  value: number | string;
+  label: string;
+  emphasize?: "amber" | "emerald" | "rose";
+}) {
+  return (
+    <div className="rounded-lg bg-slate-50 px-3 py-2.5 ring-1 ring-slate-100">
+      <p
+        className={cn(
+          "text-2xl font-bold tabular-nums tracking-tight",
+          emphasize === "amber" && "text-amber-700",
+          emphasize === "emerald" && "text-emerald-600",
+          emphasize === "rose" && "text-rose-600",
+          !emphasize && "text-slate-900",
+        )}
+      >
+        {typeof value === "number" ? n(value) : value}
+      </p>
+      <p className="mt-0.5 text-[11px] font-semibold text-slate-500">{label}</p>
     </div>
   );
 }
@@ -369,23 +474,62 @@ export default async function AdminDashboardPage() {
     },
   });
 
+  const attention =
+    reports.PENDING + needsReview > 0
+      ? `${n(reports.PENDING)} reports · ${n(needsReview)} in queue`
+      : "Queues clear";
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">Dashboard</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Live Ops pulse + content health — what&apos;s live, what&apos;s
-          earning, what needs attention.
-        </p>
+    <div className="space-y-5">
+      {/* Hero */}
+      <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 px-5 py-5 text-white shadow-sm sm:px-6">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -end-16 -top-20 h-48 w-48 rounded-full bg-emerald-400/20 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -start-10 bottom-0 h-32 w-32 rounded-full bg-sky-400/15 blur-3xl"
+        />
+        <div className="relative flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/15 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-emerald-300 ring-1 ring-emerald-400/30">
+                <Radio className="h-3 w-3" strokeWidth={2.5} />
+                Live-Ops
+              </span>
+              <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-slate-300 ring-1 ring-white/10">
+                {attention}
+              </span>
+            </div>
+            <h1 className="mt-2.5 text-2xl font-bold tracking-tight text-white">
+              Control room
+            </h1>
+            <p className="mt-1 max-w-xl text-sm font-medium text-slate-400">
+              Pulse on players, economy rates, challenges, and content health —
+              jump straight to what needs a hand.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <QuickLink href="/admin/config" label="Config" icon={Coins} dark />
+            <QuickLink
+              href="/admin/questions"
+              label="Questions"
+              icon={ListChecks}
+              dark
+            />
+            <QuickLink href="/admin/reports" label="Reports" icon={Flag} dark />
+          </div>
+        </div>
       </div>
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
         <KpiCard
           label="Players"
           value={playerCount}
           icon={Users}
-          accent="bg-sky-100 text-sky-700"
+          tone="sky"
           hint={`${n(botCount)} bots`}
           href="/admin/users"
         />
@@ -393,14 +537,14 @@ export default async function AdminDashboardPage() {
           label="Matches (7d)"
           value={matchesWeek}
           icon={Activity}
-          accent="bg-violet-100 text-violet-700"
+          tone="violet"
           hint={`${n(weekCoins)} coins paid`}
         />
         <KpiCard
           label="Live challenges"
           value={challengeLive}
           icon={Trophy}
-          accent="bg-amber-100 text-amber-700"
+          tone="amber"
           hint={`${n(challengeTotal)} total · ${n(challengeConquers)} conquered`}
           href="/admin/challenges"
         />
@@ -408,15 +552,15 @@ export default async function AdminDashboardPage() {
           label="Mission batches"
           value={missionActiveBatches}
           icon={Target}
-          accent="bg-indigo-100 text-indigo-700"
-          hint={`${n(missionBatchesTotal)} total · ${n(chestClaims)} chests claimed`}
+          tone="indigo"
+          hint={`${n(missionBatchesTotal)} total · ${n(chestClaims)} chests`}
           href="/admin/missions"
         />
         <KpiCard
           label="Published Qs"
           value={status.PUBLISHED}
           icon={CheckCircle2}
-          accent="bg-emerald-100 text-emerald-600"
+          tone="emerald"
           hint={`${publishedPct}% of ${n(totalQuestions)}`}
           href="/admin/questions"
         />
@@ -424,104 +568,89 @@ export default async function AdminDashboardPage() {
           label="Open reports"
           value={reports.PENDING}
           icon={Flag}
-          accent="bg-rose-100 text-rose-600"
+          tone="rose"
           hint={reports.PENDING > 0 ? "Needs triage" : "Queue clear"}
           href="/admin/reports"
+          alert={reports.PENDING > 0}
         />
       </div>
 
       {/* Economy snapshot */}
       <Panel
-        title="Game Config (live rates)"
+        title="Game Config — live rates"
         icon={Coins}
         action={{ label: "Open", href: "/admin/config" }}
       >
-        <p className="mb-3 text-xs text-muted-foreground">
-          From GameConfig — change anytime on Game Config without a
-          redeploy. Watch Survival coins if wallets inflate.
+        <p className="mb-3 text-xs font-medium text-slate-500">
+          From GameConfig — change without redeploy. Watch Survival coins if
+          wallets inflate.
         </p>
-        <div className="flex flex-wrap gap-2">
-          <SnapChip
-            label="Survival 🪙"
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          <RateTile
+            label="Survival coins"
             value={config.survival.coinsPerCorrect}
             unit="/correct"
           />
-          <SnapChip
+          <RateTile
             label="Survival XP"
             value={config.survival.xpPerCorrect}
             unit="/correct"
           />
-          <SnapChip
+          <RateTile
             label="Match win"
             value={config.rewards.coinsPerWin}
             unit="coins"
           />
-          <SnapChip
-            label="Match XP/goal"
-            value={config.rewards.baseXp}
-          />
-          <SnapChip
+          <RateTile label="Match XP/goal" value={config.rewards.baseXp} />
+          <RateTile
             label="Duel week"
             value={config.duel.winWeeklyXp}
             unit="XP"
           />
-          <SnapChip
+          <RateTile
             label="Survival stamina"
             value={config.survival.staminaCost}
           />
         </div>
       </Panel>
 
-      {/* Live Ops: challenges + match mix */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {/* Live Ops */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Panel
           title="Premium challenges"
           icon={Trophy}
           action={{ label: "Manage", href: "/admin/challenges" }}
         >
-          <div className="mb-4 grid grid-cols-3 gap-3">
-            <div>
-              <p className="text-2xl font-semibold tabular-nums text-slate-900">
-                {n(challengeLive)}
-              </p>
-              <p className="text-xs text-muted-foreground">live now</p>
-            </div>
-            <div>
-              <p className="text-2xl font-semibold tabular-nums text-slate-900">
-                {n(challengeUnlocks)}
-              </p>
-              <p className="text-xs text-muted-foreground">unlocks</p>
-            </div>
-            <div>
-              <p className="text-2xl font-semibold tabular-nums text-amber-700">
-                {n(challengeConquers)}
-              </p>
-              <p className="text-xs text-muted-foreground">conquers</p>
-            </div>
+          <div className="mb-4 grid grid-cols-3 gap-2">
+            <MiniStat value={challengeLive} label="live now" />
+            <MiniStat value={challengeUnlocks} label="unlocks" />
+            <MiniStat
+              value={challengeConquers}
+              label="conquers"
+              emphasize="amber"
+            />
           </div>
           {liveChallenges.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">
-              No live challenges — create one for the Survival lobby.
-            </p>
+            <EmptyHint text="No live challenges — create one for the Survival lobby." />
           ) : (
-            <ul className="divide-y">
+            <ul className="divide-y divide-slate-100 rounded-lg ring-1 ring-slate-100">
               {liveChallenges.map((c) => (
                 <li
                   key={c.id}
-                  className="flex items-center justify-between gap-3 py-2"
+                  className="flex items-center justify-between gap-3 px-3 py-2.5"
                 >
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium text-slate-800">
+                    <span className="block truncate text-sm font-semibold text-slate-800">
                       {c.titleEn}
                     </span>
-                    <span className="text-xs text-muted-foreground">
-                      🪙{n(c.unlockCostCoins)} unlock · target {n(c.targetScore)}
+                    <span className="text-xs font-medium text-slate-500">
+                      {n(c.unlockCostCoins)} unlock · target {n(c.targetScore)}
                       {c.expiresAt
                         ? ` · ends ${timeAgo(c.expiresAt).replace("ago", "").trim()}`
                         : ""}
                     </span>
                   </span>
-                  <span className="flex shrink-0 flex-col items-end gap-0.5 text-xs text-muted-foreground">
+                  <span className="flex shrink-0 flex-col items-end gap-0.5 text-[11px] font-semibold text-slate-500">
                     <span className="tabular-nums">
                       {n(c._count.access)} unlocks
                     </span>
@@ -533,22 +662,17 @@ export default async function AdminDashboardPage() {
               ))}
             </ul>
           )}
-          <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">
-            {n(challengeOnlyBanks)} challenge-only banks · {n(survivalMatchesWeek)}{" "}
-            Survival matches this week
+          <p className="mt-3 text-xs font-medium text-slate-500">
+            {n(challengeOnlyBanks)} challenge-only banks ·{" "}
+            {n(survivalMatchesWeek)} Survival matches this week
           </p>
         </Panel>
 
         <Panel title="Match mix (7 days)" icon={BarChart3}>
           {matchesWeek === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
-              <Sparkles className="h-6 w-6 text-slate-300" />
-              <p className="text-sm text-muted-foreground">
-                No finished matches in the last 7 days.
-              </p>
-            </div>
+            <EmptyHint text="No finished matches in the last 7 days." />
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3.5">
               {modeRows.map((m) => {
                 const row = modeMap[m.id] ?? { count: 0, coins: 0, xp: 0 };
                 return (
@@ -559,7 +683,7 @@ export default async function AdminDashboardPage() {
                       max={maxModeCount}
                       color={m.color}
                     />
-                    <p className="mt-0.5 text-[11px] text-slate-400">
+                    <p className="mt-1 text-[11px] font-medium text-slate-400">
                       {n(row.coins)} coins · {n(row.xp)} XP earned
                     </p>
                   </div>
@@ -567,25 +691,27 @@ export default async function AdminDashboardPage() {
               })}
             </div>
           )}
-          <p className="mt-4 text-xs text-muted-foreground">
+          <p className="mt-4 border-t border-slate-100 pt-3 text-xs font-medium text-slate-500">
             Active mission batches: {n(missionActiveBatches)}. Chests claimed
             lifetime: {n(chestClaims)}.
           </p>
         </Panel>
       </div>
 
-      {/* Content: pipeline + difficulty */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {/* Content pipeline */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Panel
           title="Publishing pipeline"
           icon={Activity}
           action={{ label: "Manage", href: "/admin/questions" }}
         >
           <div className="mb-4 flex items-end gap-2">
-            <span className="text-3xl font-semibold tabular-nums text-slate-900">
+            <span className="text-4xl font-bold tracking-tight tabular-nums text-slate-900">
               {publishedPct}%
             </span>
-            <span className="pb-1 text-sm text-muted-foreground">live</span>
+            <span className="pb-1.5 text-sm font-semibold text-emerald-600">
+              live
+            </span>
           </div>
           <div className="space-y-3">
             <StatBar
@@ -616,12 +742,12 @@ export default async function AdminDashboardPage() {
         </Panel>
 
         <Panel title="Difficulty mix" icon={BarChart3}>
-          <div className="space-y-3 pt-1">
+          <div className="space-y-3.5 pt-0.5">
             <StatBar
               label="Easy"
               value={difficulty.EASY}
               max={totalQuestions}
-              color="bg-green-500"
+              color="bg-emerald-500"
             />
             <StatBar
               label="Medium"
@@ -636,7 +762,7 @@ export default async function AdminDashboardPage() {
               color="bg-rose-500"
             />
           </div>
-          <p className="mt-4 text-xs text-muted-foreground">
+          <p className="mt-4 text-xs font-medium text-slate-500">
             Authored buckets for filtering. Live difficulty (Elo) evolves from
             real play.
           </p>
@@ -644,36 +770,26 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* Category + engagement */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Panel
           title="Category coverage"
           icon={Layers}
           action={{ label: "Categories", href: "/admin/categories" }}
         >
           {topCategories.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-              No categories yet.
-            </p>
+            <EmptyHint text="No categories yet." />
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3.5">
               {topCategories.map((c) => (
-                <div key={c.id}>
-                  <StatBar
-                    label={c.nameEn}
-                    sublabel={c.nameFa}
-                    value={c._count.questions}
-                    max={maxCatCount}
-                    color={c.challengeOnly ? "bg-amber-500" : "bg-sky-500"}
-                  />
-                  {c.challengeOnly ? (
-                    <Badge
-                      variant="secondary"
-                      className="mt-1 bg-amber-50 text-[10px] text-amber-800"
-                    >
-                      Challenge-only
-                    </Badge>
-                  ) : null}
-                </div>
+                <StatBar
+                  key={c.id}
+                  label={c.nameEn}
+                  sublabel={c.nameFa}
+                  value={c._count.questions}
+                  max={maxCatCount}
+                  color={c.challengeOnly ? "bg-amber-500" : "bg-sky-500"}
+                  badge={c.challengeOnly ? "Challenge-only" : undefined}
+                />
               ))}
               {uncategorized > 0 ? (
                 <StatBar
@@ -689,65 +805,51 @@ export default async function AdminDashboardPage() {
 
         <Panel title="Answer engagement" icon={GaugeCircle}>
           {totalPlays === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
-              <Sparkles className="h-6 w-6 text-slate-300" />
-              <p className="text-sm text-muted-foreground">
-                No answer data yet — stats appear once players start playing.
-              </p>
-            </div>
+            <EmptyHint text="No answer data yet — stats appear once players start playing." />
           ) : (
             <>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <p className="text-2xl font-semibold tabular-nums text-slate-900">
-                    {n(totalPlays)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">served</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-semibold tabular-nums text-slate-900">
-                    {n(totalCorrect)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">correct</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-semibold tabular-nums text-emerald-600">
-                    {accuracy}%
-                  </p>
-                  <p className="text-xs text-muted-foreground">accuracy</p>
-                </div>
+              <div className="grid grid-cols-3 gap-2">
+                <MiniStat value={totalPlays} label="served" />
+                <MiniStat value={totalCorrect} label="correct" />
+                <MiniStat
+                  value={`${accuracy}%`}
+                  label="accuracy"
+                  emphasize="emerald"
+                />
               </div>
-              <div className="mt-4 space-y-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+              <div className="mt-4">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   Most played
                 </p>
-                <ul className="divide-y">
+                <ul className="divide-y divide-slate-100 rounded-lg ring-1 ring-slate-100">
                   {mostPlayed.map((q) => {
                     const p = preview(q.content);
                     const acc = pct(q.timesCorrect, q.timesServed);
                     return (
-                      <li
-                        key={q.id}
-                        className="flex items-center justify-between gap-3 py-1.5"
-                      >
+                      <li key={q.id}>
                         <Link
                           href={`/admin/questions/${q.id}/edit`}
-                          className="min-w-0 truncate text-sm text-slate-700 hover:underline"
+                          className="flex items-center justify-between gap-3 px-3 py-2 transition-colors hover:bg-slate-50"
                         >
-                          {p.en}
+                          <span className="min-w-0 truncate text-sm font-medium text-slate-700">
+                            {p.en}
+                          </span>
+                          <span className="flex shrink-0 items-center gap-2 text-xs font-semibold">
+                            <span className="tabular-nums text-slate-400">
+                              {n(q.timesServed)}×
+                            </span>
+                            <span
+                              className={cn(
+                                "min-w-10 rounded-md px-1.5 py-0.5 text-center tabular-nums",
+                                acc >= 50
+                                  ? "bg-emerald-50 text-emerald-700"
+                                  : "bg-rose-50 text-rose-600",
+                              )}
+                            >
+                              {acc}%
+                            </span>
+                          </span>
                         </Link>
-                        <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-                          <span className="tabular-nums">
-                            {n(q.timesServed)}×
-                          </span>
-                          <span
-                            className={`tabular-nums font-medium ${
-                              acc >= 50 ? "text-emerald-600" : "text-rose-500"
-                            }`}
-                          >
-                            {acc}%
-                          </span>
-                        </span>
                       </li>
                     );
                   })}
@@ -767,27 +869,25 @@ export default async function AdminDashboardPage() {
             action={{ label: "All questions", href: "/admin/questions" }}
           >
             {recent.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                No questions yet.
-              </p>
+              <EmptyHint text="No questions yet." />
             ) : (
-              <ul className="divide-y">
+              <ul className="divide-y divide-slate-100 rounded-lg ring-1 ring-slate-100">
                 {recent.map((q) => {
                   const p = preview(q.content);
                   return (
                     <li key={q.id}>
                       <Link
                         href={`/admin/questions/${q.id}/edit`}
-                        className="flex items-center justify-between gap-3 py-2.5 hover:opacity-80"
+                        className="flex items-center justify-between gap-3 px-3 py-2.5 transition-colors hover:bg-slate-50"
                       >
                         <span className="min-w-0">
-                          <span className="block truncate text-sm font-medium text-slate-800">
+                          <span className="block truncate text-sm font-semibold text-slate-800">
                             {p.en}
                           </span>
                           {p.fa ? (
                             <span
                               dir="rtl"
-                              className="block truncate text-xs text-muted-foreground"
+                              className="mt-0.5 block truncate text-xs text-slate-400"
                             >
                               {p.fa}
                             </span>
@@ -796,7 +896,7 @@ export default async function AdminDashboardPage() {
                         <span className="flex shrink-0 items-center gap-2">
                           <DifficultyBadge difficulty={q.difficulty} />
                           <QuestionStatusBadge status={q.status} />
-                          <span className="w-14 text-right text-xs text-slate-400">
+                          <span className="hidden w-14 text-right text-[11px] font-semibold text-slate-400 sm:block">
                             {timeAgo(q.createdAt)}
                           </span>
                         </span>
@@ -810,7 +910,7 @@ export default async function AdminDashboardPage() {
         </div>
 
         <Panel title="Health & moderation" icon={AlertTriangle}>
-          <ul className="space-y-3 text-sm">
+          <ul className="space-y-1.5">
             <HealthRow
               label="Needs review"
               value={needsReview}
@@ -848,7 +948,7 @@ export default async function AdminDashboardPage() {
               href="/admin/questions"
             />
           </ul>
-          <p className="mt-4 border-t pt-3 text-xs text-muted-foreground">
+          <p className="mt-4 border-t border-slate-100 pt-3 text-xs font-medium text-slate-500">
             {totalReports === 0
               ? "No reports filed yet."
               : `${n(totalReports)} report${totalReports === 1 ? "" : "s"} lifetime.`}
@@ -856,15 +956,30 @@ export default async function AdminDashboardPage() {
         </Panel>
       </div>
 
-      {/* Quick links */}
-      <div className="flex flex-wrap gap-2">
-        <QuickLink href="/admin/config" label="Game Config" icon={Coins} />
-        <QuickLink href="/admin/challenges" label="Challenges" icon={Trophy} />
-        <QuickLink href="/admin/missions" label="Missions" icon={Target} />
-        <QuickLink href="/admin/users" label="Users & Bots" icon={Users} />
-        <QuickLink href="/admin/questions" label="Questions" icon={ListChecks} />
-        <QuickLink href="/admin/reports" label="Reports" icon={Flag} />
-      </div>
+      {/* Quick links dock */}
+      <nav className="sticky bottom-3 z-10">
+        <div className="flex flex-wrap justify-center gap-1.5 rounded-2xl border border-slate-200/90 bg-white/95 p-2 shadow-lg shadow-slate-900/5 backdrop-blur">
+          <QuickLink href="/admin/config" label="Game Config" icon={Coins} />
+          <QuickLink href="/admin/challenges" label="Challenges" icon={Trophy} />
+          <QuickLink href="/admin/missions" label="Missions" icon={Target} />
+          <QuickLink href="/admin/users" label="Users & Bots" icon={Users} />
+          <QuickLink
+            href="/admin/questions"
+            label="Questions"
+            icon={ListChecks}
+          />
+          <QuickLink href="/admin/reports" label="Reports" icon={Flag} />
+        </div>
+      </nav>
+    </div>
+  );
+}
+
+function EmptyHint({ text }: { text: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 rounded-lg bg-slate-50 py-8 text-center ring-1 ring-slate-100">
+      <Sparkles className="h-5 w-5 text-slate-300" />
+      <p className="max-w-xs text-sm font-medium text-slate-500">{text}</p>
     </div>
   );
 }
@@ -873,17 +988,24 @@ function QuickLink({
   href,
   label,
   icon: Icon,
+  dark,
 }: {
   href: string;
   label: string;
   icon: LucideIcon;
+  dark?: boolean;
 }) {
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:border-slate-300 hover:text-slate-900"
+      className={cn(
+        "inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+        dark
+          ? "bg-white/10 text-slate-200 ring-1 ring-white/15 hover:bg-white/15 hover:text-white"
+          : "bg-slate-50 text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100 hover:text-slate-900",
+      )}
     >
-      <Icon className="h-3.5 w-3.5" strokeWidth={2} />
+      <Icon className="h-3.5 w-3.5" strokeWidth={2.25} />
       {label}
     </Link>
   );
@@ -900,26 +1022,35 @@ function HealthRow({
   tone: "ok" | "amber" | "rose" | "sky" | "slate";
   href: string;
 }) {
-  const dot = {
-    ok: "bg-emerald-400",
-    amber: "bg-amber-400",
-    rose: "bg-rose-400",
-    sky: "bg-sky-400",
-    slate: "bg-slate-300",
+  const styles = {
+    ok: "bg-emerald-50 text-emerald-800 ring-emerald-100",
+    amber: "bg-amber-50 text-amber-900 ring-amber-100",
+    rose: "bg-rose-50 text-rose-800 ring-rose-100",
+    sky: "bg-sky-50 text-sky-800 ring-sky-100",
+    slate: "bg-slate-50 text-slate-700 ring-slate-100",
   }[tone];
+  const dot = {
+    ok: "bg-emerald-500",
+    amber: "bg-amber-500",
+    rose: "bg-rose-500",
+    sky: "bg-sky-500",
+    slate: "bg-slate-400",
+  }[tone];
+
   return (
     <li>
       <Link
         href={href}
-        className="flex items-center justify-between gap-2 rounded-md px-1 py-0.5 hover:bg-slate-50"
+        className={cn(
+          "flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 ring-1 transition-colors hover:brightness-[0.98]",
+          styles,
+        )}
       >
-        <span className="flex items-center gap-2 text-slate-600">
-          <span className={`h-2 w-2 rounded-full ${dot}`} />
+        <span className="flex items-center gap-2 text-sm font-semibold">
+          <span className={cn("h-2 w-2 rounded-full", dot)} />
           {label}
         </span>
-        <span className="font-semibold tabular-nums text-slate-800">
-          {n(value)}
-        </span>
+        <span className="font-bold tabular-nums">{n(value)}</span>
       </Link>
     </li>
   );

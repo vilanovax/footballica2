@@ -259,35 +259,35 @@ export function ChallengesPanel({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       {/* Player-facing explainer */}
-      <Card className="overflow-hidden border-amber-200 bg-linear-to-br from-amber-50 via-white to-orange-50/60">
-        <CardContent className="flex flex-wrap items-center gap-4 py-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-2xl shadow-sm ring-1 ring-amber-200/80">
-            👑
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
-              What players see
-              <AdminHelpTip text="On Play, each live challenge shows unlock cost → Survival run (1 stamina) → badge when they hit the target score." />
-            </p>
-            <p className="mt-0.5 text-sm text-slate-600">
-              Unlock once with coins · run with stamina · conquer for a badge.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            <Badge className="bg-amber-600 hover:bg-amber-600">
-              {liveCount} live
-            </Badge>
-            <Badge variant="outline">{rows.length} total</Badge>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-white px-3.5 py-3 shadow-sm">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-xl ring-1 ring-amber-200">
+          👑
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+            What players see
+            <AdminHelpTip text="On Play, each live challenge shows unlock cost → Survival run (1 stamina) → badge when they hit the target score." />
+          </p>
+          <p className="mt-0.5 text-[11px] font-medium text-slate-700">
+            Unlock once with coins · run with stamina · conquer for a badge.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-950 ring-1 ring-amber-200">
+            {liveCount} live
+          </span>
+          <span className="rounded-md bg-white px-2 py-0.5 text-[11px] font-bold text-slate-800 ring-1 ring-slate-200">
+            {rows.length} total
+          </span>
+        </div>
+      </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold text-slate-900">Campaigns</h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-[11px] font-medium text-slate-700">
             Collapse to scan · expand to edit economy & schedule.
           </p>
         </div>
@@ -296,7 +296,7 @@ export function ChallengesPanel({
           size="sm"
           disabled={pending || draft != null}
           onClick={startCreate}
-          className="shrink-0 gap-1"
+          className="h-8 shrink-0 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-500"
         >
           <Plus className="h-4 w-4" />
           New challenge
@@ -304,25 +304,26 @@ export function ChallengesPanel({
       </div>
 
       {rows.length === 0 && draft == null && (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <span className="text-4xl" aria-hidden>
-              🏆
-            </span>
-            <div>
-              <p className="text-sm font-semibold text-slate-900">
-                No premium challenges yet
-              </p>
-              <p className="mt-1 text-sm text-slate-500">
-                Create “تاج آبی” or “Road to Euro” — players unlock them on Play.
-              </p>
-            </div>
-            <Button type="button" size="sm" className="gap-1" onClick={startCreate}>
-              <Plus className="h-4 w-4" />
-              Create first challenge
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col items-center gap-1.5 rounded-xl border border-dashed border-slate-300 bg-white px-4 py-10 text-center">
+          <span className="text-3xl" aria-hidden>
+            🏆
+          </span>
+          <p className="text-sm font-semibold text-slate-900">
+            No premium challenges yet
+          </p>
+          <p className="text-xs font-medium text-slate-700">
+            Create “تاج آبی” or “Road to Euro” — players unlock them on Play.
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            className="mt-1 h-8 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-500"
+            onClick={startCreate}
+          >
+            <Plus className="h-4 w-4" />
+            Create first challenge
+          </Button>
+        </div>
       )}
 
       <div className="space-y-2">
@@ -467,10 +468,12 @@ function ChallengeEditorCard({
   return (
     <Card
       className={[
-        "overflow-hidden transition-shadow",
-        mode === "create" ? "border-amber-300 ring-1 ring-amber-200/80" : "",
-        open ? "shadow-md" : "hover:shadow-sm",
-        status === "Off" || status === "Expired" ? "opacity-80" : "",
+        "overflow-hidden rounded-xl border shadow-sm transition-shadow",
+        mode === "create"
+          ? "border-amber-300 ring-1 ring-amber-200/80"
+          : "border-slate-200/90",
+        open ? "shadow-md" : "",
+        status === "Off" || status === "Expired" ? "opacity-75" : "",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -478,14 +481,14 @@ function ChallengeEditorCard({
       <button
         type="button"
         onClick={onToggleOpen}
-        className="flex w-full items-center gap-3 px-4 py-3.5 text-start"
+        className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-start"
       >
         <span
           className={[
-            "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl shadow-sm ring-1",
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl ring-1",
             mode === "create"
-              ? "bg-amber-100 ring-amber-200"
-              : "bg-slate-100 ring-slate-200",
+              ? "bg-amber-50 ring-amber-200"
+              : "bg-white ring-slate-200",
           ].join(" ")}
           aria-hidden
         >
@@ -493,9 +496,14 @@ function ChallengeEditorCard({
         </span>
 
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
             <p className="truncate text-sm font-semibold text-slate-900">
               {mode === "create" ? "New premium challenge" : titleEn}
+              {mode === "edit" && titleFa ? (
+                <span className="ms-1.5 font-medium text-slate-700" dir="auto">
+                  · {titleFa}
+                </span>
+              ) : null}
             </p>
             {mode === "edit" && status && (
               <Badge variant={scheduleTone(status)} className="text-[10px]">
@@ -503,53 +511,48 @@ function ChallengeEditorCard({
               </Badge>
             )}
             {mode === "create" && (
-              <Badge variant="outline" className="text-[10px]">
+              <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-950 ring-1 ring-amber-200">
                 Draft
-              </Badge>
+              </span>
             )}
           </div>
-          <p className="mt-0.5 truncate text-xs text-slate-500">
+          <p className="mt-0.5 truncate text-[11px] font-medium text-slate-700">
             {mode === "create" ? (
               "Fill identity → economy → badge → save"
             ) : (
-              <>
-                <span dir="rtl">{titleFa}</span>
-                <span className="mx-1.5 text-slate-300">·</span>
-                <span className="font-mono">{challenge?.slug}</span>
-              </>
+              <code className="font-mono text-slate-700">{challenge?.slug}</code>
             )}
+            {mode === "edit" && challenge ? (
+              <span className="ms-2 tabular-nums text-slate-700">
+                {challenge.unlockCount}u · {challenge.conquerCount}c
+              </span>
+            ) : null}
           </p>
         </div>
 
         {mode === "edit" && challenge && (
-          <div className="hidden shrink-0 flex-col items-end gap-1 sm:flex">
-            <div className="flex flex-wrap justify-end gap-1">
-              <StatPill>💰 {challenge.unlockCostCoins}</StatPill>
-              <StatPill>🎯 {challenge.targetScore}</StatPill>
-              <StatPill>
-                {challenge.categoryIds.length === 0
-                  ? "Any bank"
-                  : challenge.categoryIds.length === 1
-                    ? challenge.categoryLabels[0] ?? "1 bank"
-                    : `${challenge.categoryIds.length} banks`}
-              </StatPill>
-            </div>
-            <p className="text-[11px] tabular-nums text-slate-500">
-              {challenge.unlockCount} unlocked · {challenge.conquerCount}{" "}
-              conquered
-            </p>
+          <div className="hidden shrink-0 flex-wrap justify-end gap-1 sm:flex">
+            <StatPill>{challenge.unlockCostCoins}c</StatPill>
+            <StatPill>→ {challenge.targetScore}</StatPill>
+            <StatPill>
+              {challenge.categoryIds.length === 0
+                ? "Any bank"
+                : challenge.categoryIds.length === 1
+                  ? challenge.categoryLabels[0] ?? "1 bank"
+                  : `${challenge.categoryIds.length} banks`}
+            </StatPill>
           </div>
         )}
 
         {open ? (
-          <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+          <ChevronDown className="h-4 w-4 shrink-0 text-slate-700" />
         ) : (
-          <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+          <ChevronRight className="h-4 w-4 shrink-0 text-slate-700" />
         )}
       </button>
 
       {open && (
-        <CardContent className="space-y-5 border-t bg-slate-50/50 px-4 py-4">
+        <CardContent className="space-y-4 border-t border-slate-100 bg-white px-3.5 py-3.5">
           {/* Identity */}
           <Section title="Identity" tip="Slug is the stable key in URLs and Live-Ops. Titles show on Play.">
             <Field tip="kebab-case, e.g. blue-crown">
@@ -816,22 +819,27 @@ function ChallengeEditorCard({
                 />
               </Field>
             </div>
-            <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700">
+            <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800">
               <input
                 type="checkbox"
                 checked={form.isActive}
                 onChange={(e) => setField("isActive", e.target.checked)}
                 className="size-4 rounded border-slate-300"
               />
-              <span className="font-medium">Active</span>
-              <span className="text-xs text-slate-500">
+              <span className="font-semibold">Active</span>
+              <span className="text-xs font-medium text-slate-700">
                 — visible on Play when inside the schedule window
               </span>
             </label>
           </Section>
 
-          <div className="flex flex-wrap items-center gap-2 border-t pt-3">
-            <Button type="button" disabled={pending} onClick={onSave}>
+          <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+            <Button
+              type="button"
+              disabled={pending}
+              onClick={onSave}
+              className="h-9 bg-emerald-600 text-white hover:bg-emerald-500"
+            >
               {mode === "create" ? "Create challenge" : "Save changes"}
             </Button>
             <Button
@@ -839,6 +847,7 @@ function ChallengeEditorCard({
               variant="outline"
               disabled={pending}
               onClick={onCancel}
+              className="h-9 border-slate-200 bg-white"
             >
               {mode === "create" ? "Discard" : "Close"}
             </Button>
@@ -848,7 +857,7 @@ function ChallengeEditorCard({
                 variant="outline"
                 disabled={pending}
                 onClick={onToggleActive}
-                className="ms-auto"
+                className="ms-auto h-9 border-slate-200 bg-white"
               >
                 {form.isActive ? "Deactivate" : "Activate"}
               </Button>
@@ -861,6 +870,7 @@ function ChallengeEditorCard({
                 disabled={pending}
                 onClick={onDelete}
                 aria-label="Delete challenge"
+                className="h-9 w-9"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -882,12 +892,12 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-3">
-      <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+    <div className="space-y-2.5">
+      <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-700">
         {title}
         {tip ? <AdminHelpTip text={tip} /> : null}
       </p>
-      <div className="space-y-3">{children}</div>
+      <div className="space-y-2.5">{children}</div>
     </div>
   );
 }
@@ -925,7 +935,7 @@ function CategoryMultiSelect({
 
   if (categories.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-slate-200 bg-white px-3 py-3 text-xs text-slate-500">
+      <p className="rounded-xl border border-dashed border-slate-300 bg-white px-3 py-3 text-xs font-medium text-slate-700">
         No active categories. Create one under Categories first.
       </p>
     );
@@ -939,8 +949,8 @@ function CategoryMultiSelect({
           <label
             key={cat.id}
             className={[
-              "flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
-              on ? "bg-amber-50" : "hover:bg-slate-50",
+              "flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors",
+              on ? "bg-amber-50" : "hover:bg-white",
             ].join(" ")}
           >
             <input
@@ -950,8 +960,8 @@ function CategoryMultiSelect({
               className="size-4 rounded border-slate-300"
             />
             <span className="min-w-0 flex-1">
-              <span className="font-medium text-slate-800">{cat.nameEn}</span>
-              <span className="ms-1.5 text-xs text-slate-500" dir="rtl">
+              <span className="font-semibold text-slate-900">{cat.nameEn}</span>
+              <span className="ms-1.5 text-xs font-medium text-slate-700" dir="rtl">
                 {cat.nameFa}
               </span>
             </span>
@@ -969,7 +979,7 @@ function CategoryMultiSelect({
               {cat.challengeOnly ? (
                 <Badge
                   variant="outline"
-                  className="border-amber-300 bg-amber-50 text-[10px] text-amber-800"
+                  className="border-amber-300 bg-amber-50 text-[10px] text-amber-950"
                 >
                   Challenge
                 </Badge>
@@ -984,7 +994,7 @@ function CategoryMultiSelect({
 
 function StatPill({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-semibold tabular-nums text-slate-700">
+    <span className="inline-flex items-center rounded-md bg-white px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-slate-800 ring-1 ring-slate-200">
       {children}
     </span>
   );

@@ -46,7 +46,7 @@ export function ReportActions({
             size="sm"
             disabled={pending}
             onClick={() => setStatus("RESOLVED", "Resolved — issue handled.")}
-            className="h-9 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
+            className="h-8 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-500"
             title="Question fixed or report accepted"
           >
             <Check className="h-3.5 w-3.5" />
@@ -58,7 +58,7 @@ export function ReportActions({
             variant="outline"
             disabled={pending}
             onClick={() => setStatus("REJECTED", "Rejected — no change needed.")}
-            className="h-9 gap-1.5 border-rose-200 text-rose-700 hover:bg-rose-50"
+            className="h-8 gap-1.5 border-rose-200 bg-white text-rose-800 hover:bg-rose-50"
             title="Report invalid / won't change question"
           >
             <X className="h-3.5 w-3.5" />
@@ -72,13 +72,19 @@ export function ReportActions({
           variant="outline"
           disabled={pending}
           onClick={() => setStatus("PENDING", "Reopened for triage.")}
-          className="h-9 gap-1.5"
+          className="h-8 gap-1.5 border-slate-200 bg-white"
         >
           <RotateCcw className="h-3.5 w-3.5" />
           Reopen
         </Button>
       )}
-      <Button asChild type="button" variant="ghost" size="sm" className="h-9 gap-1.5">
+      <Button
+        asChild
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-8 gap-1.5 text-slate-800"
+      >
         <Link href={`/admin/questions/${questionId}/edit`}>
           <Pencil className="h-3.5 w-3.5" />
           Edit

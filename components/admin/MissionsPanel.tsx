@@ -246,86 +246,113 @@ export function MissionsPanel({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Live status */}
       <div
         className={[
-          "flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-3.5",
+          "flex flex-wrap items-center justify-between gap-3 rounded-xl border px-3.5 py-3 shadow-sm",
           livePreview.activeBatchIndex != null
             ? "border-emerald-200 bg-emerald-50"
             : "border-amber-200 bg-amber-50",
         ].join(" ")}
       >
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+          <p
+            className={[
+              "text-[10px] font-black uppercase tracking-widest",
+              livePreview.activeBatchIndex != null
+                ? "text-emerald-950"
+                : "text-amber-950",
+            ].join(" ")}
+          >
             Players see now
           </p>
-          <p className="mt-0.5 text-sm font-semibold text-slate-900">
+          <p
+            className={[
+              "mt-0.5 text-sm font-semibold",
+              livePreview.activeBatchIndex != null
+                ? "text-emerald-950"
+                : "text-amber-950",
+            ].join(" ")}
+          >
             {livePreview.activeBatchIndex != null
               ? `Campaign #${livePreview.activeBatchIndex} is live`
               : "Nothing live — turn a batch On or fix schedule"}
           </p>
         </div>
         {livePreview.activeBatchIndex != null ? (
-          <Badge className="bg-emerald-600">#{livePreview.activeBatchIndex}</Badge>
+          <Badge className="bg-emerald-700 text-white hover:bg-emerald-700">
+            #{livePreview.activeBatchIndex}
+          </Badge>
         ) : (
-          <Badge variant="secondary">Offline</Badge>
+          <span className="rounded-md bg-white px-2 py-0.5 text-[11px] font-bold text-amber-950 ring-1 ring-amber-200">
+            Offline
+          </span>
         )}
       </div>
 
       {/* Stats */}
-      <button
-        type="button"
-        onClick={() => setShowStats((v) => !v)}
-        className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-start shadow-sm"
-      >
-        <span className="text-sm font-medium text-slate-800">
-          Stats · {analytics.length} batches
-        </span>
-        {showStats ? (
-          <ChevronDown className="h-4 w-4 text-slate-400" />
-        ) : (
-          <ChevronRight className="h-4 w-4 text-slate-400" />
-        )}
-      </button>
-      {showStats ? (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          {analytics.length === 0 ? (
-            <p className="text-sm text-slate-500">No player data yet.</p>
+      <section className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm">
+        <button
+          type="button"
+          onClick={() => setShowStats((v) => !v)}
+          className="flex w-full items-center justify-between px-3.5 py-2.5 text-start"
+        >
+          <span className="text-sm font-semibold text-slate-900">
+            Stats · {analytics.length} batches
+          </span>
+          {showStats ? (
+            <ChevronDown className="h-4 w-4 text-slate-700" />
           ) : (
-            <table className="w-full min-w-[420px] text-left text-sm">
-              <thead className="border-b text-xs text-slate-500">
-                <tr>
-                  <th className="py-2 pr-3 font-medium">#</th>
-                  <th className="py-2 pr-3 font-medium">Type</th>
-                  <th className="py-2 pr-3 font-medium">Clubs</th>
-                  <th className="py-2 pr-3 font-medium">Done</th>
-                  <th className="py-2 pr-3 font-medium">Chests</th>
-                </tr>
-              </thead>
-              <tbody>
-                {analytics.map((row) => (
-                  <tr key={row.batchId} className="border-b border-slate-100">
-                    <td className="py-2 pr-3 font-medium">#{row.batchIndex}</td>
-                    <td className="py-2 pr-3 text-slate-600">
-                      {row.kind === "DAILY" ? "Daily" : "Campaign"}
-                    </td>
-                    <td className="py-2 pr-3 tabular-nums">
-                      {row.clubsStarted}
-                    </td>
-                    <td className="py-2 pr-3 tabular-nums">
-                      {row.completionRate}%
-                    </td>
-                    <td className="py-2 pr-3 tabular-nums">
-                      {row.chestClaimRate}%
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <ChevronRight className="h-4 w-4 text-slate-700" />
           )}
-        </div>
-      ) : null}
+        </button>
+        {showStats ? (
+          <div className="overflow-x-auto border-t border-slate-100 px-3.5 py-3">
+            {analytics.length === 0 ? (
+              <p className="text-sm font-medium text-slate-700">
+                No player data yet.
+              </p>
+            ) : (
+              <table className="w-full min-w-[420px] text-left text-sm">
+                <thead className="border-b border-slate-100 text-[11px] font-bold uppercase tracking-wide text-slate-700">
+                  <tr>
+                    <th className="py-2 pr-3">#</th>
+                    <th className="py-2 pr-3">Type</th>
+                    <th className="py-2 pr-3">Clubs</th>
+                    <th className="py-2 pr-3">Done</th>
+                    <th className="py-2 pr-3">Chests</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {analytics.map((row) => (
+                    <tr
+                      key={row.batchId}
+                      className="border-b border-slate-100 last:border-0"
+                    >
+                      <td className="py-2 pr-3 font-semibold text-slate-900">
+                        #{row.batchIndex}
+                      </td>
+                      <td className="py-2 pr-3 font-medium text-slate-700">
+                        {row.kind === "DAILY" ? "Daily" : "Campaign"}
+                      </td>
+                      <td className="py-2 pr-3 font-semibold tabular-nums text-slate-900">
+                        {row.clubsStarted}
+                      </td>
+                      <td className="py-2 pr-3 font-semibold tabular-nums text-slate-900">
+                        {row.completionRate}%
+                      </td>
+                      <td className="py-2 pr-3 font-semibold tabular-nums text-slate-900">
+                        {row.chestClaimRate}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        ) : null}
+      </section>
 
       {/* Campaign list */}
       <div className="flex items-center justify-between gap-3">
@@ -338,7 +365,7 @@ export function MissionsPanel({
           size="sm"
           disabled={pending}
           onClick={handleCreateBatch}
-          className="gap-1.5"
+          className="h-8 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-500"
         >
           <Plus className="h-4 w-4" />
           New batch
@@ -346,8 +373,13 @@ export function MissionsPanel({
       </div>
 
       {campaignBatches.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-500">
-          No batches yet — create one, add 3 missions, turn On.
+        <div className="flex flex-col items-center gap-1.5 rounded-xl border border-dashed border-slate-300 bg-white px-4 py-10 text-center">
+          <p className="text-sm font-semibold text-slate-900">
+            No batches yet
+          </p>
+          <p className="text-xs font-medium text-slate-700">
+            Create one, add 3 missions, turn On.
+          </p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -465,47 +497,48 @@ function BatchCard({
   return (
     <article
       className={[
-        "overflow-hidden rounded-2xl border bg-white shadow-sm",
+        "overflow-hidden rounded-xl border bg-white shadow-sm",
         isLive
           ? "border-emerald-300 ring-1 ring-emerald-100"
-          : "border-slate-200",
+          : "border-slate-200/90",
       ].join(" ")}
     >
-      <div className="flex items-center gap-2 px-3 py-2.5">
+      <div className="flex items-center gap-2 px-3 py-2">
         <button
           type="button"
           onClick={onToggleOpen}
           className="flex min-w-0 flex-1 items-center gap-2.5 text-start"
         >
           {open ? (
-            <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+            <ChevronDown className="h-4 w-4 shrink-0 text-slate-700" />
           ) : (
-            <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+            <ChevronRight className="h-4 w-4 shrink-0 text-slate-700" />
           )}
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold text-slate-900">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-sm font-semibold text-slate-900">
                 Batch #{batch.batchIndex}
               </span>
               {isLive ? (
-                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-950 ring-1 ring-emerald-200">
                   LIVE
                 </span>
               ) : null}
               <span
                 className={[
-                  "rounded-full px-2 py-0.5 text-[10px] font-bold",
+                  "rounded-md px-1.5 py-0.5 text-[10px] font-bold ring-1",
                   batch.isActive
-                    ? "bg-slate-900 text-white"
-                    : "bg-slate-100 text-slate-500",
+                    ? "bg-slate-900 text-white ring-slate-900"
+                    : "bg-white text-slate-800 ring-slate-200",
                 ].join(" ")}
               >
                 {batch.isActive ? "On" : "Off"}
               </span>
             </div>
-            <p className="mt-0.5 truncate text-xs text-slate-500">
-              {missionCount}/3 · chest {batch.chestCoins}🪙 / {batch.chestXp} XP
+            <p className="mt-0.5 truncate text-[11px] font-medium text-slate-700">
+              {missionCount}/3 · chest {batch.chestCoins}c / {batch.chestXp} XP
               {stats ? ` · ${stats.completionRate}% done` : ""}
+              <span className="ms-1.5 text-slate-600">· {scheduleHint}</span>
             </p>
           </div>
         </button>
@@ -515,13 +548,14 @@ function BatchCard({
           variant="outline"
           disabled={pending}
           onClick={onToggleActive}
+          className="h-8 border-slate-200 bg-white"
         >
           {batch.isActive ? "Off" : "On"}
         </Button>
       </div>
 
       {open ? (
-        <div className="space-y-5 border-t border-slate-100 px-3 py-4">
+        <div className="space-y-4 border-t border-slate-100 px-3 py-3.5">
           <div className="space-y-3">
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
@@ -574,11 +608,11 @@ function BatchCard({
               </div>
             </div>
 
-            <p className="text-[11px] text-slate-500" dir="rtl">
+            <p className="text-[11px] font-medium text-slate-700" dir="rtl">
               {scheduleHint}
             </p>
 
-            <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
               <label className="flex items-center gap-2 text-sm font-medium text-slate-800">
                 <input
                   type="checkbox"
@@ -593,7 +627,7 @@ function BatchCard({
                   type="button"
                   size="sm"
                   disabled={pending}
-                  className="gap-1.5"
+                  className="h-8 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-500"
                   onClick={() =>
                     onSaveBatch({
                       batchIndex,
@@ -612,7 +646,7 @@ function BatchCard({
                   type="button"
                   size="sm"
                   variant="ghost"
-                  className="text-destructive"
+                  className="h-8 text-rose-800 hover:bg-white hover:text-rose-950"
                   disabled={pending}
                   onClick={onDelete}
                 >
@@ -624,7 +658,7 @@ function BatchCard({
           </div>
 
           <div className="space-y-2">
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-700">
               Missions ({missionCount}/3)
             </p>
             {batch.missions
@@ -684,25 +718,25 @@ function MissionForm({
 
   return (
     <form
-      className="rounded-xl border border-slate-200 bg-slate-50/50"
+      className="rounded-xl border border-slate-200 bg-white"
       onSubmit={(e) => {
         e.preventDefault();
         onSave(batchId, mission, new FormData(e.currentTarget));
       }}
     >
       {mission && !expanded ? (
-        <div className="flex items-center gap-2 px-3 py-2.5">
+        <div className="flex items-center gap-2 px-3 py-2">
           <button
             type="button"
             onClick={() => setExpanded(true)}
             className="min-w-0 flex-1 text-start"
           >
-            <p className="truncate text-sm font-medium text-slate-900">
+            <p className="truncate text-sm font-semibold text-slate-900">
               {mission.titleEn}
             </p>
-            <p className="truncate text-xs text-slate-500">
+            <p className="truncate text-[11px] font-medium text-slate-700">
               {objectiveLabel(mission.objectiveType)} ×{mission.targetValue}
-              {" · "}+{mission.rewardCoins}🪙 +{mission.rewardXp}XP
+              {" · "}+{mission.rewardCoins}c +{mission.rewardXp}XP
             </p>
           </button>
           <Button
@@ -710,6 +744,7 @@ function MissionForm({
             size="sm"
             variant="ghost"
             onClick={() => setExpanded(true)}
+            className="h-8 text-slate-800"
           >
             Edit
           </Button>
@@ -717,7 +752,7 @@ function MissionForm({
       ) : (
         <div className="space-y-3 p-3">
           {!mission ? (
-            <p className="text-xs font-semibold text-slate-500">
+            <p className="text-xs font-semibold text-slate-700">
               Add mission {defaultSort + 1} of 3
             </p>
           ) : null}
@@ -764,7 +799,9 @@ function MissionForm({
               </Select>
               <input type="hidden" name="objectiveType" value={objective} />
               {objMeta ? (
-                <p className="mt-1 text-[11px] text-slate-500">{objMeta.tip}</p>
+                <p className="mt-1 text-[11px] font-medium text-slate-700">
+                  {objMeta.tip}
+                </p>
               ) : null}
             </div>
             <div>
@@ -805,7 +842,12 @@ function MissionForm({
             value={mission?.sortOrder ?? defaultSort}
           />
           <div className="flex flex-wrap gap-2">
-            <Button type="submit" size="sm" disabled={pending}>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={pending}
+              className="h-8 bg-emerald-600 text-white hover:bg-emerald-500"
+            >
               {mission ? "Save" : "Add"}
             </Button>
             {mission ? (
@@ -815,6 +857,7 @@ function MissionForm({
                   size="sm"
                   variant="ghost"
                   onClick={() => setExpanded(false)}
+                  className="h-8 text-slate-800"
                 >
                   Done
                 </Button>
@@ -822,7 +865,7 @@ function MissionForm({
                   type="button"
                   size="sm"
                   variant="ghost"
-                  className="text-destructive"
+                  className="h-8 text-rose-800 hover:bg-white hover:text-rose-950"
                   disabled={pending}
                   onClick={() => onDelete(mission.id)}
                 >

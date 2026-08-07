@@ -64,7 +64,7 @@ export function ThemeWeekBanner({
         <Link
           href={href}
           onClick={() => playSound("click")}
-          className="btn-fantasy btn-fantasy-accent flex min-h-11 w-full items-center justify-center gap-2 font-display text-sm font-extrabold"
+          className="game-cta game-cta-accent flex min-h-11 w-full items-center justify-center gap-2 font-display text-sm font-extrabold"
         >
           {ctaLabel ?? t("play.themeWeekCta")}
         </Link>

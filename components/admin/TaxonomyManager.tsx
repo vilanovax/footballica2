@@ -424,10 +424,10 @@ function ChallengeOnlyToggle({ category }: { category: CategoryRow }) {
       }
       disabled={pending}
       className={[
-        "inline-flex h-7 items-center rounded-full px-2.5 text-[11px] font-bold transition",
+        "inline-flex h-7 items-center rounded-md px-2.5 text-[11px] font-bold transition ring-1",
         on
-          ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
-          : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+          ? "bg-amber-50 text-amber-800 ring-amber-200 hover:bg-amber-100"
+          : "bg-sky-50 text-sky-800 ring-sky-200 hover:bg-sky-100",
       ].join(" ")}
     >
       {pending ? (
@@ -556,27 +556,34 @@ function BilingualName({
   en,
   fa,
   icon,
+  slug,
 }: {
   en: string;
   fa: string;
   icon?: string | null;
+  slug?: string;
 }) {
   const same = en.trim().toLowerCase() === fa.trim().toLowerCase();
   return (
     <span className="flex min-w-0 items-center gap-2.5">
-      {icon ? (
-        <span
-          aria-hidden
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-lg"
-        >
-          {icon}
+      <span
+        aria-hidden
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-lg ring-1 ring-slate-100"
+      >
+        {icon || "📁"}
+      </span>
+      <span className="flex min-w-0 flex-col leading-tight">
+        <span className="truncate text-sm font-semibold text-slate-900">
+          {en}
+          {!same && fa ? (
+            <span className="ms-1.5 font-medium text-slate-400" dir="auto">
+              · {fa}
+            </span>
+          ) : null}
         </span>
-      ) : null}
-      <span className="min-w-0 flex flex-col leading-tight">
-        <span className="truncate font-semibold text-slate-900">{en}</span>
-        {!same && fa ? (
-          <span className="truncate text-xs text-slate-500" dir="auto">
-            {fa}
+        {slug ? (
+          <span className="truncate font-mono text-[11px] text-slate-400">
+            {slug}
           </span>
         ) : null}
       </span>
@@ -598,14 +605,25 @@ function FilterChip({
       type="button"
       onClick={onClick}
       className={[
-        "inline-flex h-8 items-center rounded-full px-3 text-xs font-bold transition",
+        "inline-flex h-7 items-center rounded-md px-2.5 text-[11px] font-bold transition",
         active
-          ? "bg-slate-900 text-white"
-          : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50",
+          ? "bg-slate-900 text-white shadow-sm"
+          : "bg-slate-50 text-slate-600 ring-1 ring-slate-200 hover:bg-white",
       ].join(" ")}
     >
       {children}
     </button>
+  );
+}
+
+function CountBadge({ count }: { count: number }) {
+  return (
+    <span className="inline-flex min-w-12 items-center justify-center gap-0.5 rounded-md bg-slate-50 px-2 py-1 text-xs font-bold tabular-nums text-slate-700 ring-1 ring-slate-100">
+      {count}
+      <span className="text-[10px] font-semibold uppercase text-slate-400">
+        Q
+      </span>
+    </span>
   );
 }
 
@@ -661,10 +679,10 @@ export function TaxonomyManager({
   }, [tags, query]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Tabs + primary CTA */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex rounded-xl bg-slate-100 p-1">
+        <div className="inline-flex rounded-xl bg-slate-100/90 p-1 ring-1 ring-slate-200/80">
           <button
             type="button"
             onClick={() => {
@@ -708,7 +726,10 @@ export function TaxonomyManager({
         {tab === "categories" ? (
           <CategoryFormDialog
             trigger={
-              <Button size="sm" className="gap-1.5">
+              <Button
+                size="sm"
+                className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-500"
+              >
                 <Plus className="h-4 w-4" />
                 New category
               </Button>
@@ -717,7 +738,10 @@ export function TaxonomyManager({
         ) : (
           <TagFormDialog
             trigger={
-              <Button size="sm" className="gap-1.5">
+              <Button
+                size="sm"
+                className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-500"
+              >
                 <Plus className="h-4 w-4" />
                 New tag
               </Button>
@@ -727,76 +751,91 @@ export function TaxonomyManager({
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative min-w-0 flex-1 sm:max-w-sm">
-          <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={
-              tab === "categories"
-                ? "Search categories…"
-                : "Search tags…"
-            }
-            className="h-9 ps-9"
-          />
-        </div>
-
-        {tab === "categories" ? (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <FilterChip
-              active={scope === "all"}
-              onClick={() => setScope("all")}
-            >
-              All
-            </FilterChip>
-            <FilterChip
-              active={scope === "public"}
-              onClick={() => setScope("public")}
-            >
-              Public
-            </FilterChip>
-            <FilterChip
-              active={scope === "challenge"}
-              onClick={() => setScope("challenge")}
-            >
-              Challenge
-            </FilterChip>
-            <span className="mx-1 h-4 w-px bg-slate-200" />
-            <FilterChip
-              active={status === "all"}
-              onClick={() => setStatus("all")}
-            >
-              Any
-            </FilterChip>
-            <FilterChip
-              active={status === "active"}
-              onClick={() => setStatus("active")}
-            >
-              On
-            </FilterChip>
-            <FilterChip
-              active={status === "off"}
-              onClick={() => setStatus("off")}
-            >
-              Off
-            </FilterChip>
-          </div>
-        ) : (
-          <p className="text-xs font-medium text-slate-500">
-            {tagStats.qs.toLocaleString()} question links
+      <section className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm">
+        <header className="flex items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/70 px-3.5 py-2">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+            Search & filters
           </p>
-        )}
-      </div>
+          {tab === "categories" ? (
+            <p className="text-[11px] font-semibold text-slate-400">
+              {filteredCategories.length} shown · {catStats.active} on ·{" "}
+              {catStats.challenge} challenge
+            </p>
+          ) : (
+            <p className="text-[11px] font-semibold text-slate-400">
+              {tagStats.qs.toLocaleString()} question links
+            </p>
+          )}
+        </header>
+        <div className="flex flex-col gap-2.5 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative min-w-0 flex-1 sm:max-w-sm">
+            <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={
+                tab === "categories"
+                  ? "Search categories…"
+                  : "Search tags…"
+              }
+              className="h-9 border-slate-200 bg-slate-50/80 ps-9 shadow-none"
+            />
+          </div>
+
+          {tab === "categories" ? (
+            <div className="flex flex-wrap items-center gap-1">
+              <FilterChip
+                active={scope === "all"}
+                onClick={() => setScope("all")}
+              >
+                All
+              </FilterChip>
+              <FilterChip
+                active={scope === "public"}
+                onClick={() => setScope("public")}
+              >
+                Public
+              </FilterChip>
+              <FilterChip
+                active={scope === "challenge"}
+                onClick={() => setScope("challenge")}
+              >
+                Challenge
+              </FilterChip>
+              <span className="mx-0.5 h-4 w-px bg-slate-200" />
+              <FilterChip
+                active={status === "all"}
+                onClick={() => setStatus("all")}
+              >
+                Any
+              </FilterChip>
+              <FilterChip
+                active={status === "active"}
+                onClick={() => setStatus("active")}
+              >
+                On
+              </FilterChip>
+              <FilterChip
+                active={status === "off"}
+                onClick={() => setStatus("off")}
+              >
+                Off
+              </FilterChip>
+            </div>
+          ) : null}
+        </div>
+      </section>
 
       {/* List */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <section className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm">
         {tab === "categories" ? (
           filteredCategories.length === 0 ? (
             <EmptyState
-              title={query || scope !== "all" || status !== "all"
-                ? "No matches"
-                : "No categories yet"}
+              title={
+                query || scope !== "all" || status !== "all"
+                  ? "No matches"
+                  : "No categories yet"
+              }
               hint={
                 query || scope !== "all" || status !== "all"
                   ? "Try clearing search or filters."
@@ -808,32 +847,28 @@ export function TaxonomyManager({
               {filteredCategories.map((c) => (
                 <li
                   key={c.id}
-                  className="flex flex-wrap items-center gap-3 px-4 py-3 sm:flex-nowrap"
+                  className={[
+                    "flex flex-wrap items-center gap-2.5 px-3.5 py-2.5 transition-colors hover:bg-sky-50/40 sm:flex-nowrap sm:gap-3",
+                    !c.isActive ? "opacity-60" : "",
+                  ].join(" ")}
                 >
                   <div className="min-w-0 flex-1">
                     <BilingualName
                       en={c.nameEn}
                       fa={c.nameFa}
                       icon={c.icon}
+                      slug={c.slug}
                     />
-                    <p className="mt-0.5 truncate ps-[2.875rem] font-mono text-[11px] text-slate-400">
-                      {c.slug}
-                    </p>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                    <span className="min-w-[3.25rem] text-center text-sm font-bold tabular-nums text-slate-700">
-                      {c.count}
-                      <span className="ms-0.5 text-[10px] font-semibold uppercase text-slate-400">
-                        q
-                      </span>
-                    </span>
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <CountBadge count={c.count} />
 
-                    <div className="flex gap-1">
+                    <div className="hidden gap-1 sm:flex">
                       {c.locales.includes("en") ? (
                         <Badge
                           variant="outline"
-                          className="h-6 px-1.5 text-[10px] font-bold"
+                          className="h-6 border-slate-200 bg-white px-1.5 text-[10px] font-bold text-slate-600"
                         >
                           EN
                         </Badge>
@@ -841,7 +876,7 @@ export function TaxonomyManager({
                       {c.locales.includes("fa") ? (
                         <Badge
                           variant="outline"
-                          className="h-6 px-1.5 text-[10px] font-bold"
+                          className="h-6 border-slate-200 bg-white px-1.5 text-[10px] font-bold text-slate-600"
                         >
                           FA
                         </Badge>
@@ -870,32 +905,32 @@ export function TaxonomyManager({
             {filteredTags.map((t) => (
               <li
                 key={t.id}
-                className="flex flex-wrap items-center gap-3 px-4 py-2.5 sm:flex-nowrap"
+                className="flex flex-wrap items-center gap-2.5 px-3.5 py-2 transition-colors hover:bg-sky-50/40 sm:flex-nowrap sm:gap-3"
               >
                 <div className="min-w-0 flex-1">
-                  <BilingualName en={t.nameEn} fa={t.nameFa} />
-                  <p className="mt-0.5 truncate font-mono text-[11px] text-slate-400">
-                    {t.slug}
-                  </p>
+                  <BilingualName
+                    en={t.nameEn}
+                    fa={t.nameFa}
+                    icon="🏷️"
+                    slug={t.slug}
+                  />
                 </div>
-                <span className="min-w-[3.25rem] text-center text-sm font-bold tabular-nums text-slate-700">
-                  {t.count}
-                  <span className="ms-0.5 text-[10px] font-semibold uppercase text-slate-400">
-                    q
-                  </span>
-                </span>
+                <CountBadge count={t.count} />
                 <TagActions tag={t} />
               </li>
             ))}
           </ul>
         )}
-      </div>
+      </section>
 
-      {tab === "categories" && (
-        <p className="px-1 text-xs text-slate-500">
+      {tab === "categories" ? (
+        <p className="px-1 text-xs font-medium text-slate-500">
           Showing {filteredCategories.length} of {catStats.total} ·{" "}
-          {catStats.active} on · {catStats.challenge} challenge ·{" "}
-          {catStats.qs.toLocaleString()} questions
+          {catStats.qs.toLocaleString()} questions linked
+        </p>
+      ) : (
+        <p className="px-1 text-xs font-medium text-slate-500">
+          Showing {filteredTags.length} of {tagStats.total} tags
         </p>
       )}
     </div>
@@ -904,9 +939,12 @@ export function TaxonomyManager({
 
 function EmptyState({ title, hint }: { title: string; hint: string }) {
   return (
-    <div className="px-6 py-14 text-center">
-      <p className="font-semibold text-slate-800">{title}</p>
-      <p className="mt-1 text-sm text-slate-500">{hint}</p>
+    <div className="flex flex-col items-center justify-center gap-1.5 px-6 py-12 text-center">
+      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400 ring-1 ring-slate-200">
+        <FolderOpen className="h-5 w-5" />
+      </span>
+      <p className="text-sm font-semibold text-slate-800">{title}</p>
+      <p className="max-w-xs text-xs font-medium text-slate-500">{hint}</p>
     </div>
   );
 }

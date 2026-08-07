@@ -51,11 +51,36 @@ import {
 const POSITIONS = ["GK", "DEF", "MID", "FWD"] as const;
 
 const POS_TONE: Record<string, string> = {
-  GK: "bg-amber-50 text-amber-800 ring-amber-200",
-  DEF: "bg-sky-50 text-sky-800 ring-sky-200",
-  MID: "bg-violet-50 text-violet-800 ring-violet-200",
-  FWD: "bg-rose-50 text-rose-800 ring-rose-200",
+  GK: "bg-amber-50 text-amber-950 ring-amber-200",
+  DEF: "bg-sky-50 text-sky-950 ring-sky-200",
+  MID: "bg-violet-50 text-violet-950 ring-violet-200",
+  FWD: "bg-rose-50 text-rose-950 ring-rose-200",
 };
+
+function FilterChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "inline-flex h-7 items-center rounded-md px-2.5 text-[11px] font-bold transition",
+        active
+          ? "bg-slate-900 text-white shadow-sm"
+          : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50",
+      ].join(" ")}
+    >
+      {children}
+    </button>
+  );
+}
 
 const EMPTY: PlayerWriteInput = {
   slug: "",
@@ -147,6 +172,19 @@ export function PlayersPanel({
     });
   }, [players, query, statusFilter, posFilter]);
 
+  const posCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: players.length };
+    for (const pos of POSITIONS) {
+      counts[pos] = players.filter((p) => p.position === pos).length;
+    }
+    return counts;
+  }, [players]);
+
+  const activeCount = useMemo(
+    () => players.filter((p) => p.isActive).length,
+    [players],
+  );
+
   function openCreate() {
     setEditingSlug(null);
     setSlugTouched(false);
@@ -228,87 +266,126 @@ export function PlayersPanel({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[12rem] flex-1">
-          <Search className="pointer-events-none absolute start-2.5 top-2.5 h-4 w-4 text-slate-400" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search name, slug, club, nation…"
-            className="h-9 ps-8"
-          />
-        </div>
-        <Select
-          value={statusFilter}
-          onValueChange={(v) => setStatusFilter(v as StatusFilter)}
-        >
-          <SelectTrigger className="h-9 w-[7.5rem]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="off">Disabled</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select
-          value={posFilter}
-          onValueChange={(v) => setPosFilter(v as PosFilter)}
-        >
-          <SelectTrigger className="h-9 w-[6.5rem]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All pos</SelectItem>
-            {POSITIONS.map((p) => (
-              <SelectItem key={p} value={p}>
-                {p}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <Button
           type="button"
           variant="outline"
           onClick={seedGridPack}
           disabled={pending}
-          className="h-9 gap-1.5"
+          className="h-9 gap-1.5 border-slate-200 bg-white"
           title="Upsert Özil, Ronaldo, Messi… with career + trophies"
         >
-          <Sparkles className="h-4 w-4" />
+          <Sparkles className="h-4 w-4 text-amber-700" />
           Seed Grid pack
         </Button>
-        <Button type="button" onClick={openCreate} className="h-9 gap-1.5">
+        <Button
+          type="button"
+          onClick={openCreate}
+          className="h-9 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-500"
+        >
           <Plus className="h-4 w-4" />
-          Add
+          Add player
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <section className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm">
+        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-white px-3.5 py-2">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-slate-700">
+            Search & filters
+          </p>
+          <p className="text-[11px] font-semibold text-slate-700">
+            {filtered.length} shown · {activeCount} active
+          </p>
+        </header>
+        <div className="flex flex-col gap-2.5 p-3">
+          <div className="relative min-w-0 sm:max-w-md">
+            <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search name, slug, club, nation…"
+              className="h-9 border-slate-200 bg-white ps-9 shadow-none"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-1">
+            <FilterChip
+              active={statusFilter === "all"}
+              onClick={() => setStatusFilter("all")}
+            >
+              Any
+            </FilterChip>
+            <FilterChip
+              active={statusFilter === "active"}
+              onClick={() => setStatusFilter("active")}
+            >
+              On
+            </FilterChip>
+            <FilterChip
+              active={statusFilter === "off"}
+              onClick={() => setStatusFilter("off")}
+            >
+              Off
+            </FilterChip>
+            <span className="mx-0.5 h-4 w-px bg-slate-200" />
+            <FilterChip
+              active={posFilter === "all"}
+              onClick={() => setPosFilter("all")}
+            >
+              All ({posCounts.all})
+            </FilterChip>
+            {POSITIONS.map((pos) => (
+              <FilterChip
+                key={pos}
+                active={posFilter === pos}
+                onClick={() => setPosFilter(pos)}
+              >
+                {pos}
+                <span className="ms-1 tabular-nums text-inherit opacity-80">
+                  {posCounts[pos]}
+                </span>
+              </FilterChip>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="h-9">Player</TableHead>
-              <TableHead className="h-9 w-14">Pos</TableHead>
-              <TableHead className="h-9">Club</TableHead>
-              <TableHead className="h-9 hidden w-24 sm:table-cell">
+            <TableRow className="border-slate-100 hover:bg-transparent">
+              <TableHead className="h-8 text-[11px] font-bold uppercase tracking-wide text-slate-700">
+                Player
+              </TableHead>
+              <TableHead className="h-8 w-14 text-[11px] font-bold uppercase tracking-wide text-slate-700">
+                Pos
+              </TableHead>
+              <TableHead className="h-8 text-[11px] font-bold uppercase tracking-wide text-slate-700">
+                Club
+              </TableHead>
+              <TableHead className="hidden h-8 w-20 text-[11px] font-bold uppercase tracking-wide text-slate-700 sm:table-cell">
                 Nation
               </TableHead>
-              <TableHead className="h-9 w-20">Age / #</TableHead>
-              <TableHead className="h-9 w-16">On</TableHead>
-              <TableHead className="h-9 w-[5.5rem] text-end"> </TableHead>
+              <TableHead className="h-8 w-[4.5rem] text-[11px] font-bold uppercase tracking-wide text-slate-700">
+                Age / #
+              </TableHead>
+              <TableHead className="h-8 w-12 text-[11px] font-bold uppercase tracking-wide text-slate-700">
+                On
+              </TableHead>
+              <TableHead className="h-8 w-[5rem] text-end"> </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="h-36 text-center">
-                  <div className="flex flex-col items-center gap-2 text-slate-500">
-                    <UserRound className="h-8 w-8 text-slate-300" />
-                    <p className="text-sm font-medium text-slate-700">
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={7} className="h-40 text-center">
+                  <div className="flex flex-col items-center gap-1.5 py-4">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-700 ring-1 ring-slate-200">
+                      <UserRound className="h-5 w-5" />
+                    </span>
+                    <p className="text-sm font-semibold text-slate-800">
                       No players match
                     </p>
-                    <p className="text-xs">
+                    <p className="text-xs font-medium text-slate-700">
                       Clear filters or add a new player.
                     </p>
                     {(query || statusFilter !== "all" || posFilter !== "all") && (
@@ -334,62 +411,70 @@ export function PlayersPanel({
                 <TableRow
                   key={p.slug}
                   className={[
-                    "group cursor-pointer",
-                    p.isActive ? "" : "bg-slate-50/80 opacity-70",
+                    "group cursor-pointer border-slate-100 transition-colors hover:bg-white",
+                    p.isActive ? "" : "opacity-55",
                   ].join(" ")}
                   onClick={() => openEdit(p)}
                 >
-                  <TableCell className="py-2.5">
-                    <p className="font-medium leading-tight text-slate-900">
+                  <TableCell className="py-2">
+                    <p className="text-sm font-semibold leading-tight text-slate-900">
                       {p.nameEn}
+                      {p.nameFa ? (
+                        <span
+                          className="ms-1.5 font-medium text-slate-600"
+                          dir="auto"
+                        >
+                          · {p.nameFa}
+                        </span>
+                      ) : null}
                     </p>
-                    <p className="mt-0.5 text-xs leading-tight text-slate-500">
-                      <span dir="rtl">{p.nameFa}</span>
-                      <span className="mx-1 text-slate-300">·</span>
-                      <code className="text-[11px] text-slate-400">
-                        {p.slug}
-                      </code>
-                    </p>
+                    <code className="mt-0.5 block truncate font-mono text-[11px] text-slate-500">
+                      {p.slug}
+                    </code>
                   </TableCell>
-                  <TableCell className="py-2.5">
+                  <TableCell className="py-2">
                     <span
                       className={[
-                        "inline-flex rounded-md px-1.5 py-0.5 font-mono text-[10px] font-bold ring-1 ring-inset",
-                        POS_TONE[p.position] ?? "bg-slate-100 text-slate-600",
+                        "inline-flex rounded-md px-1.5 py-0.5 font-mono text-[10px] font-bold ring-1",
+                        POS_TONE[p.position] ??
+                          "bg-white text-slate-800 ring-slate-200",
                       ].join(" ")}
                     >
                       {p.position}
                     </span>
                   </TableCell>
-                  <TableCell className="py-2.5">
-                    <p className="text-sm leading-tight text-slate-800">
+                  <TableCell className="py-2">
+                    <p className="text-sm font-medium leading-tight text-slate-800">
                       {p.club}
                     </p>
-                    <p className="text-[11px] text-slate-500">{p.league}</p>
+                    <p className="text-[11px] text-slate-600">{p.league}</p>
                   </TableCell>
-                  <TableCell className="hidden py-2.5 sm:table-cell">
+                  <TableCell className="hidden py-2 sm:table-cell">
                     <span
-                      className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-slate-700"
+                      className="inline-flex items-center gap-1 rounded-md bg-white px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-800 ring-1 ring-slate-200"
                       title={p.nationality}
                     >
                       {p.nationalityCode}
                     </span>
                   </TableCell>
-                  <TableCell className="py-2.5 text-sm tabular-nums text-slate-700">
+                  <TableCell className="py-2 text-xs font-semibold tabular-nums text-slate-800">
                     {p.age}
-                    <span className="text-slate-300"> / </span>#{p.shirtNumber}
+                    <span className="text-slate-500"> / </span>
+                    <span className="text-slate-700">#{p.shirtNumber}</span>
                   </TableCell>
-                  <TableCell className="py-2.5">
+                  <TableCell className="py-2">
                     <span
                       className={[
-                        "inline-block h-2 w-2 rounded-full",
-                        p.isActive ? "bg-emerald-500" : "bg-slate-300",
+                        "inline-block h-2 w-2 rounded-full ring-2 ring-offset-1",
+                        p.isActive
+                          ? "bg-emerald-500 ring-emerald-200"
+                          : "bg-slate-300 ring-slate-200",
                       ].join(" ")}
                       title={p.isActive ? "Active" : "Disabled"}
                     />
                   </TableCell>
                   <TableCell
-                    className="py-2.5 text-end"
+                    className="py-2 text-end"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="flex justify-end gap-0.5 opacity-70 transition-opacity group-hover:opacity-100">
@@ -397,7 +482,7 @@ export function PlayersPanel({
                         type="button"
                         size="icon"
                         variant="ghost"
-                        className="h-8 w-8"
+                        className="h-8 w-8 text-slate-700 hover:bg-white hover:text-slate-900"
                         disabled={pending}
                         title="Edit"
                         onClick={() => openEdit(p)}
@@ -411,8 +496,8 @@ export function PlayersPanel({
                         className={[
                           "h-8 w-8",
                           p.isActive
-                            ? "text-slate-500 hover:text-rose-600"
-                            : "text-emerald-600 hover:text-emerald-700",
+                            ? "text-rose-800 hover:bg-white hover:text-rose-950"
+                            : "text-emerald-800 hover:bg-white hover:text-emerald-950",
                         ].join(" ")}
                         disabled={pending}
                         title={p.isActive ? "Disable" : "Enable"}
@@ -428,13 +513,13 @@ export function PlayersPanel({
           </TableBody>
         </Table>
         {filtered.length > 0 && (
-          <div className="border-t border-slate-100 px-3 py-2 text-[11px] text-slate-400">
+          <div className="border-t border-slate-100 bg-white px-3.5 py-2 text-[11px] font-medium text-slate-700">
             Showing {filtered.length} of {players.length}
-            <span className="ms-2 text-slate-300">·</span>
-            <span className="ms-2">Click a row to edit</span>
+            <span className="mx-1.5 text-slate-500">·</span>
+            Click a row to edit
           </div>
         )}
-      </div>
+      </section>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
@@ -443,12 +528,12 @@ export function PlayersPanel({
               {editingSlug ? "Edit player" : "Add player"}
             </DialogTitle>
             {editingSlug ? (
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-700">
                 Slug <code className="font-mono">{editingSlug}</code> is
                 permanent
               </p>
             ) : (
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-700">
                 Auto-slug from English name — edit before save if needed
               </p>
             )}
@@ -615,7 +700,7 @@ export function PlayersPanel({
               </Field>
             </section>
 
-            <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
+            <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm">
               <input
                 type="checkbox"
                 checked={form.isActive}
@@ -628,7 +713,7 @@ export function PlayersPanel({
                 <span className="font-medium text-slate-800">
                   Active in picker
                 </span>
-                <span className="mt-0.5 block text-xs text-slate-500">
+                <span className="mt-0.5 block text-xs text-slate-700">
                   Off = hidden from Mystery guesses & auto-publish
                 </span>
               </span>

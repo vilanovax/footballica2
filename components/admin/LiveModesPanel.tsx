@@ -57,6 +57,32 @@ const MODE_BLURB: Record<LiveModeId, string> = {
   tikiTaka: "PvP 3×3 claim board · duel special",
 };
 
+const MODE_ACCENT: Record<
+  LiveModeId,
+  { icon: string; ring: string }
+> = {
+  mystery: {
+    icon: "bg-violet-50 text-violet-900",
+    ring: "ring-violet-200",
+  },
+  grid: {
+    icon: "bg-sky-50 text-sky-900",
+    ring: "ring-sky-200",
+  },
+  starPath: {
+    icon: "bg-amber-50 text-amber-950",
+    ring: "ring-amber-200",
+  },
+  memory: {
+    icon: "bg-rose-50 text-rose-900",
+    ring: "ring-rose-200",
+  },
+  tikiTaka: {
+    icon: "bg-emerald-50 text-emerald-900",
+    ring: "ring-emerald-200",
+  },
+};
+
 function Switch({
   on,
   disabled,
@@ -76,31 +102,31 @@ function Switch({
       aria-pressed={on}
       aria-label={`${label}: ${on ? "On" : "Off"}`}
       className={[
-        "group flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 transition",
+        "group flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 transition",
         on
           ? "bg-emerald-50 ring-1 ring-emerald-200"
-          : "bg-slate-50 ring-1 ring-slate-200 hover:bg-slate-100",
+          : "bg-white ring-1 ring-slate-200 hover:ring-slate-300",
         "disabled:opacity-50",
       ].join(" ")}
     >
       <span
         className={[
-          "text-xs font-bold uppercase tracking-wide",
-          on ? "text-emerald-800" : "text-slate-500",
+          "text-[11px] font-bold uppercase tracking-wide",
+          on ? "text-emerald-900" : "text-slate-700",
         ].join(" ")}
       >
         {label}
       </span>
       <span
         className={[
-          "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors",
-          on ? "bg-emerald-500" : "bg-slate-300",
+          "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors",
+          on ? "bg-emerald-600" : "bg-slate-300",
         ].join(" ")}
       >
         <span
           className={[
-            "inline-block h-5 w-5 rounded-full bg-white shadow transition-transform",
-            on ? "translate-x-5" : "translate-x-0.5",
+            "inline-block h-4 w-4 rounded-full bg-white shadow transition-transform",
+            on ? "translate-x-4" : "translate-x-0.5",
           ].join(" ")}
         />
       </span>
@@ -176,38 +202,54 @@ export function LiveModesPanel({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <StatPill label="Duel specials" value={counts.duel} tone="sky" />
-          <StatPill label="GotD rotator" value={counts.gotd} tone="emerald" />
-          {dirty ? (
-            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800">
-              Unsaved
-            </span>
-          ) : (
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-500">
-              Saved
-            </span>
-          )}
-          <AdminHelpTip
-            wide
-            title="Placement"
-            text="Engines always exist in code. These switches only control whether a mode appears as a Duel special and/or in the Game of the Day rotator."
-          />
-        </div>
+    <div className="space-y-3">
+      <section
+        className={[
+          "sticky top-2 z-10 overflow-hidden rounded-xl border bg-white shadow-sm",
+          dirty ? "border-amber-300" : "border-slate-200/90",
+        ].join(" ")}
+      >
+        <header className="flex flex-wrap items-center justify-between gap-3 px-3.5 py-2.5">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-700">
+              Placement
+            </p>
+            <AdminHelpTip
+              wide
+              title="Placement"
+              text="Engines always exist in code. These switches only control whether a mode appears as a Duel special and/or in the Game of the Day rotator."
+            />
+            <span className="hidden h-4 w-px bg-slate-200 sm:block" />
+            <StatPill label="Duel" value={counts.duel} tone="sky" />
+            <StatPill label="GotD" value={counts.gotd} tone="emerald" />
+            {dirty ? (
+              <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-950 ring-1 ring-amber-200">
+                Unsaved
+              </span>
+            ) : (
+              <span className="rounded-md bg-white px-2 py-0.5 text-[11px] font-bold text-slate-700 ring-1 ring-slate-200">
+                Saved
+              </span>
+            )}
+          </div>
 
-        <Button
-          type="button"
-          size="sm"
-          disabled={pending || !dirty}
-          onClick={save}
-          className="gap-1.5"
-        >
-          <Save className="h-3.5 w-3.5" />
-          {pending ? "Saving…" : "Save"}
-        </Button>
-      </div>
+          <Button
+            type="button"
+            size="sm"
+            disabled={pending || !dirty}
+            onClick={save}
+            className={[
+              "gap-1.5",
+              dirty
+                ? "bg-emerald-600 text-white hover:bg-emerald-500"
+                : "",
+            ].join(" ")}
+          >
+            <Save className="h-3.5 w-3.5" />
+            {pending ? "Saving…" : "Save"}
+          </Button>
+        </header>
+      </section>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {LIVE_MODE_IDS.map((id) => {
@@ -215,53 +257,53 @@ export function LiveModesPanel({
           const labels = LIVE_MODE_LABELS[id];
           const placement = liveModes[id];
           const live = placement.duel || placement.gotd;
+          const accent = MODE_ACCENT[id];
 
           return (
             <article
               key={id}
               className={[
-                "flex flex-col rounded-2xl border bg-white p-4 shadow-sm transition",
+                "flex flex-col rounded-xl border bg-white p-3.5 shadow-sm transition",
                 live
-                  ? "border-slate-200"
-                  : "border-dashed border-slate-200 opacity-80",
+                  ? "border-slate-200/90"
+                  : "border-dashed border-slate-300 opacity-75",
               ].join(" ")}
             >
-              <div className="mb-3 flex items-start justify-between gap-2">
+              <div className="mb-2.5 flex items-start justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-2.5">
                   <span
                     className={[
-                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1",
                       live
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "bg-slate-100 text-slate-500",
+                        ? `${accent.icon} ${accent.ring}`
+                        : "bg-white text-slate-700 ring-slate-200",
                     ].join(" ")}
                   >
                     <Icon className="h-4 w-4" strokeWidth={2} />
                   </span>
                   <div className="min-w-0">
-                    <p className="truncate font-semibold text-slate-900">
+                    <p className="truncate text-sm font-semibold text-slate-900">
                       {labels.en}
+                      <span className="ms-1.5 font-medium text-slate-600" dir="auto">
+                        · {labels.fa}
+                      </span>
                     </p>
-                    <p className="truncate text-xs text-slate-500">
-                      {labels.fa}
+                    <p className="truncate text-[11px] font-medium text-slate-600">
+                      {MODE_BLURB[id]}
                     </p>
                   </div>
                 </div>
                 <Link
                   href={CONTENT_HREF[id]}
-                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-emerald-700"
+                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-700 transition hover:bg-white hover:text-emerald-800 ring-1 ring-transparent hover:ring-slate-200"
                   title="Open content panel"
                   aria-label={`Open ${labels.en} panel`}
                 >
-                  <ExternalLink className="h-4 w-4" />
+                  <ExternalLink className="h-3.5 w-3.5" />
                 </Link>
               </div>
 
-              <p className="mb-3 text-xs leading-snug text-slate-500">
-                {MODE_BLURB[id]}
-              </p>
-
-              <div className="mt-auto flex flex-col gap-2">
+              <div className="mt-auto grid grid-cols-2 gap-1.5">
                 <Switch
                   label="Duel"
                   on={placement.duel}
@@ -294,14 +336,14 @@ function StatPill({
 }) {
   const cls =
     tone === "sky"
-      ? "bg-sky-50 text-sky-800 ring-sky-200"
-      : "bg-emerald-50 text-emerald-800 ring-emerald-200";
+      ? "bg-sky-50 text-sky-950 ring-sky-200"
+      : "bg-emerald-50 text-emerald-950 ring-emerald-200";
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ${cls}`}
+      className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-bold ring-1 ${cls}`}
     >
       <span className="tabular-nums">{value}</span>
-      <span className="font-semibold opacity-80">{label}</span>
+      <span className="font-semibold">{label}</span>
     </span>
   );
 }

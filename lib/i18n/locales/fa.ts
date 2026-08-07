@@ -988,6 +988,8 @@ const fa: Dictionary = {
     pushDisable: "خاموش کردن هشدارها",
     pushDuel: "دوئل — نوبت تو",
     pushVault: "گاو صندوق تقریباً پر",
+    pushNewspaper: "روزنامه آماده",
+    pushStamina: "استامینا پر",
     pushUnsupported: "این مرورگر از اعلان پشتیبانی نمی‌کند.",
     pushNotConfigured: "اعلان روی این سرور هنوز تنظیم نشده.",
     pushDenied: "اجازه داده نشد — اعلان‌ها را در تنظیمات مرورگر روشن کن.",
@@ -1127,6 +1129,7 @@ const fa: Dictionary = {
     edit: {
       button: "ویرایش پروفایل",
       title: "ویرایش پروفایل",
+      subtitle: "هویت باشگاهت را ست کن",
       managerName: "نام مدیر",
       clubName: "نام باشگاه",
       stadiumName: "نام استادیوم",
@@ -1146,6 +1149,11 @@ const fa: Dictionary = {
     flag: {
       title: "پرچم باشگاه",
       subtitle: "رنگ‌هایت را به اهتزاز درآور",
+      sectionFree: "پرچم‌های ملی",
+      sectionPremium: "نشان‌های ویژه",
+      freeBadge: "رایگان",
+      premiumBadge: "ویژه",
+      equipped: "نصب‌شده",
       lvl: "لِوِل {n}",
       premiumHint: "پرچم‌های ویژه با بالا رفتن لِوِل باز می‌شوند.",
       save: "نصب پرچم",

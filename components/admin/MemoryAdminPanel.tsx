@@ -13,7 +13,6 @@ import type { AdminMemorySnapshot } from "@/actions/admin/memory";
 import { formatJalaliLabel } from "@/lib/admin/jalali";
 import { mergeGameConfig } from "@/lib/game/economy";
 import { AdminHelpTip, FieldLabel } from "@/components/admin/AdminHelpTip";
-import { ModePlacementBadges } from "@/components/admin/ModePlacementBadges";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -90,93 +89,104 @@ export function MemoryAdminPanel({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <ModePlacementBadges placement={snapshot.placement} />
-        <span className="text-xs text-slate-500">
-          Today{" "}
-          <span dir="rtl" className="font-semibold text-slate-700">
-            {formatJalaliLabel(snapshot.todayKey)}
-          </span>
-          <code className="ms-1.5 font-mono text-[10px] text-slate-400">
-            {snapshot.todayKey}
-          </code>
-        </span>
-      </div>
-
+    <div className="space-y-3">
       {/* Health strip */}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-2 sm:grid-cols-3">
         <div
           className={[
-            "rounded-2xl border bg-white p-4 shadow-sm",
+            "rounded-xl border bg-white px-3.5 py-3 shadow-sm",
             poolOk
               ? "border-emerald-200"
-              : "border-rose-200 bg-rose-50/40",
+              : "border-rose-200 bg-rose-50",
           ].join(" ")}
         >
-          <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+          <p
+            className={[
+              "text-[11px] font-bold uppercase tracking-wide",
+              poolOk ? "text-slate-700" : "text-rose-900",
+            ].join(" ")}
+          >
             Nation pool
           </p>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">
+          <p
+            className={[
+              "mt-0.5 text-2xl font-bold tabular-nums",
+              poolOk ? "text-slate-900" : "text-rose-950",
+            ].join(" ")}
+          >
             {snapshot.distinctNationCount}
           </p>
-          <p className="mt-1 text-xs text-slate-500">
-            {snapshot.activePlayerPoolCount} active players · need ≥ {pairs}{" "}
-            nations ·{" "}
+          <p
+            className={[
+              "mt-1 text-[11px] font-medium",
+              poolOk ? "text-slate-700" : "text-rose-900",
+            ].join(" ")}
+          >
+            {snapshot.activePlayerPoolCount} active · need ≥ {pairs} ·{" "}
             <Link
               href="/admin/players"
-              className="font-medium text-emerald-700 underline-offset-2 hover:underline"
+              className={[
+                "font-semibold underline-offset-2 hover:underline",
+                poolOk ? "text-emerald-800" : "text-rose-950",
+              ].join(" ")}
             >
               Players
             </Link>
           </p>
           {!poolOk ? (
-            <p className="mt-1.5 text-[11px] font-semibold text-rose-700">
+            <p className="mt-1 text-[11px] font-bold text-rose-950">
               Pool too small for {pairs} pairs
             </p>
           ) : null}
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
-            <Swords className="h-3.5 w-3.5" />
+        <div className="rounded-xl border border-slate-200/90 bg-white px-3.5 py-3 shadow-sm">
+          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-700">
+            <Swords className="h-3.5 w-3.5 text-slate-800" />
             Duel (7d)
           </div>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">
+          <p className="mt-0.5 text-2xl font-bold tabular-nums text-slate-900">
             {snapshot.recentMemoryDuelRounds}
           </p>
-          <p className="mt-1 text-xs text-slate-500">Memory rounds this week</p>
+          <p className="mt-1 text-[11px] font-medium text-slate-700">
+            Memory rounds this week
+          </p>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
-            <Brain className="h-3.5 w-3.5" />
+        <div className="rounded-xl border border-slate-200/90 bg-white px-3.5 py-3 shadow-sm">
+          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-700">
+            <Brain className="h-3.5 w-3.5 text-slate-800" />
             Daily puzzles
           </div>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">
+          <p className="mt-0.5 text-2xl font-bold tabular-nums text-slate-900">
             {snapshot.puzzles.length}
           </p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-[11px] font-medium text-slate-700">
             {todayPuzzle
               ? `Today live · ${todayPuzzle.pairCount} pairs`
-              : "None today — GotD creates on first play"}
+              : "None today — GotD on first play"}
           </p>
         </div>
       </div>
 
       {/* Settings */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+      <section
+        className={[
+          "sticky top-2 z-10 overflow-hidden rounded-xl border bg-white shadow-sm",
+          dirty ? "border-amber-300" : "border-slate-200/90",
+        ].join(" ")}
+      >
+        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-3.5 py-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-sm font-semibold text-slate-900">
               Duel settings
             </h2>
             {dirty ? (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+              <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-950 ring-1 ring-amber-200">
                 Unsaved
               </span>
             ) : (
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">
+              <span className="rounded-md bg-white px-2 py-0.5 text-[10px] font-bold text-slate-800 ring-1 ring-slate-200">
                 Saved
               </span>
             )}
@@ -187,14 +197,19 @@ export function MemoryAdminPanel({
             size="sm"
             disabled={pending || !dirty}
             onClick={saveSettings}
-            className="gap-1.5"
+            className={[
+              "h-8 gap-1.5",
+              dirty
+                ? "bg-emerald-600 text-white hover:bg-emerald-500"
+                : "",
+            ].join(" ")}
           >
             <Save className="h-3.5 w-3.5" />
             {pending ? "Saving…" : "Save"}
           </Button>
-        </div>
+        </header>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 p-3.5 sm:grid-cols-3">
           <div>
             <FieldLabel>Pairs</FieldLabel>
             <Input
@@ -205,7 +220,9 @@ export function MemoryAdminPanel({
               onChange={(e) => setPairs(Number(e.target.value))}
               className="h-10"
             />
-            <p className="mt-1 text-[11px] text-slate-500">2–8 per board</p>
+            <p className="mt-1 text-[11px] font-medium text-slate-700">
+              2–8 per board
+            </p>
           </div>
           <div>
             <FieldLabel>Turn (sec)</FieldLabel>
@@ -217,7 +234,7 @@ export function MemoryAdminPanel({
               onChange={(e) => setTurnSec(Number(e.target.value))}
               className="h-10"
             />
-            <p className="mt-1 text-[11px] text-slate-500">
+            <p className="mt-1 text-[11px] font-medium text-slate-700">
               Per-player flip window
             </p>
           </div>
@@ -231,99 +248,111 @@ export function MemoryAdminPanel({
               onChange={(e) => setRevealSec(Number(e.target.value))}
               className="h-10"
             />
-            <p className="mt-1 text-[11px] text-slate-500">
+            <p className="mt-1 text-[11px] font-medium text-slate-700">
               Mismatch flip-back delay
             </p>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Today + schedule */}
-      <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white px-4 py-3.5 shadow-sm">
-        <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
-            <Brain className="h-5 w-5" strokeWidth={2} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
-                Live today
-              </p>
-              <span
-                className="rounded-md bg-white/80 px-1.5 py-0.5 text-[11px] font-semibold text-slate-700 ring-1 ring-amber-100"
-                dir="rtl"
-              >
-                {formatJalaliLabel(snapshot.todayKey)}
-              </span>
-            </div>
-            {todayPuzzle ? (
-              <p className="mt-0.5 text-sm text-slate-700">
-                {todayPuzzle.pairCount} pairs · {todayPuzzle.attemptCount} plays
-                · {todayPuzzle.solvedCount} solved
-              </p>
-            ) : (
-              <p className="mt-0.5 text-sm text-slate-600">
-                No daily row yet
-                {snapshot.placement.gotd
-                  ? " — first GotD play will create one."
-                  : " · GotD is off under Modes."}
-              </p>
-            )}
+      {/* Live today */}
+      <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-white px-3.5 py-3 shadow-sm">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-950 ring-1 ring-amber-200">
+          <Brain className="h-4 w-4" strokeWidth={2} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <p className="text-[10px] font-black uppercase tracking-widest text-amber-950">
+              Live today
+            </p>
+            <span
+              className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] font-bold text-amber-950 ring-1 ring-amber-200"
+              dir="rtl"
+            >
+              {formatJalaliLabel(snapshot.todayKey)}
+            </span>
+            <code className="rounded-md bg-white px-1.5 py-0.5 font-mono text-[10px] text-slate-700 ring-1 ring-slate-200">
+              {snapshot.todayKey}
+            </code>
           </div>
+          {todayPuzzle ? (
+            <p className="mt-1 text-sm font-semibold text-slate-900">
+              {todayPuzzle.pairCount} pairs · {todayPuzzle.attemptCount} plays ·{" "}
+              {todayPuzzle.solvedCount} solved
+            </p>
+          ) : (
+            <p className="mt-1 text-sm font-medium text-slate-800">
+              No daily row yet
+              {snapshot.placement.gotd
+                ? " — first GotD play will create one."
+                : " · GotD is off under Modes."}
+            </p>
+          )}
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+      {/* Schedule */}
+      <section className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm">
+        <header className="flex items-center justify-between border-b border-slate-100 px-3.5 py-2.5">
           <h2 className="text-sm font-semibold text-slate-900">Schedule</h2>
-          <span className="text-xs font-medium text-slate-400">
+          <span className="text-[11px] font-semibold text-slate-800">
             {schedule.length} day{schedule.length === 1 ? "" : "s"}
           </span>
-        </div>
+        </header>
 
         {schedule.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-slate-500">
-            No other daily puzzles yet. Enable GotD under Modes — rows appear
-            on first play.
-          </p>
+          <div className="flex flex-col items-center gap-1.5 px-4 py-10 text-center">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-800 ring-1 ring-slate-200">
+              <Brain className="h-5 w-5" />
+            </span>
+            <p className="text-sm font-semibold text-slate-900">
+              No other daily puzzles yet
+            </p>
+            <p className="max-w-xs text-xs font-medium text-slate-800">
+              Enable GotD under Modes — rows appear on first play.
+            </p>
+          </div>
         ) : (
           <ul className="divide-y divide-slate-100">
-            {schedule.map((p) => (
-              <li
-                key={p.id}
-                className="flex items-center gap-3 px-4 py-3"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className="text-xs font-semibold text-slate-800"
-                      dir="rtl"
-                    >
-                      {formatJalaliLabel(p.dateKey)}
-                    </span>
-                    <code className="font-mono text-[10px] text-slate-400">
-                      {p.dateKey}
-                    </code>
-                    {p.dateKey > snapshot.todayKey ? (
-                      <span className="rounded-full bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold text-sky-700">
-                        UPCOMING
+            {schedule.map((p) => {
+              const isUpcoming = p.dateKey > snapshot.todayKey;
+              return (
+                <li
+                  key={p.id}
+                  className="flex items-center gap-2.5 px-3.5 py-2.5"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span
+                        className="text-xs font-bold text-slate-900"
+                        dir="rtl"
+                      >
+                        {formatJalaliLabel(p.dateKey)}
                       </span>
-                    ) : (
-                      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500">
-                        PAST
-                      </span>
-                    )}
+                      <code className="font-mono text-[10px] text-slate-700">
+                        {p.dateKey}
+                      </code>
+                      {isUpcoming ? (
+                        <span className="rounded-md bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold text-sky-950 ring-1 ring-sky-200">
+                          UPCOMING
+                        </span>
+                      ) : (
+                        <span className="rounded-md bg-white px-1.5 py-0.5 text-[10px] font-bold text-slate-800 ring-1 ring-slate-200">
+                          PAST
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 text-[11px] font-semibold text-slate-700">
+                      {p.pairCount} pairs · {p.attemptCount} plays ·{" "}
+                      {p.solvedCount} solved
+                    </p>
                   </div>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    {p.pairCount} pairs · {p.attemptCount} plays ·{" "}
-                    {p.solvedCount} solved
-                  </p>
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
-      </div>
+      </section>
     </div>
   );
 }

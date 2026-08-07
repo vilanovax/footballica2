@@ -32,7 +32,7 @@ export function ReportFilters({
 
   return (
     <div
-      className="inline-flex flex-wrap gap-1 rounded-2xl bg-slate-100 p-1"
+      className="inline-flex flex-wrap gap-1 rounded-xl bg-slate-100/90 p-1 ring-1 ring-slate-200/80"
       role="tablist"
       aria-label="Report status"
     >
@@ -48,23 +48,23 @@ export function ReportFilters({
             aria-selected={isActive}
             onClick={() => select(t.key)}
             className={[
-              "inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition",
+              "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-bold transition",
               isActive
                 ? "bg-white text-slate-900 shadow-sm"
                 : urgent
-                  ? "text-rose-700 hover:bg-rose-50"
-                  : "text-slate-500 hover:text-slate-800",
+                  ? "text-rose-800 hover:bg-rose-50"
+                  : "text-slate-700 hover:bg-white/80 hover:text-slate-900",
             ].join(" ")}
           >
             {t.label}
             <span
               className={[
-                "rounded-full px-1.5 text-[10px] font-bold tabular-nums",
+                "rounded-md px-1.5 text-[10px] font-bold tabular-nums",
                 isActive
                   ? "bg-slate-900 text-white"
                   : urgent
-                    ? "bg-rose-100 text-rose-800"
-                    : "bg-white text-slate-500 ring-1 ring-slate-200",
+                    ? "bg-rose-50 text-rose-950 ring-1 ring-rose-200"
+                    : "bg-white text-slate-800 ring-1 ring-slate-200",
               ].join(" ")}
             >
               {count}

@@ -106,136 +106,78 @@ export function QuestionFilters({
   const hasFilters = chips.length > 0;
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <div className="min-w-0">
-          <FieldLabel
-            tipTitle="Format"
-            tip="TEXT is classic MCQ. IMAGE / REVEAL need media. CAREER_PATH and Higher/Lower use JSON payloads in content."
-          >
-            Format
-          </FieldLabel>
-          <Select
-            value={type ?? ALL}
-            onValueChange={(v) => setParam("type", v)}
-          >
-            <SelectTrigger className="h-9 w-full bg-white">
-              <SelectValue placeholder="All formats" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All formats</SelectItem>
-              {TYPES.map((t) => (
-                <SelectItem key={t.value} value={t.value}>
-                  {t.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="min-w-0">
-          <FieldLabel
-            tipTitle="Status"
-            tip="Published questions can appear in matches. Draft / In review stay out of the live bank. Retired is soft-removed."
-          >
-            Status
-          </FieldLabel>
-          <Select
-            value={status ?? ALL}
-            onValueChange={(v) => setParam("status", v)}
-          >
-            <SelectTrigger className="h-9 w-full bg-white">
-              <SelectValue placeholder="All statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All statuses</SelectItem>
-              {STATUSES.map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="min-w-0">
-          <FieldLabel tipTitle="Difficulty" tip="Authored bucket used in draws.">
-            Difficulty
-          </FieldLabel>
-          <Select
-            value={difficulty ?? ALL}
-            onValueChange={(v) => setParam("difficulty", v)}
-          >
-            <SelectTrigger className="h-9 w-full bg-white">
-              <SelectValue placeholder="All difficulties" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All difficulties</SelectItem>
-              {DIFFICULTIES.map((d) => (
-                <SelectItem key={d.value} value={d.value}>
-                  {d.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="min-w-0">
-          <FieldLabel
-            tipTitle="Category"
-            tip="Topic bucket used for Survival, Duel drafts, and Match Day draws."
-          >
-            Category
-          </FieldLabel>
-          <Select
-            value={category ?? ALL}
-            onValueChange={(v) => setParam("category", v)}
-          >
-            <SelectTrigger className="h-9 w-full bg-white">
-              <SelectValue placeholder="All categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All categories</SelectItem>
-              {categories.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.nameEn}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="min-w-0">
-          <FieldLabel
-            tipTitle="Tag"
-            tip="Optional labels for Live-Ops filtering (e.g. World Cup, Classics)."
-          >
-            Tag
-          </FieldLabel>
-          <Select value={tag ?? ALL} onValueChange={(v) => setParam("tag", v)}>
-            <SelectTrigger className="h-9 w-full bg-white">
-              <SelectValue placeholder="All tags" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All tags</SelectItem>
-              {tags.map((t) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {t.nameEn}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+    <div className="space-y-2.5">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        <FilterSelect
+          label="Format"
+          tipTitle="Format"
+          tip="TEXT is classic MCQ. IMAGE / REVEAL need media. CAREER_PATH and Higher/Lower use JSON payloads in content."
+          value={type ?? ALL}
+          onChange={(v) => setParam("type", v)}
+          placeholder="All formats"
+          items={[
+            { value: ALL, label: "All formats" },
+            ...TYPES.map((t) => ({ value: t.value, label: t.label })),
+          ]}
+        />
+        <FilterSelect
+          label="Status"
+          tipTitle="Status"
+          tip="Published questions can appear in matches. Draft / In review stay out of the live bank. Retired is soft-removed."
+          value={status ?? ALL}
+          onChange={(v) => setParam("status", v)}
+          placeholder="All statuses"
+          items={[
+            { value: ALL, label: "All statuses" },
+            ...STATUSES.map((s) => ({ value: s.value, label: s.label })),
+          ]}
+        />
+        <FilterSelect
+          label="Difficulty"
+          tipTitle="Difficulty"
+          tip="Authored bucket used in draws."
+          value={difficulty ?? ALL}
+          onChange={(v) => setParam("difficulty", v)}
+          placeholder="All difficulties"
+          items={[
+            { value: ALL, label: "All difficulties" },
+            ...DIFFICULTIES.map((d) => ({ value: d.value, label: d.label })),
+          ]}
+        />
+        <FilterSelect
+          label="Category"
+          tipTitle="Category"
+          tip="Topic bucket used for Survival, Duel drafts, and Match Day draws."
+          value={category ?? ALL}
+          onChange={(v) => setParam("category", v)}
+          placeholder="All categories"
+          items={[
+            { value: ALL, label: "All categories" },
+            ...categories.map((c) => ({ value: c.id, label: c.nameEn })),
+          ]}
+        />
+        <FilterSelect
+          label="Tag"
+          tipTitle="Tag"
+          tip="Optional labels for Live-Ops filtering (e.g. World Cup, Classics)."
+          value={tag ?? ALL}
+          onChange={(v) => setParam("tag", v)}
+          placeholder="All tags"
+          items={[
+            { value: ALL, label: "All tags" },
+            ...tags.map((t) => ({ value: t.id, label: t.nameEn })),
+          ]}
+        />
       </div>
 
       {hasFilters && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
           {chips.map((chip) => (
             <button
               key={chip.key}
               type="button"
               onClick={() => setParam(chip.key, ALL)}
-              className="inline-flex h-7 items-center gap-1 rounded-full bg-slate-900 px-2.5 text-[11px] font-semibold text-white hover:bg-slate-700"
+              className="inline-flex h-7 items-center gap-1 rounded-full bg-slate-900 px-2.5 text-[11px] font-semibold text-white transition-colors hover:bg-slate-700"
               title="Remove filter"
             >
               {chip.label}
@@ -252,6 +194,44 @@ export function QuestionFilters({
           </Button>
         </div>
       )}
+    </div>
+  );
+}
+
+function FilterSelect({
+  label,
+  tipTitle,
+  tip,
+  value,
+  onChange,
+  placeholder,
+  items,
+}: {
+  label: string;
+  tipTitle: string;
+  tip: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  items: { value: string; label: string }[];
+}) {
+  return (
+    <div className="min-w-0">
+      <FieldLabel tipTitle={tipTitle} tip={tip}>
+        {label}
+      </FieldLabel>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="h-9 w-full border-slate-200 bg-slate-50/80 text-xs font-medium shadow-none">
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {items.map((item) => (
+            <SelectItem key={item.value} value={item.value}>
+              {item.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

@@ -2,7 +2,14 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import { loadBusinessSnapshot } from "@/lib/club/businessService";
-import { notifyDuelYourTurn, notifyVaultNearlyFull } from "@/lib/push/send";
+import { computeStaminaRegen } from "@/lib/club/stamina";
+import { canClaimNews } from "@/lib/boosters/boosters";
+import {
+  notifyDuelYourTurn,
+  notifyNewspaperReady,
+  notifyStaminaFull,
+  notifyVaultNearlyFull,
+} from "@/lib/push/send";
 import { isWebPushReady } from "@/lib/push/webPush";
 
 const VAULT_RATIO = 0.8;
@@ -84,6 +91,99 @@ export async function scanVaultNearlyFullPushes(
 
     candidates += 1;
     const res = await notifyVaultNearlyFull(userId);
+    sent += res.sent;
+  }
+
+  return { candidates, sent };
+}
+
+/**
+ * Daily newspaper is claimable again (Tehran day gate).
+ */
+export async function scanNewspaperReadyPushes(
+  limit = 40,
+): Promise<{ candidates: number; sent: number }> {
+  if (!isWebPushReady()) return { candidates: 0, sent: 0 };
+
+  const now = new Date();
+  const subs = await prisma.pushSubscription.findMany({
+    where: { newspaperReady: true },
+    select: { userId: true },
+    distinct: ["userId"],
+    take: limit,
+  });
+
+  let sent = 0;
+  let candidates = 0;
+
+  for (const { userId } of subs) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        isBot: true,
+        club: { select: { lastNewsClaim: true } },
+      },
+    });
+    if (!user?.club || user.isBot) continue;
+    if (!canClaimNews(user.club.lastNewsClaim, now)) continue;
+
+    candidates += 1;
+    const res = await notifyNewspaperReady(userId);
+    sent += res.sent;
+  }
+
+  return { candidates, sent };
+}
+
+/**
+ * Passive stamina has regenerated to full — nudge toward Play.
+ */
+export async function scanStaminaFullPushes(
+  limit = 40,
+): Promise<{ candidates: number; sent: number }> {
+  if (!isWebPushReady()) return { candidates: 0, sent: 0 };
+
+  const now = new Date();
+  const subs = await prisma.pushSubscription.findMany({
+    where: { staminaFull: true },
+    select: { userId: true },
+    distinct: ["userId"],
+    take: limit,
+  });
+
+  let sent = 0;
+  let candidates = 0;
+
+  for (const { userId } of subs) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        isBot: true,
+        club: {
+          select: {
+            stamina: true,
+            maxStamina: true,
+            lastStaminaUpdate: true,
+            medicalLevel: true,
+          },
+        },
+      },
+    });
+    if (!user?.club || user.isBot) continue;
+
+    const regen = computeStaminaRegen(
+      {
+        stamina: user.club.stamina,
+        maxStamina: user.club.maxStamina,
+        lastStaminaUpdate: user.club.lastStaminaUpdate,
+        medicalLevel: user.club.medicalLevel,
+      },
+      now,
+    );
+    if (regen.stamina < user.club.maxStamina) continue;
+
+    candidates += 1;
+    const res = await notifyStaminaFull(userId);
     sent += res.sent;
   }
 

@@ -1,6 +1,11 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import {
+  useMemo,
+  useState,
+  useTransition,
+  type ReactNode,
+} from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -110,7 +115,7 @@ function AxisChip({
   const values = valuesForKind(axis.kind, ruleOptions);
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700">
         {label}
       </span>
       <div className="flex min-w-0 flex-col gap-1">
@@ -152,6 +157,29 @@ function AxisChip({
         </Select>
       </div>
     </div>
+  );
+}
+
+function StatusPill({
+  tone,
+  children,
+}: {
+  tone: "amber" | "emerald" | "rose" | "slate" | "sky";
+  children: ReactNode;
+}) {
+  const cls = {
+    amber: "bg-amber-50 text-amber-950 ring-amber-200",
+    emerald: "bg-emerald-50 text-emerald-950 ring-emerald-200",
+    rose: "bg-rose-50 text-rose-950 ring-rose-200",
+    slate: "bg-white text-slate-800 ring-slate-200",
+    sky: "bg-sky-50 text-sky-950 ring-sky-200",
+  }[tone];
+  return (
+    <span
+      className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ring-1 ${cls}`}
+    >
+      {children}
+    </span>
   );
 }
 
@@ -378,85 +406,61 @@ export function GridPuzzlesPanel({
   }
 
   return (
-    <div className="space-y-4">
-      {/* Live today */}
+    <div className="space-y-3">
       <button
         type="button"
         onClick={loadToday}
-        className="flex w-full items-center gap-3 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white px-4 py-3.5 text-start shadow-sm transition hover:border-amber-300 hover:shadow"
+        className="flex w-full items-center gap-3 rounded-xl border border-amber-200 bg-white px-3.5 py-3 text-start shadow-sm transition hover:border-amber-300 hover:shadow"
       >
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
-          <Grid3x3 className="h-5 w-5" strokeWidth={2} />
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-950 ring-1 ring-amber-200">
+          <Grid3x3 className="h-4 w-4" strokeWidth={2} />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <p className="text-[10px] font-black uppercase tracking-widest text-amber-950">
               Live today
             </p>
-            <code className="rounded-md bg-white/80 px-1.5 py-0.5 font-mono text-[11px] text-slate-600 ring-1 ring-amber-100">
+            <code className="rounded-md bg-white px-1.5 py-0.5 font-mono text-[10px] text-slate-800 ring-1 ring-slate-200">
               {todayKey}
             </code>
             {todayPuzzle ? (
-              <span
-                className={[
-                  "rounded-full px-2 py-0.5 text-[10px] font-bold",
-                  todayPuzzle.solvable
-                    ? "bg-emerald-100 text-emerald-800"
-                    : "bg-rose-100 text-rose-800",
-                ].join(" ")}
-              >
-                {todayPuzzle.solvable ? "OK" : `${todayPuzzle.emptyCells} empty`}
-              </span>
+              <StatusPill tone={todayPuzzle.solvable ? "emerald" : "rose"}>
+                {todayPuzzle.solvable
+                  ? "OK"
+                  : `${todayPuzzle.emptyCells} empty`}
+              </StatusPill>
             ) : null}
           </div>
           {todayPuzzle ? (
-            <>
-              <p className="mt-0.5 truncate text-sm font-medium text-slate-900">
-                {boardSummary(todayPuzzle)}
-              </p>
-              <p className="text-xs text-slate-500">
-                {todayPuzzle.maxMistakes} mistakes · {todayPuzzle.attemptCount}{" "}
-                plays · {todayPuzzle.solvedCount} solved
-              </p>
-            </>
+            <p className="mt-1 truncate text-sm font-semibold text-slate-900">
+              {boardSummary(todayPuzzle)}
+              <span className="ms-2 text-[11px] font-semibold text-slate-700">
+                {todayPuzzle.maxMistakes}m · {todayPuzzle.attemptCount} plays ·{" "}
+                {todayPuzzle.solvedCount} solved
+              </span>
+            </p>
           ) : (
-            <p className="mt-0.5 text-sm text-slate-600">
+            <p className="mt-1 text-sm font-medium text-slate-800">
               No board yet — Auto-fill + Save to publish.
             </p>
           )}
         </div>
-        <span className="shrink-0 text-xs font-semibold text-amber-800">
+        <span className="shrink-0 rounded-md bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-950 ring-1 ring-amber-200">
           {todayPuzzle ? "Edit" : "Set"}
         </span>
       </button>
 
-      {/* Board editor */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
+      <section className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm">
+        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-3.5 py-2.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             <h2 className="text-sm font-semibold text-slate-900">Board</h2>
-            {isToday ? (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
-                TODAY
-              </span>
-            ) : null}
+            {isToday ? <StatusPill tone="amber">TODAY</StatusPill> : null}
             {preview ? (
-              <span
-                className={[
-                  "rounded-full px-2 py-0.5 text-[10px] font-bold",
-                  preview.solvable
-                    ? "bg-emerald-100 text-emerald-800"
-                    : "bg-rose-100 text-rose-800",
-                ].join(" ")}
-              >
-                {preview.solvable
-                  ? "Ready"
-                  : `${preview.emptyCells} empty`}
-              </span>
+              <StatusPill tone={preview.solvable ? "emerald" : "rose"}>
+                {preview.solvable ? "Ready" : `${preview.emptyCells} empty`}
+              </StatusPill>
             ) : (
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">
-                Preview needed
-              </span>
+              <StatusPill tone="slate">Preview needed</StatusPill>
             )}
             <AdminHelpTip text="Green cells ≥ 3 catalog matches. Save requires all 9 green." />
           </div>
@@ -468,9 +472,9 @@ export function GridPuzzlesPanel({
               variant="outline"
               disabled={pending}
               onClick={fillWeek}
-              className="gap-1.5"
+              className="h-8 gap-1.5 border-slate-200 bg-white"
             >
-              <Wand2 className="h-3.5 w-3.5" />
+              <Wand2 className="h-3.5 w-3.5 text-amber-800" />
               Fill week
             </Button>
             <Button
@@ -479,7 +483,7 @@ export function GridPuzzlesPanel({
               variant="outline"
               disabled={pending}
               onClick={autoFill}
-              className="gap-1.5 border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-100"
+              className="h-8 gap-1.5 border-violet-200 bg-violet-50 text-violet-950 hover:bg-violet-100"
             >
               <Sparkles className="h-3.5 w-3.5" />
               Auto-fill
@@ -490,7 +494,7 @@ export function GridPuzzlesPanel({
               variant="outline"
               disabled={pending}
               onClick={runPreview}
-              className="gap-1.5"
+              className="h-8 gap-1.5 border-slate-200 bg-white"
             >
               <Eye className="h-3.5 w-3.5" />
               Preview
@@ -500,199 +504,199 @@ export function GridPuzzlesPanel({
               size="sm"
               disabled={pending || !readyToSave}
               onClick={publish}
-              className="gap-1.5"
+              className="h-8 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-500"
             >
               <Save className="h-3.5 w-3.5" />
               {pending ? "Saving…" : "Save"}
             </Button>
           </div>
-        </div>
+        </header>
 
-        <div className="mb-4 grid gap-3 sm:grid-cols-12">
-          <div className="sm:col-span-4">
-            <FieldLabel>Date</FieldLabel>
-            <Input
-              type="date"
-              value={dateKey}
-              onChange={(e) => {
-                setDateKey(e.target.value);
-                setPreview(null);
-              }}
-              className="h-10"
-            />
-          </div>
-          <div className="sm:col-span-3">
-            <FieldLabel>Max mistakes</FieldLabel>
-            <Input
-              type="number"
-              min={1}
-              max={20}
-              value={maxMistakes}
-              onChange={(e) => setMaxMistakes(Number(e.target.value))}
-              className="h-10"
-            />
-          </div>
-          <div className="flex items-end sm:col-span-5">
-            <p className="pb-2 text-xs text-slate-500">
-              Schedule{" "}
-              <span className="font-semibold text-slate-700">
-                {weekCoverage.scheduled}
-              </span>{" "}
-              · solvable{" "}
-              <span className="font-semibold text-slate-700">
-                {weekCoverage.solvable}
-              </span>
-            </p>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto rounded-xl bg-slate-50/80 p-3 ring-1 ring-slate-100">
-          <div
-            className="mx-auto grid min-w-[22rem] gap-2"
-            style={{
-              gridTemplateColumns:
-                "minmax(8.5rem,1.15fr) repeat(3, minmax(5.5rem,1fr))",
-            }}
-          >
-            <div className="flex items-end justify-center pb-1">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-300">
-                3×3
-              </span>
-            </div>
-            {cols.map((axis, i) => (
-              <AxisChip
-                key={`c-${i}`}
-                label={`Col ${i + 1}`}
-                axis={axis}
-                ruleOptions={ruleOptions}
-                onChange={(next) => updateCol(i, next)}
+        <div className="space-y-3 p-3.5">
+          <div className="grid gap-3 sm:grid-cols-12">
+            <div className="sm:col-span-4">
+              <FieldLabel>Date</FieldLabel>
+              <Input
+                type="date"
+                value={dateKey}
+                onChange={(e) => {
+                  setDateKey(e.target.value);
+                  setPreview(null);
+                }}
+                className="h-10"
               />
-            ))}
+            </div>
+            <div className="sm:col-span-3">
+              <FieldLabel>Max mistakes</FieldLabel>
+              <Input
+                type="number"
+                min={1}
+                max={20}
+                value={maxMistakes}
+                onChange={(e) => setMaxMistakes(Number(e.target.value))}
+                className="h-10"
+              />
+            </div>
+            <div className="flex items-end sm:col-span-5">
+              <p className="pb-2 text-xs font-medium text-slate-800">
+                Schedule{" "}
+                <span className="font-bold text-slate-900">
+                  {weekCoverage.scheduled}
+                </span>{" "}
+                · solvable{" "}
+                <span className="font-bold text-slate-900">
+                  {weekCoverage.solvable}
+                </span>
+              </p>
+            </div>
+          </div>
 
-            {rows.map((rowAxis, r) => (
-              <div key={`r-${r}`} className="contents">
-                <AxisChip
-                  label={`Row ${r + 1}`}
-                  axis={rowAxis}
-                  ruleOptions={ruleOptions}
-                  onChange={(next) => updateRow(r, next)}
-                />
-                {cols.map((_, c) => {
-                  const idx = r * GRID_SIZE + c;
-                  const n = preview?.counts[idx];
-                  const tone =
-                    n == null
-                      ? "border-dashed border-slate-200 bg-white text-slate-300"
-                      : n === 0
-                        ? "border-rose-200 bg-rose-50 text-rose-700"
-                        : n < 3
-                          ? "border-amber-200 bg-amber-50 text-amber-800"
-                          : "border-emerald-200 bg-emerald-50 text-emerald-800";
-                  return (
-                    <div
-                      key={`cell-${r}-${c}`}
-                      className={[
-                        "flex h-14 items-center justify-center rounded-xl border-2 text-sm font-bold tabular-nums shadow-sm",
-                        tone,
-                      ].join(" ")}
-                      title={
-                        n == null
-                          ? "Preview to check"
-                          : `${n} matching player(s)`
-                      }
-                    >
-                      {n == null ? "·" : n}
-                    </div>
-                  );
-                })}
+          <div className="overflow-x-auto rounded-xl bg-white p-3 ring-1 ring-slate-200">
+            <div
+              className="mx-auto grid min-w-[22rem] gap-2"
+              style={{
+                gridTemplateColumns:
+                  "minmax(8.5rem,1.15fr) repeat(3, minmax(5.5rem,1fr))",
+              }}
+            >
+              <div className="flex items-end justify-center pb-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-700">
+                  3×3
+                </span>
               </div>
-            ))}
+              {cols.map((axis, i) => (
+                <AxisChip
+                  key={`c-${i}`}
+                  label={`Col ${i + 1}`}
+                  axis={axis}
+                  ruleOptions={ruleOptions}
+                  onChange={(next) => updateCol(i, next)}
+                />
+              ))}
+
+              {rows.map((rowAxis, r) => (
+                <div key={`r-${r}`} className="contents">
+                  <AxisChip
+                    label={`Row ${r + 1}`}
+                    axis={rowAxis}
+                    ruleOptions={ruleOptions}
+                    onChange={(next) => updateRow(r, next)}
+                  />
+                  {cols.map((_, c) => {
+                    const idx = r * GRID_SIZE + c;
+                    const n = preview?.counts[idx];
+                    const tone =
+                      n == null
+                        ? "border-dashed border-slate-200 bg-white text-slate-500"
+                        : n === 0
+                          ? "border-rose-200 bg-rose-50 text-rose-950"
+                          : n < 3
+                            ? "border-amber-200 bg-amber-50 text-amber-950"
+                            : "border-emerald-200 bg-emerald-50 text-emerald-950";
+                    return (
+                      <div
+                        key={`cell-${r}-${c}`}
+                        className={[
+                          "flex h-12 items-center justify-center rounded-lg border-2 text-sm font-bold tabular-nums",
+                          tone,
+                        ].join(" ")}
+                        title={
+                          n == null
+                            ? "Preview to check"
+                            : `${n} matching player(s)`
+                        }
+                      >
+                        {n == null ? "·" : n}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 text-[11px] font-semibold text-slate-800">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />≥ 3
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+              1–2
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />0
+            </span>
           </div>
         </div>
+      </section>
 
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-[11px] text-slate-500">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />≥ 3
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-            1–2
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />0
-          </span>
-        </div>
-      </div>
-
-      {/* Schedule */}
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+      <section className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm">
+        <header className="flex items-center justify-between border-b border-slate-100 px-3.5 py-2.5">
           <h2 className="text-sm font-semibold text-slate-900">Schedule</h2>
-          <span className="text-xs font-medium text-slate-400">
+          <span className="text-[11px] font-semibold text-slate-800">
             {schedule.length} day{schedule.length === 1 ? "" : "s"}
           </span>
-        </div>
+        </header>
 
         {schedule.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-slate-500">
-            No other days — Fill week or Auto-fill + Save a future date.
-          </p>
+          <div className="flex flex-col items-center gap-1.5 px-4 py-10 text-center">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-800 ring-1 ring-slate-200">
+              <Grid3x3 className="h-5 w-5" />
+            </span>
+            <p className="text-sm font-semibold text-slate-900">
+              No other days
+            </p>
+            <p className="text-xs font-medium text-slate-800">
+              Fill week or Auto-fill + Save a future date.
+            </p>
+          </div>
         ) : (
           <ul className="divide-y divide-slate-100">
-            {schedule.map((p) => (
-              <li
-                key={p.id}
-                className="flex items-center gap-3 px-4 py-3 transition hover:bg-slate-50"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <code className="font-mono text-xs font-semibold text-slate-700">
-                      {p.dateKey}
-                    </code>
-                    {p.dateKey > todayKey ? (
-                      <span className="rounded-full bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold text-sky-700">
-                        UPCOMING
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500">
-                        PAST
-                      </span>
-                    )}
-                    <span
-                      className={[
-                        "rounded-full px-1.5 py-0.5 text-[10px] font-bold",
-                        p.solvable
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-rose-50 text-rose-700",
-                      ].join(" ")}
-                    >
-                      {p.solvable ? "OK" : `${p.emptyCells} empty`}
-                    </span>
-                  </div>
-                  <p className="mt-0.5 truncate text-sm text-slate-800">
-                    {boardSummary(p)}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    {p.maxMistakes} mistakes · {p.attemptCount} plays ·{" "}
-                    {p.solvedCount} solved
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => loadRow(p)}
-                  className="h-9 gap-1.5 px-2.5 text-slate-600"
-                  aria-label={`Edit ${p.dateKey}`}
+            {schedule.map((p) => {
+              const isUpcoming = p.dateKey > todayKey;
+              return (
+                <li
+                  key={p.id}
+                  className="flex items-center gap-2.5 px-3.5 py-2.5"
                 >
-                  <Pencil className="h-3.5 w-3.5" />
-                  Edit
-                </Button>
-              </li>
-            ))}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <code className="font-mono text-xs font-bold text-slate-900">
+                        {p.dateKey}
+                      </code>
+                      {isUpcoming ? (
+                        <StatusPill tone="sky">UPCOMING</StatusPill>
+                      ) : (
+                        <StatusPill tone="slate">PAST</StatusPill>
+                      )}
+                      <StatusPill tone={p.solvable ? "emerald" : "rose"}>
+                        {p.solvable ? "OK" : `${p.emptyCells} empty`}
+                      </StatusPill>
+                    </div>
+                    <p className="mt-0.5 truncate text-sm font-semibold text-slate-900">
+                      {boardSummary(p)}
+                      <span className="ms-2 text-[11px] font-semibold text-slate-700">
+                        {p.maxMistakes}m · {p.attemptCount}p · {p.solvedCount}s
+                      </span>
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => loadRow(p)}
+                    className="h-8 w-8 shrink-0 text-slate-800 hover:bg-white hover:text-slate-900"
+                    aria-label={`Edit ${p.dateKey}`}
+                    title="Edit"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                </li>
+              );
+            })}
           </ul>
         )}
-      </div>
+      </section>
     </div>
   );
 }

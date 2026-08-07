@@ -104,9 +104,8 @@ export function UsersBotsPanel({ bots, users }: UsersBotsPanelProps) {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Health strip */}
-      <div className="grid gap-3 sm:grid-cols-3">
+    <div className="space-y-3">
+      <div className="grid gap-2 sm:grid-cols-3">
         <StatCard
           label="Real users"
           value={users.length}
@@ -127,20 +126,20 @@ export function UsersBotsPanel({ bots, users }: UsersBotsPanelProps) {
         />
       </div>
 
-      <Tabs value={tab} onValueChange={setTab} className="space-y-4">
+      <Tabs value={tab} onValueChange={setTab} className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <TabsList className="rounded-2xl bg-slate-100 p-1">
-            <TabsTrigger value="users" className="gap-1.5 rounded-xl">
+          <TabsList className="rounded-xl bg-slate-100/90 p-1 ring-1 ring-slate-200/80">
+            <TabsTrigger value="users" className="gap-1.5 rounded-lg">
               <Users className="h-3.5 w-3.5" />
               Users
-              <span className="rounded-full bg-white/80 px-1.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200">
+              <span className="rounded-md bg-white px-1.5 text-[10px] font-bold text-slate-800 ring-1 ring-slate-200">
                 {users.length}
               </span>
             </TabsTrigger>
-            <TabsTrigger value="bots" className="gap-1.5 rounded-xl">
+            <TabsTrigger value="bots" className="gap-1.5 rounded-lg">
               <Bot className="h-3.5 w-3.5" />
               Bots
-              <span className="rounded-full bg-white/80 px-1.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200">
+              <span className="rounded-md bg-white px-1.5 text-[10px] font-bold text-slate-800 ring-1 ring-slate-200">
                 {bots.length}
               </span>
             </TabsTrigger>
@@ -155,22 +154,41 @@ export function UsersBotsPanel({ bots, users }: UsersBotsPanelProps) {
         </div>
 
         <TabsContent value="users" className="mt-0 space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <SearchField
-              value={userQuery}
-              onChange={setUserQuery}
-              placeholder="Search phone or club…"
-            />
-            <AdminHelpTip text="Grant tops up club coins (logged, not IAP). Answers = correct / total." />
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            {filteredUsers.length === 0 ? (
-              <p className="px-4 py-10 text-center text-sm text-slate-500">
-                {users.length === 0
-                  ? "No real users yet."
-                  : "No users match your search."}
+          <section className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm">
+            <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-3.5 py-2">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-slate-700">
+                Search users
               </p>
+              <div className="flex items-center gap-1.5">
+                <AdminHelpTip text="Grant tops up club coins (logged, not IAP). Answers = correct / total." />
+                <p className="text-[11px] font-semibold text-slate-700">
+                  {filteredUsers.length} shown
+                </p>
+              </div>
+            </header>
+            <div className="p-3">
+              <SearchField
+                value={userQuery}
+                onChange={setUserQuery}
+                placeholder="Search phone or club…"
+              />
+            </div>
+          </section>
+
+          <section className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm">
+            {filteredUsers.length === 0 ? (
+              <div className="flex flex-col items-center gap-1.5 px-4 py-10 text-center">
+                <p className="text-sm font-semibold text-slate-900">
+                  {users.length === 0
+                    ? "No real users yet"
+                    : "No users match"}
+                </p>
+                <p className="text-xs font-medium text-slate-700">
+                  {users.length === 0
+                    ? "OTP sign-ups will appear here."
+                    : "Clear search to see everyone."}
+                </p>
+              </div>
             ) : (
               <ul className="divide-y divide-slate-100">
                 {filteredUsers.map((u) => {
@@ -178,27 +196,30 @@ export function UsersBotsPanel({ bots, users }: UsersBotsPanelProps) {
                   return (
                     <li
                       key={u.id}
-                      className="flex flex-wrap items-center gap-3 px-4 py-3"
+                      className="flex flex-wrap items-center gap-2.5 px-3.5 py-2.5"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-semibold text-slate-900">
+                        <p className="truncate text-sm font-semibold text-slate-900">
                           {u.clubName ?? "No club"}
                         </p>
-                        <p className="truncate font-mono text-xs text-slate-500">
+                        <p className="truncate font-mono text-[11px] text-slate-700">
                           {u.phone ?? "—"}
-                        </p>
-                        <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                          <span className="font-semibold tabular-nums text-amber-700">
-                            {(u.clubId ? u.coins : 0).toLocaleString()} 🪙
+                          <span className="ms-2 font-sans font-semibold tabular-nums text-amber-800">
+                            {(u.clubId ? u.coins : 0).toLocaleString()}c
                           </span>
-                          <AnswersPill label={u.answersLabel} />
-                          <span>{u.matchesPlayed} matches</span>
-                          <span>{u.weeklyXp} XP/wk</span>
-                          {joinedKey ? (
-                            <span dir="rtl">
-                              {formatJalaliLabel(joinedKey)}
-                            </span>
-                          ) : null}
+                          <span className="ms-2 font-sans text-slate-700">
+                            <AnswersPill label={u.answersLabel} /> ·{" "}
+                            {u.matchesPlayed}m · {u.weeklyXp} XP/wk
+                            {joinedKey ? (
+                              <>
+                                {" "}
+                                ·{" "}
+                                <span dir="rtl">
+                                  {formatJalaliLabel(joinedKey)}
+                                </span>
+                              </>
+                            ) : null}
+                          </span>
                         </p>
                       </div>
                       <GrantCoinsDialog
@@ -211,38 +232,55 @@ export function UsersBotsPanel({ bots, users }: UsersBotsPanelProps) {
                 })}
               </ul>
             )}
-          </div>
+          </section>
         </TabsContent>
 
         <TabsContent value="bots" className="mt-0 space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <SearchField
-              value={botQuery}
-              onChange={setBotQuery}
-              placeholder="Search bot name…"
-            />
-            <AdminHelpTip text="Click a name to rename. Toggle Enabled to include/exclude from matchmaking." />
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            {filteredBots.length === 0 ? (
-              <p className="px-4 py-10 text-center text-sm text-slate-500">
-                {bots.length === 0
-                  ? "No bots yet — Generate a batch to fill the duel pool."
-                  : "No bots match your search."}
+          <section className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm">
+            <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-3.5 py-2">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-slate-700">
+                Search bots
               </p>
+              <div className="flex items-center gap-1.5">
+                <AdminHelpTip text="Click a name to rename. Toggle Enabled to include/exclude from matchmaking." />
+                <p className="text-[11px] font-semibold text-slate-700">
+                  {filteredBots.length} shown · {enabledBots} on
+                </p>
+              </div>
+            </header>
+            <div className="p-3">
+              <SearchField
+                value={botQuery}
+                onChange={setBotQuery}
+                placeholder="Search bot name…"
+              />
+            </div>
+          </section>
+
+          <section className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm">
+            {filteredBots.length === 0 ? (
+              <div className="flex flex-col items-center gap-1.5 px-4 py-10 text-center">
+                <p className="text-sm font-semibold text-slate-900">
+                  {bots.length === 0 ? "No bots yet" : "No bots match"}
+                </p>
+                <p className="text-xs font-medium text-slate-700">
+                  {bots.length === 0
+                    ? "Generate a batch to fill the duel pool."
+                    : "Clear search to see the pool."}
+                </p>
+              </div>
             ) : (
               <ul className="divide-y divide-slate-100">
                 {filteredBots.map((b) => (
                   <li
                     key={b.id}
                     className={[
-                      "flex flex-wrap items-center gap-3 px-4 py-3 transition",
-                      b.enabled ? "hover:bg-slate-50" : "bg-slate-50/80 opacity-80",
+                      "flex flex-wrap items-center gap-2.5 px-3.5 py-2.5",
+                      b.enabled ? "" : "opacity-60",
                     ].join(" ")}
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <InlineBotName
                           botId={b.id}
                           initialName={b.clubName}
@@ -250,17 +288,17 @@ export function UsersBotsPanel({ bots, users }: UsersBotsPanelProps) {
                         />
                         <DifficultyBadge difficulty={b.difficulty} />
                         {!b.enabled ? (
-                          <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">
+                          <span className="rounded-md bg-white px-1.5 py-0.5 text-[10px] font-bold text-slate-800 ring-1 ring-slate-200">
                             OFF
                           </span>
                         ) : null}
                       </div>
-                      <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                      <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] font-medium text-slate-700">
                         <AnswersPill label={b.answersLabel} />
                         <span>{b.duelsPlayed} duels</span>
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <BotEnabledToggle
                         botId={b.id}
                         enabled={b.enabled}
@@ -270,7 +308,7 @@ export function UsersBotsPanel({ bots, users }: UsersBotsPanelProps) {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-9 w-9 text-rose-500 hover:bg-rose-50 hover:text-rose-600"
+                        className="h-8 w-8 text-rose-800 hover:bg-white hover:text-rose-950"
                         disabled={pending}
                         aria-label={`Delete ${b.clubName}`}
                         onClick={() => {
@@ -296,7 +334,7 @@ export function UsersBotsPanel({ bots, users }: UsersBotsPanelProps) {
                 ))}
               </ul>
             )}
-          </div>
+          </section>
         </TabsContent>
       </Tabs>
     </div>
@@ -319,16 +357,16 @@ function StatCard({
       ? "border-sky-200"
       : tone === "emerald"
         ? "border-emerald-200"
-        : "border-slate-200";
+        : "border-slate-200/90";
   return (
-    <div className={`rounded-2xl border bg-white p-4 shadow-sm ${ring}`}>
-      <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+    <div className={`rounded-xl border bg-white px-3.5 py-3 shadow-sm ${ring}`}>
+      <p className="text-[11px] font-bold uppercase tracking-wide text-slate-700">
         {label}
       </p>
-      <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">
+      <p className="mt-0.5 text-2xl font-bold tabular-nums text-slate-900">
         {value}
       </p>
-      <p className="mt-0.5 text-xs text-slate-500">{hint}</p>
+      <p className="mt-0.5 text-[11px] font-medium text-slate-700">{hint}</p>
     </div>
   );
 }
@@ -343,13 +381,13 @@ function SearchField({
   placeholder: string;
 }) {
   return (
-    <div className="relative min-w-[12rem] flex-1">
-      <Search className="pointer-events-none absolute start-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+    <div className="relative min-w-0 sm:max-w-md">
+      <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
       <Input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="h-10 ps-9"
+        className="h-9 border-slate-200 bg-white ps-9 shadow-none"
       />
     </div>
   );
@@ -358,7 +396,7 @@ function SearchField({
 function AnswersPill({ label }: { label: string }) {
   return (
     <span
-      className="inline-flex rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-slate-700"
+      className="inline-flex rounded-md bg-white px-1.5 py-0.5 font-mono text-[11px] font-bold tabular-nums text-slate-800 ring-1 ring-slate-200"
       title="Correct / questions answered"
     >
       {label}
@@ -423,7 +461,7 @@ function GrantCoinsDialog({
           variant="outline"
           size="sm"
           disabled={!canGrant || pending}
-          className="h-9 gap-1.5 border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 hover:text-amber-900"
+          className="h-8 gap-1.5 border-amber-200 bg-amber-50 text-amber-950 hover:bg-amber-100"
           title={canGrant ? "Grant coins" : "No club yet"}
         >
           <Coins className="h-3.5 w-3.5" />
@@ -695,13 +733,13 @@ function DifficultyBadge({ difficulty }: { difficulty: BotDifficulty | null }) {
   const d = difficulty ?? "MEDIUM";
   const tone =
     d === "EASY"
-      ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+      ? "bg-emerald-50 text-emerald-950 ring-emerald-200"
       : d === "HARD"
-        ? "bg-rose-50 text-rose-700 ring-rose-200"
-        : "bg-amber-50 text-amber-800 ring-amber-200";
+        ? "bg-rose-50 text-rose-950 ring-rose-200"
+        : "bg-amber-50 text-amber-950 ring-amber-200";
   return (
     <span
-      className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 ${tone}`}
+      className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-bold ring-1 ${tone}`}
     >
       {d}
     </span>

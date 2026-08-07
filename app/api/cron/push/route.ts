@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { isProduction, secretsEqual } from "@/lib/env";
 import {
   scanDuelYourTurnPushes,
+  scanNewspaperReadyPushes,
+  scanStaminaFullPushes,
   scanVaultNearlyFullPushes,
 } from "@/lib/push/scanNotify";
 
@@ -30,11 +32,13 @@ export async function GET(request: Request) {
   }
 
   try {
-    const [duel, vault] = await Promise.all([
+    const [duel, vault, newspaper, stamina] = await Promise.all([
       scanDuelYourTurnPushes(50),
       scanVaultNearlyFullPushes(40),
+      scanNewspaperReadyPushes(40),
+      scanStaminaFullPushes(40),
     ]);
-    return NextResponse.json({ ok: true, duel, vault });
+    return NextResponse.json({ ok: true, duel, vault, newspaper, stamina });
   } catch (err) {
     console.error("cron/push failed", err);
     return NextResponse.json({ ok: false, error: "server_error" }, { status: 500 });
