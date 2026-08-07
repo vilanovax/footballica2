@@ -20,6 +20,11 @@ import { MysteryShareCard } from "@/components/mystery/MysteryShareCard";
 import { BadgeUnlockPopup } from "@/components/quiz/BadgeUnlockPopup";
 import { GotdResultModal } from "@/components/play/GotdResultModal";
 import { BottomSheet } from "@/components/ui/BottomSheet";
+import {
+  GameChip,
+  GameIconWell,
+  GamePanel,
+} from "@/components/ui/game";
 import type { GotdRewardsPayload } from "@/lib/game/gotdRewards";
 
 type Props = {
@@ -178,19 +183,13 @@ export function MysteryArena({ initial }: Props) {
   const canLock = Boolean(selectedId) && !pending;
 
   return (
-    <section className="relative -mx-4 flex min-h-0 flex-1 flex-col gap-2.5 bg-[#071510] px-4 pb-2 text-white">
+    <section className="relative -mx-4 flex min-h-0 flex-1 flex-col gap-2.5 bg-arena px-4 pb-2 text-arena-fg">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 overflow-hidden"
       >
-        <div className="absolute inset-0 bg-linear-to-b from-[#0a1f14] via-[#071510] to-[#052e16]" />
-        <div
-          className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(-16deg, transparent, transparent 12px, #fff 12px, #fff 13px)",
-          }}
-        />
+        <div className="absolute inset-0 bg-linear-to-b from-arena-deep via-arena to-arena-mid" />
+        <div className="game-pinstripe absolute inset-0 opacity-60" />
         <div className="absolute -end-16 top-0 h-56 w-56 rounded-full bg-amber-400/15 blur-3xl" />
         <div className="absolute -start-20 top-36 h-48 w-48 rounded-full bg-emerald-400/15 blur-3xl" />
       </div>
@@ -199,14 +198,15 @@ export function MysteryArena({ initial }: Props) {
       <motion.header
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative z-10 overflow-hidden rounded-2xl bg-linear-to-br from-[#052e16] via-[#0f172a] to-[#052e16] px-2.5 py-2 shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_4px_0_0_rgba(0,0,0,0.35)]"
+        className="relative z-10"
       >
+        <GamePanel tone="emerald" className="px-2.5 py-2">
         <div className="relative flex items-center gap-2">
           <Link
             href="/play"
             onClick={() => playSound("click")}
             aria-label={t("common.back")}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black/40 shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_3px_0_0_rgba(0,0,0,0.35)] transition-transform active:scale-90"
+            className="game-cta game-cta-ghost h-11 w-11 shrink-0 p-0"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -217,15 +217,13 @@ export function MysteryArena({ initial }: Props) {
             />
           </Link>
 
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-300/35 bg-black/40 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/icons/mystery.png"
-              alt=""
-              draggable={false}
-              className="h-8 w-8 object-contain"
-            />
-          </span>
+          <GameIconWell
+            size="md"
+            amber
+            src="/icons/mystery.png"
+            className="h-11 w-11"
+            iconClassName="h-8 w-8"
+          />
 
           <div className="min-w-0 flex-1">
             <h1 className="truncate font-display text-base font-black leading-tight text-white">
@@ -237,7 +235,7 @@ export function MysteryArena({ initial }: Props) {
           </div>
 
           <div className="flex shrink-0 items-center gap-1">
-            <span className="inline-flex items-center gap-0.5 rounded-xl bg-black/40 px-1.5 py-1 font-display text-xs font-black tabular-nums text-white/90 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]">
+            <GameChip className="gap-0.5 px-1.5 py-1 text-xs tabular-nums">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/icons/guesses.png"
@@ -248,8 +246,8 @@ export function MysteryArena({ initial }: Props) {
               />
               {toLocaleDigits(mystery.guessCount, locale)}/
               {toLocaleDigits(mystery.maxGuesses, locale)}
-            </span>
-            <span className="inline-flex items-center gap-0.5 rounded-xl bg-black/40 px-1.5 py-1 font-display text-xs font-black tabular-nums text-amber-200 shadow-[inset_0_0_0_1px_rgba(251,191,36,0.3)]">
+            </GameChip>
+            <GameChip tone="amber" className="gap-0.5 px-1.5 py-1 text-xs tabular-nums">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/icons/streak.png"
@@ -259,7 +257,7 @@ export function MysteryArena({ initial }: Props) {
                 className="h-5 w-5 object-contain"
               />
               {toLocaleDigits(mystery.mysteryStreak, locale)}
-            </span>
+            </GameChip>
             <button
               type="button"
               onClick={() => {
@@ -267,7 +265,7 @@ export function MysteryArena({ initial }: Props) {
                 setHowOpen(true);
               }}
               aria-label={t("mystery.howToTitle")}
-              className="flex h-11 w-11 items-center justify-center rounded-xl bg-black/40 shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_3px_0_0_rgba(0,0,0,0.35)] transition-transform active:scale-90"
+              className="game-cta game-cta-ghost h-11 w-11 p-0"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -279,6 +277,7 @@ export function MysteryArena({ initial }: Props) {
             </button>
           </div>
         </div>
+        </GamePanel>
       </motion.header>
 
       {/* Attempt dots */}
@@ -445,8 +444,11 @@ export function MysteryArena({ initial }: Props) {
           animate={{ opacity: 1, y: 0 }}
           className="pointer-events-none fixed inset-x-0 z-40 mx-auto w-full max-w-mobile px-3 bottom-[max(0.5rem,env(safe-area-inset-bottom,0px))]"
         >
-          <div className="pointer-events-auto overflow-hidden rounded-t-[1.35rem] bg-linear-to-b from-[#0a1f14] via-[#0f172a] to-[#071510] px-2.5 pt-2.5 pb-2 shadow-[0_0_0_1px_rgba(52,211,153,0.3),0_-14px_36px_rgba(0,0,0,0.55)]">
-            <div className="mb-2 flex justify-center">
+          <GamePanel
+            tone="emerald"
+            className="pointer-events-auto rounded-t-[1.35rem] rounded-b-none px-2.5 pt-2.5 pb-2 shadow-[0_-14px_36px_rgba(0,0,0,0.55)]"
+          >
+            <div className="relative mb-2 flex justify-center">
               <span
                 aria-hidden
                 className="h-1 w-10 rounded-full bg-white/25"
@@ -454,7 +456,7 @@ export function MysteryArena({ initial }: Props) {
             </div>
             <p
               className={[
-                "mb-1.5 text-center font-display text-[11px] font-black",
+                "relative mb-1.5 text-center font-display text-[11px] font-black",
                 selectedLabel ? "text-emerald-200" : "text-white/50",
               ].join(" ")}
             >
@@ -468,9 +470,9 @@ export function MysteryArena({ initial }: Props) {
                 setSelectedId(null);
               }}
               placeholder={t("mystery.searchPlaceholder")}
-              className="min-h-11 w-full rounded-2xl bg-black/45 px-3 font-display text-sm font-bold text-white outline-none shadow-[inset_0_0_0_1px_rgba(255,255,255,0.14)] placeholder:text-white/35 focus:shadow-[inset_0_0_0_2px_rgba(52,211,153,0.45)]"
+              className="game-input relative min-h-11 w-full px-3 font-display text-sm font-bold"
             />
-            <ul className="mt-1.5 max-h-28 overflow-y-auto rounded-2xl bg-black/35 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]">
+            <ul className="relative mt-1.5 max-h-28 overflow-y-auto rounded-2xl bg-black/35 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]">
               {filtered.length === 0 ? (
                 <li className="px-3 py-2.5 text-center font-display text-xs font-bold text-white/40">
                   …
@@ -510,15 +512,15 @@ export function MysteryArena({ initial }: Props) {
               whileTap={canLock ? { y: 2 } : undefined}
               onClick={onGuess}
               className={[
-                "mt-2 flex w-full min-h-12 items-center justify-center rounded-2xl border-2 font-display text-base font-black transition-transform",
+                "game-cta relative mt-2 w-full font-display text-base font-black",
                 canLock
-                  ? "border-emerald-400/45 bg-linear-to-b from-emerald-500 to-emerald-800 text-white shadow-[0_4px_0_0_rgba(0,0,0,0.4)] active:translate-y-0.5 active:shadow-[0_2px_0_0_rgba(0,0,0,0.4)]"
-                  : "border-white/10 bg-white/10 text-white/45",
+                  ? "game-cta-primary"
+                  : "cursor-not-allowed bg-white/10 text-white/45 shadow-none",
               ].join(" ")}
             >
               {pending ? "…" : t("mystery.guess")}
             </motion.button>
-          </div>
+          </GamePanel>
         </motion.footer>
       )}
     </section>

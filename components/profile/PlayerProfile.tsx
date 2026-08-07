@@ -38,15 +38,12 @@ import type { BadgePresentation } from "@/lib/game/badgeTypes";
 import { resolveBadgeImageUrl } from "@/lib/game/badgeArt";
 import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
-
-/** Shared dark game panel — matches Club Hub emerald chrome. */
-const PANEL_SHELL =
-  "relative overflow-hidden rounded-bubble-xl border-[3px] border-emerald-500/35 bg-linear-to-br from-[#052e16] via-[#0f172a] to-[#052e16] shadow-[0_5px_0_0_rgba(0,0,0,0.28)]";
-
-const PANEL_STRIPE = {
-  backgroundImage:
-    "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
-} as const;
+import {
+  GameChip,
+  GamePanel,
+  type GamePanelTone,
+} from "@/components/ui/game";
+import { cn } from "@/lib/utils";
 
 /** Tier → medal ring fill. */
 const TIER_RING: Record<BadgeTier, string> = {
@@ -55,14 +52,11 @@ const TIER_RING: Record<BadgeTier, string> = {
   gold: "from-yellow-200 to-amber-400 text-yellow-950",
 };
 
-/** Dark game card chrome — distinct per tier. */
-const TIER_CARD: Record<BadgeTier, string> = {
-  bronze:
-    "border-amber-600/50 bg-linear-to-br from-[#3d2a08] via-[#5c3d0a] to-[#1c1408] shadow-[0_4px_0_0_rgba(0,0,0,0.35)]",
-  silver:
-    "border-slate-300/45 bg-linear-to-br from-[#1e293b] via-[#334155] to-[#0f172a] shadow-[0_4px_0_0_rgba(0,0,0,0.35)]",
-  gold:
-    "border-amber-300/60 bg-linear-to-br from-[#5c3d0a] via-[#9a6b12] to-[#2a1c06] shadow-[0_4px_0_0_rgba(0,0,0,0.35)]",
+/** Arena panel tone per badge tier. */
+const TIER_PANEL: Record<BadgeTier, GamePanelTone> = {
+  bronze: "amber",
+  silver: "emerald",
+  gold: "amber",
 };
 
 const TIER_MEDAL_GLOW: Record<BadgeTier, string> = {
@@ -320,16 +314,8 @@ export function PlayerProfile({
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: "spring", stiffness: 240, damping: 22 }}
-        className={[PANEL_SHELL, "p-4"].join(" ")}
-        style={{
-          background: `linear-gradient(165deg, #052e16 0%, #0f172a 48%, ${clubColor.hex}44 100%)`,
-        }}
       >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-[0.05]"
-          style={PANEL_STRIPE}
-        />
+        <GamePanel tone="emerald" className="p-4">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0"
@@ -484,6 +470,7 @@ export function PlayerProfile({
             </motion.div>
           </div>
         </div>
+        </GamePanel>
       </motion.header>
 
       {/* ── Stadium scoreboard ───────────────────────────────────────────── */}
@@ -496,13 +483,8 @@ export function PlayerProfile({
           damping: 22,
           delay: 0.08,
         }}
-        className={[PANEL_SHELL, "p-3.5"].join(" ")}
       >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-[0.05]"
-          style={PANEL_STRIPE}
-        />
+        <GamePanel tone="emerald" className="p-3.5">
         <div
           aria-hidden
           className="pointer-events-none absolute -end-10 top-0 h-28 w-28 rounded-full bg-amber-300/15 blur-3xl"
@@ -522,9 +504,9 @@ export function PlayerProfile({
               {t("profile.scoreboardTitle")}
             </h2>
           </div>
-          <span className="rounded-full border border-white/12 bg-black/35 px-2.5 py-0.5 font-display text-[10px] font-bold text-white/50">
+          <GameChip className="text-[10px] text-white/50">
             {t("profile.statsTitle")}
-          </span>
+          </GameChip>
         </div>
 
         {!hasMatches ? (
@@ -605,15 +587,11 @@ export function PlayerProfile({
             </div>
           </>
         )}
+        </GamePanel>
       </motion.div>
 
       {/* ── Trophy cabinet ───────────────────────────────────────────────── */}
-      <div className={[PANEL_SHELL, "p-3"].join(" ")}>
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.05]"
-          style={PANEL_STRIPE}
-          aria-hidden
-        />
+      <GamePanel tone="emerald" className="p-3">
         <div
           aria-hidden
           className="pointer-events-none absolute -start-8 top-4 h-24 w-24 rounded-full bg-amber-300/12 blur-3xl"
@@ -632,7 +610,7 @@ export function PlayerProfile({
               {t("profile.trophies")}
             </h2>
           </div>
-          <span className="shrink-0 rounded-full border border-emerald-400/35 bg-black/40 px-2.5 py-1 font-display text-[11px] font-black text-emerald-100">
+          <GameChip tone="emerald" className="shrink-0 text-[11px]">
             {locale === "fa" ? (
               t("profile.trophiesCountLabel", {
                 unlocked: toLocaleDigits(unlockedHonors.length, locale),
@@ -646,7 +624,7 @@ export function PlayerProfile({
                 })}
               </bdi>
             )}
-          </span>
+          </GameChip>
         </div>
 
         <div className="relative flex flex-col gap-3.5">
@@ -778,7 +756,7 @@ export function PlayerProfile({
             </div>
           )}
         </div>
-      </div>
+      </GamePanel>
 
       {hasMissionBoards && (
         <MissionDrawer
@@ -973,12 +951,12 @@ function BadgeTile({
   const stepsLeft = prog ? Math.max(0, prog.target - prog.current) : 0;
   const hasArt = Boolean(imageUrl);
 
-  const shell =
+  const panelTone: GamePanelTone =
     state === "unlocked"
-      ? TIER_CARD[a.tier]
+      ? TIER_PANEL[a.tier]
       : state === "progress"
-        ? "border-orange-400/45 bg-linear-to-br from-[#431407] via-[#7c2d12] to-[#1c0a05] shadow-[0_4px_0_0_rgba(0,0,0,0.35)]"
-        : "border-white/12 bg-linear-to-br from-[#1e293b] via-[#334155] to-[#0f172a] shadow-[0_4px_0_0_rgba(0,0,0,0.3)] opacity-90";
+        ? "rose"
+        : "emerald";
 
   return (
     <motion.button
@@ -996,20 +974,17 @@ function BadgeTile({
           : { delay, type: "spring", stiffness: 260, damping: 20 }
       }
       whileTap={{ scale: 0.96 }}
-      className={[
-        "relative flex min-h-[8.25rem] w-full flex-col items-center gap-1.5 overflow-hidden rounded-2xl border-[3px] px-2 py-2.5 text-center",
-        shell,
-      ].join(" ")}
+      className="w-full"
       aria-label={name}
     >
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.06]"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(-16deg, transparent, transparent 10px, #fff 10px, #fff 11px)",
-        }}
-        aria-hidden
-      />
+      <GamePanel
+        tone={panelTone}
+        className={cn(
+          "flex min-h-[8.25rem] w-full flex-col items-center gap-1.5 px-2 py-2.5 text-center",
+          state === "unlocked" && a.tier === "gold" && "ring-1 ring-arena-amber/50",
+          state !== "unlocked" && state !== "progress" && "opacity-90",
+        )}
+      >
 
       {hasArt ? (
         <span
@@ -1085,6 +1060,7 @@ function BadgeTile({
           {t("profile.trophyLocked")}
         </span>
       )}
+      </GamePanel>
     </motion.button>
   );
 }
@@ -1146,8 +1122,9 @@ function TrophyInspectSheet({
         exit={{ y: 40, opacity: 0 }}
         transition={{ type: "spring", stiffness: 320, damping: 28 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-mobile overflow-hidden rounded-[1.75rem] border-[3px] border-emerald-400/35 bg-linear-to-b from-[#0a1f14] via-[#0f172a] to-[#052e16] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.65)]"
+        className="relative w-full max-w-mobile shadow-[0_24px_60px_-12px_rgba(0,0,0,0.65)]"
       >
+        <GamePanel tone="emerald" className="rounded-[1.75rem]">
         <div className="absolute inset-x-0 top-0 z-10 flex justify-center pt-2.5">
           <span
             aria-hidden
@@ -1309,11 +1286,12 @@ function TrophyInspectSheet({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-12 w-full items-center justify-center rounded-2xl border-2 border-emerald-400/40 bg-linear-to-b from-emerald-500 to-emerald-800 font-display text-base font-black text-white shadow-[0_4px_0_0_rgba(0,0,0,0.45)] transition-transform active:translate-y-0.5 active:shadow-[0_2px_0_0_rgba(0,0,0,0.45)]"
+            className="game-cta game-cta-primary relative w-full font-display text-base font-black"
           >
             {t("profile.trophyClose")}
           </button>
         </div>
+        </GamePanel>
       </motion.div>
     </motion.div>
   );

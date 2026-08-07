@@ -8,6 +8,8 @@ import { viewerMatchScore } from "@/lib/duel/matchScore";
 import { AvatarImage } from "@/components/common/AvatarImage";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
+import { GameChip, GamePanel } from "@/components/ui/game";
+import { cn } from "@/lib/utils";
 
 type RecentDuelHistoryProps = {
   history: DuelSnapshot[];
@@ -34,28 +36,30 @@ export function RecentDuelHistory({
 
   return (
     <div
-      className={[
+      className={cn(
         "relative z-10 mt-1 flex flex-col gap-2.5 pt-3",
-        playChrome ? "" : "border-t border-border/60 pt-4",
-      ].join(" ")}
+        !playChrome && "border-t border-border/60 pt-4",
+      )}
     >
       <div className="flex items-end justify-between gap-2 px-0.5">
         <div className="min-w-0">
           <h2
-            className={[
+            className={cn(
               "font-display text-[11px] font-black uppercase tracking-widest",
               playChrome
-                ? "text-emerald-800/70"
+                ? "text-muted-foreground"
                 : "tracking-[0.14em] text-muted-foreground",
-            ].join(" ")}
+            )}
           >
             {title}
           </h2>
           <p
-            className={[
+            className={cn(
               "mt-0.5 font-display text-[11px] font-bold",
-              playChrome ? "text-foreground/45" : "font-body font-semibold text-muted-foreground",
-            ].join(" ")}
+              playChrome
+                ? "text-foreground/45"
+                : "font-body font-semibold text-muted-foreground",
+            )}
           >
             {hint}
           </p>
@@ -63,7 +67,7 @@ export function RecentDuelHistory({
         {playChrome && (
           <Link
             href="/play/duel"
-            className="shrink-0 font-display text-xs font-black text-emerald-700 underline-offset-2 hover:underline"
+            className="shrink-0 font-display text-xs font-black text-primary underline-offset-2 hover:underline"
           >
             {t("play.seeAllDuels")}
           </Link>
@@ -109,79 +113,94 @@ function HistoryRow({
         ? t("duel.outcomeDraw")
         : t("duel.outcomeLose");
 
+  const chipTone =
+    outcome === "WIN" ? "emerald" : outcome === "DRAW" ? "default" : "default";
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.04 * index }}
     >
-      <Link
-        href={`/play/duel/${d.id}`}
-        className={[
-          "flex min-h-12 items-center gap-2.5 rounded-2xl px-2.5 py-2 transition-transform active:scale-[0.98]",
-          dark
-            ? "bg-linear-to-br from-[#0f172a] via-[#14532d]/70 to-[#052e16] shadow-[0_0_0_1px_rgba(52,211,153,0.28),0_3px_0_0_rgba(0,0,0,0.28)]"
-            : "rounded-bubble-lg border-2 border-border/70 bg-surface/80 shadow-fantasy",
-        ].join(" ")}
-      >
-        <AvatarImage
-          avatarKey={themParty?.avatar}
-          className={[
-            "h-10 w-10 shrink-0 rounded-full ring-2",
-            dark ? "ring-white/20" : "ring-border h-12 w-12",
-          ].join(" ")}
-          /* Opponent lost → grey them; you lost → they stay color (winner). */
-          muted={!themParty?.avatar || outcome === "WIN"}
-        />
+      {dark ? (
+        <Link href={`/play/duel/${d.id}`}>
+          <GamePanel
+            tone={
+              outcome === "WIN"
+                ? "emerald"
+                : outcome === "LOSE"
+                  ? "rose"
+                  : "amber"
+            }
+            className="flex min-h-12 items-center gap-2.5 px-2.5 py-2 transition-transform active:scale-[0.98]"
+          >
+            <AvatarImage
+              avatarKey={themParty?.avatar}
+              className="h-10 w-10 shrink-0 rounded-full ring-2 ring-white/20"
+              muted={!themParty?.avatar || outcome === "WIN"}
+            />
 
-        <div className="min-w-0 flex-1">
-          <p
-            className={[
-              "truncate font-display text-sm font-black",
-              dark ? "text-white" : "font-bold text-surface-foreground",
-            ].join(" ")}
-          >
-            {themParty?.name ??
-              (d.isBotOpponent ? t("duel.vsBot") : t("duel.vsRival"))}
-          </p>
-          <p
-            className={[
-              "mt-0.5 font-display text-sm font-black tabular-nums",
-              dark ? "text-emerald-200" : "text-foreground",
-            ].join(" ")}
-          >
-            {toLocaleDigits(you, locale)}
-            <span
-              className={[
-                "mx-1",
-                dark ? "text-white/40" : "text-muted-foreground",
-              ].join(" ")}
+            <div className="relative min-w-0 flex-1">
+              <p className="truncate font-display text-sm font-black text-white">
+                {themParty?.name ??
+                  (d.isBotOpponent ? t("duel.vsBot") : t("duel.vsRival"))}
+              </p>
+              <p className="mt-0.5 font-display text-sm font-black tabular-nums text-emerald-200">
+                {toLocaleDigits(you, locale)}
+                <span className="mx-1 text-white/40">–</span>
+                {toLocaleDigits(them, locale)}
+              </p>
+            </div>
+
+            <GameChip
+              tone={chipTone}
+              className={cn(
+                "shrink-0",
+                outcome === "LOSE" && "bg-rose-500/25 text-rose-200",
+                outcome === "DRAW" && "bg-white/10 text-white/55",
+              )}
             >
-              –
-            </span>
-            {toLocaleDigits(them, locale)}
-          </p>
-        </div>
-
-        <span
-          className={[
-            "shrink-0 rounded-full px-2.5 py-1 font-display text-[11px] font-black",
-            outcome === "WIN"
-              ? dark
-                ? "bg-emerald-500/25 text-emerald-200"
-                : "bg-primary/20 text-primary"
-              : outcome === "DRAW"
-                ? dark
-                  ? "bg-white/10 text-white/55"
-                  : "bg-muted text-muted-foreground"
-                : dark
-                  ? "bg-rose-500/25 text-rose-200"
-                  : "bg-destructive/15 text-destructive",
-          ].join(" ")}
+              {outcomeLabel}
+            </GameChip>
+          </GamePanel>
+        </Link>
+      ) : (
+        <Link
+          href={`/play/duel/${d.id}`}
+          className="flex min-h-12 items-center gap-2.5 rounded-bubble-lg border-2 border-border/70 bg-surface/80 px-2.5 py-2 shadow-fantasy transition-transform active:scale-[0.98]"
         >
-          {outcomeLabel}
-        </span>
-      </Link>
+          <AvatarImage
+            avatarKey={themParty?.avatar}
+            className="h-12 w-12 shrink-0 rounded-full ring-2 ring-border"
+            muted={!themParty?.avatar || outcome === "WIN"}
+          />
+
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-display text-sm font-bold text-surface-foreground">
+              {themParty?.name ??
+                (d.isBotOpponent ? t("duel.vsBot") : t("duel.vsRival"))}
+            </p>
+            <p className="mt-0.5 font-display text-sm font-black tabular-nums text-foreground">
+              {toLocaleDigits(you, locale)}
+              <span className="mx-1 text-muted-foreground">–</span>
+              {toLocaleDigits(them, locale)}
+            </p>
+          </div>
+
+          <span
+            className={cn(
+              "shrink-0 rounded-full px-2.5 py-1 font-display text-[11px] font-black",
+              outcome === "WIN"
+                ? "bg-primary/20 text-primary"
+                : outcome === "DRAW"
+                  ? "bg-muted text-muted-foreground"
+                  : "bg-destructive/15 text-destructive",
+            )}
+          >
+            {outcomeLabel}
+          </span>
+        </Link>
+      )}
     </motion.div>
   );
 }

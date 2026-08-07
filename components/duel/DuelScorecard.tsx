@@ -15,6 +15,8 @@ import type {
   ScorecardOutcome,
   ScorecardRound,
 } from "@/lib/duel/scorecardTypes";
+import { GameChip, GameCta, GamePanel } from "@/components/ui/game";
+import { cn } from "@/lib/utils";
 
 type DuelScorecardProps = {
   data: ScorecardData;
@@ -70,25 +72,25 @@ export function DuelScorecard({
 
   return (
     <section
-      className={[
+      className={cn(
         "relative flex flex-1 flex-col overflow-hidden rounded-bubble-xl",
+        !isResult && "game-sheet",
         isResult ? "min-h-0" : "min-h-[min(100%,34rem)]",
-      ].join(" ")}
+      )}
     >
       {!isResult && (
         <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-linear-to-b from-[#1a2433] via-[#121820] to-[#0c1218]" />
-          <div className="absolute inset-x-0 top-0 h-44 bg-linear-to-b from-emerald-500/18 to-transparent" />
-          <div className="absolute -inset-s-16 top-1/4 h-52 w-52 rounded-full bg-primary/20 blur-3xl" />
-          <div className="absolute -inset-e-14 bottom-1/5 h-44 w-44 rounded-full bg-secondary/20 blur-3xl" />
+          <div className="game-sheet-wash absolute inset-x-0 top-0 h-44" />
+          <div className="absolute -start-16 top-1/4 h-52 w-52 rounded-full bg-emerald-400/15 blur-3xl" />
+          <div className="absolute -end-14 bottom-1/5 h-44 w-44 rounded-full bg-amber-400/12 blur-3xl" />
         </div>
       )}
 
       <div
-        className={[
+        className={cn(
           "relative z-10 flex flex-1 flex-col",
           isResult ? "gap-3 px-0 py-0" : "gap-4 px-2.5 py-4",
-        ].join(" ")}
+        )}
       >
         {!isResult && (
           <div className="flex justify-center">
@@ -100,16 +102,11 @@ export function DuelScorecard({
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ type: "spring", stiffness: 320, damping: 24 }}
-          className={[
-            "relative overflow-hidden rounded-2xl border border-white/12 bg-white/5 shadow-[0_12px_32px_rgba(0,0,0,0.35)] backdrop-blur-sm",
-            isResult ? "px-3 py-4" : "px-3 py-5",
-          ].join(" ")}
         >
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-linear-to-b from-white/8 to-transparent"
-          />
-
+          <GamePanel
+            tone="emerald"
+            className={cn(isResult ? "px-3 py-4" : "px-3 py-5")}
+          >
           {!hideOutcomeBanner && (
             <OutcomeBanner status={status} outcome={outcome} />
           )}
@@ -135,22 +132,18 @@ export function DuelScorecard({
                 key={`${youScore}-${themScore}`}
                 initial={{ scale: 0.92, opacity: 0.7 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className={[
+                className={cn(
                   "font-display font-black tabular-nums tracking-tight text-white drop-shadow-md",
                   isResult ? "text-5xl" : "text-4xl",
-                ].join(" ")}
+                )}
               >
                 {toLocaleDigits(youScore, locale)}
                 <span className="mx-1.5 text-white/35">–</span>
                 {toLocaleDigits(themScore, locale)}
               </motion.p>
-              <motion.span
-                animate={{ scale: [1, 1.06, 1] }}
-                transition={{ repeat: Infinity, duration: 1.8 }}
-                className="mt-1 rounded-full bg-amber-400/20 px-2.5 py-0.5 font-display text-[10px] font-black uppercase tracking-[0.2em] text-amber-300 ring-1 ring-amber-300/40"
-              >
+              <GameChip tone="amber" className="mt-1 uppercase tracking-[0.2em]">
                 VS
-              </motion.span>
+              </GameChip>
             </div>
             <PlayerBlock
               player={them}
@@ -158,6 +151,7 @@ export function DuelScorecard({
               compact={isResult}
             />
           </div>
+          </GamePanel>
         </motion.header>
 
         <div className="relative flex flex-col gap-2">
@@ -184,28 +178,25 @@ export function DuelScorecard({
             {status === "WAITING" ? (
               <WaitingCard />
             ) : (
-              <button
-                type="button"
+              <GameCta
+                variant="primary"
+                block
                 onClick={onPrimaryAction}
-                className="btn-fantasy btn-fantasy-primary w-full justify-center text-base"
+                className="font-display text-base font-black"
               >
                 {primaryLabel}
-              </button>
+              </GameCta>
             )}
 
             {(status === "COMPLETED" || status === "WAITING") && (
-              <button
-                type="button"
+              <GameCta
+                variant={status === "COMPLETED" ? "accent" : "ghost"}
+                block
                 onClick={onSecondaryAction}
-                className={[
-                  "min-h-touch w-full justify-center rounded-bubble border-2 px-5 py-3 font-display text-sm font-bold transition-transform active:scale-[0.98]",
-                  status === "COMPLETED"
-                    ? "border-amber-300/50 bg-amber-400/15 text-amber-200"
-                    : "border-white/15 bg-white/8 text-white/70",
-                ].join(" ")}
+                className="font-display text-sm font-bold"
               >
                 {secondaryLabel}
-              </button>
+              </GameCta>
             )}
           </motion.footer>
         )}

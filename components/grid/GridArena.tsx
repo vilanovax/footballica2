@@ -18,12 +18,19 @@ import { toLocaleDigits } from "@/lib/i18n/format";
 import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playerPhotoSrc } from "@/lib/players/photos";
+import {
+  GameChip,
+  GameIconWell,
+  GamePanel,
+} from "@/components/ui/game";
+import { ARENA } from "@/lib/ui/tokens";
+import { cn } from "@/lib/utils";
 
 type Props = {
   initial: DailyGridSnapshot;
 };
 
-const GRID_MOOD = "#071510";
+const GRID_MOOD = ARENA.bg;
 
 export function GridArena({ initial }: Props) {
   const { t, locale } = useTranslation();
@@ -203,19 +210,13 @@ export function GridArena({ initial }: Props) {
   }
 
   return (
-    <section className="relative flex min-h-dvh flex-1 flex-col gap-3 bg-[#071510] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-white">
+    <section className="relative flex min-h-dvh flex-1 flex-col gap-3 bg-arena px-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-arena-fg">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 overflow-hidden"
       >
-        <div className="absolute inset-0 bg-linear-to-b from-[#0a1f14] via-[#071510] to-[#052e16]" />
-        <div
-          className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(-16deg, transparent, transparent 12px, #fff 12px, #fff 13px)",
-          }}
-        />
+        <div className="absolute inset-0 bg-linear-to-b from-arena-deep via-arena to-arena-mid" />
+        <div className="game-pinstripe absolute inset-0 opacity-60" />
         <div className="absolute -end-16 top-0 h-56 w-56 rounded-full bg-amber-400/12 blur-3xl" />
         <div className="absolute -start-20 top-40 h-48 w-48 rounded-full bg-emerald-400/15 blur-3xl" />
       </div>
@@ -240,13 +241,14 @@ export function GridArena({ initial }: Props) {
         onClose={() => setShowResult(false)}
       />
 
-      <header className="relative z-10 shrink-0 overflow-hidden rounded-2xl bg-linear-to-br from-[#052e16] via-[#0f172a] to-[#052e16] px-2.5 py-2 shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_4px_0_0_rgba(0,0,0,0.35)] pt-[max(0.5rem,env(safe-area-inset-top))]">
+      <header className="relative z-10 shrink-0 pt-[max(0.5rem,env(safe-area-inset-top))]">
+        <GamePanel tone="emerald" className="px-2.5 py-2">
         <div className="relative flex items-center gap-2">
           <Link
             href="/play"
             onClick={() => playSound("click")}
             aria-label={t("common.back")}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black/40 shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_3px_0_0_rgba(0,0,0,0.35)] transition-transform active:scale-90"
+            className="game-cta game-cta-ghost h-11 w-11 shrink-0 p-0"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -257,22 +259,20 @@ export function GridArena({ initial }: Props) {
             />
           </Link>
 
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-300/35 bg-black/40 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/icons/guesses.png"
-              alt=""
-              draggable={false}
-              className="h-7 w-7 object-contain"
-            />
-          </span>
+          <GameIconWell
+            size="md"
+            amber
+            src="/icons/guesses.png"
+            className="h-11 w-11"
+            iconClassName="h-7 w-7"
+          />
 
           <div className="min-w-0 flex-1">
             <h1 className="truncate font-display text-base font-black leading-tight text-white">
               {t("grid.title")}
             </h1>
             <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-              <span className="inline-flex items-center gap-0.5 rounded-lg bg-black/40 px-1.5 py-0.5 font-display text-[11px] font-black tabular-nums text-emerald-200 shadow-[inset_0_0_0_1px_rgba(52,211,153,0.3)]">
+              <GameChip tone="emerald" className="gap-0.5 px-1.5 py-0.5 text-[11px] tabular-nums">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/icons/target.png"
@@ -283,8 +283,8 @@ export function GridArena({ initial }: Props) {
                 />
                 {toLocaleDigits(grid.filled, locale)}/
                 {toLocaleDigits(grid.totalCells, locale)}
-              </span>
-              <span className="inline-flex items-center gap-0.5 rounded-lg bg-black/40 px-1.5 py-0.5 font-display text-[11px] font-black tabular-nums text-amber-200 shadow-[inset_0_0_0_1px_rgba(251,191,36,0.3)]">
+              </GameChip>
+              <GameChip tone="amber" className="gap-0.5 px-1.5 py-0.5 text-[11px] tabular-nums">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/icons/streak.png"
@@ -294,20 +294,20 @@ export function GridArena({ initial }: Props) {
                   className="h-3.5 w-3.5 object-contain"
                 />
                 {toLocaleDigits(grid.gridStreak, locale)}
-              </span>
+              </GameChip>
             </div>
           </div>
 
           <motion.div
             key={livesLeft}
             aria-label={t("grid.livesLabel")}
-            className={[
+            className={cn(
               "flex shrink-0 items-center gap-1 rounded-xl bg-black/40 px-2 py-1.5 shadow-[inset_0_0_0_1px_rgba(251,113,133,0.4)]",
-              livesPulse ? "animate-lives-pulse" : "",
-              livesLeft <= 2 && !done
-                ? "shadow-[inset_0_0_0_1px_rgba(251,113,133,0.7),0_0_14px_rgba(244,63,94,0.35)]"
-                : "",
-            ].join(" ")}
+              livesPulse && "animate-lives-pulse",
+              livesLeft <= 2 &&
+                !done &&
+                "shadow-[inset_0_0_0_1px_rgba(251,113,133,0.7),0_0_14px_rgba(244,63,94,0.35)]",
+            )}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -321,10 +321,10 @@ export function GridArena({ initial }: Props) {
               className="h-5 w-5 object-contain"
             />
             <span
-              className={[
+              className={cn(
                 "font-display text-sm font-black tabular-nums",
                 livesLeft <= 2 ? "text-rose-300" : "text-rose-100",
-              ].join(" ")}
+              )}
             >
               {t("grid.livesLeft", {
                 cur: toLocaleDigits(livesLeft, locale),
@@ -333,23 +333,17 @@ export function GridArena({ initial }: Props) {
             </span>
           </motion.div>
         </div>
+        </GamePanel>
       </header>
 
       {/* 3×3 board — central focus */}
-      <div
-        className={[
-          "relative z-10 mx-auto w-full max-w-md shrink-0 overflow-x-auto rounded-bubble-xl bg-linear-to-br from-[#0a1f14] via-[#0f172a] to-[#052e16] p-2.5 shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_5px_0_0_rgba(0,0,0,0.35)] transition-opacity",
-          done && showResult ? "opacity-40" : "",
-        ].join(" ")}
+      <GamePanel
+        tone="emerald"
+        className={cn(
+          "relative z-10 mx-auto w-full max-w-md shrink-0 overflow-x-auto p-2.5 transition-opacity",
+          done && showResult && "opacity-40",
+        )}
       >
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.05]"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
-          }}
-          aria-hidden
-        />
         <div
           className="relative grid gap-1.5"
           style={{
@@ -463,7 +457,7 @@ export function GridArena({ initial }: Props) {
             </div>
           ))}
         </div>
-      </div>
+      </GamePanel>
 
       <BottomSheet
         open={Boolean(selected) && !done}
@@ -480,7 +474,7 @@ export function GridArena({ initial }: Props) {
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("grid.searchPlaceholder")}
             autoFocus
-            className="min-h-12 w-full rounded-2xl bg-black/45 px-3.5 font-display text-sm font-bold text-white outline-none shadow-[inset_0_0_0_1px_rgba(255,255,255,0.14)] placeholder:text-white/35 focus:shadow-[inset_0_0_0_2px_rgba(52,211,153,0.45)]"
+            className="game-input min-h-12 w-full px-3.5 font-display text-sm font-bold"
           />
 
           <ul className="max-h-[min(48dvh,22rem)] space-y-1.5 overflow-y-auto overscroll-contain pe-0.5 [-webkit-overflow-scrolling:touch]">

@@ -14,6 +14,7 @@ import { nextMilestone, winsAway } from "@/lib/club/milestones";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { PostMatchSummary } from "@/components/match/PostMatchSummary";
+import { GameCta } from "@/components/ui/game";
 
 type MatchResultProps = {
   totalKicks: number;
@@ -104,20 +105,22 @@ export function MatchResult({
           </p>
         </div>
         <div className="flex w-full flex-col gap-3">
-          <button
-            type="button"
+          <GameCta
+            variant="primary"
+            block
             onClick={() => void submit()}
-            className="btn-fantasy btn-fantasy-primary w-full justify-center"
+            className="font-display text-base font-black"
           >
             {t("common.retry")}
-          </button>
-          <button
-            type="button"
+          </GameCta>
+          <GameCta
+            variant="accent"
+            block
             onClick={onExit}
-            className="btn-fantasy btn-fantasy-accent w-full justify-center"
+            className="font-display text-base font-black"
           >
             {t("common.backToClub")}
-          </button>
+          </GameCta>
         </div>
       </section>
     );

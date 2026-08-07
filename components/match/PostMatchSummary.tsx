@@ -15,6 +15,7 @@ import type {
   PostMatchOutcome,
   PostMatchRewards,
 } from "./postMatchTypes";
+import { GameCta } from "@/components/ui/game";
 
 export type PostMatchSummaryProps = {
   outcome: PostMatchOutcome;
@@ -592,27 +593,26 @@ function CtaButton({
   const variant = cta.variant ?? fallbackVariant;
   if (variant === "secondary") {
     return (
-      <button
-        type="button"
+      <GameCta
+        variant="ghost"
+        block
         disabled={cta.disabled}
         onClick={cta.onClick}
-        className="min-h-touch w-full rounded-bubble border-2 border-border bg-surface px-5 py-3 font-display text-sm font-bold text-muted-foreground transition-transform active:scale-[0.98] disabled:opacity-50"
+        className="font-display text-sm font-bold"
       >
         {cta.label}
-      </button>
+      </GameCta>
     );
   }
   return (
-    <button
-      type="button"
+    <GameCta
+      variant={variant === "accent" ? "accent" : "primary"}
+      block
       disabled={cta.disabled}
       onClick={cta.onClick}
-      className={[
-        "btn-fantasy mb-0.5 min-h-touch w-full justify-center text-base disabled:opacity-50",
-        variant === "accent" ? "btn-fantasy-accent" : "btn-fantasy-primary",
-      ].join(" ")}
+      className="mb-0.5 font-display text-base font-black"
     >
       {cta.label}
-    </button>
+    </GameCta>
   );
 }

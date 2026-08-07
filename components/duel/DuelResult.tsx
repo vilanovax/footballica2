@@ -16,6 +16,8 @@ import { startDuel } from "@/actions/duel/startDuel";
 import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
+import { GameChip, GameCta, GamePanel } from "@/components/ui/game";
+import { cn } from "@/lib/utils";
 
 type DuelResultProps = {
   duel: DuelSnapshot;
@@ -136,18 +138,18 @@ export function DuelResult({ duel, missions: initialMissions }: DuelResultProps)
         : "text-rose-200";
 
   return (
-    <section className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+    <section className="game-sheet relative flex min-h-0 flex-1 flex-col overflow-hidden">
       {/* Arena atmosphere */}
       <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-linear-to-b from-[#1a2433] via-[#121820] to-[#0a0f14]" />
+        <div className="game-sheet-wash absolute inset-x-0 top-0 h-56" />
         <div
-          className={[
+          className={cn(
             "absolute inset-x-0 top-0 h-56 bg-linear-to-b via-transparent to-transparent",
             glowClass,
-          ].join(" ")}
+          )}
         />
-        <div className="absolute -inset-s-20 top-24 h-64 w-64 rounded-full bg-primary/15 blur-3xl" />
-        <div className="absolute -inset-e-16 bottom-32 h-52 w-52 rounded-full bg-secondary/15 blur-3xl" />
+        <div className="absolute -start-20 top-24 h-64 w-64 rounded-full bg-emerald-400/15 blur-3xl" />
+        <div className="absolute -end-16 bottom-32 h-52 w-52 rounded-full bg-amber-400/12 blur-3xl" />
       </div>
 
       {/* Scrollable board — dock stays in-flow below (immersive: no BottomNav). */}
@@ -193,15 +195,20 @@ export function DuelResult({ duel, missions: initialMissions }: DuelResultProps)
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="mt-3 flex items-center justify-center gap-2 rounded-2xl border border-amber-300/30 bg-amber-400/10 px-4 py-3"
+            className="mt-3"
           >
-            <span aria-hidden>📅</span>
-            <p className="font-display text-sm font-bold text-amber-100">
-              {t("result.weeklyXpBonus")}
-            </p>
-            <span className="font-display text-sm font-black text-amber-300">
-              +{toLocaleDigits(weeklyXp, locale)} XP
-            </span>
+            <GamePanel
+              tone="amber"
+              className="flex items-center justify-center gap-2 px-4 py-3"
+            >
+              <span aria-hidden className="relative">📅</span>
+              <p className="relative font-display text-sm font-bold text-amber-100">
+                {t("result.weeklyXpBonus")}
+              </p>
+              <GameChip tone="amber" className="relative font-black">
+                +{toLocaleDigits(weeklyXp, locale)} XP
+              </GameChip>
+            </GamePanel>
           </motion.div>
         )}
 
@@ -226,38 +233,39 @@ export function DuelResult({ duel, missions: initialMissions }: DuelResultProps)
         )}
       </div>
 
-      {/* In-flow dock — gap clears fantasy button 3D shadow (6px). */}
+      {/* In-flow dock — Arena chrome */}
       <motion.footer
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15 }}
-        className="relative z-20 shrink-0 border-t border-white/10 bg-[#0c1218]/98 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur-md"
+        className="relative z-20 shrink-0 border-t border-white/10 bg-arena/95 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur-md"
       >
         <div className="flex flex-col gap-3">
-          <button
-            type="button"
+          <GameCta
+            variant="primary"
+            block
             disabled={pending}
             onClick={handleRematch}
-            className="btn-fantasy btn-fantasy-primary mb-0.5 min-h-touch w-full justify-center text-base disabled:opacity-50"
+            className="mb-0.5 font-display text-base font-black"
           >
             {pending ? t("duel.starting") : t("duel.scorecard.rematch")}
-          </button>
+          </GameCta>
           <div className="flex gap-2">
-            <button
-              type="button"
+            <GameCta
+              variant="ghost"
               onClick={() => router.push("/play/duel")}
-              className="min-h-touch min-w-0 flex-1 rounded-2xl border border-white/20 bg-white/10 px-4 font-display text-sm font-bold text-white transition-transform active:scale-[0.98]"
+              className="min-w-0 flex-1 font-display text-sm font-bold"
             >
               {t("duel.backLobby")}
-            </button>
-            <button
-              type="button"
+            </GameCta>
+            <GameCta
+              variant="ghost"
               onClick={() => void handleShare()}
               aria-label={t("duel.scorecard.share")}
-              className="min-h-touch shrink-0 rounded-2xl border border-white/15 bg-white/5 px-4 font-display text-sm font-bold text-white/75 transition-transform active:scale-[0.98]"
+              className="shrink-0 font-display text-sm font-bold text-white/75"
             >
               {t("duel.scorecard.share")}
-            </button>
+            </GameCta>
           </div>
         </div>
       </motion.footer>

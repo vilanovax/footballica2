@@ -9,6 +9,14 @@ import { toLocaleDigits } from "@/lib/i18n/format";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
 import { ResourceIcon } from "@/components/common/ResourceIcon";
+import {
+  GameChip,
+  GameIconWell,
+  GamePanel,
+  GameTile,
+  type GamePanelTone,
+} from "@/components/ui/game";
+import { cn } from "@/lib/utils";
 
 function GameIcon({
   src,
@@ -36,48 +44,37 @@ export type MatchCardTone = "penalty" | "quick" | "survival" | "duel";
 const TONE: Record<
   MatchCardTone,
   {
-    shell: string;
-    iconShell: string;
+    panel: GamePanelTone;
     cta: string;
     iconSrc: string;
     wash: string;
+    amberWell?: boolean;
   }
 > = {
   penalty: {
-    shell:
-      "bg-linear-to-br from-[#052e16] via-[#0f172a] to-[#022c22] shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_4px_0_0_rgba(0,0,0,0.3)]",
-    iconShell:
-      "border-emerald-400/40 bg-emerald-600/35 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]",
-    cta: "border-emerald-400/45 bg-linear-to-b from-emerald-500 to-emerald-800 text-white shadow-[0_4px_0_0_rgba(0,0,0,0.4)]",
+    panel: "emerald",
+    cta: "game-cta game-cta-primary flex-1 font-display text-sm font-black",
     iconSrc: "/icons/target.png",
     wash: "bg-emerald-400/20",
   },
   quick: {
-    shell:
-      "bg-linear-to-br from-[#052e16] via-[#14532d] to-[#0f172a] shadow-[0_0_0_1px_rgba(74,222,128,0.4),0_4px_0_0_rgba(0,0,0,0.3)]",
-    iconShell:
-      "border-lime-300/45 bg-lime-500/30 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]",
-    cta: "border-lime-300/50 bg-linear-to-b from-lime-400 to-emerald-700 text-emerald-950 shadow-[0_4px_0_0_rgba(0,0,0,0.4)]",
+    panel: "emerald",
+    cta: "game-cta game-cta-primary flex-1 font-display text-sm font-black",
     iconSrc: "/icons/energy.png",
     wash: "bg-lime-300/20",
   },
   survival: {
-    shell:
-      "bg-linear-to-br from-[#431407] via-[#0f172a] to-[#1c0a05] shadow-[0_0_0_1px_rgba(248,113,113,0.4),0_4px_0_0_rgba(0,0,0,0.3)]",
-    iconShell:
-      "border-rose-300/40 bg-rose-600/35 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]",
-    cta: "border-rose-300/45 bg-linear-to-b from-rose-500 to-rose-800 text-white shadow-[0_4px_0_0_rgba(0,0,0,0.4)]",
+    panel: "rose",
+    cta: "game-cta flex-1 bg-rose-500 font-display text-sm font-black text-white shadow-[0_5px_0_0_rgb(136,19,55)] active:shadow-[0_2px_0_0_rgb(136,19,55)]",
     iconSrc: "/icons/heart.png",
     wash: "bg-rose-400/20",
   },
   duel: {
-    shell:
-      "bg-linear-to-br from-[#5c3d0a] via-[#0f172a] to-[#2a1c06] shadow-[0_0_0_1px_rgba(251,191,36,0.45),0_4px_0_0_rgba(0,0,0,0.3)]",
-    iconShell:
-      "border-amber-300/45 bg-amber-500/30 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]",
-    cta: "border-amber-300/50 bg-linear-to-b from-accent to-[hsl(38_92%_42%)] text-accent-foreground shadow-[0_4px_0_0_rgba(120,70,0,0.5)]",
+    panel: "amber",
+    cta: "game-cta game-cta-accent flex-1 font-display text-sm font-black",
     iconSrc: "/icons/trophy.png",
     wash: "bg-amber-300/20",
+    amberWell: true,
   },
 };
 
@@ -98,7 +95,7 @@ type MatchCardProps = {
 };
 
 /**
- * Dark game Match Card — mode-tinted chrome, chip meta, CTA + info sheet.
+ * Dark game Match Card — Arena panel chrome, chip meta, CTA + info sheet.
  */
 export function MatchCard({
   modeId,
@@ -127,40 +124,31 @@ export function MatchCard({
 
   return (
     <>
-      <article
-        className={[
-          "relative overflow-hidden rounded-bubble-xl p-3.5",
-          style.shell,
-          urgent
-            ? "shadow-[0_0_0_2px_rgba(251,191,36,0.65),0_0_22px_rgba(251,191,36,0.28),0_4px_0_0_rgba(0,0,0,0.3)]"
-            : "",
-        ].join(" ")}
+      <GamePanel
+        tone={style.panel}
+        className={cn(
+          "p-3.5",
+          urgent &&
+            "ring-2 ring-arena-amber shadow-[0_0_22px_rgba(251,191,36,0.28)]",
+        )}
       >
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.05]"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
-          }}
           aria-hidden
-        />
-        <div
-          aria-hidden
-          className={[
+          className={cn(
             "pointer-events-none absolute -end-10 -top-8 h-28 w-28 rounded-full blur-3xl",
             style.wash,
-          ].join(" ")}
+          )}
         />
 
         <div className="relative flex items-start gap-3">
-          <span
-            className={[
-              "relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border-2",
-              style.iconShell,
-            ].join(" ")}
-            aria-hidden
-          >
-            <GameIcon src={style.iconSrc} className="h-7 w-7" />
+          <span className="relative shrink-0" aria-hidden>
+            <GameIconWell
+              size="md"
+              amber={style.amberWell}
+              src={style.iconSrc}
+              className="h-12 w-12"
+              iconClassName="h-7 w-7"
+            />
             {urgent ? (
               <span className="absolute -end-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 font-display text-[10px] font-black text-accent-foreground shadow-[0_2px_0_0_rgba(0,0,0,0.35)]">
                 !
@@ -173,9 +161,9 @@ export function MatchCard({
                 {title}
               </h3>
               {urgentBadge ? (
-                <span className="rounded-full bg-accent px-2 py-0.5 font-display text-[10px] font-black uppercase tracking-wide text-accent-foreground shadow-[0_2px_0_0_rgba(0,0,0,0.3)]">
+                <GameChip tone="amber" className="uppercase tracking-wide">
                   {urgentBadge}
-                </span>
+                </GameChip>
               ) : null}
             </div>
             <p className="mt-0.5 font-display text-xs font-bold text-white/55">
@@ -185,13 +173,13 @@ export function MatchCard({
         </div>
 
         <div className="relative mt-3 flex flex-wrap gap-1.5">
-          <Chip>
-            <ResourceIcon kind="energy" size="sm" className="me-1" />
+          <GameChip>
+            <ResourceIcon kind="energy" size="sm" className="me-0.5" />
             {toLocaleDigits(economy.staminaCost, locale)}
-          </Chip>
+          </GameChip>
           {modeId === "survival" ? (
             <>
-              <Chip>
+              <GameChip>
                 <span className="inline-flex items-center gap-1">
                   <ResourceIcon kind="coin" size="sm" />
                   {toLocaleDigits(economy.perCorrectCoins ?? 0, locale)}
@@ -199,26 +187,26 @@ export function MatchCard({
                   <ResourceIcon kind="xp" size="sm" />
                   {toLocaleDigits(economy.perCorrectXp ?? 0, locale)}
                 </span>
-              </Chip>
-              <Chip>
+              </GameChip>
+              <GameChip>
                 {t("play.chipRecord", {
                   n: toLocaleDigits(survivalBest ?? 0, locale),
                 })}
-              </Chip>
+              </GameChip>
               {liveChallengeCount > 0 ? (
-                <Chip>
+                <GameChip tone="amber">
                   <GameIcon
                     src="/icons/crown.png"
-                    className="me-1 h-3.5 w-3.5"
+                    className="me-0.5 h-3.5 w-3.5"
                   />
                   {t("play.chipLiveChallenges", {
                     n: toLocaleDigits(liveChallengeCount, locale),
                   })}
-                </Chip>
+                </GameChip>
               ) : null}
             </>
           ) : (
-            <Chip>
+            <GameChip>
               <span className="inline-flex items-center gap-1">
                 <ResourceIcon kind="coin" size="sm" />~
                 {toLocaleDigits(economy.approxCoins, locale)}
@@ -226,16 +214,16 @@ export function MatchCard({
                 <ResourceIcon kind="xp" size="sm" />
                 {toLocaleDigits(economy.approxXp, locale)}
               </span>
-            </Chip>
+            </GameChip>
           )}
           {modeId === "duel" && economy.duelWinWeeklyXp != null && (
-            <Chip>
+            <GameChip tone="amber">
               <span className="inline-flex items-center gap-1">
                 <ResourceIcon kind="xp" size="sm" />+
                 {toLocaleDigits(economy.duelWinWeeklyXp, locale)}{" "}
                 {t("play.info.weeklyXp")}
               </span>
-            </Chip>
+            </GameChip>
           )}
         </div>
 
@@ -246,10 +234,7 @@ export function MatchCard({
               playSound("click");
               haptic(HAPTIC.tap);
             }}
-            className={[
-              "flex min-h-12 flex-1 items-center justify-center rounded-2xl border-2 px-3 font-display text-sm font-black transition-transform active:translate-y-0.5 active:shadow-[0_2px_0_0_rgba(0,0,0,0.4)]",
-              style.cta,
-            ].join(" ")}
+            className={style.cta}
           >
             {ctaLabel}
           </Link>
@@ -257,12 +242,12 @@ export function MatchCard({
             type="button"
             aria-label={t("play.modeInfo")}
             onClick={openInfo}
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-black/35 shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_3px_0_0_rgba(0,0,0,0.3)] transition-transform active:scale-90"
+            className="game-cta game-cta-ghost h-12 w-12 shrink-0 p-0"
           >
             <GameIcon src="/icons/help.png" className="h-8 w-8" />
           </button>
         </div>
-      </article>
+      </GamePanel>
 
       <BottomSheet
         open={infoOpen}
@@ -279,14 +264,6 @@ export function MatchCard({
         />
       </BottomSheet>
     </>
-  );
-}
-
-function Chip({ children }: { children: ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-full bg-black/40 px-2.5 py-1 font-display text-[11px] font-black text-white/85 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]">
-      {children}
-    </span>
   );
 }
 
@@ -327,16 +304,16 @@ function ModeInfoBody({
       </p>
 
       {isSurvival && (
-        <div className="rounded-2xl bg-rose-500/15 px-3 py-3 text-center shadow-[inset_0_0_0_1px_rgba(251,113,133,0.35)]">
+        <GameTile tone="default" className="bg-rose-500/15 px-3 py-3 text-center shadow-[inset_0_0_0_1px_rgba(251,113,133,0.35)]">
           <div className="flex items-center justify-center gap-2" dir="ltr">
             {Array.from({ length: lives }, (_, i) => (
-              <span
+              <GameIconWell
                 key={i}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-black/40 shadow-[0_0_0_1px_rgba(255,255,255,0.12)]"
-                aria-hidden
-              >
-                <GameIcon src="/icons/heart.png" className="h-6 w-6" />
-              </span>
+                size="md"
+                src="/icons/heart.png"
+                className="h-10 w-10"
+                iconClassName="h-6 w-6"
+              />
             ))}
           </div>
           <p className="mt-2 font-display text-xs font-extrabold text-rose-200">
@@ -348,7 +325,7 @@ function ModeInfoBody({
               {t("play.info.survival.yourBest")}: {n(survivalBest)}
             </p>
           )}
-        </div>
+        </GameTile>
       )}
 
       <div className="grid grid-cols-3 gap-2">
@@ -427,7 +404,7 @@ function StatTile({
   sub?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center gap-1.5 rounded-2xl bg-black/40 px-2 py-3 text-center shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]">
+    <GameTile className="flex flex-col items-center gap-1.5 px-2 py-3 text-center">
       <span className="font-display text-[10px] font-black uppercase tracking-wide text-white/45">
         {label}
       </span>
@@ -440,6 +417,6 @@ function StatTile({
           {sub}
         </span>
       ) : null}
-    </div>
+    </GameTile>
   );
 }

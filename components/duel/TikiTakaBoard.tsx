@@ -21,6 +21,12 @@ import { toLocaleDigits } from "@/lib/i18n/format";
 import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { DuelSpecialHelpSheet } from "@/components/duel/DuelSpecialHelpSheet";
+import {
+  GameChip,
+  GameIconWell,
+  GamePanel,
+} from "@/components/ui/game";
+import { cn } from "@/lib/utils";
 
 type TikiTakaBoardProps = {
   duelId: string;
@@ -304,18 +310,19 @@ export function TikiTakaBoard({
         <div className="absolute inset-x-0 bottom-0 h-36 bg-linear-to-t from-black/60 to-transparent" />
       </div>
 
-      {/* Header — emerald chrome + close */}
+      {/* Header — Arena chrome + close */}
       <motion.header
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative z-10 mx-3 mt-[max(0.5rem,env(safe-area-inset-top))] overflow-hidden rounded-2xl bg-linear-to-br from-[#052e16] via-[#0f172a] to-[#052e16] px-2.5 py-2 shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_4px_0_0_rgba(0,0,0,0.35)]"
+        className="relative z-10 mx-3 mt-[max(0.5rem,env(safe-area-inset-top))]"
       >
+        <GamePanel tone="emerald" className="px-2.5 py-2">
         <div className="relative flex items-center gap-2">
           <Link
             href="/play/duel"
             onClick={() => playSound("click")}
             aria-label={t("common.close")}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black/40 shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_3px_0_0_rgba(0,0,0,0.35)] transition-transform active:scale-90"
+            className="game-cta game-cta-ghost h-11 w-11 shrink-0 p-0"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -326,28 +333,27 @@ export function TikiTakaBoard({
             />
           </Link>
 
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-300/35 bg-black/40 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/icons/target.png"
-              alt=""
-              draggable={false}
-              className="h-7 w-7 object-contain"
-            />
-          </span>
+          <GameIconWell
+            size="md"
+            amber
+            src="/icons/target.png"
+            className="h-11 w-11"
+            iconClassName="h-7 w-7"
+          />
 
           <div className="min-w-0 flex-1">
             <h1 className="truncate font-display text-base font-black leading-tight text-white">
               {t("duel.tiki.title")}
             </h1>
             <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-              <span
-                className={[
-                  "inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 font-display text-[10px] font-extrabold uppercase tracking-wide",
+              <GameChip
+                tone={yourTurn ? "emerald" : "default"}
+                className={cn(
+                  "gap-1 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide",
                   yourTurn
                     ? "bg-sky-500/25 text-sky-200 shadow-[inset_0_0_0_1px_rgba(56,189,248,0.4)]"
                     : "bg-rose-500/25 text-rose-200 shadow-[inset_0_0_0_1px_rgba(251,113,133,0.4)]",
-                ].join(" ")}
+                )}
               >
                 <motion.span
                   className="h-1.5 w-1.5 rounded-full bg-current"
@@ -359,8 +365,8 @@ export function TikiTakaBoard({
                   transition={{ repeat: Infinity, duration: 1.1 }}
                 />
                 {yourTurn ? t("duel.tiki.yourTurn") : t("duel.tiki.theirTurn")}
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-lg bg-black/40 px-1.5 py-0.5 font-display text-[11px] font-black tabular-nums text-white/80 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]">
+              </GameChip>
+              <GameChip className="gap-1 px-1.5 py-0.5 text-[11px] tabular-nums">
                 <span className="text-sky-300">
                   {toLocaleDigits(youCells, locale)}
                 </span>
@@ -368,7 +374,7 @@ export function TikiTakaBoard({
                 <span className="text-rose-300">
                   {toLocaleDigits(themCells, locale)}
                 </span>
-              </span>
+              </GameChip>
             </div>
           </div>
 
@@ -420,7 +426,7 @@ export function TikiTakaBoard({
               haptic(HAPTIC.tap);
               setHelpOpen(true);
             }}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black/40 shadow-[0_0_0_1px_rgba(251,191,36,0.35),0_3px_0_0_rgba(0,0,0,0.35)] transition-transform active:scale-90"
+            className="game-cta game-cta-ghost h-11 w-11 shrink-0 p-0 ring-1 ring-arena-amber/40"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -431,20 +437,15 @@ export function TikiTakaBoard({
             />
           </button>
         </div>
+        </GamePanel>
       </motion.header>
 
       {/* Board */}
       <div className="relative z-10 mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-2">
-        <div className="relative mx-auto w-full max-w-sm overflow-hidden rounded-bubble-xl bg-linear-to-br from-[#0a1f14] via-[#0f172a] to-[#052e16] p-2.5 shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_5px_0_0_rgba(0,0,0,0.35)]">
-          <div
-            className="pointer-events-none absolute inset-0 opacity-[0.05]"
-            style={{
-              backgroundImage:
-                "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
-            }}
-            aria-hidden
-          />
-
+        <GamePanel
+          tone="emerald"
+          className="relative mx-auto w-full max-w-sm p-2.5"
+        >
           <div
             className="relative grid gap-1.5"
             style={{
@@ -560,7 +561,7 @@ export function TikiTakaBoard({
               </div>
             ))}
           </div>
-        </div>
+        </GamePanel>
 
         <div className="mx-auto mt-3 flex max-w-sm items-center justify-center gap-4">
           <LegendDot className="bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.55)]" label={t("duel.tiki.you")} />
@@ -572,8 +573,11 @@ export function TikiTakaBoard({
       {/* Footer dock */}
       <div className="relative z-20 shrink-0 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
         {yourTurn && selectedCell ? (
-          <div className="overflow-hidden rounded-2xl bg-linear-to-br from-[#0a1f14] via-[#0f172a] to-[#052e16] px-2.5 pb-2.5 pt-2 shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_-4px_24px_rgba(0,0,0,0.45)]">
-            <p className="mb-1 text-center font-display text-[11px] font-extrabold text-emerald-200/90">
+          <GamePanel
+            tone="emerald"
+            className="px-2.5 pb-2.5 pt-2 shadow-[0_-4px_24px_rgba(0,0,0,0.45)]"
+          >
+            <p className="relative mb-1 text-center font-display text-[11px] font-extrabold text-emerald-200/90">
               {t("duel.tiki.cellFor", {
                 row:
                   locale === "fa"
@@ -585,7 +589,7 @@ export function TikiTakaBoard({
                     : board.axes.cols[selectedCell.col]!.labelEn,
               })}
             </p>
-            <p className="mb-1.5 text-center font-display text-[11px] font-bold text-white/55">
+            <p className="relative mb-1.5 text-center font-display text-[11px] font-bold text-white/55">
               {selectedLabel
                 ? `✓ ${selectedLabel}`
                 : t("duel.tiki.pickHint")}
@@ -596,9 +600,9 @@ export function TikiTakaBoard({
               disabled={busy}
               onChange={(e) => void runSearch(e.target.value)}
               placeholder={t("mystery.searchPlaceholder")}
-              className="min-h-12 w-full rounded-2xl bg-black/40 px-3 font-display text-sm font-bold text-white outline-none shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] placeholder:text-white/35 focus:shadow-[inset_0_0_0_1px_rgba(52,211,153,0.55)]"
+              className="game-input relative min-h-12 w-full px-3 font-display text-sm font-bold"
             />
-            <ul className="mt-1.5 max-h-32 overflow-y-auto rounded-2xl bg-black/35 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]">
+            <ul className="relative mt-1.5 max-h-32 overflow-y-auto rounded-2xl bg-black/35 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]">
               {options.length === 0 ? (
                 <li className="px-3 py-2.5 text-center font-display text-xs font-bold text-white/35">
                   {query.trim().length < 2
@@ -644,19 +648,19 @@ export function TikiTakaBoard({
               type="button"
               disabled={busy || !selectedId}
               onClick={submitGuess}
-              className="btn-fantasy-primary mt-2 w-full min-h-12"
+              className="game-cta game-cta-primary relative mt-2 w-full min-h-12 font-display font-black"
             >
               {t("duel.tiki.submit")}
             </button>
-          </div>
+          </GamePanel>
         ) : (
-          <div className="rounded-2xl bg-black/40 px-4 py-3 text-center shadow-[0_0_0_1px_rgba(52,211,153,0.22),0_4px_0_0_rgba(0,0,0,0.35)]">
-            <p className="font-display text-sm font-bold text-white/80">
+          <GamePanel tone="emerald" className="px-4 py-3 text-center">
+            <p className="relative font-display text-sm font-bold text-white/80">
               {yourTurn
                 ? t("duel.tiki.tapCell")
                 : t("duel.tiki.waitRival")}
             </p>
-            <p className="mt-1 font-body text-xs font-semibold text-white/40">
+            <p className="relative mt-1 font-body text-xs font-semibold text-white/40">
               {t("duel.tiki.missRule")}
             </p>
             <button
@@ -665,11 +669,11 @@ export function TikiTakaBoard({
                 playSound("click");
                 setHelpOpen(true);
               }}
-              className="mt-2 min-h-11 px-3 font-display text-xs font-extrabold text-emerald-300 underline-offset-2 hover:underline"
+              className="relative mt-2 min-h-11 px-3 font-display text-xs font-extrabold text-emerald-300 underline-offset-2 hover:underline"
             >
               {t("duel.help.howToPlay")}
             </button>
-          </div>
+          </GamePanel>
         )}
       </div>
 

@@ -10,6 +10,8 @@ import { RecentDuelHistory } from "@/components/duel/RecentDuelHistory";
 import { DuelInboxBanner } from "@/components/duel/DuelInboxBanner";
 import { MatchCard } from "@/components/play/MatchCard";
 import { ResourceIcon } from "@/components/common/ResourceIcon";
+import { GameChip, GamePanel } from "@/components/ui/game";
+import { cn } from "@/lib/utils";
 
 type PlayModesProps = {
   recentDuels?: DuelSnapshot[];
@@ -26,7 +28,7 @@ type PlayModesProps = {
 };
 
 /**
- * Match Day Phase 1 — tinted Match Cards, Solo / Online groups,
+ * Match Day Phase 1 — Arena Match Cards, Solo / Online groups,
  * economy chips from GameConfig, 1-click CTA + [i] sheet.
  * Challenges live under Survival lobby (`/play/survival`).
  */
@@ -49,15 +51,7 @@ export function PlayModes({
 
   return (
     <section className="flex flex-1 flex-col gap-4 pb-4">
-      <header className="relative overflow-hidden rounded-bubble-xl bg-linear-to-br from-[#052e16] via-[#0f172a] to-[#052e16] p-3.5 shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_4px_0_0_rgba(0,0,0,0.28)]">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.05]"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
-          }}
-          aria-hidden
-        />
+      <GamePanel tone="emerald" className="p-3.5">
         <div
           aria-hidden
           className="pointer-events-none absolute -end-8 top-0 h-24 w-24 rounded-full bg-emerald-400/20 blur-3xl"
@@ -68,29 +62,30 @@ export function PlayModes({
               {t("play.chooseMode")}
             </h1>
           </div>
-          <div
-            className={[
-              "flex shrink-0 items-center gap-1.5 rounded-2xl bg-black/40 px-2.5 py-1.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]",
-              staminaLow ? "shadow-[inset_0_0_0_1px_rgba(248,113,113,0.5)]" : "",
-            ].join(" ")}
+          <GameChip
+            tone={staminaLow ? "default" : "emerald"}
+            className={cn(
+              "gap-1.5 px-2.5 py-1.5 text-base tabular-nums",
+              staminaLow && "text-rose-300 shadow-[inset_0_0_0_1px_rgba(248,113,113,0.5)]",
+            )}
             aria-label={t("play.staminaBalance", {
               cur: toLocaleDigits(stamina, locale),
               max: toLocaleDigits(maxStamina, locale),
             })}
           >
             <span
-              className={[
-                "font-display text-base font-black tabular-nums",
+              className={cn(
+                "font-display font-black",
                 staminaLow ? "text-rose-300" : "text-emerald-200",
-              ].join(" ")}
+              )}
             >
               {toLocaleDigits(stamina, locale)}/
               {toLocaleDigits(maxStamina, locale)}
             </span>
             <ResourceIcon kind="energy" size="md" className="h-7 w-7" />
-          </div>
+          </GameChip>
         </div>
-      </header>
+      </GamePanel>
 
       <DuelInboxBanner
         count={inboxCount}
@@ -101,7 +96,7 @@ export function PlayModes({
       {gotd}
 
       <div className="flex flex-col gap-2.5">
-        <h2 className="px-0.5 font-display text-[11px] font-black uppercase tracking-widest text-emerald-800/70">
+        <h2 className="px-0.5 font-display text-[11px] font-black uppercase tracking-widest text-muted-foreground">
           {t("play.groupSolo")}
         </h2>
         <MatchCard
@@ -138,7 +133,7 @@ export function PlayModes({
       </div>
 
       <div className="flex flex-col gap-2.5">
-        <h2 className="px-0.5 font-display text-[11px] font-black uppercase tracking-widest text-emerald-800/70">
+        <h2 className="px-0.5 font-display text-[11px] font-black uppercase tracking-widest text-muted-foreground">
           {t("play.groupOnline")}
         </h2>
         <MatchCard

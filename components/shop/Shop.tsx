@@ -28,6 +28,12 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { UpgradeCard } from "@/components/club-hub/UpgradeCard";
 import { ResourceIcon } from "@/components/common/ResourceIcon";
+import {
+  GameChip,
+  GameIconWell,
+  GamePanel,
+} from "@/components/ui/game";
+import { cn } from "@/lib/utils";
 
 type ShopProps = {
   initialClub: ClubSnapshot;
@@ -160,16 +166,8 @@ export function Shop({
       <motion.header
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-bubble-xl bg-linear-to-br from-[#5c3d0a] via-[#0f172a] to-[#052e16] px-3.5 pb-4 pt-3 shadow-[0_0_0_1px_rgba(251,191,36,0.4),0_5px_0_0_rgba(0,0,0,0.32)]"
       >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-[0.05]"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
-          }}
-        />
+        <GamePanel tone="amber" className="px-3.5 pb-4 pt-3">
         <div
           aria-hidden
           className="pointer-events-none absolute -end-8 -top-10 h-36 w-36 rounded-full bg-amber-300/25 blur-3xl"
@@ -186,7 +184,7 @@ export function Shop({
           <Link
             href="/club"
             onClick={() => playSound("click")}
-            className="flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-xl bg-black/40 px-3 font-display text-xs font-black text-white/80 shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_3px_0_0_rgba(0,0,0,0.35)] transition-transform active:scale-95"
+            className="game-cta game-cta-ghost h-10 min-w-10 gap-1.5 px-3 font-display text-xs font-black"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -213,9 +211,10 @@ export function Shop({
                 ? { duration: 0.55 }
                 : { duration: 2.4, repeat: Infinity, ease: "easeInOut" }
             }
-            className="flex h-16 w-16 items-center justify-center rounded-2xl bg-black/40 shadow-[0_0_0_1px_rgba(251,191,36,0.4),0_4px_0_0_rgba(0,0,0,0.35)]"
           >
-            <ResourceIcon kind="coin" size="xl" className="h-12 w-12!" />
+            <GameIconWell amber className="h-16 w-16">
+              <ResourceIcon kind="coin" size="xl" className="h-12 w-12!" />
+            </GameIconWell>
           </motion.div>
 
           <p className="mt-1 font-display text-[11px] font-black uppercase tracking-widest text-white/50">
@@ -233,6 +232,7 @@ export function Shop({
             {t("shop.title")}
           </h1>
         </div>
+        </GamePanel>
       </motion.header>
 
       {/* ── Mode tabs ──────────────────────────────────────────── */}
@@ -316,37 +316,28 @@ export function Shop({
               const isPending = pending === b.type;
               const disabled = !canAfford || isPending;
               return (
-                <div
+                <GamePanel
                   key={b.type}
-                  className={[
-                    "relative flex items-center gap-3 overflow-hidden rounded-2xl px-3 py-3",
-                    canAfford
-                      ? "bg-linear-to-br from-[#052e16] via-[#0f172a] to-[#022c22] shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_4px_0_0_rgba(0,0,0,0.3)]"
-                      : "bg-black/35 opacity-80 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_3px_0_0_rgba(0,0,0,0.25)]",
-                  ].join(" ")}
+                  tone="emerald"
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-3",
+                    !canAfford && "opacity-80",
+                  )}
                 >
-                  <div
-                    className="pointer-events-none absolute inset-0 opacity-[0.05]"
-                    style={{
-                      backgroundImage:
-                        "repeating-linear-gradient(-16deg, transparent, transparent 10px, #fff 10px, #fff 11px)",
-                    }}
-                    aria-hidden
-                  />
-                  <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-black/40 text-3xl shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_3px_0_0_rgba(0,0,0,0.35)]">
+                  <GameIconWell size="lg" className="text-3xl">
                     {b.icon}
-                  </div>
+                  </GameIconWell>
 
                   <div className="relative min-w-0 flex-1 text-start">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-display text-base font-black text-white">
                         {t(`shop.boosters.${b.type}.name`)}
                       </p>
-                      <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 font-display text-[10px] font-black text-emerald-100 shadow-[inset_0_0_0_1px_rgba(52,211,153,0.35)]">
+                      <GameChip tone="emerald" className="text-[10px]">
                         {t("shop.owned", {
                           n: toLocaleDigits(b.owned(club), locale),
                         })}
-                      </span>
+                      </GameChip>
                     </div>
                     <p className="mt-0.5 font-display text-xs font-bold text-white/50">
                       {t(`shop.boosters.${b.type}.desc`)}
@@ -358,12 +349,12 @@ export function Shop({
                     disabled={disabled}
                     onClick={() => purchaseBooster(b.type)}
                     whileTap={disabled ? undefined : { y: 2 }}
-                    className={[
-                      "relative flex min-h-12 min-w-22 flex-col items-center justify-center rounded-2xl border-2 px-3 py-2 font-display text-sm font-black transition-transform",
+                    className={cn(
+                      "game-cta relative min-w-22 flex-col px-3 py-2 font-display text-sm font-black",
                       canAfford
-                        ? "border-emerald-400/45 bg-linear-to-b from-emerald-500 to-emerald-800 text-white shadow-[0_3px_0_0_rgba(0,0,0,0.4)] active:translate-y-0.5 active:shadow-[0_1px_0_0_rgba(0,0,0,0.4)]"
-                        : "border-white/10 bg-white/10 text-white/45",
-                    ].join(" ")}
+                        ? "game-cta-primary"
+                        : "cursor-not-allowed bg-white/10 text-white/45 shadow-none",
+                    )}
                   >
                     {isPending ? (
                       <span>…</span>
@@ -382,7 +373,7 @@ export function Shop({
                       </>
                     )}
                   </motion.button>
-                </div>
+                </GamePanel>
               );
             })}
 
@@ -411,25 +402,22 @@ export function Shop({
                       stiffness: 280,
                       damping: 20,
                     }}
-                    className={[
-                      "relative overflow-hidden rounded-2xl px-3.5 py-3.5",
-                      pack.highlight
-                        ? "bg-linear-to-br from-[#5c3d0a] via-[#9a6b12]/40 to-[#0f172a] shadow-[0_0_0_1px_rgba(251,191,36,0.5),0_0_22px_rgba(251,191,36,0.18),0_4px_0_0_rgba(0,0,0,0.3)]"
-                        : "bg-linear-to-br from-[#3d2a08] via-[#0f172a] to-[#2a1c06] shadow-[0_0_0_1px_rgba(251,191,36,0.3),0_4px_0_0_rgba(0,0,0,0.3)]",
-                    ].join(" ")}
                   >
-                    <div
-                      className="pointer-events-none absolute inset-0 opacity-[0.05]"
-                      style={{
-                        backgroundImage:
-                          "repeating-linear-gradient(-16deg, transparent, transparent 10px, #fff 10px, #fff 11px)",
-                      }}
-                      aria-hidden
-                    />
+                    <GamePanel
+                      tone="amber"
+                      className={cn(
+                        "px-3.5 py-3.5",
+                        pack.highlight &&
+                          "ring-1 ring-arena-amber shadow-[0_0_22px_rgba(251,191,36,0.18)]",
+                      )}
+                    >
                     {pack.highlight && (
-                      <span className="absolute start-3 top-3 rounded-full bg-accent px-2.5 py-0.5 font-display text-[10px] font-black uppercase tracking-wider text-accent-foreground shadow-[0_2px_0_0_rgba(0,0,0,0.3)]">
+                      <GameChip
+                        tone="amber"
+                        className="absolute start-3 top-3 bg-accent text-[10px] uppercase tracking-wider text-accent-foreground"
+                      >
                         {t("shop.bestValue")}
-                      </span>
+                      </GameChip>
                     )}
 
                     <div className="relative flex items-center gap-3 pt-1">
@@ -487,7 +475,7 @@ export function Shop({
                       disabled={!!pending}
                       onClick={() => buyPack(pack.tier)}
                       whileTap={pending ? undefined : { y: 2 }}
-                      className="relative mt-3.5 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 border-amber-300/45 bg-linear-to-b from-accent to-[hsl(38_92%_42%)] font-display text-sm font-black text-accent-foreground shadow-[0_4px_0_0_rgba(120,70,0,0.5)] transition-transform active:translate-y-0.5 active:shadow-[0_2px_0_0_rgba(120,70,0,0.5)] disabled:opacity-60"
+                      className="game-cta game-cta-accent relative mt-3.5 w-full gap-2 font-display text-sm font-black disabled:opacity-60"
                     >
                       {isPending ? (
                         "…"
@@ -501,6 +489,7 @@ export function Shop({
                         </>
                       )}
                     </motion.button>
+                    </GamePanel>
                   </motion.div>
                 );
               })}

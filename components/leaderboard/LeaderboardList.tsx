@@ -19,6 +19,11 @@ import {
 import { ResourceIcon } from "@/components/common/ResourceIcon";
 import { RankArt, medalKindForPlace } from "@/components/leaderboard/RankArt";
 import { shortClubName } from "@/lib/leaderboard/displayName";
+import {
+  GameChip,
+  GamePanel,
+} from "@/components/ui/game";
+import { cn } from "@/lib/utils";
 
 type LeaderboardListProps = {
   rows: LeaderboardRow[];
@@ -128,15 +133,7 @@ export function LeaderboardList({
   return (
     <section className="relative flex flex-1 flex-col">
       <header className="sticky top-0 z-20 -mx-1 bg-background/85 pb-2.5 pt-2 backdrop-blur-md">
-        <div className="relative overflow-hidden rounded-bubble-xl border-[3px] border-emerald-400/40 bg-linear-to-br from-[#052e16] via-[#14532d] to-[#0f172a] p-3 shadow-[0_5px_0_0_rgba(0,0,0,0.28)]">
-          <div
-            className="pointer-events-none absolute inset-0 opacity-[0.06]"
-            style={{
-              backgroundImage:
-                "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
-            }}
-            aria-hidden
-          />
+        <GamePanel tone="emerald" className="p-3">
           <motion.div
             aria-hidden
             className="pointer-events-none absolute -end-8 top-0 h-24 w-24 rounded-full bg-emerald-300/25 blur-2xl"
@@ -156,12 +153,12 @@ export function LeaderboardList({
               </h1>
             </div>
             {tab === "weekly" && (
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-bubble border-2 border-amber-300/45 bg-black/35 px-2.5 py-1.5 font-display text-[11px] font-black text-amber-100 shadow-[0_3px_0_0_rgba(0,0,0,0.3)]">
+              <GameChip tone="amber" className="shrink-0 gap-1 px-2.5 py-1.5 text-[11px]">
                 ⏳{" "}
                 {t("leaderboard.resetsIn", {
                   n: toLocaleDigits(resetsInDays, locale),
                 })}
-              </span>
+              </GameChip>
             )}
           </div>
 
@@ -208,7 +205,7 @@ export function LeaderboardList({
               );
             })}
           </div>
-        </div>
+        </GamePanel>
       </header>
 
       {tab === "hof" ? (
@@ -236,8 +233,12 @@ export function LeaderboardList({
                 playSound("click");
                 setPrizesOpen(true);
               }}
-              className="relative mb-3 flex w-full items-center justify-between gap-2 overflow-hidden rounded-bubble-xl border-[3px] border-amber-400/45 bg-linear-to-br from-[#5c3d0a] via-[#9a6b12] to-[#2a1c06] px-3 py-3 text-start shadow-[0_4px_0_0_rgba(0,0,0,0.28)] transition-transform active:scale-[0.99]"
+              className="mb-3 w-full text-start transition-transform active:scale-[0.99]"
             >
+              <GamePanel
+                tone="amber"
+                className="flex w-full items-center justify-between gap-2 px-3 py-3"
+              >
               <span className="relative inline-flex items-center gap-1.5 font-display text-xs font-black text-amber-50">
                 <RankArt kind="trophy" size="sm" className="h-5 w-5" />
                 {t("leaderboard.prizeBanner", {
@@ -247,6 +248,7 @@ export function LeaderboardList({
               <span className="relative rounded-bubble bg-accent px-2.5 py-1 font-display text-[10px] font-black text-accent-foreground shadow-[0_2px_0_0_rgba(0,0,0,0.3)]">
                 {t("leaderboard.prizeTap")}
               </span>
+              </GamePanel>
             </button>
           )}
 
@@ -294,7 +296,7 @@ export function LeaderboardList({
 
       {showStickyYou && sticky && (
         <div className="pointer-events-none fixed inset-x-0 z-40 mx-auto w-full max-w-mobile px-3 bottom-[calc(10.5rem+env(safe-area-inset-bottom,0px))]">
-          <div className="pointer-events-auto rounded-bubble-xl bg-linear-to-br from-[#052e16] via-[#14532d] to-[#022c22] p-0.5 shadow-[0_0_0_2px_rgba(251,191,36,0.65),0_0_20px_rgba(251,191,36,0.35),0_6px_0_0_rgba(0,0,0,0.35)]">
+          <div className="pointer-events-auto ring-2 ring-arena-amber shadow-[0_0_20px_rgba(251,191,36,0.35)]">
             <LeaderboardRowItem row={sticky} sticky />
           </div>
         </div>
@@ -375,16 +377,9 @@ function YourHuntCard({
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative mb-3 overflow-hidden rounded-bubble-xl border-[3px] border-emerald-400/45 bg-linear-to-br from-[#052e16] via-[#14532d] to-[#022c22] p-3 shadow-[0_5px_0_0_rgba(0,0,0,0.28)]"
+      className="mb-3"
     >
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.07]"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
-        }}
-        aria-hidden
-      />
+      <GamePanel tone="emerald" className="p-3">
       <motion.div
         aria-hidden
         className="pointer-events-none absolute -end-8 top-0 h-24 w-24 rounded-full bg-emerald-300/30 blur-2xl"
@@ -436,13 +431,14 @@ function YourHuntCard({
           <button
             type="button"
             onClick={onPrizes}
-            className="inline-flex min-h-9 items-center gap-1 rounded-bubble bg-accent px-2.5 py-1.5 font-display text-[11px] font-black text-accent-foreground shadow-[0_3px_0_0_rgba(0,0,0,0.35)]"
+            className="game-cta game-cta-accent inline-flex min-h-9 items-center gap-1 px-2.5 py-1.5 font-display text-[11px] font-black"
           >
             <RankArt kind="trophy" size="sm" className="h-3.5 w-3.5" />
             {t("leaderboard.prizeTap")}
           </button>
         </div>
       </div>
+      </GamePanel>
     </motion.div>
   );
 }
@@ -458,29 +454,21 @@ function LeaderboardRowItem({
   const unplayed = row.playState === "unplayed";
   const hot = !unplayed && row.rank > 0 && row.rank <= 10;
   const you = row.isCurrentUser;
+  const tone =
+    sticky || you || hot ? "emerald" : unplayed ? "sky" : "emerald";
 
   return (
-    <motion.div
-      variants={sticky ? undefined : rowVariants}
-      className={[
-        "relative flex min-h-12 items-center gap-2 overflow-hidden rounded-2xl px-2 py-1.5 shadow-[0_3px_0_0_rgba(0,0,0,0.28)]",
-        sticky || you
-          ? "bg-linear-to-br from-[#166534] via-[#14532d] to-[#052e16] shadow-[0_0_0_2px_rgba(251,191,36,0.7),0_0_18px_rgba(251,191,36,0.28),0_3px_0_0_rgba(0,0,0,0.3)]"
-          : unplayed
-            ? "bg-linear-to-br from-[#1e293b] via-[#334155] to-[#0f172a] opacity-75 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_3px_0_0_rgba(0,0,0,0.28)]"
-            : hot
-              ? "bg-linear-to-br from-[#052e16] via-[#14532d] to-[#022c22] shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_3px_0_0_rgba(0,0,0,0.28)]"
-              : "bg-linear-to-br from-[#0f172a] via-[#1e293b] to-[#020617] shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_3px_0_0_rgba(0,0,0,0.28)]",
-      ].join(" ")}
-    >
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.05]"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(-16deg, transparent, transparent 10px, #fff 10px, #fff 11px)",
-        }}
-        aria-hidden
-      />
+    <motion.div variants={sticky ? undefined : rowVariants}>
+      <GamePanel
+        tone={tone as "emerald" | "sky"}
+        className={cn(
+          "flex min-h-12 items-center gap-2 px-2 py-1.5",
+          (sticky || you) &&
+            "ring-2 ring-arena-amber shadow-[0_0_18px_rgba(251,191,36,0.28)]",
+          unplayed && "opacity-75",
+          !hot && !you && !sticky && !unplayed && "game-panel opacity-95",
+        )}
+      >
       {(sticky || you) && (
         <div
           aria-hidden
@@ -555,6 +543,7 @@ function LeaderboardRowItem({
           <ResourceIcon kind="xp" size="sm" className="h-3.5 w-3.5" />
         </p>
       </div>
+      </GamePanel>
     </motion.div>
   );
 }
