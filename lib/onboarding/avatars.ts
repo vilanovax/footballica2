@@ -23,7 +23,10 @@ export type ManagerAvatar = {
   /** Short personality tag shown on the card. */
   tagline: string;
   faTagline: string;
-  /** In-character line for the "handing over the keys" dialog. */
+  /** In-character line while handing over the keys (narrative beat). */
+  keysDialog: string;
+  faKeysDialog: string;
+  /** In-character line prompting the club name. */
   dialog: string;
   faDialog: string;
   /**
@@ -42,10 +45,14 @@ export const MANAGER_AVATARS: ManagerAvatar[] = [
     emoji: "🧠",
     tagline: "Reads the game like a book.",
     faTagline: "بازی رو مثل کتاب می‌خونه.",
+    keysDialog:
+      "These keys open a ruined ground — cracked stands, dirt pitch. Rebuild it with me, Boss.",
+    faKeysDialog:
+      "این کلیدها مال یه زمین خرابه‌ست — سکوهای ترک‌خورده، چمن خاکی. با هم بازسازیش می‌کنیم رئیس.",
     dialog:
-      "Welcome Boss! The club is in ruins, but we can fix it. What should we name our team?",
+      "The keys are yours. What should we put on the scoreboard — name the club.",
     faDialog:
-      "رئیس خوش اومدی! باشگاه نابوده ولی با هم می‌سازیمش. اسم تیممون رو چی بذاریم؟",
+      "کلیدها مال توئه. روی تابلو چی بنویسیم — اسم باشگاه رو بگو.",
   },
   {
     key: "YOUNG_DIRECTOR",
@@ -55,10 +62,13 @@ export const MANAGER_AVATARS: ManagerAvatar[] = [
     emoji: "💼",
     tagline: "Ambitious and fearless.",
     faTagline: "جاه‌طلب و نترس.",
+    keysDialog:
+      "Investors walked. The stands are empty. Take the keys — we flip this club.",
+    faKeysDialog:
+      "سرمایه‌گذارها رفتن. سکوها خالیه. کلیدها رو بگیر — این باشگاه رو برمی‌گردونیم.",
     dialog:
-      "Welcome Boss! The club is in ruins, but we can fix it. What should we name our team?",
-    faDialog:
-      "رئیس خوش اومدی! باشگاه نابوده ولی با هم می‌سازیمش. اسم تیممون رو چی بذاریم؟",
+      "Every empire starts with a name. What do we call our project?",
+    faDialog: "هر امپراتوری با یه اسم شروع می‌شه. پروژه‌مونو چی صدا کنیم؟",
   },
   {
     key: "VETERAN_FAN",
@@ -68,10 +78,13 @@ export const MANAGER_AVATARS: ManagerAvatar[] = [
     emoji: "📣",
     tagline: "Lives and breathes the club.",
     faTagline: "با باشگاه نفس می‌کشه.",
+    keysDialog:
+      "I kept these keys through the dark years. The terrace is waiting for a real boss.",
+    faKeysDialog:
+      "تو سال‌های تاریک این کلیدها رو نگه داشتم. سکو منتظر یه رئیس واقعیه.",
     dialog:
-      "Welcome Boss! The club is in ruins, but we can fix it. What should we name our team?",
-    faDialog:
-      "رئیس خوش اومدی! باشگاه نابوده ولی با هم می‌سازیمش. اسم تیممون رو چی بذاریم؟",
+      "Give the ultras a name they can chant. What are we called?",
+    faDialog: "به اولتراس یه اسم بده که هوار بکشن. اسم‌مون چیه؟",
   },
 
   // ── Unlockable cosmetics (earned via achievements) ──────────────────────────
@@ -83,6 +96,8 @@ export const MANAGER_AVATARS: ManagerAvatar[] = [
     emoji: "🧤",
     tagline: "Never lets one slip past.",
     faTagline: "هیچ توپی از دستش در نمی‌ره.",
+    keysDialog: "",
+    faKeysDialog: "",
     dialog: "",
     faDialog: "",
     lockedBy: "clean_sheet",
@@ -95,6 +110,8 @@ export const MANAGER_AVATARS: ManagerAvatar[] = [
     emoji: "🦸",
     tagline: "Shows up every single day.",
     faTagline: "هر روز پای کاره.",
+    keysDialog: "",
+    faKeysDialog: "",
     dialog: "",
     faDialog: "",
     lockedBy: "streak_7",
@@ -107,6 +124,8 @@ export const MANAGER_AVATARS: ManagerAvatar[] = [
     emoji: "👑",
     tagline: "A name carved into history.",
     faTagline: "اسمش تو تاریخ حک شده.",
+    keysDialog: "",
+    faKeysDialog: "",
     dialog: "",
     faDialog: "",
     lockedBy: "streak_30",
@@ -119,6 +138,8 @@ export const MANAGER_AVATARS: ManagerAvatar[] = [
     emoji: "🧓",
     tagline: "Seen it all, won it all.",
     faTagline: "همه‌چیزو دیده، همه‌چیزو برده.",
+    keysDialog: "",
+    faKeysDialog: "",
     dialog: "",
     faDialog: "",
     lockedBy: "veteran",
@@ -131,6 +152,8 @@ export const MANAGER_AVATARS: ManagerAvatar[] = [
     emoji: "🌟",
     tagline: "Born to lift trophies.",
     faTagline: "برای بالا بردن جام‌ها ساخته شده.",
+    keysDialog: "",
+    faKeysDialog: "",
     dialog: "",
     faDialog: "",
     lockedBy: "first_win",
@@ -143,6 +166,8 @@ export const MANAGER_AVATARS: ManagerAvatar[] = [
     emoji: "👽",
     tagline: "Tactics from another galaxy.",
     faTagline: "تاکتیک‌هایی از کهکشانی دیگر.",
+    keysDialog: "",
+    faKeysDialog: "",
     dialog: "",
     faDialog: "",
     lockedBy: "on_fire",

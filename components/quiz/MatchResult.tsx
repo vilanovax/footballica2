@@ -231,19 +231,21 @@ export function MatchResult({
     confirmed.combo >= 2
       ? {
           key: "combo",
-          label: `⚡ ${t("result.combo", {
+          label: t("result.combo", {
             n: toLocaleDigits(confirmed.combo, locale),
-          })}`,
+          }),
           tone: "accent" as const,
+          iconSrc: "/icons/streak.png",
         }
       : null,
     streak.dailyStreak >= 1
       ? {
           key: "streak",
-          label: `🔥 ${t("result.streakDays", {
+          label: t("result.streakDays", {
             n: toLocaleDigits(streak.dailyStreak, locale),
-          })}`,
+          }),
           tone: "secondary" as const,
+          iconSrc: "/icons/streak.png",
         }
       : null,
     businessBoostGranted
@@ -253,12 +255,14 @@ export function MatchResult({
             pct: toLocaleDigits(Math.round(businessBoostBonus * 100), locale),
           }),
           tone: "accent" as const,
+          iconSrc: "/icons/upgrade.png",
         }
       : null,
   ].filter(Boolean) as Array<{
     key: string;
     label: string;
     tone: "accent" | "secondary";
+    iconSrc?: string;
   }>;
 
   const streakNote = streak.extended
@@ -273,6 +277,7 @@ export function MatchResult({
     <PostMatchSummary
       outcome={{
         emoji: won ? "🏆" : "🧤",
+        heroSrc: won ? "/icons/trophy.png" : "/icons/broken-heart.png",
         title,
         subtitle: t("result.goalsScored", {
           goals: toLocaleDigits(confirmed.goals, locale),

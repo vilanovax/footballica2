@@ -13,6 +13,7 @@ import {
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
+import { GameCta, GameTile } from "@/components/ui/game";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -142,19 +143,14 @@ export function PushOptIn() {
 
   return (
     <div className="mt-3.5 flex flex-col gap-3">
-      <button
-        type="button"
+      <GameCta
+        variant={subscribed ? "primary" : "accent"}
+        block
         disabled={pending}
         onClick={() => void (subscribed ? disable() : enable())}
-        className={[
-          "flex min-h-12 w-full items-center justify-center rounded-2xl border-2 font-display text-base font-black shadow-[0_3px_0_0_rgba(0,0,0,0.3)] transition-transform active:translate-y-px active:shadow-none disabled:opacity-60",
-          subscribed
-            ? "border-emerald-300/50 bg-emerald-500/25 text-emerald-100"
-            : "border-sky-300/50 bg-sky-500/30 text-sky-50",
-        ].join(" ")}
       >
         {subscribed ? t("settings.pushDisable") : t("settings.pushEnable")}
-      </button>
+      </GameCta>
 
       {subscribed && (
         <div className="flex flex-col gap-2">
@@ -209,19 +205,24 @@ function PrefSwitch({
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className="flex min-h-11 items-center justify-between gap-3 rounded-xl bg-black/25 px-3 ring-1 ring-white/10"
+      className="w-full text-start"
     >
-      <span className="text-start font-display text-sm font-bold text-white/90">
-        {label}
-      </span>
-      <span
-        className={[
-          "relative flex h-7 w-12 items-center rounded-full px-0.5 transition-colors",
-          checked ? "justify-end bg-accent" : "justify-start bg-white/20",
-        ].join(" ")}
+      <GameTile
+        tone={checked ? "amber" : "default"}
+        className="flex min-h-11 items-center justify-between gap-3 px-3 py-2"
       >
-        <span className="h-6 w-6 rounded-full bg-white shadow" />
-      </span>
+        <span className="font-display text-sm font-bold text-white/90">
+          {label}
+        </span>
+        <span
+          className={[
+            "relative flex h-7 w-12 items-center rounded-full px-0.5 transition-colors",
+            checked ? "justify-end bg-accent" : "justify-start bg-white/20",
+          ].join(" ")}
+        >
+          <span className="h-6 w-6 rounded-full bg-white shadow" />
+        </span>
+      </GameTile>
     </button>
   );
 }

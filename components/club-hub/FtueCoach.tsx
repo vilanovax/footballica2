@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { AvatarImage } from "@/components/common/AvatarImage";
+import { GamePanel } from "@/components/ui/game";
 import { playSound } from "@/lib/audio/SoundManager";
 
 type FtueCoachProps = {
@@ -34,53 +35,54 @@ export function FtueCoach({ avatarKey, name, line, cta }: FtueCoachProps) {
       animate={slideUp.animate}
       exit={slideUp.exit}
       transition={slideUp.transition}
-      className="pointer-events-auto w-full max-w-mobile rounded-bubble border border-accent/40 bg-surface p-4 shadow-fantasy"
+      className="pointer-events-auto w-full max-w-mobile"
     >
-      <div className="flex items-start gap-3">
-        <motion.div
-          animate={{ rotate: [0, -6, 6, 0] }}
-          transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
-          className="shrink-0"
-          aria-hidden
-        >
-          <AvatarImage
-            avatarKey={avatarKey}
-            className="h-14 w-14 rounded-full shadow-fantasy-sm"
-          />
-        </motion.div>
-
-        <div className="min-w-0 flex-1">
-          <p className="font-display text-xs font-bold uppercase tracking-widest text-accent-deep">
-            {name}
-          </p>
-          <p className="mt-1 font-display text-sm font-bold leading-snug text-surface-foreground">
-            {line}
-          </p>
-        </div>
-      </div>
-
-      {cta && (
-        <motion.div
-          animate={{
-            boxShadow: [
-              "0 0 0px hsl(var(--primary) / 0)",
-              "0 0 24px 4px hsl(var(--primary) / 0.7)",
-              "0 0 0px hsl(var(--primary) / 0)",
-            ],
-          }}
-          transition={{ repeat: Infinity, duration: 1.5 }}
-          className="mt-4 rounded-bubble"
-        >
-          <Link
-            href={cta.href}
-            onClick={() => playSound("click")}
-            className="btn-fantasy btn-fantasy-primary flex w-full items-center justify-center gap-2"
+      <GamePanel tone="amber" className="p-4">
+        <div className="flex items-start gap-3">
+          <motion.div
+            animate={{ rotate: [0, -6, 6, 0] }}
+            transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
+            className="shrink-0"
+            aria-hidden
           >
-            <span aria-hidden>⚽️</span>
-            <span>{cta.label}</span>
-          </Link>
-        </motion.div>
-      )}
+            <AvatarImage
+              avatarKey={avatarKey}
+              className="h-14 w-14 rounded-full shadow-md ring-2 ring-amber-300/35"
+            />
+          </motion.div>
+
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-xs font-bold uppercase tracking-widest text-amber-200">
+              {name}
+            </p>
+            <p className="mt-1 font-display text-sm font-bold leading-snug text-white">
+              {line}
+            </p>
+          </div>
+        </div>
+
+        {cta && (
+          <motion.div
+            animate={{
+              boxShadow: [
+                "0 0 0px rgba(251,191,36,0)",
+                "0 0 22px 4px rgba(251,191,36,0.55)",
+                "0 0 0px rgba(251,191,36,0)",
+              ],
+            }}
+            transition={{ repeat: Infinity, duration: 1.5 }}
+            className="mt-4 rounded-2xl"
+          >
+            <Link
+              href={cta.href}
+              onClick={() => playSound("click")}
+              className="game-cta game-cta-accent flex min-h-14 w-full items-center justify-center"
+            >
+              {cta.label}
+            </Link>
+          </motion.div>
+        )}
+      </GamePanel>
     </motion.div>
   );
 }

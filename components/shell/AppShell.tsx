@@ -25,19 +25,21 @@ export function AppShell({ children }: AppShellProps) {
   // Auth + FTUE screens: no bottom nav chrome.
   const bareChrome =
     pathname === "/login" || pathname?.startsWith("/onboarding");
+  const onboardingMood = pathname?.startsWith("/onboarding");
 
   // Focused match / daily puzzle arenas — hide tab bar for immersion.
   // Exit via in-arena close (X); Play hub keeps the nav.
   const immersivePlay = isImmersivePlayRoute(pathname);
   const fullBleedMood = isFullBleedMoodRoute(pathname);
   const hideNav = bareChrome || immersivePlay;
+  const pitchShell = Boolean(fullBleedMood || onboardingMood);
 
   return (
     <div
       className={[
         "relative mx-auto flex min-h-dvh w-full max-w-mobile flex-col overflow-x-hidden",
-        // Mystery paints edge-to-edge dark — kill Day Match cream behind safe areas.
-        fullBleedMood ? "bg-[#0a0f14]" : "",
+        // Mystery / onboarding paint pitch-dark — kill Day Match cream.
+        pitchShell ? "bg-[hsl(var(--arena-bg))]" : "",
       ].join(" ")}
     >
       <main

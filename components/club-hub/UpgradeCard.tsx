@@ -188,6 +188,11 @@ export function UpgradeCard({
               <p className="font-display text-sm font-black text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.65)]">
                 {t(`upgrades.${def.key}.name`)}
               </p>
+              {spotlight && def.key === "STADIUM" && level === 0 && (
+                <span className="rounded-full bg-amber-400/25 px-2 py-0.5 font-display text-[10px] font-black text-amber-100 ring-1 ring-amber-300/45">
+                  {t("ftue.firstUpgradeLabel")}
+                </span>
+              )}
               {isMax && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/30 px-2 py-0.5 font-display text-[10px] font-black text-amber-100 ring-1 ring-amber-300/50">
                   {/* eslint-disable-next-line @next/next/no-img-element */}

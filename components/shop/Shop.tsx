@@ -30,6 +30,7 @@ import { UpgradeCard } from "@/components/club-hub/UpgradeCard";
 import { ResourceIcon } from "@/components/common/ResourceIcon";
 import {
   GameChip,
+  GameCta,
   GameIconWell,
   GamePanel,
 } from "@/components/ui/game";
@@ -48,11 +49,19 @@ type Tab = "upgrades" | "boosters" | "coins";
 /** Booster catalog (metadata only — cost + counts come from the server). */
 const BOOSTERS: {
   type: BoosterShopType;
-  icon: string;
+  iconSrc: string;
   owned: (c: ClubSnapshot) => number;
 }[] = [
-  { type: "FIFTY_FIFTY", icon: "✂️", owned: (c) => c.boosterFiftyFifty },
-  { type: "FREEZE_TIMER", icon: "❄️", owned: (c) => c.boosterFreezeTimer },
+  {
+    type: "FIFTY_FIFTY",
+    iconSrc: "/icons/help.png",
+    owned: (c) => c.boosterFiftyFifty,
+  },
+  {
+    type: "FREEZE_TIMER",
+    iconSrc: "/icons/timer.png",
+    owned: (c) => c.boosterFreezeTimer,
+  },
 ];
 
 const TABS: { key: Tab; iconSrc?: string; glyph?: string }[] = [
@@ -236,49 +245,54 @@ export function Shop({
       </motion.header>
 
       {/* ── Mode tabs ──────────────────────────────────────────── */}
-      <div className="relative grid grid-cols-3 gap-1 rounded-2xl bg-black/40 p-1 shadow-[0_0_0_1px_rgba(255,255,255,0.1),inset_0_1px_0_0_rgba(255,255,255,0.06)]">
-        {TABS.map(({ key, iconSrc, glyph }) => {
-          const active = tab === key;
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => {
-                playSound("click");
-                setTab(key);
-              }}
-              className={[
-                "relative flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 font-display transition-colors",
-                active ? "text-white" : "text-white/50",
-              ].join(" ")}
-            >
-              {active && (
-                <motion.span
-                  layoutId="shop-tab"
-                  transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                  className="absolute inset-0 rounded-xl bg-linear-to-b from-emerald-600/90 to-emerald-900/95 shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_2px_0_0_rgba(0,0,0,0.35)]"
-                />
-              )}
-              <span className="relative flex h-5 items-center justify-center" aria-hidden>
-                {iconSrc ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={iconSrc}
-                    alt=""
-                    draggable={false}
-                    className="h-5 w-5 object-contain"
+      <GamePanel tone="emerald" pinstripe={false} className="p-1">
+        <div className="relative grid grid-cols-3 gap-1">
+          {TABS.map(({ key, iconSrc, glyph }) => {
+            const active = tab === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  playSound("click");
+                  setTab(key);
+                }}
+                className={[
+                  "relative flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 font-display transition-colors",
+                  active ? "text-white" : "text-white/50",
+                ].join(" ")}
+              >
+                {active && (
+                  <motion.span
+                    layoutId="shop-tab"
+                    transition={{ type: "spring", stiffness: 420, damping: 32 }}
+                    className="absolute inset-0 rounded-xl bg-linear-to-b from-emerald-500/90 to-emerald-900/95 ring-1 ring-emerald-300/35"
                   />
-                ) : (
-                  glyph
                 )}
-              </span>
-              <span className="relative text-[11px] font-black sm:text-xs">
-                {tabLabel(key)}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+                <span
+                  className="relative flex h-5 items-center justify-center"
+                  aria-hidden
+                >
+                  {iconSrc ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={iconSrc}
+                      alt=""
+                      draggable={false}
+                      className="h-5 w-5 object-contain"
+                    />
+                  ) : (
+                    glyph
+                  )}
+                </span>
+                <span className="relative text-[11px] font-black sm:text-xs">
+                  {tabLabel(key)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </GamePanel>
 
       {/* ── Tab content ────────────────────────────────────────── */}
       <AnimatePresence mode="wait">
@@ -324,9 +338,7 @@ export function Shop({
                     !canAfford && "opacity-80",
                   )}
                 >
-                  <GameIconWell size="lg" className="text-3xl">
-                    {b.icon}
-                  </GameIconWell>
+                  <GameIconWell size="lg" src={b.iconSrc} amber={canAfford} />
 
                   <div className="relative min-w-0 flex-1 text-start">
                     <div className="flex flex-wrap items-center gap-2">
@@ -344,17 +356,11 @@ export function Shop({
                     </p>
                   </div>
 
-                  <motion.button
-                    type="button"
+                  <GameCta
+                    variant={canAfford ? "primary" : "ghost"}
                     disabled={disabled}
                     onClick={() => purchaseBooster(b.type)}
-                    whileTap={disabled ? undefined : { y: 2 }}
-                    className={cn(
-                      "game-cta relative min-w-22 flex-col px-3 py-2 font-display text-sm font-black",
-                      canAfford
-                        ? "game-cta-primary"
-                        : "cursor-not-allowed bg-white/10 text-white/45 shadow-none",
-                    )}
+                    className="min-w-22 flex-col px-3 py-2 text-sm"
                   >
                     {isPending ? (
                       <span>…</span>
@@ -372,7 +378,7 @@ export function Shop({
                         </span>
                       </>
                     )}
-                  </motion.button>
+                  </GameCta>
                 </GamePanel>
               );
             })}
@@ -470,12 +476,12 @@ export function Shop({
                       </div>
                     </div>
 
-                    <motion.button
-                      type="button"
+                    <GameCta
+                      variant="accent"
+                      block
                       disabled={!!pending}
                       onClick={() => buyPack(pack.tier)}
-                      whileTap={pending ? undefined : { y: 2 }}
-                      className="game-cta game-cta-accent relative mt-3.5 w-full gap-2 font-display text-sm font-black disabled:opacity-60"
+                      className="relative mt-3.5 gap-2 text-sm disabled:opacity-60"
                     >
                       {isPending ? (
                         "…"
@@ -488,7 +494,7 @@ export function Shop({
                           </span>
                         </>
                       )}
-                    </motion.button>
+                    </GameCta>
                     </GamePanel>
                   </motion.div>
                 );

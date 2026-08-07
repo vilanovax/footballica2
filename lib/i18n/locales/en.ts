@@ -40,6 +40,11 @@ const en = {
   onboarding: {
     chooseManager: "Choose Your Manager",
     whichManager: "Which manager are you?",
+    keysEyebrow: "The Handover",
+    keysTitle: "Keys to a ruined club",
+    keysLine:
+      "These keys open a ruined ground — cracked stands, dirt pitch. Rebuild it with me, Boss.",
+    acceptKeys: "Take the keys",
     chooseColor: "Club Colors",
     pickColor: "Pick your kit color",
     colorHint: "This accent paints your hub, profile, and scoreboard.",
@@ -54,7 +59,7 @@ const en = {
     back: "← Back",
     changeManager: "← Change manager",
     dialog:
-      "Welcome Boss! The club is in ruins, but we can fix it. What should we name our team?",
+      "The keys are yours. What should we put on the scoreboard — name the club.",
     errBlacklisted: "That famous club name is taken by history. Pick a twist!",
     errTaken: "That club name is already flying. Try another.",
     errTooShort: "Name is too short.",
@@ -538,7 +543,7 @@ const en = {
     fans: "Fans",
     playAgain: "Play Again",
     outOfEnergy: "Out of Energy",
-    spendCoins: "Now spend your coins!",
+    spendCoins: "Head back to the Hub and buy wooden benches for the stadium.",
     saveFailed: "Save Failed",
     level: "Level {n}",
     xpToGo: "{cur} / {next}",
@@ -894,10 +899,12 @@ const en = {
   },
   ftue: {
     step0Line:
-      "Let's test your skills on the pitch, Boss! Win your first match to earn some coins.",
-    step0Cta: "Play First Match",
-    step1Line: "Great job! Now use those coins to fix our ruined stadium.",
+      "Keys in pocket — time to earn the first coins. Play a short penalty shootout. No stamina cost.",
+    step0Cta: "Play tutorial match",
+    step1Line:
+      "Perfect. Spend those coins on wooden benches — your first stadium fix.",
     gradLine: "You're ready. Take us to the Championship!",
+    firstUpgradeLabel: "Wooden benches",
   },
   news: {
     masthead: "The Footballica Times",
