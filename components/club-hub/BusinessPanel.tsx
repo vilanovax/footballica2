@@ -16,6 +16,12 @@ import { FacilityBusinessCard } from "@/components/club-hub/FacilityBusinessCard
 import { BankBusinessSheet } from "@/components/club-hub/BankBusinessSheet";
 import { StaffBusinessSheet } from "@/components/club-hub/StaffBusinessSheet";
 import { BottomSheet } from "@/components/ui/BottomSheet";
+import {
+  GameCta,
+  GameIconWell,
+  GamePanel,
+  GameTile,
+} from "@/components/ui/game";
 import { FundsCost } from "@/components/club-hub/FundsCost";
 import type { BusinessFacilityKey } from "@/lib/club/businessEconomy";
 import { playSound } from "@/lib/audio/SoundManager";
@@ -692,30 +698,13 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
         closeLabel={t("common.close")}
         tone="dark"
       >
-        {/* Vault hero — amber on pitch dark */}
-        <div className="relative -mx-1 overflow-hidden rounded-bubble-xl bg-linear-to-br from-[#3d2a08] via-[#0f172a] to-[#071410] shadow-[0_0_0_1px_rgba(251,191,36,0.45),0_4px_0_0_rgba(0,0,0,0.35)]">
+        <GamePanel className="-mx-1" tone="amber">
           <div
-            className="pointer-events-none absolute inset-0 opacity-[0.06]"
-            style={{
-              backgroundImage:
-                "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
-            }}
+            className="absolute -inset-e-8 -top-8 h-32 w-32 rounded-full bg-amber-400/20 blur-3xl"
             aria-hidden
           />
-          <div className="absolute -end-8 -top-8 h-32 w-32 rounded-full bg-amber-400/20 blur-3xl" aria-hidden />
           <div className="relative flex flex-col items-center px-4 pb-4 pt-5">
-            <span
-              className="flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-300/40 bg-black/40 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]"
-              aria-hidden
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/icons/gift.png"
-                alt=""
-                draggable={false}
-                className="h-9 w-9 object-contain"
-              />
-            </span>
+            <GameIconWell size="lg" amber src="/icons/gift.png" />
             <motion.p
               key={biz.vaultBalance}
               initial={{ scale: 0.92, opacity: 0.6 }}
@@ -747,12 +736,13 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
                   : t("club.biz.vault")}
             </p>
           </div>
-        </div>
+        </GamePanel>
 
         <div className="mt-4 flex flex-col gap-2.5">
           {canWithdraw && (
-            <motion.button
-              type="button"
+            <GameCta
+              variant="primary"
+              block
               disabled={pending}
               onClick={() => {
                 setVaultOpen(false);
@@ -760,8 +750,6 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
                   t("club.biz.withdrawn"),
                 );
               }}
-              whileTap={pending ? undefined : { y: 3 }}
-              className="flex min-h-14 w-full items-center justify-center gap-2 rounded-bubble-xl bg-emerald-500 px-4 font-display text-base font-black text-white shadow-[0_5px_0_0_rgba(6,78,59,0.9)]"
             >
               <ArrowLeftRight className="h-4 w-4 shrink-0" aria-hidden />
               {treasurerEarly
@@ -771,7 +759,7 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
                 : t("club.biz.withdrawCta", {
                     n: toLocaleDigits(biz.vaultBalance, locale),
                   })}
-            </motion.button>
+            </GameCta>
           )}
           {vaultFull && !biz.staff.hasTreasurer && biz.staff.enabled && (
             <p className="text-center font-display text-[11px] font-bold text-white/65">
@@ -787,8 +775,10 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
           {!vaultMaxed &&
             biz.vaultUpgradeCost !== null &&
             biz.nextVaultCap != null && (
-              <button
-                type="button"
+              <GameCta
+                variant="accent"
+                block
+                className="justify-between px-4"
                 disabled={pending || biz.clubFunds < biz.vaultUpgradeCost}
                 onClick={() => {
                   setVaultOpen(false);
@@ -796,12 +786,6 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
                     t("club.biz.vaultUpgraded"),
                   );
                 }}
-                className={[
-                  "flex min-h-14 w-full items-center justify-between gap-3 rounded-bubble-xl px-4 font-display text-base font-black",
-                  biz.clubFunds >= biz.vaultUpgradeCost
-                    ? "bg-accent text-accent-foreground shadow-[0_5px_0_0_hsl(var(--accent-deep))]"
-                    : "cursor-not-allowed bg-white/10 text-white/50 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]",
-                ].join(" ")}
               >
                 <span className="flex flex-col items-start leading-tight">
                   <span className="text-[10px] font-black uppercase tracking-widest opacity-70">
@@ -829,11 +813,14 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
                     className="opacity-70"
                   />
                 )}
-              </button>
+              </GameCta>
             )}
 
           {vaultMaxed && (
-            <div className="flex items-center justify-center gap-2 rounded-bubble-xl bg-amber-500/15 px-3 py-3 shadow-[0_0_0_1px_rgba(251,191,36,0.4)]">
+            <GameTile
+              tone="amber"
+              className="flex items-center justify-center gap-2 px-3 py-3"
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/icons/crown.png"
@@ -844,7 +831,7 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
               <p className="font-display text-sm font-black text-amber-300">
                 {t("club.biz.maxed")}
               </p>
-            </div>
+            </GameTile>
           )}
         </div>
       </BottomSheet>

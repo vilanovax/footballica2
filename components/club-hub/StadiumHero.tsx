@@ -4,6 +4,11 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
 import { BottomSheet } from "@/components/ui/BottomSheet";
+import {
+  GameIconWell,
+  GamePanel,
+  GameTile,
+} from "@/components/ui/game";
 
 const Confetti = dynamic(() =>
   import("./Confetti").then((m) => m.Confetti),
@@ -14,6 +19,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
+import { cn } from "@/lib/utils";
 
 type StadiumHeroProps = {
   stadiumLevel: number;
@@ -304,34 +310,15 @@ export function StadiumHero({
         closeLabel={t("common.close")}
         tone="dark"
       >
-        <div
-          className={[
-            "relative -mx-1 overflow-hidden rounded-bubble-xl bg-linear-to-br shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_4px_0_0_rgba(0,0,0,0.35)]",
-            scene.wash,
-          ].join(" ")}
-        >
-          <div
-            className="pointer-events-none absolute inset-0 opacity-[0.06]"
-            style={{
-              backgroundImage:
-                "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
-            }}
-            aria-hidden
-          />
-
+        <GamePanel className="-mx-1" tone="emerald">
           <div className="relative flex items-center gap-3 px-3 py-3.5">
-            <span
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-amber-300/35 bg-black/40 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]"
-              aria-hidden
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/icons/stadium.png"
-                alt=""
-                draggable={false}
-                className={["h-12 w-12 object-contain", scene.art].join(" ")}
-              />
-            </span>
+            <GameIconWell
+              size="lg"
+              amber
+              src="/icons/stadium.png"
+              className="h-16 w-16"
+              iconClassName={cn("h-12 w-12", scene.art)}
+            />
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1">
@@ -354,7 +341,7 @@ export function StadiumHero({
                   /{toLocaleDigits(cap, locale)}
                 </span>
               </p>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-black/40 ring-1 ring-white/15">
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-black/40 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.15)]">
                 <motion.div
                   className={[
                     "h-full rounded-full",
@@ -374,7 +361,7 @@ export function StadiumHero({
               </p>
             </div>
           </div>
-        </div>
+        </GamePanel>
 
         <ul className="mt-3 flex flex-col gap-2">
           <FacilityRow
@@ -480,54 +467,41 @@ function FacilityRow({
   hot?: boolean;
 }) {
   return (
-    <li
-      className={[
-        "flex items-center gap-3 rounded-2xl px-3 py-2.5",
-        hot
-          ? "bg-amber-500/15 shadow-[0_0_0_1px_rgba(251,191,36,0.45),0_3px_0_0_rgba(0,0,0,0.28)]"
-          : "bg-black/35 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_3px_0_0_rgba(0,0,0,0.28)]",
-      ].join(" ")}
-    >
-      <span
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/40 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]"
-        aria-hidden
+    <li>
+      <GameTile
+        tone={hot ? "amber" : "default"}
+        className="flex items-center gap-3 px-3 py-2.5"
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={iconSrc}
-          alt=""
-          draggable={false}
-          className="h-6 w-6 object-contain"
-        />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="font-display text-[11px] font-bold text-white/55">
-          {label}
-        </p>
-        <p
-          className={[
-            "font-display text-base font-black",
-            hot ? "text-amber-200" : "text-white",
-          ].join(" ")}
-        >
-          {value}
-          {sub ? (
-            <span className="ms-1.5 inline-flex items-center gap-0.5 text-[11px] font-bold text-white/55">
-              ·{" "}
-              {subIconSrc ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={subIconSrc}
-                  alt=""
-                  aria-hidden
-                  className="inline h-3.5 w-3.5 object-contain"
-                />
-              ) : null}
-              {sub}
-            </span>
-          ) : null}
-        </p>
-      </div>
+        <GameIconWell size="sm" src={iconSrc} className="h-10 w-10" />
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-[11px] font-bold text-white/55">
+            {label}
+          </p>
+          <p
+            className={cn(
+              "font-display text-base font-black",
+              hot ? "text-amber-200" : "text-white",
+            )}
+          >
+            {value}
+            {sub ? (
+              <span className="ms-1.5 inline-flex items-center gap-0.5 text-[11px] font-bold text-white/55">
+                ·{" "}
+                {subIconSrc ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={subIconSrc}
+                    alt=""
+                    aria-hidden
+                    className="inline h-3.5 w-3.5 object-contain"
+                  />
+                ) : null}
+                {sub}
+              </span>
+            ) : null}
+          </p>
+        </div>
+      </GameTile>
     </li>
   );
 }

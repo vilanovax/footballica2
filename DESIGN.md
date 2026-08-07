@@ -159,3 +159,7 @@ Existing screens may still use one-off classes. When touching a file, migrate th
 - `components/ui/BottomSheet.tsx`
 - `components/club-hub/BankBusinessSheet.tsx`
 - `components/club-hub/StaffBusinessSheet.tsx`
+- `components/club-hub/FacilityBusinessCard.tsx` (sheet body)
+- `components/club-hub/StadiumHero.tsx` (sheet body)
+- `components/club-hub/UpgradeCard.tsx` (sheet body)
+- `components/club-hub/BusinessPanel.tsx` (Vault sheet)

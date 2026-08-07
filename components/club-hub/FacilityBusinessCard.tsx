@@ -6,6 +6,15 @@ import { ChevronRight, Lock } from "lucide-react";
 import type { FacilityView } from "@/lib/club/businessEconomy";
 import type { BusinessFacilityKey } from "@/lib/club/businessEconomy";
 import { BottomSheet } from "@/components/ui/BottomSheet";
+import {
+  GameChip,
+  GameCta,
+  GameIconWell,
+  GameOffer,
+  GamePanel,
+  GameTile,
+  type GamePanelTone,
+} from "@/components/ui/game";
 import { FundsCost } from "@/components/club-hub/FundsCost";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
@@ -13,6 +22,12 @@ import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
 import { staffDisplayName } from "@/lib/club/staff";
 import { useLiveFacilityFill } from "@/lib/club/useLiveFacilityFill";
+
+const FACILITY_PANEL_TONE: Record<BusinessFacilityKey, GamePanelTone> = {
+  TICKET_OFFICE: "emerald",
+  CLUB_SHOP: "sky",
+  MUSEUM: "amber",
+};
 
 const FACILITY_META: Record<
   BusinessFacilityKey,
@@ -480,53 +495,29 @@ export function FacilityBusinessCard({
         closeLabel={t("common.close")}
         tone="dark"
       >
-        {/* Hero — collectable / income as the star number */}
-        <div
-          className={[
-            "relative -mx-1 overflow-hidden rounded-bubble-xl bg-linear-to-br",
-            f.key === "MUSEUM"
-              ? "shadow-[0_0_0_1px_rgba(251,191,36,0.45),0_4px_0_0_rgba(0,0,0,0.35)]"
-              : f.key === "CLUB_SHOP"
-                ? "shadow-[0_0_0_1px_rgba(56,189,248,0.4),0_4px_0_0_rgba(0,0,0,0.35)]"
-                : "shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_4px_0_0_rgba(0,0,0,0.35)]",
-            meta.hero,
-          ].join(" ")}
+        <GamePanel
+          className="-mx-1"
+          tone={FACILITY_PANEL_TONE[f.key]}
         >
           <div
             className={[
-              "pointer-events-none absolute -end-10 -top-8 h-36 w-36 rounded-full blur-3xl",
+              "pointer-events-none absolute -inset-e-10 -top-8 h-36 w-36 rounded-full blur-3xl",
               meta.glow,
             ].join(" ")}
             aria-hidden
           />
-          <div
-            className="pointer-events-none absolute inset-0 opacity-[0.07]"
-            style={{
-              backgroundImage:
-                "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
-            }}
-            aria-hidden
-          />
 
           <div className="relative flex flex-col items-center px-4 pb-5 pt-5">
-            <motion.span
-              className="flex h-20 w-20 items-center justify-center rounded-full border border-amber-300/35 bg-black/40 shadow-[0_0_28px_rgba(255,255,255,0.12),0_3px_0_0_rgba(0,0,0,0.35)]"
+            <motion.div
               animate={{ y: [0, -4, 0] }}
               transition={{
                 repeat: Infinity,
                 duration: 2.4,
                 ease: "easeInOut",
               }}
-              aria-hidden
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={meta.iconSrc}
-                alt=""
-                draggable={false}
-                className="h-11 w-11 object-contain"
-              />
-            </motion.span>
+              <GameIconWell size="xl" amber src={meta.iconSrc} />
+            </motion.div>
 
             {f.status === "BUILT" && (
               <>
@@ -601,7 +592,7 @@ export function FacilityBusinessCard({
                             )}
                       </span>
                     </div>
-                    <div className="h-3 overflow-hidden rounded-full border border-white/20 bg-black/40">
+                    <div className="h-3 overflow-hidden rounded-full bg-black/40 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.15)]">
                       <motion.div
                         className={[
                           "h-full rounded-full",
@@ -642,12 +633,12 @@ export function FacilityBusinessCard({
 
             {f.status === "LOCKED" && (
               <>
-                <p className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-black/40 px-3 py-1.5 font-display text-xs font-black text-white/85 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.15)]">
+                <GameChip className="mt-3 gap-1.5 px-3 py-1.5 text-xs text-white/85">
                   <Lock className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
                   {t("club.biz.unlockAt", {
                     n: toLocaleDigits(f.unlockPlayerLevel, locale),
                   })}
-                </p>
+                </GameChip>
                 {f.nextRatePerHour != null && (
                   <p className="mt-2 font-display text-xs font-bold text-white/65">
                     {t("club.biz.previewIncome", {
@@ -658,7 +649,7 @@ export function FacilityBusinessCard({
               </>
             )}
           </div>
-        </div>
+        </GamePanel>
 
         <p className="mt-3 text-center font-display text-xs font-bold text-white/55">
           {t(meta.descKey)}
@@ -671,50 +662,46 @@ export function FacilityBusinessCard({
               setOpen(false);
               onManageStaff();
             }}
-            className="mt-3 flex w-full items-center justify-between rounded-bubble-xl bg-black/35 px-3 py-3 text-start shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_3px_0_0_rgba(0,0,0,0.28)] transition-transform active:scale-[0.99]"
+            className="mt-3 w-full text-start transition-transform active:scale-[0.99]"
           >
-            <span className="flex items-center gap-2">
-              {f.staff ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={f.staff.avatarImage}
-                  alt=""
-                  className="h-9 w-9 rounded-lg object-cover shadow-[0_0_0_1px_rgba(52,211,153,0.35)]"
-                />
-              ) : (
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-black/40 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
+            <GameTile className="flex w-full items-center justify-between px-3 py-3">
+              <span className="flex items-center gap-2">
+                {f.staff ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src="/icons/hub-mission.png"
+                    src={f.staff.avatarImage}
                     alt=""
-                    draggable={false}
-                    className="h-5 w-5 object-contain opacity-80"
+                    className="h-9 w-9 rounded-lg object-cover shadow-[0_0_0_1px_hsl(var(--arena-ring)/0.35)]"
                   />
-                </span>
-              )}
-              <span>
-                <span className="block font-display text-xs font-black text-white">
-                  {f.staff
-                    ? staffDisplayName(f.staff, locale)
-                    : t("club.staff.emptyDesk")}
-                </span>
-                <span className="block font-display text-[11px] font-bold text-white/55">
-                  {f.staff
-                    ? t("club.staff.perkRate", {
-                        pct: toLocaleDigits(f.staff.rateBonusPercent, locale),
-                      })
-                    : t("club.staff.assignHint")}
+                ) : (
+                  <GameIconWell size="sm" src="/icons/hub-mission.png" />
+                )}
+                <span>
+                  <span className="block font-display text-xs font-black text-white">
+                    {f.staff
+                      ? staffDisplayName(f.staff, locale)
+                      : t("club.staff.emptyDesk")}
+                  </span>
+                  <span className="block font-display text-[11px] font-bold text-white/55">
+                    {f.staff
+                      ? t("club.staff.perkRate", {
+                          pct: toLocaleDigits(
+                            f.staff.rateBonusPercent,
+                            locale,
+                          ),
+                        })
+                      : t("club.staff.assignHint")}
+                  </span>
                 </span>
               </span>
-            </span>
-            <ChevronRight className="h-4 w-4 text-white/45 rtl:rotate-180" />
+              <ChevronRight className="h-4 w-4 text-white/45 rtl:rotate-180" />
+            </GameTile>
           </button>
         )}
 
-        {/* Built: two key numbers only */}
         {f.status === "BUILT" && (
           <div className="mt-3 grid grid-cols-2 gap-2.5">
-            <div className="rounded-bubble-xl bg-black/35 px-3 py-3 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_3px_0_0_rgba(0,0,0,0.28)]">
+            <GameTile className="px-3 py-3">
               <p className="flex items-center gap-1 font-display text-[10px] font-black uppercase tracking-wide text-white/50">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -733,8 +720,8 @@ export function FacilityBusinessCard({
                   n: toLocaleDigits(f.ratePerHour, locale),
                 })}
               </p>
-            </div>
-            <div className="rounded-bubble-xl bg-black/35 px-3 py-3 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_3px_0_0_rgba(0,0,0,0.28)]">
+            </GameTile>
+            <GameTile className="px-3 py-3">
               <p className="flex items-center gap-1 font-display text-[10px] font-black uppercase tracking-wide text-white/50">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -751,31 +738,24 @@ export function FacilityBusinessCard({
               >
                 {toLocaleDigits(f.storageCap, locale)}
               </p>
-            </div>
+            </GameTile>
           </div>
         )}
 
-        {/* Upgrade offer = card + CTA */}
         {f.status === "BUILT" && !isMax && f.upgradeCost != null && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative mt-4 overflow-hidden rounded-bubble-xl bg-linear-to-br from-accent/25 via-[#2a1f08] to-[#0f172a] p-1 shadow-[0_0_0_1px_rgba(251,191,36,0.5),0_5px_0_0_hsl(var(--accent-deep))]"
+            className="mt-4"
           >
-            <div className="rounded-[1.1rem] bg-black/35 px-3.5 pb-3.5 pt-3">
+            <GameOffer>
               <div className="flex items-center gap-3">
-                <span
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-accent shadow-[0_3px_0_0_hsl(var(--accent-deep))]"
-                  aria-hidden
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/icons/upgrade.png"
-                    alt=""
-                    draggable={false}
-                    className="h-7 w-7 object-contain"
-                  />
-                </span>
+                <GameIconWell
+                  size="md"
+                  src="/icons/upgrade.png"
+                  className="h-12 w-12 bg-accent shadow-[0_3px_0_0_hsl(var(--accent-deep))]"
+                  iconClassName="h-7 w-7"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="font-display text-[10px] font-black uppercase tracking-widest text-accent">
                     {t("club.biz.nextUpgrade")}
@@ -794,20 +774,15 @@ export function FacilityBusinessCard({
                   </p>
                 </div>
               </div>
-              <motion.button
-                type="button"
+              <GameCta
+                variant="accent"
+                block
+                className="mt-3"
                 disabled={pending || !f.canUpgrade}
                 onClick={() => {
                   setOpen(false);
                   onUpgrade();
                 }}
-                whileTap={pending || !f.canUpgrade ? undefined : { y: 3 }}
-                className={[
-                  "mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-bubble-xl px-4 font-display text-base font-black",
-                  f.canUpgrade
-                    ? "bg-accent text-accent-foreground shadow-[0_5px_0_0_hsl(var(--accent-deep))]"
-                    : "cursor-not-allowed bg-white/10 text-white/55 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]",
-                ].join(" ")}
               >
                 {f.canUpgrade ? (
                   <>
@@ -820,13 +795,16 @@ export function FacilityBusinessCard({
                     have: toLocaleDigits(clubFunds, locale),
                   })
                 )}
-              </motion.button>
-            </div>
+              </GameCta>
+            </GameOffer>
           </motion.div>
         )}
 
         {isMax && (
-          <div className="mt-4 flex items-center justify-center gap-2 rounded-bubble-xl bg-amber-500/15 px-3 py-3 shadow-[0_0_0_1px_rgba(251,191,36,0.4)]">
+          <GameTile
+            tone="amber"
+            className="mt-4 flex items-center justify-center gap-2 px-3 py-3"
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/icons/crown.png"
@@ -837,24 +815,19 @@ export function FacilityBusinessCard({
             <p className="font-display text-base font-black text-amber-300">
               {t("club.biz.maxed")}
             </p>
-          </div>
+          </GameTile>
         )}
 
         {f.status === "AVAILABLE" && f.buildCost !== null && (
-          <motion.button
-            type="button"
+          <GameCta
+            variant="accent"
+            block
+            className="mt-4"
             disabled={pending || !f.canBuild}
             onClick={() => {
               setOpen(false);
               onBuild();
             }}
-            whileTap={pending || !f.canBuild ? undefined : { y: 3 }}
-            className={[
-              "mt-4 flex min-h-14 w-full items-center justify-center gap-2 rounded-bubble-xl px-4 font-display text-base font-black",
-              f.canBuild
-                ? "bg-accent text-accent-foreground shadow-[0_6px_0_0_hsl(var(--accent-deep))]"
-                : "cursor-not-allowed bg-white/10 text-white/55 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]",
-            ].join(" ")}
           >
             {f.buildCost === 0 ? (
               t("club.biz.buildFree")
@@ -869,7 +842,7 @@ export function FacilityBusinessCard({
                 have: toLocaleDigits(clubFunds, locale),
               })
             )}
-          </motion.button>
+          </GameCta>
         )}
       </BottomSheet>
     </>
