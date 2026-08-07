@@ -9,6 +9,7 @@ import { LOCALES, type Locale } from "@/lib/i18n/config";
 import { logout } from "@/actions/auth";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { PushOptIn } from "@/components/pwa/PushOptIn";
+import { TelegramOptIn } from "@/components/pwa/TelegramOptIn";
 import {
   GameChip,
   GameCta,
@@ -267,6 +268,15 @@ export default function SettingsPage() {
             desc={t("settings.pushDesc")}
           />
           <PushOptIn />
+          <div className="mt-5 border-t border-white/10 pt-4">
+            <p className="font-display text-sm font-black text-white">
+              {t("settings.telegram")}
+            </p>
+            <p className="mt-1 font-display text-xs font-bold text-white/55">
+              {t("settings.telegramDesc")}
+            </p>
+            <TelegramOptIn />
+          </div>
         </>
       ),
     },

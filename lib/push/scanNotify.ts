@@ -10,7 +10,7 @@ import {
   notifyStaminaFull,
   notifyVaultNearlyFull,
 } from "@/lib/push/send";
-import { isWebPushReady } from "@/lib/push/webPush";
+import { isNotifyReady, listNotifyCandidateUserIds } from "@/lib/push/channels";
 
 const VAULT_RATIO = 0.8;
 
@@ -21,7 +21,7 @@ const VAULT_RATIO = 0.8;
 export async function scanDuelYourTurnPushes(
   limit = 40,
 ): Promise<{ candidates: number; sent: number }> {
-  if (!isWebPushReady()) return { candidates: 0, sent: 0 };
+  if (!isNotifyReady()) return { candidates: 0, sent: 0 };
 
   const duels = await prisma.duelMatch.findMany({
     where: {
@@ -65,19 +65,14 @@ export async function scanDuelYourTurnPushes(
 export async function scanVaultNearlyFullPushes(
   limit = 30,
 ): Promise<{ candidates: number; sent: number }> {
-  if (!isWebPushReady()) return { candidates: 0, sent: 0 };
+  if (!isNotifyReady()) return { candidates: 0, sent: 0 };
 
-  const subs = await prisma.pushSubscription.findMany({
-    where: { vaultNearlyFull: true },
-    select: { userId: true },
-    distinct: ["userId"],
-    take: limit,
-  });
+  const userIds = await listNotifyCandidateUserIds("vaultNearlyFull", limit);
 
   let sent = 0;
   let candidates = 0;
 
-  for (const { userId } of subs) {
+  for (const userId of userIds) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, xp: true, isBot: true, club: true },
@@ -103,20 +98,15 @@ export async function scanVaultNearlyFullPushes(
 export async function scanNewspaperReadyPushes(
   limit = 40,
 ): Promise<{ candidates: number; sent: number }> {
-  if (!isWebPushReady()) return { candidates: 0, sent: 0 };
+  if (!isNotifyReady()) return { candidates: 0, sent: 0 };
 
   const now = new Date();
-  const subs = await prisma.pushSubscription.findMany({
-    where: { newspaperReady: true },
-    select: { userId: true },
-    distinct: ["userId"],
-    take: limit,
-  });
+  const userIds = await listNotifyCandidateUserIds("newspaperReady", limit);
 
   let sent = 0;
   let candidates = 0;
 
-  for (const { userId } of subs) {
+  for (const userId of userIds) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -136,25 +126,20 @@ export async function scanNewspaperReadyPushes(
 }
 
 /**
- * Passive stamina has regenerated to full — nudge toward Play.
+ * Club stamina has regenerated to full — nudge toward Play.
  */
 export async function scanStaminaFullPushes(
   limit = 40,
 ): Promise<{ candidates: number; sent: number }> {
-  if (!isWebPushReady()) return { candidates: 0, sent: 0 };
+  if (!isNotifyReady()) return { candidates: 0, sent: 0 };
 
   const now = new Date();
-  const subs = await prisma.pushSubscription.findMany({
-    where: { staminaFull: true },
-    select: { userId: true },
-    distinct: ["userId"],
-    take: limit,
-  });
+  const userIds = await listNotifyCandidateUserIds("staminaFull", limit);
 
   let sent = 0;
   let candidates = 0;
 
-  for (const { userId } of subs) {
+  for (const userId of userIds) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {

@@ -1000,6 +1000,18 @@ const fa: Dictionary = {
     pushNotConfigured: "اعلان روی این سرور هنوز تنظیم نشده.",
     pushDenied: "اجازه داده نشد — اعلان‌ها را در تنظیمات مرورگر روشن کن.",
     pushFailed: "فعال‌سازی اعلان نشد. دوباره تلاش کن.",
+    telegram: "تلگرام",
+    telegramDesc:
+      "همان هشدارها در تلگرام وقتی مرورگر بسته است — دوئل، گاوصندوق، روزنامه، استامینا.",
+    telegramConnect: "اتصال تلگرام",
+    telegramUnlink: "قطع اتصال تلگرام",
+    telegramLinked: "متصل",
+    telegramConnectHint:
+      "ربات فوتبالیکا باز می‌شود. Start را بزن تا باشگاهت وصل شود.",
+    telegramRefreshHint: "بعد از اتصال در تلگرام برگرد اینجا — وضعیت با فوکوس تازه می‌شود.",
+    telegramMaster: "هشدار تلگرام روشن",
+    telegramNotConfigured:
+      "ربات تلگرام تنظیم نشده (TELEGRAM_BOT_TOKEN + TELEGRAM_BOT_USERNAME).",
   },
   campaign: {
     eyebrow: "قهرمانی",

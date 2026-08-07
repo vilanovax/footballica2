@@ -429,9 +429,17 @@ Missions / campaign → claim coins/XP
 - [x] Soft facility rate bonus from active deals (capped)
 - [x] Hub chip + sheet; sponsored bank stays separate interest opt-in
 
+### Shipped — Telegram re-engagement
+
+- [x] `TelegramNotifyLink` (chat id + same prefs/cooldowns as Web Push)
+- [x] Fan-out inside `notify*` (web + Telegram); cron scanners channel-agnostic
+- [x] Settings → Connect Telegram (`t.me/<bot>?start=<signed token>`)
+- [x] Webhook `/api/telegram/webhook` (`/start`, `/unlink`)
+- [ ] SMS re-engagement (still open — auth OTP stub only)
+
 ### Explicitly not shipped (later)
 
-- [ ] SMS / Telegram re-engagement channels
+- [ ] SMS re-engagement channel
 - [ ] Competitive buffs from Funds (forbidden by design)
 - [ ] Income minting cron (forbidden — notify-only cron OK)
 
@@ -483,9 +491,10 @@ Useful when balancing without opening Admin:
 
 Shipped in this pass (PWA + soft links). Remaining ideas:
 
-1. ~~Re-engagement PWA push~~ — SMS / Telegram still open.
+1. ~~Re-engagement PWA push~~ · ~~Telegram bot~~ — SMS still open.
 2. ~~Museum trophies (badge taxonomy → weighted rate %)~~
 3. ~~Dogfood Staff / Treasurer withdraw feel~~ — keep tuning hire costs in Live-Ops.
 4. ~~Stadium → Ticket capacity~~
 5. ~~Milestone branch upgrades (Speed / Warehouse / Premium)~~
-6. ~~Sponsor Office~~ — SMS / Telegram re-engagement still open.
+6. ~~Sponsor Office~~
+7. SMS re-engagement (provider + opt-in) when needed.

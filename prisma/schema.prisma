@@ -217,6 +217,8 @@ model User {
   matches    Match[]
   hallOfFame HallOfFame[]
   pushSubscriptions PushSubscription[]
+  /// Optional Telegram re-engagement link (one chat per human).
+  telegramNotify TelegramNotifyLink?
 
   duelsAsChallenger DuelMatch[] @relation("DuelChallenger")
   duelsAsOpponent   DuelMatch[] @relation("DuelOpponent")
@@ -251,6 +253,29 @@ model PushSubscription {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+}
+
+/// Telegram bot chat linked for the same re-engagement events as Web Push.
+model TelegramNotifyLink {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Telegram `chat.id` (private chats are the user id).
+  chatId String @unique
+
+  enabled         Boolean @default(true)
+  duelYourTurn    Boolean @default(true)
+  vaultNearlyFull Boolean @default(true)
+  newspaperReady  Boolean @default(true)
+  staminaFull     Boolean @default(true)
+
+  lastDuelAt       DateTime?
+  lastVaultAt      DateTime?
+  lastNewspaperAt  DateTime?
+  lastStaminaAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 /// Archived weekly league podium (top 3 humans) snapshot before `weeklyXp` reset.

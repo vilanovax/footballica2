@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { ensureWebPushConfigured, webpush } from "@/lib/push/webPush";
 import type { PushPayload } from "@/lib/push/types";
+import { isTelegramReady, sendTelegramNotify } from "@/lib/push/telegram";
 
 const DUEL_COOLDOWN_MS = 2 * 60_000;
 const VAULT_COOLDOWN_MS = 12 * 60 * 60_000;
@@ -17,20 +18,26 @@ type PrefField =
   | "newspaperReady"
   | "staminaFull";
 
-type CooldownField =
+type WebCooldownField =
   | "lastDuelPushAt"
   | "lastVaultPushAt"
   | "lastNewspaperPushAt"
   | "lastStaminaPushAt";
 
+type TgCooldownField =
+  | "lastDuelAt"
+  | "lastVaultAt"
+  | "lastNewspaperAt"
+  | "lastStaminaAt";
+
 type SendResult = { sent: number; pruned: number };
 
-async function deliver(
+async function deliverWeb(
   userId: string,
   payload: PushPayload,
   filter: {
     prefer: PrefField;
-    cooldownField: CooldownField;
+    cooldownField: WebCooldownField;
     cooldownMs: number;
   },
 ): Promise<SendResult> {
@@ -81,6 +88,72 @@ async function deliver(
   return { sent, pruned };
 }
 
+async function deliverTelegram(
+  userId: string,
+  payload: PushPayload,
+  filter: {
+    prefer: PrefField;
+    cooldownField: TgCooldownField;
+    cooldownMs: number;
+  },
+): Promise<SendResult> {
+  if (!isTelegramReady()) return { sent: 0, pruned: 0 };
+
+  const link = await prisma.telegramNotifyLink.findUnique({
+    where: { userId },
+  });
+  if (!link || !link.enabled || !link[filter.prefer]) {
+    return { sent: 0, pruned: 0 };
+  }
+
+  const now = new Date();
+  const last = link[filter.cooldownField];
+  if (last && now.getTime() - last.getTime() < filter.cooldownMs) {
+    return { sent: 0, pruned: 0 };
+  }
+
+  const res = await sendTelegramNotify(link.chatId, payload);
+  if (res.blocked) {
+    await prisma.telegramNotifyLink.delete({ where: { id: link.id } });
+    return { sent: 0, pruned: 1 };
+  }
+  if (!res.ok) return { sent: 0, pruned: 0 };
+
+  await prisma.telegramNotifyLink.update({
+    where: { id: link.id },
+    data: { [filter.cooldownField]: now },
+  });
+  return { sent: 1, pruned: 0 };
+}
+
+async function deliver(
+  userId: string,
+  payload: PushPayload,
+  filter: {
+    prefer: PrefField;
+    webCooldown: WebCooldownField;
+    tgCooldown: TgCooldownField;
+    cooldownMs: number;
+  },
+): Promise<SendResult> {
+  const [web, tg] = await Promise.all([
+    deliverWeb(userId, payload, {
+      prefer: filter.prefer,
+      cooldownField: filter.webCooldown,
+      cooldownMs: filter.cooldownMs,
+    }),
+    deliverTelegram(userId, payload, {
+      prefer: filter.prefer,
+      cooldownField: filter.tgCooldown,
+      cooldownMs: filter.cooldownMs,
+    }),
+  ]);
+  return {
+    sent: web.sent + tg.sent,
+    pruned: web.pruned + tg.pruned,
+  };
+}
+
 async function assertHuman(userId: string): Promise<boolean> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -107,7 +180,8 @@ export async function notifyDuelYourTurn(
     },
     {
       prefer: "duelYourTurn",
-      cooldownField: "lastDuelPushAt",
+      webCooldown: "lastDuelPushAt",
+      tgCooldown: "lastDuelAt",
       cooldownMs: DUEL_COOLDOWN_MS,
     },
   );
@@ -129,7 +203,8 @@ export async function notifyVaultNearlyFull(
     },
     {
       prefer: "vaultNearlyFull",
-      cooldownField: "lastVaultPushAt",
+      webCooldown: "lastVaultPushAt",
+      tgCooldown: "lastVaultAt",
       cooldownMs: VAULT_COOLDOWN_MS,
     },
   );
@@ -151,7 +226,8 @@ export async function notifyNewspaperReady(
     },
     {
       prefer: "newspaperReady",
-      cooldownField: "lastNewspaperPushAt",
+      webCooldown: "lastNewspaperPushAt",
+      tgCooldown: "lastNewspaperAt",
       cooldownMs: NEWSPAPER_COOLDOWN_MS,
     },
   );
@@ -171,7 +247,8 @@ export async function notifyStaminaFull(userId: string): Promise<SendResult> {
     },
     {
       prefer: "staminaFull",
-      cooldownField: "lastStaminaPushAt",
+      webCooldown: "lastStaminaPushAt",
+      tgCooldown: "lastStaminaAt",
       cooldownMs: STAMINA_COOLDOWN_MS,
     },
   );

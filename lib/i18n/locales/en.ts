@@ -999,6 +999,18 @@ const en = {
     pushNotConfigured: "Push is not configured on this server yet.",
     pushDenied: "Permission denied — enable notifications in browser settings.",
     pushFailed: "Could not enable alerts. Try again.",
+    telegram: "Telegram",
+    telegramDesc:
+      "Same alerts in Telegram when the browser is closed — duel, Safe, newspaper, stamina.",
+    telegramConnect: "Connect Telegram",
+    telegramUnlink: "Unlink Telegram",
+    telegramLinked: "Linked",
+    telegramConnectHint:
+      "Opens the Footballica bot. Tap Start so we can match your club.",
+    telegramRefreshHint: "After linking in Telegram, return here — status updates on focus.",
+    telegramMaster: "Telegram alerts on",
+    telegramNotConfigured:
+      "Telegram bot is not configured (TELEGRAM_BOT_TOKEN + TELEGRAM_BOT_USERNAME).",
   },
   campaign: {
     eyebrow: "Championship",
