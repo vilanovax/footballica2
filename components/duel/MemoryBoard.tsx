@@ -12,6 +12,13 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
+import {
+  GameChip,
+  GameCta,
+  GameIconWell,
+  GamePanel,
+} from "@/components/ui/game";
+import { cn } from "@/lib/utils";
 
 type MemoryBoardProps = {
   mode: "attack" | "defend";
@@ -31,7 +38,7 @@ type Feedback =
   | null;
 
 /**
- * Async MEMORY half — pitch-night arena, 4×4 footballer ↔ country.
+ * Async MEMORY half — Arena pitch, 4×4 footballer ↔ country.
  * Server grades matches; client auto-submits on timer end.
  */
 export function MemoryBoard({
@@ -85,30 +92,28 @@ export function MemoryBoard({
     () =>
       isAttack
         ? {
-            flood: "from-orange-500/35 via-amber-400/10",
-            badge: "bg-orange-500 text-white shadow-orange-500/40",
-            ring: "stroke-orange-400",
-            ringTrack: "stroke-orange-400/20",
-            bar: "from-orange-400 to-amber-300",
-            barGlow: "shadow-[0_0_18px_rgba(251,146,60,0.55)]",
-            score: "text-orange-300",
-            cta: "btn-fantasy-primary",
-            matchRing: "ring-amber-300/70",
-            matchBg: "from-amber-400/35 to-emerald-600/40",
-            pickRing: "ring-orange-300",
+            flood: "from-amber-400/35 via-orange-500/12",
+            panelTone: "amber" as const,
+            ring: "stroke-amber-400",
+            ringTrack: "stroke-amber-400/25",
+            bar: "from-amber-400 to-orange-300",
+            score: "text-amber-200",
+            cta: "accent" as const,
+            pickRing: "shadow-[0_0_0_2px_rgba(251,191,36,0.85),0_4px_0_0_rgba(0,0,0,0.4)]",
+            matchGlow: "shadow-[0_0_0_2px_rgba(251,191,36,0.7),0_5px_0_0_rgba(0,0,0,0.35)]",
+            matchWash: "from-amber-400/40 to-emerald-700/50",
           }
         : {
-            flood: "from-sky-400/30 via-teal-400/10",
-            badge: "bg-sky-500 text-white shadow-sky-500/40",
+            flood: "from-sky-400/30 via-teal-400/12",
+            panelTone: "sky" as const,
             ring: "stroke-sky-400",
-            ringTrack: "stroke-sky-400/20",
+            ringTrack: "stroke-sky-400/25",
             bar: "from-sky-400 to-teal-300",
-            barGlow: "shadow-[0_0_18px_rgba(56,189,248,0.5)]",
-            score: "text-sky-300",
-            cta: "btn-fantasy-secondary",
-            matchRing: "ring-teal-300/70",
-            matchBg: "from-teal-400/35 to-emerald-600/40",
-            pickRing: "ring-sky-300",
+            score: "text-sky-200",
+            cta: "primary" as const,
+            pickRing: "shadow-[0_0_0_2px_rgba(56,189,248,0.85),0_4px_0_0_rgba(0,0,0,0.4)]",
+            matchGlow: "shadow-[0_0_0_2px_rgba(45,212,191,0.75),0_5px_0_0_rgba(0,0,0,0.35)]",
+            matchWash: "from-teal-400/40 to-emerald-700/50",
           },
     [isAttack],
   );
@@ -118,7 +123,7 @@ export function MemoryBoard({
     100,
     (secondsLeft / totalSeconds.current) * 100,
   );
-  const ringR = 34;
+  const ringR = 30;
   const ringC = 2 * Math.PI * ringR;
   const ringOffset = ringC * (1 - pairPct / 100);
 
@@ -249,133 +254,174 @@ export function MemoryBoard({
     <section className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
       {/* Pitch night arena */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[#071410]" />
+        <div className="absolute inset-0 bg-arena" />
         <div
-          className={`absolute inset-x-0 top-0 h-48 bg-linear-to-b ${theme.flood} to-transparent`}
+          className={cn(
+            "absolute inset-x-0 top-0 h-52 bg-linear-to-b to-transparent",
+            theme.flood,
+          )}
         />
-        <div className="absolute inset-0 opacity-[0.14]"
+        <div
+          className="absolute inset-0 opacity-[0.1]"
           style={{
             backgroundImage:
-              "repeating-linear-gradient(90deg, transparent 0 28px, rgba(255,255,255,0.09) 28px 29px), repeating-linear-gradient(0deg, transparent 0 36px, rgba(255,255,255,0.05) 36px 37px)",
+              "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
           }}
         />
-        <div className="absolute inset-x-[12%] top-[38%] h-px bg-white/15" />
-        <div className="absolute start-1/2 top-[28%] h-[44%] w-px -translate-x-1/2 bg-white/12" />
-        <div className="absolute start-1/2 top-[48%] h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/10" />
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-linear-to-t from-black/50 to-transparent" />
+        {/* Pitch markings under the grid */}
+        <div className="absolute inset-x-[10%] top-[42%] h-px bg-white/12" />
+        <div className="absolute start-1/2 top-[32%] h-[40%] w-px -translate-x-1/2 bg-white/10" />
+        <div className="absolute start-1/2 top-[52%] h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full shadow-[0_0_0_1px_rgba(255,255,255,0.1)]" />
+        <div
+          className={cn(
+            "absolute -inset-e-10 top-16 h-36 w-36 rounded-full blur-3xl",
+            isAttack ? "bg-amber-400/20" : "bg-sky-400/18",
+          )}
+        />
+        <div className="absolute inset-x-0 bottom-0 h-44 bg-linear-to-t from-black/70 to-transparent" />
       </div>
 
       {/* HUD */}
-      <header className="relative z-10 flex items-center gap-3 px-3 pt-3">
-        <div className="relative h-[4.5rem] w-[4.5rem] shrink-0">
-          <svg viewBox="0 0 80 80" className="h-full w-full -rotate-90">
-            <circle
-              cx="40"
-              cy="40"
-              r={ringR}
-              fill="none"
-              strokeWidth="6"
-              className={theme.ringTrack}
-            />
-            <motion.circle
-              cx="40"
-              cy="40"
-              r={ringR}
-              fill="none"
-              strokeWidth="6"
-              strokeLinecap="round"
-              className={theme.ring}
-              strokeDasharray={ringC}
-              animate={{ strokeDashoffset: ringOffset }}
-              transition={{ type: "spring", stiffness: 120, damping: 20 }}
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span
-              className={`font-display text-xl font-black tabular-nums leading-none ${theme.score}`}
-            >
-              {toLocaleDigits(pairsFound, locale)}
-            </span>
-            <span className="font-display text-[10px] font-bold text-white/45">
-              /{toLocaleDigits(board.pairCount, locale)}
-            </span>
-          </div>
-        </div>
+      <header className="relative z-10 mx-3 mt-[max(0.5rem,env(safe-area-inset-top))]">
+        <GamePanel tone={theme.panelTone} className="px-3 py-2.5">
+          <div className="relative flex items-center gap-3">
+            {/* Pair progress ring */}
+            <div className="relative h-[4.25rem] w-[4.25rem] shrink-0">
+              <svg viewBox="0 0 80 80" className="h-full w-full -rotate-90">
+                <circle
+                  cx="40"
+                  cy="40"
+                  r={ringR}
+                  fill="none"
+                  strokeWidth="7"
+                  className={theme.ringTrack}
+                />
+                <motion.circle
+                  cx="40"
+                  cy="40"
+                  r={ringR}
+                  fill="none"
+                  strokeWidth="7"
+                  strokeLinecap="round"
+                  className={theme.ring}
+                  strokeDasharray={ringC}
+                  animate={{ strokeDashoffset: ringOffset }}
+                  transition={{ type: "spring", stiffness: 140, damping: 22 }}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center rounded-full bg-black/35">
+                <span
+                  className={cn(
+                    "font-display text-xl font-black tabular-nums leading-none",
+                    theme.score,
+                  )}
+                >
+                  {toLocaleDigits(pairsFound, locale)}
+                </span>
+                <span className="mt-0.5 font-display text-[10px] font-bold text-white/50">
+                  /{toLocaleDigits(board.pairCount, locale)}
+                </span>
+              </div>
+            </div>
 
-        <div className="min-w-0 flex-1">
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-display text-[11px] font-extrabold uppercase tracking-wide shadow-lg ${theme.badge}`}
-          >
-            <motion.span
-              className="h-1.5 w-1.5 rounded-full bg-white"
-              animate={
-                reduceMotion
-                  ? undefined
-                  : { opacity: [1, 0.35, 1], scale: [1, 1.3, 1] }
-              }
-              transition={{ repeat: Infinity, duration: 1.1 }}
-            />
-            {mode === "attack"
-              ? t("duel.memory.attackBadge")
-              : t("duel.memory.defendBadge")}
-          </span>
-          <h2 className="mt-1.5 font-display text-xl font-black text-white drop-shadow-md">
-            {t("duel.memory.title")}
-          </h2>
-          <p className="mt-0.5 font-body text-xs font-semibold text-white/55">
+            <div className="min-w-0 flex-1">
+              <GameChip
+                tone={isAttack ? "amber" : "emerald"}
+                className="uppercase tracking-wide"
+              >
+                <motion.span
+                  className="h-1.5 w-1.5 rounded-full bg-current"
+                  animate={
+                    reduceMotion
+                      ? undefined
+                      : { opacity: [1, 0.35, 1], scale: [1, 1.25, 1] }
+                  }
+                  transition={{ repeat: Infinity, duration: 1.1 }}
+                />
+                {isAttack
+                  ? t("duel.memory.attackBadge")
+                  : t("duel.memory.defendBadge")}
+              </GameChip>
+              <h2 className="mt-1.5 font-display text-xl font-black leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]">
+                {t("duel.memory.title")}
+              </h2>
+              <p className="mt-0.5 font-display text-[11px] font-bold text-white/60">
+                {t("duel.memory.hint")}
+              </p>
+            </div>
+
+            {combo >= 2 ? (
+              <motion.div
+                initial={reduceMotion ? false : { scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="shrink-0 rounded-2xl bg-accent px-2.5 py-2 text-center shadow-[0_3px_0_0_hsl(var(--accent-deep))]"
+              >
+                <p className="font-display text-[9px] font-bold uppercase tracking-wide text-accent-foreground/70">
+                  combo
+                </p>
+                <p className="font-display text-lg font-black leading-none text-accent-foreground tabular-nums">
+                  ×{toLocaleDigits(combo, locale)}
+                </p>
+              </motion.div>
+            ) : (
+              <GameIconWell
+                size="md"
+                amber={isAttack}
+                src="/icons/memory-ball.png"
+                className="h-12 w-12 shrink-0"
+                iconClassName="h-7 w-7"
+              />
+            )}
+          </div>
+        </GamePanel>
+      </header>
+
+      {/* Fuse timer */}
+      <div className="relative z-10 mx-3 mt-2.5">
+        <div
+          className={cn(
+            "overflow-hidden rounded-full bg-black/50 p-0.5 shadow-[0_0_0_1px_rgba(255,255,255,0.12)]",
+            hurry && "shadow-[0_0_0_1px_rgba(251,113,133,0.45)]",
+          )}
+        >
+          <motion.div
+            className={cn(
+              "h-2.5 rounded-full bg-linear-to-r",
+              critical
+                ? "from-rose-500 to-orange-400"
+                : theme.bar,
+              hurry && !critical && "shadow-[0_0_14px_rgba(251,146,60,0.55)]",
+            )}
+            animate={{ width: `${timePct}%` }}
+            transition={{ duration: 0.15, ease: "linear" }}
+          />
+        </div>
+        <div className="mt-1.5 flex items-center justify-between gap-2 px-0.5">
+          <p className="font-display text-[11px] font-bold text-white/45">
             {t("duel.memory.pairsCleared", {
               n: toLocaleDigits(pairsFound, locale),
               total: toLocaleDigits(board.pairCount, locale),
             })}
           </p>
-        </div>
-
-        {combo >= 2 && (
-          <motion.div
-            initial={reduceMotion ? false : { scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="shrink-0 rounded-2xl bg-amber-400 px-2.5 py-2 text-center shadow-[0_0_20px_rgba(251,191,36,0.45)]"
-          >
-            <p className="font-display text-[10px] font-bold uppercase text-amber-950/70">
-              combo
-            </p>
-            <p className="font-display text-lg font-black leading-none text-amber-950 tabular-nums">
-              ×{toLocaleDigits(combo, locale)}
-            </p>
-          </motion.div>
-        )}
-      </header>
-
-      {/* Fuse timer */}
-      <div className="relative z-10 mx-3 mt-3">
-        <div className="overflow-hidden rounded-full bg-black/40 p-0.5 ring-1 ring-white/10">
-          <motion.div
-            className={[
-              "h-2.5 rounded-full bg-linear-to-r",
-              theme.bar,
-              hurry ? theme.barGlow : "",
-              critical ? "bg-linear-to-r from-rose-500 to-orange-400" : "",
-            ].join(" ")}
-            animate={{ width: `${timePct}%` }}
-            transition={{ duration: 0.15, ease: "linear" }}
-          />
-        </div>
-        <div className="mt-1.5 flex items-center justify-between px-0.5">
-          <p className="font-body text-[11px] font-semibold text-white/40">
-            {t("duel.memory.hint")}
-          </p>
           <motion.p
             animate={
               critical && !reduceMotion
-                ? { scale: [1, 1.08, 1], color: ["#fda4af", "#fff", "#fda4af"] }
+                ? { scale: [1, 1.06, 1] }
                 : undefined
             }
-            transition={{ repeat: Infinity, duration: 0.55 }}
-            className={[
-              "font-display text-sm font-black tabular-nums",
-              hurry ? "text-rose-300" : "text-white/85",
-            ].join(" ")}
+            transition={{ repeat: Infinity, duration: 0.5 }}
+            className={cn(
+              "inline-flex items-center gap-1 font-display text-sm font-black tabular-nums",
+              hurry ? "text-rose-300" : "text-white/90",
+            )}
           >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/timer.png"
+              alt=""
+              draggable={false}
+              className="h-4 w-4 object-contain opacity-90"
+            />
             {hurry ? `${t("duel.memory.timerHurry")} · ` : ""}
             {t("duel.memory.timer", {
               s: toLocaleDigits(secondsLeft, locale),
@@ -389,7 +435,7 @@ export function MemoryBoard({
         key={missShake}
         animate={
           missShake > 0 && !reduceMotion
-            ? { x: [0, -6, 6, -4, 4, 0] }
+            ? { x: [0, -7, 7, -4, 4, 0] }
             : { x: 0 }
         }
         transition={{ duration: 0.35 }}
@@ -402,19 +448,24 @@ export function MemoryBoard({
           const faceUp = state === "up" || state === "matched";
           const selected = state === "up";
           const matched = state === "matched";
+          const isPlayer = card.face === "PLAYER";
 
           return (
             <motion.button
               key={card.id}
               type="button"
               initial={
-                reduceMotion ? false : { opacity: 0, y: 14, scale: 0.92 }
+                reduceMotion ? false : { opacity: 0, y: 12, scale: 0.9 }
               }
-              animate={{ opacity: 1, y: 0, scale: matched ? 1.02 : 1 }}
+              animate={{
+                opacity: matched ? 0.92 : 1,
+                y: 0,
+                scale: matched ? 0.97 : 1,
+              }}
               transition={{
-                delay: reduceMotion ? 0 : index * 0.025,
+                delay: reduceMotion ? 0 : index * 0.022,
                 type: "spring",
-                stiffness: 360,
+                stiffness: 380,
                 damping: 22,
               }}
               disabled={
@@ -422,11 +473,9 @@ export function MemoryBoard({
               }
               onClick={() => handleFlip(card, index)}
               whileTap={
-                state === "down" && !locked
-                  ? { scale: 0.94 }
-                  : undefined
+                state === "down" && !locked ? { scale: 0.93, y: 2 } : undefined
               }
-              className="relative aspect-square min-h-[44px] min-w-[44px] [perspective:900px]"
+              className="relative aspect-square min-h-touch min-w-touch [perspective:1000px]"
               aria-label={faceUp ? cardLabel(card) : t("duel.memory.cardBack")}
             >
               <motion.div
@@ -435,25 +484,33 @@ export function MemoryBoard({
                 transition={
                   reduceMotion
                     ? { duration: 0 }
-                    : { type: "spring", stiffness: 280, damping: 20 }
+                    : { type: "spring", stiffness: 300, damping: 22 }
                 }
               >
-                {/* Back — jersey kit */}
+                {/* Back — kit tile */}
                 <div
-                  className={[
-                    "absolute inset-0 flex flex-col items-center justify-center overflow-hidden rounded-2xl shadow-[0_8px_20px_rgba(0,0,0,0.45)] [backface-visibility:hidden] ring-2",
+                  className={cn(
+                    "absolute inset-0 flex flex-col items-center justify-center overflow-hidden rounded-2xl [backface-visibility:hidden]",
+                    "bg-linear-to-br from-arena-mid via-arena-deep to-arena",
                     selected
                       ? theme.pickRing
-                      : "ring-white/15",
-                    "bg-linear-to-br from-[#0f3d2e] via-[#0a241c] to-[#061510]",
-                  ].join(" ")}
+                      : "shadow-[0_0_0_1px_rgba(52,211,153,0.28),0_5px_0_0_rgba(0,0,0,0.4)]",
+                  )}
                 >
                   <div
                     aria-hidden
-                    className="absolute inset-0 opacity-30"
+                    className="absolute inset-[14%] rounded-full shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1),0_0_0_1px_rgba(255,255,255,0.06)]"
+                  />
+                  <div
+                    aria-hidden
+                    className="absolute inset-[28%] rounded-full shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
+                  />
+                  <div
+                    aria-hidden
+                    className="absolute inset-0 opacity-40"
                     style={{
                       backgroundImage:
-                        "linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.12) 50%, transparent 60%)",
+                        "linear-gradient(135deg, transparent 42%, rgba(255,255,255,0.14) 50%, transparent 58%)",
                     }}
                   />
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -461,43 +518,81 @@ export function MemoryBoard({
                     src="/icons/memory-ball.png"
                     alt=""
                     draggable={false}
-                    className="relative h-9 w-9 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)]"
+                    className="relative h-8 w-8 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.55)]"
                   />
                 </div>
 
                 {/* Front */}
                 <div
-                  className={[
-                    "absolute inset-0 flex flex-col items-center justify-center gap-0.5 overflow-hidden rounded-2xl px-1 shadow-[0_8px_20px_rgba(0,0,0,0.4)] [backface-visibility:hidden] [transform:rotateY(180deg)] ring-2",
+                  className={cn(
+                    "absolute inset-0 flex flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl px-1 [backface-visibility:hidden] [transform:rotateY(180deg)]",
                     matched
-                      ? `${theme.matchRing} bg-linear-to-br ${theme.matchBg}`
-                      : "ring-white/25 bg-linear-to-br from-slate-800 to-slate-950",
-                  ].join(" ")}
+                      ? cn(
+                          "bg-linear-to-br",
+                          theme.matchWash,
+                          theme.matchGlow,
+                        )
+                      : isPlayer
+                        ? "bg-linear-to-br from-sky-900/95 to-arena-deep shadow-[0_0_0_1px_rgba(125,211,252,0.45),0_5px_0_0_rgba(0,0,0,0.4)]"
+                        : "bg-linear-to-br from-amber-900/90 to-arena-deep shadow-[0_0_0_1px_rgba(251,191,36,0.45),0_5px_0_0_rgba(0,0,0,0.4)]",
+                  )}
                 >
                   {matched && (
                     <motion.span
                       aria-hidden
-                      initial={{ opacity: 0.8, scale: 0.6 }}
-                      animate={{ opacity: 0, scale: 1.6 }}
+                      initial={{ opacity: 0.85, scale: 0.55 }}
+                      animate={{ opacity: 0, scale: 1.7 }}
                       transition={{ duration: 0.55 }}
-                      className="pointer-events-none absolute inset-0 rounded-2xl bg-amber-300/30"
+                      className="pointer-events-none absolute inset-0 rounded-2xl bg-amber-300/35"
                     />
                   )}
-                  {card.face === "PLAYER" && card.art ? (
+
+                  {/* Face type chip */}
+                  <span
+                    className={cn(
+                      "absolute start-1 top-1 rounded px-1 py-px font-display text-[8px] font-black uppercase tracking-wide",
+                      isPlayer
+                        ? "bg-sky-400/25 text-sky-100"
+                        : "bg-amber-400/25 text-amber-100",
+                    )}
+                  >
+                    {isPlayer ? "P" : "C"}
+                  </span>
+
+                  {matched ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src="/icons/done.png"
+                      alt=""
+                      draggable={false}
+                      className="absolute end-1 top-1 h-3.5 w-3.5 object-contain opacity-90"
+                    />
+                  ) : null}
+
+                  {isPlayer && card.art ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={card.art}
                       alt=""
-                      className="h-9 w-9 object-contain drop-shadow-md"
+                      className="h-10 w-10 object-contain drop-shadow-md"
                     />
-                  ) : card.face === "COUNTRY" && card.art ? (
-                    <span className="text-[1.65rem] leading-none drop-shadow" aria-hidden>
+                  ) : !isPlayer && card.art ? (
+                    <span
+                      className="text-[1.75rem] leading-none drop-shadow"
+                      aria-hidden
+                    >
                       {card.art}
                     </span>
                   ) : (
-                    <span className="text-lg">❓</span>
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src="/icons/mystery.png"
+                      alt=""
+                      draggable={false}
+                      className="h-8 w-8 object-contain opacity-70"
+                    />
                   )}
-                  <span className="line-clamp-2 text-center font-display text-[9px] font-extrabold leading-tight text-white">
+                  <span className="line-clamp-2 max-w-full px-0.5 text-center font-display text-[10px] font-extrabold leading-tight text-white">
                     {cardLabel(card)}
                   </span>
                 </div>
@@ -508,7 +603,7 @@ export function MemoryBoard({
       </motion.div>
 
       {/* Floating callouts */}
-      <div className="pointer-events-none absolute inset-x-0 top-[42%] z-30 flex justify-center">
+      <div className="pointer-events-none absolute inset-x-0 top-[44%] z-30 flex justify-center">
         <AnimatePresence mode="popLayout">
           {feedback && (
             <motion.div
@@ -516,19 +611,19 @@ export function MemoryBoard({
               initial={
                 reduceMotion
                   ? { opacity: 0 }
-                  : { opacity: 0, y: 16, scale: 0.7 }
+                  : { opacity: 0, y: 18, scale: 0.7 }
               }
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -12, scale: 1.1 }}
-              transition={{ type: "spring", stiffness: 400, damping: 18 }}
-              className={[
-                "rounded-2xl px-4 py-2 font-display text-lg font-black shadow-2xl",
+              exit={{ opacity: 0, y: -14, scale: 1.08 }}
+              transition={{ type: "spring", stiffness: 420, damping: 18 }}
+              className={cn(
+                "rounded-2xl px-4 py-2 font-display text-lg font-black shadow-[0_4px_0_0_rgba(0,0,0,0.35)]",
                 feedback.kind === "combo"
-                  ? "bg-amber-400 text-amber-950"
+                  ? "bg-accent text-accent-foreground"
                   : feedback.kind === "clear"
-                    ? "bg-emerald-400 text-emerald-950"
-                    : "bg-white text-emerald-800",
-              ].join(" ")}
+                    ? "bg-arena-success text-white"
+                    : "bg-white text-emerald-900",
+              )}
             >
               {feedback.kind === "combo"
                 ? t("duel.memory.combo", {
@@ -543,20 +638,17 @@ export function MemoryBoard({
       </div>
 
       {/* Dock CTA */}
-      <div className="relative z-10 mt-auto border-t border-white/10 bg-black/35 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-md">
-        <button
-          type="button"
+      <div className="relative z-10 mt-auto border-t border-white/10 bg-black/45 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-md">
+        <GameCta
+          variant={theme.cta}
+          block
           disabled={pending || submitted.current}
           onClick={() => finish(false)}
-          className={[
-            "btn-fantasy w-full min-h-12 font-display text-base font-black shadow-fantasy active:scale-[0.98]",
-            theme.cta,
-            pending || submitted.current ? "opacity-60" : "",
-          ].join(" ")}
+          className="min-h-13 text-base"
         >
           {pending ? "…" : t("duel.memory.submitEarly")}
-        </button>
-        <p className="mt-1.5 text-center font-body text-[10px] font-semibold text-white/40">
+        </GameCta>
+        <p className="mt-1.5 text-center font-display text-[10px] font-bold text-white/45">
           {t("duel.memory.submitHint")}
         </p>
       </div>
