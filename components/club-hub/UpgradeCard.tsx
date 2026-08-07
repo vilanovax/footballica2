@@ -145,27 +145,22 @@ export function UpgradeCard({
         }
         transition={spotlight ? { repeat: Infinity, duration: 1.6 } : undefined}
         className={[
-          "relative cursor-pointer overflow-hidden rounded-bubble-xl border-[3px] px-3 py-3 shadow-[0_6px_0_0_rgba(0,0,0,0.32)] scroll-mt-24",
-          spotlight
-            ? "z-50 border-accent"
-            : affordable
-              ? `${skin.rim} ring-1 ring-accent/25`
-              : skin.rim,
+          "scroll-mt-24",
+          spotlight ? "z-50" : "",
           locked ? "pointer-events-none opacity-45" : "",
         ].join(" ")}
       >
-        <div
-          className={["absolute inset-0 bg-linear-to-br", skin.row].join(" ")}
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
-          }}
-          aria-hidden
-        />
+        <GamePanel
+          tone={UPGRADE_PANEL_TONE[def.key]}
+          className={[
+            "cursor-pointer px-3 py-3",
+            spotlight
+              ? "ring-2 ring-accent"
+              : affordable
+                ? "ring-1 ring-accent/30"
+                : "",
+          ].join(" ")}
+        >
         {affordable && (
           <motion.div
             aria-hidden
@@ -180,16 +175,9 @@ export function UpgradeCard({
 
         <div className="relative flex items-center gap-3">
           <div className="relative shrink-0">
-            <span
-              className={[
-                "flex h-14 w-14 items-center justify-center rounded-2xl border-2 shadow-[0_3px_0_0_rgba(0,0,0,0.4)]",
-                affordable
-                  ? "border-accent/70 bg-accent/15"
-                  : "border-white/25 bg-black/35",
-              ].join(" ")}
-            >
+            <GameIconWell size="lg" amber={affordable}>
               <UpgradeIcon upgradeKey={def.key} size="md" className="h-9 w-9!" />
-            </span>
+            </GameIconWell>
             <span className="absolute -bottom-1 -start-1 rounded-full bg-black/65 px-1.5 py-0.5 font-display text-[9px] font-black text-white ring-1 ring-white/30">
               Lv{toLocaleDigits(level, locale)}
             </span>
@@ -311,6 +299,7 @@ export function UpgradeCard({
             />
           </div>
         </div>
+        </GamePanel>
       </motion.div>
 
       <BottomSheet

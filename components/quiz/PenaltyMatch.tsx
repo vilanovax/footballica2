@@ -24,6 +24,7 @@ import { Scoreboard } from "./Scoreboard";
 import { GoalBurst } from "./GoalBurst";
 import { MissedPopup } from "./MissedPopup";
 import { MatchLeaveControl } from "./MatchLeaveControl";
+import { GameIconWell, GamePanel } from "@/components/ui/game";
 
 // Post-match / rare chrome — keep out of the kickoff JS chunk.
 const MatchResult = dynamic(() =>
@@ -220,19 +221,13 @@ export function PenaltyMatch({
   const showMiss = locked && feedback?.result === "miss";
 
   return (
-    <section className="relative -mx-4 flex flex-1 flex-col bg-[#071510] px-4 text-white">
+    <section className="relative -mx-4 flex flex-1 flex-col bg-arena px-4 text-arena-fg">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 overflow-hidden"
       >
-        <div className="absolute inset-0 bg-linear-to-b from-[#0a1f14] via-[#071510] to-[#052e16]" />
-        <div
-          className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(-16deg, transparent, transparent 12px, #fff 12px, #fff 13px)",
-          }}
-        />
+        <div className="absolute inset-0 bg-linear-to-b from-arena-deep via-arena to-arena-mid" />
+        <div className="game-pinstripe absolute inset-0 opacity-60" />
         <div className="absolute -end-16 top-0 h-48 w-48 rounded-full bg-amber-400/12 blur-3xl" />
         <div className="absolute -start-20 top-40 h-40 w-40 rounded-full bg-emerald-400/15 blur-3xl" />
       </div>
@@ -245,8 +240,8 @@ export function PenaltyMatch({
         ].join(" ")}
         onAnimationEnd={() => setShake(false)}
       >
-        <header className="overflow-hidden rounded-2xl bg-linear-to-br from-[#052e16] via-[#0f172a] to-[#052e16] px-3 py-2.5 shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_4px_0_0_rgba(0,0,0,0.32)]">
-          <div className="flex items-center gap-2">
+        <GamePanel tone="emerald" className="px-3 py-2.5">
+          <div className="relative flex items-center gap-2">
             <MatchLeaveControl
               setPaused={setPaused}
               onConfirmLeave={handleLeaveMatch}
@@ -262,18 +257,9 @@ export function PenaltyMatch({
                 })}
               </p>
             </div>
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/40 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/icons/target.png"
-                alt=""
-                aria-hidden
-                draggable={false}
-                className="h-6 w-6 object-contain"
-              />
-            </span>
+            <GameIconWell size="md" amber src="/icons/target.png" />
           </div>
-          <div className="mt-2.5 space-y-2">
+          <div className="relative mt-2.5 space-y-2">
             <Scoreboard
               kickNumber={currentIndex + 1}
               totalKicks={questions.length}
@@ -281,7 +267,7 @@ export function PenaltyMatch({
             />
             <FuseTimer ref={fuseRef} paused={locked || paused} />
           </div>
-        </header>
+        </GamePanel>
 
         <AnimatePresence mode="wait">
           <QuestionCard

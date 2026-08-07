@@ -9,6 +9,8 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
+import { GamePanel } from "@/components/ui/game";
+import { cn } from "@/lib/utils";
 
 type Props = {
   season: CampaignSeasonView;
@@ -59,27 +61,11 @@ export function CampaignSeasonCard({
       initial={embedded || chaptersOnly ? false : { opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 280, damping: 26 }}
-      className={[
-        "relative overflow-hidden rounded-bubble-xl border-[3px] shadow-[0_5px_0_0_rgba(0,0,0,0.28)]",
-        rewardReady
-          ? "border-amber-300/55"
-          : embedded || chaptersOnly
-            ? "border-emerald-500/35"
-            : "border-emerald-500/40",
-      ].join(" ")}
     >
-      <div
-        className="absolute inset-0 bg-linear-to-br from-[#022c22] via-[#14532d] to-[#0f172a]"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.06]"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
-        }}
-        aria-hidden
-      />
+      <GamePanel
+        tone={rewardReady ? "amber" : "emerald"}
+        className={cn(chaptersOnly && "shadow-arena-ring")}
+      >
       {rewardReady && !chaptersOnly && (
         <motion.div
           aria-hidden
@@ -325,6 +311,7 @@ export function CampaignSeasonCard({
           )}
         </div>
       )}
+      </GamePanel>
     </motion.section>
   );
 }

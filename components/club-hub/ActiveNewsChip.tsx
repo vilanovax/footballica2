@@ -8,6 +8,7 @@ import {
   newspaperEventById,
 } from "@/lib/boosters/boosters";
 import type { ActiveNewsBoosterSnapshot } from "@/lib/club/upgrades";
+import { GamePanel } from "@/components/ui/game";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 
@@ -79,86 +80,69 @@ export function ActiveNewsChip({
       whileTap={{ scale: 0.97 }}
       onClick={onOpen}
       aria-label={t("club.dailyNews")}
-      className={[
-        "relative flex w-full flex-col overflow-hidden border-2 shadow-[0_3px_0_0_rgba(0,0,0,0.28)]",
-        compact
-          ? "min-h-11 rounded-2xl border-white/15"
-          : "min-h-12 rounded-bubble-xl border-[3px]",
-        !compact && isCoin
-          ? "border-amber-300/55"
-          : !compact
-            ? "border-sky-300/50"
-            : "",
-      ].join(" ")}
+      className="w-full"
     >
-      <div
-        className={[
-          "absolute inset-0 bg-linear-to-br",
-          compact
-            ? "from-[#0f172a] via-[#14532d]/85 to-[#052e16]"
-            : isCoin
-              ? "from-[#5c3d0a] via-[#9a6b12] to-[#2a1c06]"
-              : "from-[#0c2d4a] via-[#134e75] to-[#081f33]",
-        ].join(" ")}
-        aria-hidden
-      />
-
-      <div
-        className={[
-          "relative flex items-center justify-between gap-2",
-          compact ? "px-2.5 py-2" : "px-3 py-2.5",
-        ].join(" ")}
+      <GamePanel
+        tone={isCoin || compact ? "amber" : "sky"}
+        className={compact ? "min-h-11" : "min-h-12"}
       >
-        <span className="flex min-w-0 items-center gap-2 font-display font-black text-white">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={isCoin ? "/icons/coin.png" : "/icons/fans.png"}
-            alt=""
-            draggable={false}
-            className={
-              compact ? "h-5 w-5 object-contain" : "h-6 w-6 object-contain"
-            }
-          />
-          <span
-            className={[
-              "min-w-0 truncate",
-              compact ? "text-xs" : "text-sm",
-            ].join(" ")}
-          >
-            {t(labelKey, { mult: formatMultiplier(booster.multiplier) })}
-            {!compact && (
-              <span className="mt-0.5 block truncate font-display text-[10px] font-bold text-white/55">
-                {eventTitle}
-              </span>
-            )}
-          </span>
-        </span>
-        <span
+        <div
           className={[
-            "shrink-0 rounded-bubble font-display font-black tabular-nums ring-1",
-            compact ? "px-2 py-1 text-[10px]" : "px-2.5 py-1.5 text-xs",
-            urgent
-              ? "bg-rose-500/30 text-rose-100 ring-rose-300/40"
-              : "bg-black/40 text-white/95 ring-white/20",
+            "relative flex items-center justify-between gap-2",
+            compact ? "px-2.5 py-2" : "px-3 py-2.5",
           ].join(" ")}
         >
-          {toLocaleDigits(formatRemaining(remainingMs), locale)}
-        </span>
-      </div>
+          <span className="flex min-w-0 items-center gap-2 font-display font-black text-white">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={isCoin ? "/icons/coin.png" : "/icons/fans.png"}
+              alt=""
+              draggable={false}
+              className={
+                compact ? "h-5 w-5 object-contain" : "h-6 w-6 object-contain"
+              }
+            />
+            <span
+              className={[
+                "min-w-0 truncate",
+                compact ? "text-xs" : "text-sm",
+              ].join(" ")}
+            >
+              {t(labelKey, { mult: formatMultiplier(booster.multiplier) })}
+              {!compact && (
+                <span className="mt-0.5 block truncate font-display text-[10px] font-bold text-white/55">
+                  {eventTitle}
+                </span>
+              )}
+            </span>
+          </span>
+          <span
+            className={[
+              "shrink-0 rounded-bubble font-display font-black tabular-nums ring-1",
+              compact ? "px-2 py-1 text-[10px]" : "px-2.5 py-1.5 text-xs",
+              urgent
+                ? "bg-rose-500/30 text-rose-100 ring-rose-300/40"
+                : "bg-black/40 text-white/95 ring-white/20",
+            ].join(" ")}
+          >
+            {toLocaleDigits(formatRemaining(remainingMs), locale)}
+          </span>
+        </div>
 
-      <div className="relative h-1 bg-black/45" aria-hidden>
-        <motion.div
-          className={[
-            "h-full",
-            urgent
-              ? "bg-linear-to-r from-rose-400 to-orange-300"
-              : "bg-linear-to-r from-emerald-400 to-lime-300",
-          ].join(" ")}
-          initial={false}
-          animate={{ width: `${remainPct}%` }}
-          transition={{ duration: 0.4 }}
-        />
-      </div>
+        <div className="relative h-1 bg-black/45" aria-hidden>
+          <motion.div
+            className={[
+              "h-full",
+              urgent
+                ? "bg-linear-to-r from-rose-400 to-orange-300"
+                : "bg-linear-to-r from-emerald-400 to-lime-300",
+            ].join(" ")}
+            initial={false}
+            animate={{ width: `${remainPct}%` }}
+            transition={{ duration: 0.4 }}
+          />
+        </div>
+      </GamePanel>
     </motion.button>
   );
 }

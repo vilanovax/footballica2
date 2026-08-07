@@ -145,12 +145,12 @@ export function FacilityBusinessCard({
             n: toLocaleDigits(f.unlockPlayerLevel, locale),
           });
 
-  const rowRim =
+  const rowTone: GamePanelTone =
     f.status === "LOCKED"
-      ? "border-white/15"
+      ? "emerald"
       : f.status === "AVAILABLE"
-        ? "border-accent/70"
-        : meta.rim;
+        ? "amber"
+        : FACILITY_PANEL_TONE[f.key];
 
   return (
     <>
@@ -165,34 +165,20 @@ export function FacilityBusinessCard({
           }
         }}
         whileTap={{ scale: 0.985, y: 2 }}
-        className={[
-          "relative cursor-pointer overflow-hidden rounded-bubble-xl border-[3px] px-3 py-3 shadow-[0_6px_0_0_rgba(0,0,0,0.32)]",
-          rowRim,
-          f.status === "AVAILABLE" || (f.status === "BUILT" && f.canUpgrade)
-            ? "ring-1 ring-accent/25"
-            : "",
-          f.status === "LOCKED" ? "opacity-90" : "",
-        ].join(" ")}
+        className={
+          f.status === "LOCKED" ? "opacity-90" : undefined
+        }
       >
-        <div
+        <GamePanel
+          tone={rowTone}
           className={[
-            "absolute inset-0 bg-linear-to-br",
-            f.status === "LOCKED"
-              ? "from-[#1e293b] via-[#334155] to-[#0f172a]"
-              : f.status === "AVAILABLE"
-                ? "from-[#14532d] via-[#166534] to-[#052e16]"
-                : meta.row,
+            "cursor-pointer px-3 py-3",
+            f.status === "AVAILABLE" || (f.status === "BUILT" && f.canUpgrade)
+              ? "ring-1 ring-accent/30"
+              : "",
+            f.status === "LOCKED" ? "grayscale-[0.35]" : "",
           ].join(" ")}
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
-          }}
-          aria-hidden
-        />
+        >
         {(f.status === "BUILT" && live.fillPct > 0) ||
         f.status === "AVAILABLE" ? (
           <motion.div
@@ -208,25 +194,15 @@ export function FacilityBusinessCard({
 
         <div className="relative flex items-center gap-3">
           <div className="relative shrink-0">
-            <span
-              className={[
-                "flex h-14 w-14 items-center justify-center rounded-2xl border-2 shadow-[0_3px_0_0_rgba(0,0,0,0.4)]",
-                f.status === "LOCKED"
-                  ? "border-white/15 bg-black/30 grayscale"
-                  : f.status === "AVAILABLE"
-                    ? "border-accent/80 bg-accent/20"
-                    : "border-white/25 bg-black/35",
-              ].join(" ")}
-              aria-hidden
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={meta.iconSrc}
-                alt=""
-                draggable={false}
-                className="h-9 w-9 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]"
-              />
-            </span>
+            <GameIconWell
+              size="lg"
+              amber={f.status === "AVAILABLE"}
+              src={meta.iconSrc}
+              className={
+                f.status === "LOCKED" ? "grayscale" : undefined
+              }
+              iconClassName="h-9 w-9 drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]"
+            />
             {f.status === "LOCKED" && (
               <span
                 className="absolute -bottom-1 -end-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#0f172a] bg-slate-800 text-white/70 shadow-md"
@@ -485,6 +461,7 @@ export function FacilityBusinessCard({
             </div>
           </div>
         )}
+        </GamePanel>
       </motion.div>
 
       <BottomSheet
@@ -501,7 +478,7 @@ export function FacilityBusinessCard({
         >
           <div
             className={[
-              "pointer-events-none absolute -inset-e-10 -top-8 h-36 w-36 rounded-full blur-3xl",
+              "pointer-events-none absolute -end-10 -top-8 h-36 w-36 rounded-full blur-3xl",
               meta.glow,
             ].join(" ")}
             aria-hidden

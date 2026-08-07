@@ -41,6 +41,7 @@ import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
 import type { CampaignSeasonView } from "@/lib/game/campaignSeason";
 import { NextGoalCard } from "@/components/club-hub/NextGoalCard";
 import { HubTodayRail } from "@/components/club-hub/HubTodayRail";
+import { GamePanel } from "@/components/ui/game";
 
 // Heavy / deferred hub panels — keep first Club paint lean.
 const BusinessPanel = dynamic(() =>
@@ -228,16 +229,8 @@ export function ClubHub({
 
   return (
     <section className="relative flex flex-1 flex-col gap-3">
-      {/* Hub top bar — same dark game chrome as campaign / business cards */}
-      <div className="relative overflow-hidden rounded-bubble-xl border-[3px] border-emerald-500/35 bg-linear-to-br from-[#052e16] via-[#14532d] to-[#0f172a] p-2.5 shadow-[0_5px_0_0_rgba(0,0,0,0.28)]">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.06]"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
-          }}
-          aria-hidden
-        />
+      {/* Hub top bar — Arena panel chrome */}
+      <GamePanel tone="emerald" className="p-2.5">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-x-0 top-0 h-16 opacity-40"
@@ -339,7 +332,7 @@ export function ClubHub({
             onClubUpdate={setClub}
           />
         </div>
-      </div>
+      </GamePanel>
 
       {/* First viewport essence: stadium world */}
       <div className="relative">

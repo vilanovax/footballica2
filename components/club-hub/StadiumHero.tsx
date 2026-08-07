@@ -8,11 +8,8 @@ import {
   GameIconWell,
   GamePanel,
   GameTile,
+  type GamePanelTone,
 } from "@/components/ui/game";
-
-const Confetti = dynamic(() =>
-  import("./Confetti").then((m) => m.Confetti),
-);
 import { fansSoftCap } from "@/lib/club/upgradeEffects";
 import { staminaRegenIntervalMinutes } from "@/lib/club/stamina";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -20,6 +17,10 @@ import { toLocaleDigits } from "@/lib/i18n/format";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
 import { cn } from "@/lib/utils";
+
+const Confetti = dynamic(() =>
+  import("./Confetti").then((m) => m.Confetti),
+);
 
 type StadiumHeroProps = {
   stadiumLevel: number;
@@ -31,32 +32,28 @@ type StadiumHeroProps = {
   celebrating: boolean;
 };
 
-/** Visual tiers — dark game wash + stadium art treatment (not emoji scenes). */
+/** Visual tiers — Arena panel tone + stadium art treatment. */
 const TIER_SCENE = [
   {
-    rim: "border-stone-500/50",
-    wash: "from-[#1c1917] via-[#44403c] to-[#0c0a09]",
+    tone: "emerald" as GamePanelTone,
     glow: "bg-stone-400/20",
     art: "grayscale brightness-75 contrast-110",
     tip: "🪨",
   },
   {
-    rim: "border-amber-600/45",
-    wash: "from-[#3d2a08] via-[#7a5410] to-[#1c1408]",
+    tone: "amber" as GamePanelTone,
     glow: "bg-amber-400/25",
     art: "sepia-[.35] brightness-90 contrast-105",
     tip: "🚧",
   },
   {
-    rim: "border-emerald-400/45",
-    wash: "from-[#052e16] via-[#14532d] to-[#022c22]",
+    tone: "emerald" as GamePanelTone,
     glow: "bg-emerald-400/30",
     art: "brightness-100 saturate-110",
     tip: "🌱",
   },
   {
-    rim: "border-sky-300/50",
-    wash: "from-[#0c2d4a] via-[#134e75] to-[#0a281c]",
+    tone: "sky" as GamePanelTone,
     glow: "bg-sky-300/35",
     art: "brightness-110 saturate-125 drop-shadow-[0_0_18px_rgba(125,211,252,0.45)]",
     tip: "💡",
@@ -103,23 +100,12 @@ export function StadiumHero({
         type="button"
         onClick={openSheet}
         aria-label={t("stadium.openDetails")}
-        className={[
-          "relative aspect-16/11 w-full overflow-hidden rounded-bubble-xl border-[3px] text-start shadow-[0_6px_0_0_rgba(0,0,0,0.32)] transition-transform active:translate-y-px active:shadow-[0_4px_0_0_rgba(0,0,0,0.32)]",
-          scene.rim,
-        ].join(" ")}
+        className="w-full text-start transition-transform active:translate-y-px"
       >
-        <div
-          className={["absolute inset-0 bg-linear-to-br", scene.wash].join(" ")}
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(-16deg, transparent, transparent 12px, #fff 12px, #fff 13px)",
-          }}
-          aria-hidden
-        />
+        <GamePanel
+          tone={scene.tone}
+          className="aspect-16/11 w-full"
+        >
         <motion.div
           aria-hidden
           className={[
@@ -300,6 +286,7 @@ export function StadiumHero({
         <AnimatePresence>
           {celebrating ? <Confetti key={celebrateKey} /> : null}
         </AnimatePresence>
+        </GamePanel>
       </button>
 
       <BottomSheet

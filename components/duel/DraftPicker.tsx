@@ -10,6 +10,12 @@ import { toLocaleDigits } from "@/lib/i18n/format";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { playSound } from "@/lib/audio/SoundManager";
 import { DuelSpecialHelpSheet } from "@/components/duel/DuelSpecialHelpSheet";
+import {
+  GameChip,
+  GameIconWell,
+  GamePanel,
+} from "@/components/ui/game";
+import { cn } from "@/lib/utils";
 
 type DraftPickerProps = {
   options: DuelCategoryOption[];
@@ -23,39 +29,43 @@ type DraftPickerProps = {
   onPickSpecial?: (mode: LiveModeId) => void;
 };
 
-/** Accent themes per quiz slot — pitch / kit colors, no violet cluster. */
+/** Accent themes per quiz slot — Arena dark chrome accents. */
 const WEAPON_THEMES = [
   {
     ring: "ring-orange-400/70",
-    glow: "from-orange-500/30 via-amber-400/8 to-transparent",
+    glow: "from-orange-500/25 via-amber-400/8 to-transparent",
     badge: "bg-orange-500 text-white",
-    iconBg: "bg-orange-500/15 ring-orange-400/45",
+    iconBg: "bg-orange-500/20 ring-orange-400/45",
     bar: "bg-orange-500",
-    cta: "bg-orange-500/15 text-orange-800",
+    cta: "bg-orange-500/25 text-orange-100",
+    panel: "amber" as const,
   },
   {
     ring: "ring-sky-400/70",
-    glow: "from-sky-500/30 via-teal-400/8 to-transparent",
+    glow: "from-sky-500/25 via-teal-400/8 to-transparent",
     badge: "bg-sky-500 text-white",
-    iconBg: "bg-sky-500/15 ring-sky-400/45",
+    iconBg: "bg-sky-500/20 ring-sky-400/45",
     bar: "bg-sky-500",
-    cta: "bg-sky-500/15 text-sky-900",
+    cta: "bg-sky-500/25 text-sky-100",
+    panel: "sky" as const,
   },
   {
     ring: "ring-emerald-400/70",
-    glow: "from-emerald-500/30 via-lime-400/8 to-transparent",
+    glow: "from-emerald-500/25 via-lime-400/8 to-transparent",
     badge: "bg-emerald-500 text-white",
-    iconBg: "bg-emerald-500/15 ring-emerald-400/45",
+    iconBg: "bg-emerald-500/20 ring-emerald-400/45",
     bar: "bg-emerald-500",
-    cta: "bg-emerald-500/15 text-emerald-900",
+    cta: "bg-emerald-500/25 text-emerald-100",
+    panel: "emerald" as const,
   },
   {
     ring: "ring-amber-400/70",
-    glow: "from-amber-500/30 via-yellow-400/8 to-transparent",
+    glow: "from-amber-500/25 via-yellow-400/8 to-transparent",
     badge: "bg-amber-500 text-amber-950",
-    iconBg: "bg-amber-500/15 ring-amber-400/45",
+    iconBg: "bg-amber-500/20 ring-amber-400/45",
     bar: "bg-amber-500",
-    cta: "bg-amber-500/20 text-amber-950",
+    cta: "bg-amber-500/25 text-amber-100",
+    panel: "amber" as const,
   },
 ] as const;
 
@@ -120,13 +130,13 @@ export function DraftPicker({
 
   return (
     <>
-    <section className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-bubble-xl">
+    <section className="game-sheet relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-bubble-xl">
       {/* Arena atmosphere */}
       <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-linear-to-b from-[#152029] via-[#101820] to-[#0a1016]" />
-        <div className="absolute inset-x-0 top-0 h-40 bg-linear-to-b from-orange-500/25 to-transparent" />
-        <div className="absolute -inset-s-16 top-1/3 h-52 w-52 rounded-full bg-secondary/20 blur-3xl" />
-        <div className="absolute -inset-e-12 bottom-1/4 h-44 w-44 rounded-full bg-primary/15 blur-3xl" />
+        <div className="game-sheet-wash absolute inset-x-0 top-0 h-40" />
+        <div className="absolute inset-x-0 top-0 h-40 bg-linear-to-b from-orange-500/20 to-transparent" />
+        <div className="absolute -start-16 top-1/3 h-52 w-52 rounded-full bg-amber-400/15 blur-3xl" />
+        <div className="absolute -end-12 bottom-1/4 h-44 w-44 rounded-full bg-emerald-400/12 blur-3xl" />
       </div>
 
       <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-4 px-3 pb-4 pt-4">
@@ -135,10 +145,10 @@ export function DraftPicker({
           <motion.p
             initial={reduceMotion ? false : { opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mx-auto inline-flex items-center gap-2 rounded-full bg-orange-500 px-3 py-1.5 font-display text-xs font-extrabold text-white shadow-lg shadow-orange-500/30"
+            className="mx-auto inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1.5 font-display text-xs font-extrabold text-accent-foreground shadow-[0_3px_0_0_rgba(0,0,0,0.35)]"
           >
             <motion.span
-              className="h-2 w-2 rounded-full bg-white"
+              className="h-2 w-2 rounded-full bg-accent-foreground"
               animate={
                 reduceMotion
                   ? undefined
@@ -200,13 +210,14 @@ export function DraftPicker({
                       scale: selected ? 1.015 : 1,
                     }}
                     transition={{ type: "spring", stiffness: 320, damping: 22 }}
-                    className={[
-                      "group relative flex min-h-[5.25rem] items-stretch overflow-hidden rounded-2xl border-2 shadow-[0_12px_32px_rgba(0,0,0,0.4)]",
-                      selected
-                        ? "border-amber-300 bg-white ring-2 ring-rose-400/60"
-                        : "border-rose-300/60 bg-linear-to-br from-rose-50 to-amber-50",
-                    ].join(" ")}
                   >
+                    <GamePanel
+                      tone="rose"
+                      className={cn(
+                        "flex min-h-[5.25rem] items-stretch",
+                        selected && "ring-2 ring-arena-amber",
+                      )}
+                    >
                     <motion.button
                       type="button"
                       disabled={busy}
@@ -219,29 +230,29 @@ export function DraftPicker({
                         if (mode === "memory" && onPickMemory) onPickMemory();
                         else onPickSpecial?.(mode);
                       }}
-                      className="flex min-h-[5.25rem] min-w-0 flex-1 items-center gap-3 p-3.5 text-start disabled:cursor-wait"
+                      className="relative flex min-h-[5.25rem] min-w-0 flex-1 items-center gap-3 p-3.5 text-start disabled:cursor-wait"
                     >
-                      <span className="relative z-10 flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-2xl bg-rose-500 text-2xl shadow-md">
+                      <GameIconWell size="lg" className="text-2xl">
                         {meta.icon}
-                      </span>
+                      </GameIconWell>
                       <span className="relative z-10 min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-2">
-                          <span className="font-display text-lg font-black text-slate-900">
+                          <span className="font-display text-lg font-black text-white">
                             {selected ? t("duel.draftLocking") : label}
                           </span>
-                          <span className="rounded-full bg-rose-500 px-2 py-0.5 font-display text-[10px] font-extrabold uppercase tracking-wide text-white">
+                          <GameChip tone="amber" className="uppercase tracking-wide">
                             {t("duel.draftMemoryOnce")}
-                          </span>
+                          </GameChip>
                         </span>
                         {mode === "memory" && (
-                          <span className="mt-1 block font-body text-sm font-bold text-slate-700">
+                          <span className="mt-1 block font-body text-sm font-bold text-white/70">
                             {t("duel.draftMemoryPairs", {
                               n: toLocaleDigits(pairs, locale),
                             })}
                           </span>
                         )}
                         {mode === "tikiTaka" && (
-                          <span className="mt-1 block font-body text-sm font-bold text-slate-700">
+                          <span className="mt-1 block font-body text-sm font-bold text-white/70">
                             {t("duel.draftTikiBlurb")}
                           </span>
                         )}
@@ -257,7 +268,7 @@ export function DraftPicker({
                         haptic(HAPTIC.tap);
                         setHelpMode(mode);
                       }}
-                      className="flex w-14 shrink-0 items-center justify-center border-s border-rose-300/40 bg-rose-500/10 active:scale-95 disabled:opacity-40"
+                      className="relative flex w-14 shrink-0 items-center justify-center border-s border-white/15 bg-black/25 active:scale-95 disabled:opacity-40"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
@@ -267,6 +278,7 @@ export function DraftPicker({
                         className="h-9 w-9 object-contain"
                       />
                     </button>
+                    </GamePanel>
                   </motion.div>
                 );
               })}
@@ -312,13 +324,15 @@ export function DraftPicker({
                       playSound("click");
                       onPick(c.id);
                     }}
-                    className={[
-                      "group relative flex min-h-[5.25rem] items-center gap-3 overflow-hidden rounded-2xl border-2 p-3.5 text-start shadow-[0_10px_28px_rgba(0,0,0,0.35)] disabled:cursor-wait",
-                      selected
-                        ? `border-amber-300 bg-white ring-2 ${theme.ring}`
-                        : "border-white/20 bg-white",
-                    ].join(" ")}
+                    className="group w-full text-start disabled:cursor-wait"
                   >
+                    <GamePanel
+                      tone={theme.panel}
+                      className={cn(
+                        "flex min-h-[5.25rem] items-center gap-3 p-3.5",
+                        selected && `ring-2 ${theme.ring}`,
+                      )}
+                    >
                     <div
                       aria-hidden
                       className={[
@@ -353,10 +367,10 @@ export function DraftPicker({
                     </span>
 
                     <span className="relative z-10 min-w-0 flex-1">
-                      <span className="block truncate font-display text-lg font-black text-slate-900">
+                      <span className="block truncate font-display text-lg font-black text-white">
                         {selected ? t("duel.draftLocking") : name}
                       </span>
-                      <span className="mt-1 block font-body text-sm font-bold text-slate-600">
+                      <span className="mt-1 block font-body text-sm font-bold text-white/65">
                         {t("duel.questions", {
                           n: toLocaleDigits(c.questionCount, locale),
                         })}
@@ -377,7 +391,7 @@ export function DraftPicker({
                         "relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full font-display text-xl font-black shadow-md",
                         selected
                           ? "bg-amber-400 text-amber-950"
-                          : "bg-slate-900 text-white",
+                          : "bg-black/50 text-white ring-1 ring-white/20",
                       ].join(" ")}
                       animate={
                         selected && !reduceMotion
@@ -394,9 +408,10 @@ export function DraftPicker({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: [0.55, 0], scale: [1, 1.06] }}
                         transition={{ duration: 0.65 }}
-                        className="pointer-events-none absolute inset-0 rounded-2xl ring-4 ring-amber-300"
+                        className="pointer-events-none absolute inset-0 rounded-bubble-xl ring-4 ring-arena-amber"
                       />
                     )}
+                    </GamePanel>
                   </motion.button>
                 );
               })}
@@ -430,18 +445,14 @@ function RulePill({
   highlight?: boolean;
 }) {
   return (
-    <span
-      className={[
-        "inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-xs font-extrabold",
-        highlight
-          ? "bg-rose-500 text-white shadow-md shadow-rose-500/35"
-          : "bg-white/14 text-white ring-1 ring-white/25",
-      ].join(" ")}
+    <GameChip
+      tone={highlight ? "amber" : "default"}
+      className="min-h-9 px-3 py-1.5 text-xs font-extrabold"
     >
       <span aria-hidden className="text-sm leading-none">
         {icon}
       </span>
       {label}
-    </span>
+    </GameChip>
   );
 }

@@ -301,34 +301,13 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
         </div>
       )}
 
-      {/* Collect desk — game treasure panel */}
-      <div
-        className={[
-          "relative overflow-hidden rounded-bubble-xl border-[3px] shadow-[0_6px_0_0_rgba(0,0,0,0.28)]",
-          vaultFull
-            ? "border-amber-300"
-            : primaryCollect
-              ? "border-accent"
-              : "border-emerald-700/40",
-        ].join(" ")}
+      {/* Collect desk — Arena treasure panel */}
+      <GamePanel
+        tone={vaultFull ? "amber" : "emerald"}
+        className={
+          primaryCollect && !vaultFull ? "ring-1 ring-accent/40" : undefined
+        }
       >
-        <div
-          className={[
-            "absolute inset-0 bg-linear-to-br",
-            vaultFull
-              ? "from-[#5c3d0a] via-[#8a5a12] to-[#3d2808]"
-              : "from-[#0d3b2e] via-[#145c45] to-[#0a281c]",
-          ].join(" ")}
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.08]"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(-18deg, transparent, transparent 12px, #fff 12px, #fff 13px)",
-          }}
-          aria-hidden
-        />
         <motion.div
           aria-hidden
           className={[
@@ -429,29 +408,22 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
             playSound("click");
             setVaultOpen(true);
           }}
-          className={[
-            "relative mx-3 mt-2 rounded-2xl border-2 px-3 py-3 text-start shadow-[0_3px_0_0_rgba(0,0,0,0.35)] transition-transform active:translate-y-px active:shadow-none",
-            vaultFull
-              ? "border-amber-200/80 bg-linear-to-r from-amber-400 to-amber-300"
-              : "border-amber-400/40 bg-linear-to-r from-[#3d2a08]/90 to-[#5c3d0a]/90",
-          ].join(" ")}
+          className="relative mx-3 mt-2 w-[calc(100%-1.5rem)] text-start transition-transform active:translate-y-px"
         >
+          <GameTile
+            tone="amber"
+            className={[
+              "px-3 py-3",
+              vaultFull ? "bg-linear-to-r from-amber-400 to-amber-300 text-amber-950" : "",
+            ].join(" ")}
+          >
           <div className="flex items-center gap-2.5">
-            <span
-              className={[
-                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-inner",
-                vaultFull ? "bg-amber-950/20" : "bg-black/30",
-              ].join(" ")}
-              aria-hidden
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/icons/gift.png"
-                alt=""
-                draggable={false}
-                className="h-6 w-6 object-contain"
-              />
-            </span>
+            <GameIconWell
+              size="md"
+              amber={!vaultFull}
+              src="/icons/gift.png"
+              className={vaultFull ? "bg-amber-950/20" : undefined}
+            />
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
                 <span
@@ -515,6 +487,7 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
               </div>
             </div>
           </div>
+          </GameTile>
         </button>
 
         <div className="relative flex flex-col gap-2 p-3 pt-3">
@@ -616,7 +589,7 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
             </>
           )}
         </div>
-      </div>
+      </GamePanel>
 
       <div className="flex flex-col gap-2.5">
         {biz.facilities.map((f) => (

@@ -12,6 +12,7 @@ import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { ResourceIcon } from "@/components/common/ResourceIcon";
+import { GamePanel } from "@/components/ui/game";
 
 type StatusBarProps = {
   coins: number;
@@ -197,23 +198,24 @@ export function StatusBar({
               exit={{ y: 24, opacity: 0, scale: 0.96 }}
               transition={{ type: "spring", stiffness: 380, damping: 28 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-sm overflow-hidden rounded-bubble-xl border-[3px] border-sky-400/40 bg-linear-to-br from-[#0c2d4a] via-[#134e75] to-[#0f172a] p-5 shadow-[0_6px_0_0_rgba(0,0,0,0.35)]"
+              className="w-full max-w-sm"
             >
-              <div className="mb-3 flex justify-center" aria-hidden>
+              <GamePanel tone="sky" className="p-5">
+              <div className="relative mb-3 flex justify-center" aria-hidden>
                 <ResourceIcon kind="energy" size="lg" className="h-12 w-12" />
               </div>
               <h2
                 id="stamina-refill-title"
-                className="text-center font-display text-xl font-black text-white"
+                className="relative text-center font-display text-xl font-black text-white"
               >
                 {t("status.refillTitle")}
               </h2>
-              <p className="mt-2 text-center font-display text-sm font-bold text-white/65">
+              <p className="relative mt-2 text-center font-display text-sm font-bold text-white/65">
                 {t("status.refillBody", {
                   cost: toLocaleDigits(staminaRefillCost, locale),
                 })}
               </p>
-              <div className="mt-5 grid grid-cols-2 gap-2">
+              <div className="relative mt-5 grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   disabled={pending}
@@ -247,6 +249,7 @@ export function StatusBar({
                   )}
                 </motion.button>
               </div>
+              </GamePanel>
             </motion.div>
           </motion.div>
         )}
