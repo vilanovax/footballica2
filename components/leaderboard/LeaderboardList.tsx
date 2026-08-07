@@ -250,49 +250,51 @@ export function LeaderboardList({
             </button>
           )}
 
-          {showPodium && (
-            <div ref={youOnPodium ? setYouAnchor : undefined}>
-              <LeaderboardPodium rows={podiumRows} />
+          <div className="relative mb-1 overflow-hidden rounded-bubble-xl bg-linear-to-b from-[#052e16]/40 via-transparent to-transparent p-0.5">
+            {showPodium && (
+              <div ref={youOnPodium ? setYouAnchor : undefined}>
+                <LeaderboardPodium rows={podiumRows} />
+              </div>
+            )}
+
+            <div className="mb-1.5 flex items-center justify-between px-1">
+              <p className="font-display text-[10px] font-black uppercase tracking-widest text-emerald-800/70">
+                {t("leaderboard.tableTitle")}
+              </p>
+              <p className="font-display text-[10px] font-black text-emerald-800/55">
+                {t("leaderboard.xpShort")}
+              </p>
             </div>
-          )}
 
-          <div className="mb-1.5 flex items-center justify-between px-0.5">
-            <p className="font-display text-[10px] font-black uppercase tracking-widest text-emerald-800/70">
-              {t("leaderboard.tableTitle")}
-            </p>
-            <p className="font-display text-[10px] font-black text-emerald-800/55">
-              {t("leaderboard.xpShort")}
-            </p>
+            <motion.ol
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className={[
+                "flex flex-col gap-1.5",
+                showStickyYou ? "pb-36" : "pb-28",
+              ].join(" ")}
+            >
+              {listRows.map((row) => {
+                const isYou = sticky?.userId === row.userId;
+                return (
+                  <li
+                    key={row.userId}
+                    className="list-none"
+                    ref={isYou && youInList ? setYouAnchor : undefined}
+                  >
+                    <LeaderboardRowItem row={row} />
+                  </li>
+                );
+              })}
+            </motion.ol>
           </div>
-
-          <motion.ol
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className={[
-              "flex flex-col gap-2",
-              showStickyYou ? "pb-36" : "pb-28",
-            ].join(" ")}
-          >
-            {listRows.map((row) => {
-              const isYou = sticky?.userId === row.userId;
-              return (
-                <li
-                  key={row.userId}
-                  className="list-none"
-                  ref={isYou && youInList ? setYouAnchor : undefined}
-                >
-                  <LeaderboardRowItem row={row} />
-                </li>
-              );
-            })}
-          </motion.ol>
         </>
       )}
 
       {showStickyYou && sticky && (
         <div className="pointer-events-none fixed inset-x-0 z-40 mx-auto w-full max-w-mobile px-3 bottom-[calc(10.5rem+env(safe-area-inset-bottom,0px))]">
-          <div className="pointer-events-auto rounded-bubble-xl border-[3px] border-accent bg-linear-to-br from-[#052e16] via-[#14532d] to-[#022c22] p-0.5 shadow-[0_6px_0_0_rgba(0,0,0,0.35)]">
+          <div className="pointer-events-auto rounded-bubble-xl bg-linear-to-br from-[#052e16] via-[#14532d] to-[#022c22] p-0.5 shadow-[0_0_0_2px_rgba(251,191,36,0.65),0_0_20px_rgba(251,191,36,0.35),0_6px_0_0_rgba(0,0,0,0.35)]">
             <LeaderboardRowItem row={sticky} sticky />
           </div>
         </div>
@@ -461,14 +463,14 @@ function LeaderboardRowItem({
     <motion.div
       variants={sticky ? undefined : rowVariants}
       className={[
-        "relative flex items-center gap-2.5 overflow-hidden rounded-2xl border-[3px] px-2.5 py-2 shadow-[0_3px_0_0_rgba(0,0,0,0.28)]",
+        "relative flex min-h-12 items-center gap-2 overflow-hidden rounded-2xl px-2 py-1.5 shadow-[0_3px_0_0_rgba(0,0,0,0.28)]",
         sticky || you
-          ? "border-accent/70 bg-linear-to-br from-[#14532d] via-[#166534] to-[#052e16]"
+          ? "bg-linear-to-br from-[#166534] via-[#14532d] to-[#052e16] shadow-[0_0_0_2px_rgba(251,191,36,0.7),0_0_18px_rgba(251,191,36,0.28),0_3px_0_0_rgba(0,0,0,0.3)]"
           : unplayed
-            ? "border-white/10 bg-linear-to-br from-[#1e293b] via-[#334155] to-[#0f172a] opacity-75"
+            ? "bg-linear-to-br from-[#1e293b] via-[#334155] to-[#0f172a] opacity-75 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_3px_0_0_rgba(0,0,0,0.28)]"
             : hot
-              ? "border-emerald-400/40 bg-linear-to-br from-[#052e16] via-[#14532d] to-[#022c22]"
-              : "border-white/12 bg-linear-to-br from-[#0f172a] via-[#1e293b] to-[#020617]",
+              ? "bg-linear-to-br from-[#052e16] via-[#14532d] to-[#022c22] shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_3px_0_0_rgba(0,0,0,0.28)]"
+              : "bg-linear-to-br from-[#0f172a] via-[#1e293b] to-[#020617] shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_3px_0_0_rgba(0,0,0,0.28)]",
       ].join(" ")}
     >
       <div
@@ -479,15 +481,23 @@ function LeaderboardRowItem({
         }}
         aria-hidden
       />
+      {(sticky || you) && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_120%_at_0%_50%,rgba(251,191,36,0.18),transparent_55%)]"
+        />
+      )}
 
       <div
         className={[
-          "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border font-display text-xs font-black",
+          "relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-display text-[11px] font-black tabular-nums",
           you
-            ? "border-accent/60 bg-accent text-accent-foreground"
+            ? "bg-accent text-accent-foreground shadow-[0_2px_0_0_rgba(0,0,0,0.35)]"
             : unplayed
-              ? "border-white/10 bg-black/30 text-white/45"
-              : "border-white/15 bg-black/35 text-white",
+              ? "bg-black/30 text-white/45"
+              : hot
+                ? "bg-emerald-500/25 text-emerald-100 ring-1 ring-emerald-300/35"
+                : "bg-black/40 text-white/85 ring-1 ring-white/12",
         ].join(" ")}
       >
         {unplayed || row.rank <= 0
@@ -498,8 +508,8 @@ function LeaderboardRowItem({
       <AvatarImage
         avatarKey={row.avatarKey}
         className={[
-          "relative h-10 w-10 shrink-0 rounded-full ring-2",
-          you ? "ring-accent/70" : "ring-white/20",
+          "relative h-9 w-9 shrink-0 rounded-full ring-2",
+          you ? "ring-accent/80" : "ring-white/20",
           unplayed ? "grayscale" : "",
         ].join(" ")}
       />
@@ -507,7 +517,7 @@ function LeaderboardRowItem({
       <div className="relative min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <p
-            className="truncate font-display text-sm font-black text-white"
+            className="truncate font-display text-[13px] font-black leading-tight text-white"
             title={row.clubName}
           >
             {shortClubName(row.clubName, 20)}
@@ -518,7 +528,7 @@ function LeaderboardRowItem({
             </span>
           )}
         </div>
-        <p className="truncate font-display text-[11px] font-bold text-white/55">
+        <p className="mt-0.5 truncate font-display text-[10px] font-bold leading-none text-white/45">
           {unplayed
             ? t("leaderboard.notPlayed")
             : t("leaderboard.rowMatches", {
@@ -527,15 +537,22 @@ function LeaderboardRowItem({
         </p>
       </div>
 
-      <div className="relative shrink-0 rounded-xl border border-white/15 bg-black/35 px-2 py-1.5 text-end">
+      <div
+        className={[
+          "relative shrink-0 rounded-xl px-2 py-1 text-end",
+          you
+            ? "bg-black/40 shadow-[inset_0_0_0_1px_rgba(251,191,36,0.35)]"
+            : "bg-black/35 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]",
+        ].join(" ")}
+      >
         <p
           className={[
-            "inline-flex items-center gap-1 font-display text-sm font-extrabold tabular-nums leading-none",
+            "inline-flex items-center gap-1 font-display text-sm font-black tabular-nums leading-none",
             unplayed ? "text-white/45" : "text-emerald-300",
           ].join(" ")}
         >
-          <ResourceIcon kind="xp" size="sm" className="h-3.5 w-3.5" />
           {formatNumber(row.weeklyXp, locale)}
+          <ResourceIcon kind="xp" size="sm" className="h-3.5 w-3.5" />
         </p>
       </div>
     </motion.div>

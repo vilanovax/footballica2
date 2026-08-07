@@ -306,7 +306,7 @@ export function StadiumHero({
       >
         <div
           className={[
-            "relative -mx-1 overflow-hidden rounded-bubble-xl border-2 border-white/15 bg-linear-to-br shadow-[0_5px_0_0_rgba(0,0,0,0.35)]",
+            "relative -mx-1 overflow-hidden rounded-bubble-xl bg-linear-to-br shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_4px_0_0_rgba(0,0,0,0.35)]",
             scene.wash,
           ].join(" ")}
         >
@@ -321,7 +321,7 @@ export function StadiumHero({
 
           <div className="relative flex items-center gap-3 px-3 py-3.5">
             <span
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border-2 border-white/25 bg-black/30 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]"
+              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-amber-300/35 bg-black/40 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]"
               aria-hidden
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -378,19 +378,20 @@ export function StadiumHero({
 
         <ul className="mt-3 flex flex-col gap-2">
           <FacilityRow
-            emoji="🏟️"
+            iconSrc="/icons/stadium.png"
             label={t("stadium.statStadium")}
             value={`${t("stadium.lvl")} ${toLocaleDigits(stadiumLevel, locale)}`}
             hot={stadiumLevel >= 3}
           />
           <FacilityRow
-            emoji="🏃"
+            iconSrc="/icons/training.png"
             label={t("stadium.statTraining")}
             value={`${t("stadium.lvl")} ${toLocaleDigits(trainingGroundLevel, locale)}`}
-            sub={`⚡ ${toLocaleDigits(maxStamina, locale)}`}
+            subIconSrc="/icons/energy.png"
+            sub={toLocaleDigits(maxStamina, locale)}
           />
           <FacilityRow
-            emoji="🏥"
+            iconSrc="/icons/medical.png"
             label={t("stadium.statMedical")}
             value={`${t("stadium.lvl")} ${toLocaleDigits(medicalLevel, locale)}`}
             sub={t("stadium.regenEvery", {
@@ -464,32 +465,40 @@ function FacilityBadge({
 }
 
 function FacilityRow({
-  emoji,
+  iconSrc,
   label,
   value,
   sub,
+  subIconSrc,
   hot,
 }: {
-  emoji: string;
+  iconSrc: string;
   label: string;
   value: string;
   sub?: string;
+  subIconSrc?: string;
   hot?: boolean;
 }) {
   return (
     <li
       className={[
-        "flex items-center gap-3 rounded-2xl border-2 px-3 py-2.5 shadow-[0_3px_0_0_rgba(0,0,0,0.3)]",
+        "flex items-center gap-3 rounded-2xl px-3 py-2.5",
         hot
-          ? "border-amber-400/55 bg-amber-500/15"
-          : "border-white/12 bg-black/25",
+          ? "bg-amber-500/15 shadow-[0_0_0_1px_rgba(251,191,36,0.45),0_3px_0_0_rgba(0,0,0,0.28)]"
+          : "bg-black/35 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_3px_0_0_rgba(0,0,0,0.28)]",
       ].join(" ")}
     >
       <span
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-black/30 text-xl"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/40 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]"
         aria-hidden
       >
-        {emoji}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={iconSrc}
+          alt=""
+          draggable={false}
+          className="h-6 w-6 object-contain"
+        />
       </span>
       <div className="min-w-0 flex-1">
         <p className="font-display text-[11px] font-bold text-white/55">
@@ -503,8 +512,18 @@ function FacilityRow({
         >
           {value}
           {sub ? (
-            <span className="ms-1.5 text-[11px] font-bold text-white/55">
-              · {sub}
+            <span className="ms-1.5 inline-flex items-center gap-0.5 text-[11px] font-bold text-white/55">
+              ·{" "}
+              {subIconSrc ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={subIconSrc}
+                  alt=""
+                  aria-hidden
+                  className="inline h-3.5 w-3.5 object-contain"
+                />
+              ) : null}
+              {sub}
             </span>
           ) : null}
         </p>

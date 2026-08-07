@@ -13,8 +13,8 @@ type ScoreboardProps = {
 export function Scoreboard({ kickNumber, totalKicks, goals }: ScoreboardProps) {
   const { locale } = useTranslation();
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2">
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-1.5">
         {Array.from({ length: totalKicks }).map((_, i) => {
           const taken = i < kickNumber - 1;
           const isCurrent = i === kickNumber - 1;
@@ -22,23 +22,30 @@ export function Scoreboard({ kickNumber, totalKicks, goals }: ScoreboardProps) {
             <span
               key={i}
               className={[
-                "h-3 w-3 rounded-full border",
+                "rounded-full",
                 isCurrent
-                  ? "border-accent bg-accent shadow-glow-accent"
+                  ? "h-3 w-3 bg-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.65)]"
                   : taken
-                    ? "border-primary bg-primary"
-                    : "border-border bg-muted",
+                    ? "h-2.5 w-2.5 bg-emerald-400"
+                    : "h-2.5 w-2.5 bg-white/20",
               ].join(" ")}
             />
           );
         })}
       </div>
 
-      <div className="flex items-center gap-1 font-display text-sm font-bold text-foreground">
-        <span aria-hidden>⚽️</span>
+      <div className="inline-flex items-center gap-1 rounded-xl bg-black/40 px-2 py-1 font-display text-sm font-black tabular-nums text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/icons/trophy.png"
+          alt=""
+          aria-hidden
+          draggable={false}
+          className="h-4 w-4 object-contain"
+        />
         <span>
           {toLocaleDigits(goals, locale)}
-          <span className="text-muted-foreground">
+          <span className="text-white/45">
             /{toLocaleDigits(totalKicks, locale)}
           </span>
         </span>

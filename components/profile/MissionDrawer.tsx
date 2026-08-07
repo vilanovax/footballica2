@@ -72,7 +72,7 @@ function firstIncompleteHref(
 
 /**
  * Bottom-sheet mission hub — claim-first footer, Daily / Campaign tabs.
- * Sheet chrome uses shadow + top accent bar (no thick border on radius).
+ * Dark emerald game chrome aligned with Club Hub sheets.
  */
 export function MissionDrawer({
   open,
@@ -230,7 +230,7 @@ export function MissionDrawer({
             type="button"
             aria-label={t("common.close")}
             onClick={close}
-            className="absolute inset-0 bg-[hsl(210_45%_8%/0.62)] backdrop-blur-[6px]"
+            className="absolute inset-0 bg-black/70 backdrop-blur-[8px]"
           />
 
           <motion.div
@@ -241,61 +241,91 @@ export function MissionDrawer({
             animate={{ y: 0 }}
             exit={{ y: "105%" }}
             transition={{ type: "spring", stiffness: 420, damping: 36 }}
-            className="relative z-10 flex max-h-[82dvh] flex-col overflow-hidden rounded-t-[1.75rem] bg-surface shadow-[0_-18px_48px_rgba(15,35,55,0.28)]"
+            className="relative z-10 flex max-h-[84dvh] flex-col overflow-hidden rounded-t-[1.75rem] border-t-[3px] border-emerald-400/40 bg-linear-to-b from-[#0a1f14] via-[#0f172a] to-[#052e16] shadow-[0_-20px_50px_rgba(0,0,0,0.55)]"
           >
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 h-32"
+              className="pointer-events-none absolute inset-0 opacity-[0.05]"
               style={{
-                background:
-                  "linear-gradient(180deg, hsl(var(--secondary) / 0.22), hsl(var(--surface)) 70%)",
+                backgroundImage:
+                  "repeating-linear-gradient(-16deg, transparent, transparent 12px, #fff 12px, #fff 13px)",
               }}
             />
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-secondary via-primary to-accent"
+              className="pointer-events-none absolute -end-16 top-0 h-40 w-40 rounded-full bg-emerald-400/20 blur-3xl"
             />
+            {anyRewardReady && (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -start-12 top-8 h-32 w-32 rounded-full bg-amber-300/20 blur-3xl"
+              />
+            )}
 
-            <header className="relative shrink-0 px-4 pb-2 pt-3">
-              <div className="mb-2 flex justify-center">
+            <header className="relative shrink-0 px-4 pb-2.5 pt-3">
+              <div className="mb-2.5 flex justify-center">
                 <span
                   aria-hidden
-                  className="h-1.5 w-11 rounded-full bg-foreground/20"
+                  className="h-1.5 w-11 rounded-full bg-white/25"
                 />
               </div>
 
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 text-start">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl" aria-hidden>
-                      🎯
+                  <div className="flex items-center gap-2.5">
+                    <span
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border-2 border-white/20 bg-black/35 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]"
+                      aria-hidden
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src="/icons/hub-mission.png"
+                        alt=""
+                        draggable={false}
+                        className="h-7 w-7 object-contain"
+                      />
                     </span>
-                    <h2 className="font-display text-xl font-black text-foreground">
-                      {t("missions.drawerTitle")}
-                    </h2>
+                    <div className="min-w-0">
+                      <h2 className="font-display text-xl font-black text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]">
+                        {t("missions.drawerTitle")}
+                      </h2>
+                      <p
+                        className={[
+                          "mt-0.5 font-display text-xs font-bold",
+                          anyRewardReady
+                            ? "text-amber-200"
+                            : "text-white/55",
+                        ].join(" ")}
+                      >
+                        {anyRewardReady
+                          ? t("missions.drawerSubtitleReady")
+                          : t("missions.drawerSubtitle", {
+                              done: toLocaleDigits(
+                                dailyStats.done + campaignStats.done,
+                                locale,
+                              ),
+                              total: toLocaleDigits(
+                                dailyStats.total + campaignStats.total,
+                                locale,
+                              ),
+                            })}
+                      </p>
+                    </div>
                   </div>
-                  <p className="mt-0.5 font-body text-xs font-semibold text-muted-foreground">
-                    {anyRewardReady
-                      ? t("missions.drawerSubtitleReady")
-                      : t("missions.drawerSubtitle", {
-                          done: toLocaleDigits(
-                            dailyStats.done + campaignStats.done,
-                            locale,
-                          ),
-                          total: toLocaleDigits(
-                            dailyStats.total + campaignStats.total,
-                            locale,
-                          ),
-                        })}
-                  </p>
                 </div>
                 <button
                   type="button"
                   onClick={close}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted font-display text-base font-bold text-muted-foreground transition-transform active:scale-95"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/40 font-display text-base font-black text-white/70 transition-transform active:scale-95"
                   aria-label={t("common.close")}
                 >
-                  ✕
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/icons/close.png"
+                    alt=""
+                    draggable={false}
+                    className="h-5 w-5 object-contain opacity-90"
+                  />
                 </button>
               </div>
 
@@ -303,7 +333,7 @@ export function MissionDrawer({
                 <div
                   role="tablist"
                   aria-label={t("missions.drawerTitle")}
-                  className="relative mt-3 grid grid-cols-2 gap-1 rounded-bubble-lg bg-muted p-1"
+                  className="relative mt-3.5 grid grid-cols-2 gap-1 rounded-2xl border border-white/12 bg-black/40 p-1 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
                 >
                   {(
                     [
@@ -328,16 +358,14 @@ export function MissionDrawer({
                         aria-selected={active}
                         onClick={() => selectTab(item.key)}
                         className={[
-                          "relative z-10 flex min-h-10 items-center justify-center gap-1.5 rounded-bubble px-2 font-display text-sm font-bold transition-colors",
-                          active
-                            ? "text-foreground"
-                            : "text-muted-foreground",
+                          "relative z-10 flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-2 font-display text-sm font-black transition-colors",
+                          active ? "text-white" : "text-white/50",
                         ].join(" ")}
                       >
                         {active && (
                           <motion.span
                             layoutId="mission-tab-pill"
-                            className="absolute inset-0 rounded-bubble bg-surface shadow-fantasy-sm"
+                            className="absolute inset-0 rounded-xl border border-emerald-400/35 bg-linear-to-b from-emerald-600/80 to-emerald-900/90 shadow-[0_2px_0_0_rgba(0,0,0,0.35)]"
                             transition={{
                               type: "spring",
                               stiffness: 420,
@@ -348,10 +376,12 @@ export function MissionDrawer({
                         <span className="relative z-10">{item.label}</span>
                         <span
                           className={[
-                            "relative z-10 rounded-full px-1.5 py-0.5 text-[10px] tabular-nums",
+                            "relative z-10 rounded-full px-1.5 py-0.5 text-[10px] font-black tabular-nums ring-1",
                             item.stats.ready
-                              ? "bg-accent/25 text-accent-deep"
-                              : "bg-background/80 text-muted-foreground",
+                              ? "bg-accent text-accent-foreground ring-amber-300/40"
+                              : active
+                                ? "bg-black/30 text-white/80 ring-white/15"
+                                : "bg-white/10 text-white/50 ring-white/10",
                           ].join(" ")}
                         >
                           {toLocaleDigits(item.stats.done, locale)}/
@@ -364,9 +394,9 @@ export function MissionDrawer({
               )}
             </header>
 
-            <div className="relative flex-1 space-y-3 overflow-y-auto overscroll-contain bg-gradient-to-b from-surface to-[hsl(var(--muted)/0.55)] px-4 pb-3 pt-1">
+            <div className="relative flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 pb-3 pt-1">
               {!hasDaily && !hasCampaignPane && (
-                <p className="rounded-bubble-lg bg-surface px-4 py-8 text-center font-display text-sm font-semibold text-muted-foreground shadow-fantasy-sm">
+                <p className="rounded-2xl border border-white/12 bg-black/35 px-4 py-8 text-center font-display text-sm font-bold text-white/55">
                   {t("missions.drawerEmpty")}
                 </p>
               )}
@@ -402,11 +432,11 @@ export function MissionDrawer({
                     transition={{ duration: 0.18 }}
                     className="space-y-3"
                   >
-                    <div className="rounded-bubble-lg bg-secondary/15 px-3 py-2.5">
-                      <p className="font-display text-[11px] font-bold uppercase tracking-widest text-secondary">
+                    <div className="rounded-2xl border border-emerald-400/25 bg-black/35 px-3 py-2.5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]">
+                      <p className="font-display text-[11px] font-black uppercase tracking-widest text-emerald-300/90">
                         {t("campaign.eyebrow")}
                       </p>
-                      <p className="font-display text-sm font-bold text-foreground">
+                      <p className="mt-0.5 font-display text-sm font-bold text-white/85">
                         {t("campaign.drawerBlurb")}
                       </p>
                     </div>
@@ -427,7 +457,7 @@ export function MissionDrawer({
 
                     {hasChapters && (
                       <div className="space-y-2">
-                        <p className="font-display text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                        <p className="font-display text-[11px] font-black uppercase tracking-wide text-white/45">
                           {t("campaign.chapters")}
                         </p>
                         <ul className="flex flex-col gap-1.5">
@@ -440,24 +470,48 @@ export function MissionDrawer({
                                   href={`/play/survival?challenge=${encodeURIComponent(ch.id)}`}
                                   onClick={close}
                                   className={[
-                                    "flex min-h-11 items-center gap-2 rounded-2xl px-2.5 py-2 shadow-fantasy-sm",
+                                    "flex min-h-12 items-center gap-2.5 rounded-2xl border px-2.5 py-2 transition-transform active:scale-[0.98]",
                                     ch.conquered
-                                      ? "bg-emerald-500/15"
-                                      : "bg-surface",
+                                      ? "border-emerald-400/30 bg-emerald-500/15"
+                                      : ch.unlocked
+                                        ? "border-white/12 bg-black/40"
+                                        : "border-white/8 bg-black/25 opacity-70",
                                   ].join(" ")}
                                 >
                                   <span
-                                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-muted text-sm"
+                                    className={[
+                                      "flex h-9 w-9 items-center justify-center rounded-xl border font-display text-sm font-black",
+                                      ch.conquered
+                                        ? "border-emerald-400/40 bg-emerald-600/40 text-white"
+                                        : "border-white/15 bg-black/40 text-white/70",
+                                    ].join(" ")}
                                     aria-hidden
                                   >
-                                    {ch.conquered
-                                      ? ch.rewardBadgeEmoji || "🏆"
-                                      : toLocaleDigits(i + 1, locale)}
+                                    {ch.conquered ? (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img
+                                        src="/icons/trophy.png"
+                                        alt=""
+                                        draggable={false}
+                                        className="h-5 w-5 object-contain"
+                                      />
+                                    ) : (
+                                      toLocaleDigits(i + 1, locale)
+                                    )}
                                   </span>
-                                  <span className="min-w-0 flex-1 truncate font-display text-sm font-bold">
+                                  <span className="min-w-0 flex-1 truncate font-display text-sm font-bold text-white">
                                     {title}
                                   </span>
-                                  <span className="text-[10px] font-extrabold uppercase text-muted-foreground">
+                                  <span
+                                    className={[
+                                      "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase ring-1",
+                                      ch.conquered
+                                        ? "bg-emerald-500/25 text-emerald-200 ring-emerald-400/30"
+                                        : ch.unlocked
+                                          ? "bg-accent/90 text-accent-foreground ring-amber-300/35"
+                                          : "bg-white/10 text-white/45 ring-white/10",
+                                    ].join(" ")}
+                                  >
                                     {ch.conquered
                                       ? t("campaign.chapterDone")
                                       : ch.unlocked
@@ -502,10 +556,12 @@ export function MissionDrawer({
                             <Link
                               href={`/play/survival?challenge=${encodeURIComponent(ch.id)}`}
                               onClick={close}
-                              className="flex min-h-11 items-center gap-2 rounded-2xl bg-surface px-2.5 py-2 shadow-fantasy-sm"
+                              className="flex min-h-12 items-center gap-2.5 rounded-2xl border border-white/12 bg-black/40 px-2.5 py-2 transition-transform active:scale-[0.98]"
                             >
-                              <span className="font-display text-sm font-bold">
-                                {toLocaleDigits(i + 1, locale)}.{" "}
+                              <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 bg-black/40 font-display text-sm font-black text-white/70">
+                                {toLocaleDigits(i + 1, locale)}
+                              </span>
+                              <span className="min-w-0 flex-1 truncate font-display text-sm font-bold text-white">
                                 {locale === "fa" ? ch.titleFa : ch.titleEn}
                               </span>
                             </Link>
@@ -519,18 +575,18 @@ export function MissionDrawer({
             </div>
 
             {activeStats.ready ? (
-              <div className="relative shrink-0 bg-surface px-4 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(15,35,55,0.08)]">
+              <div className="relative shrink-0 border-t border-white/10 bg-[#071510]/95 px-4 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-md">
                 <motion.button
                   type="button"
                   disabled={claimingAll}
                   onClick={handleClaimAll}
-                  animate={{ scale: [1, 1.02, 1] }}
+                  animate={{ scale: [1, 1.015, 1] }}
                   transition={{
                     repeat: Infinity,
-                    duration: 1.1,
+                    duration: 1.35,
                     ease: "easeInOut",
                   }}
-                  className="btn-fantasy btn-fantasy-accent flex min-h-12 w-full items-center justify-center gap-2 font-display text-base font-bold disabled:opacity-60"
+                  className="flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl border-2 border-amber-300/50 bg-linear-to-b from-accent to-[hsl(38_92%_42%)] font-display text-base font-black text-accent-foreground shadow-[0_4px_0_0_rgba(120,70,0,0.55),0_0_24px_rgba(251,191,36,0.35)] transition-transform active:translate-y-0.5 active:shadow-[0_2px_0_0_rgba(120,70,0,0.55)] disabled:opacity-60"
                   aria-label={
                     claimingAll
                       ? t("missions.claiming")
@@ -545,7 +601,7 @@ export function MissionDrawer({
                     alt=""
                     aria-hidden
                     draggable={false}
-                    className="h-9 w-auto object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)]"
+                    className="h-9 w-auto object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]"
                   />
                   {claimingAll
                     ? t("missions.claiming")
@@ -555,13 +611,20 @@ export function MissionDrawer({
                 </motion.button>
               </div>
             ) : continueHref ? (
-              <div className="relative shrink-0 bg-surface px-4 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(15,35,55,0.08)]">
+              <div className="relative shrink-0 border-t border-white/10 bg-[#071510]/95 px-4 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-md">
                 <Link
                   href={continueHref}
                   onClick={close}
-                  className="btn-fantasy btn-fantasy-pitch flex min-h-12 w-full items-center justify-center gap-2 font-display text-base font-bold"
+                  className="flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl border-2 border-emerald-400/40 bg-linear-to-b from-emerald-500 to-emerald-800 font-display text-base font-black text-white shadow-[0_4px_0_0_rgba(0,0,0,0.45),0_0_20px_rgba(16,185,129,0.3)] transition-transform active:translate-y-0.5 active:shadow-[0_2px_0_0_rgba(0,0,0,0.45)]"
                 >
-                  <span aria-hidden>⚽</span>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/icons/target.png"
+                    alt=""
+                    aria-hidden
+                    draggable={false}
+                    className="h-6 w-6 object-contain"
+                  />
                   {t("missions.drawerContinueCta")}
                 </Link>
               </div>

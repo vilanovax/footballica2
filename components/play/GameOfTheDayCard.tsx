@@ -287,67 +287,75 @@ function GotdShell({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="font-display text-xs font-bold uppercase tracking-widest text-amber-700/90 dark:text-amber-300/90">
+      <div className="flex items-center justify-between gap-2 px-0.5">
+        <h2 className="font-display text-[11px] font-black uppercase tracking-widest text-amber-800/80">
           {t("play.gameOfTheDay")}
         </h2>
-        <span className="rounded-full bg-amber-500/20 px-2.5 py-0.5 font-display text-[10px] font-extrabold text-amber-900 ring-1 ring-amber-400/40 dark:text-amber-100">
+        <span className="rounded-full bg-amber-500/20 px-2.5 py-0.5 font-display text-[10px] font-extrabold text-amber-900 shadow-[inset_0_0_0_1px_rgba(251,191,36,0.45)]">
           {kindLabel}
         </span>
       </div>
 
-      <article className="relative overflow-hidden rounded-[1.75rem] border-2 border-amber-400/50 bg-linear-to-br from-amber-400/25 via-surface to-primary/15 p-4 shadow-[0_10px_28px_rgba(180,120,20,0.22)] ring-1 ring-amber-200/40">
-        {/* Spotlight wash */}
+      <article className="relative overflow-hidden rounded-bubble-xl bg-linear-to-br from-[#5c3d0a] via-[#0f172a] to-[#2a1c06] p-3.5 shadow-[0_0_0_1px_rgba(251,191,36,0.45),0_5px_0_0_rgba(0,0,0,0.3)]">
         <div
+          className="pointer-events-none absolute inset-0 opacity-[0.05]"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
+          }}
           aria-hidden
-          className="pointer-events-none absolute -end-8 -top-10 h-36 w-36 rounded-full bg-amber-300/25 blur-2xl"
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute -bottom-12 -start-6 h-32 w-32 rounded-full bg-primary/20 blur-2xl"
+          className="pointer-events-none absolute -end-8 -top-10 h-36 w-36 rounded-full bg-amber-300/25 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-12 -start-6 h-32 w-32 rounded-full bg-emerald-400/15 blur-3xl"
         />
 
-        <div className="relative flex items-start gap-3.5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={icon}
-            alt=""
-            aria-hidden
-            draggable={false}
-            className="h-16 w-16 shrink-0 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.28)]"
-          />
+        <div className="relative flex items-start gap-3">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border-2 border-amber-300/40 bg-black/35 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={icon}
+              alt=""
+              aria-hidden
+              draggable={false}
+              className="h-10 w-10 object-contain drop-shadow-[0_3px_8px_rgba(0,0,0,0.4)]"
+            />
+          </span>
           <div className="min-w-0 flex-1">
-            <p className="font-display text-xl font-black leading-tight text-foreground">
+            <p className="font-display text-xl font-black leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]">
               {title}
             </p>
-            <p className="mt-1 font-body text-sm font-bold text-foreground/75">
+            <p className="mt-1 font-display text-sm font-bold text-white/65">
               {blurb}
             </p>
-            <p className="mt-1.5 font-display text-[11px] font-bold text-amber-800 dark:text-amber-200">
+            <p className="mt-1.5 font-display text-[11px] font-black text-amber-200/90">
               {meta}
             </p>
           </div>
         </div>
 
-        <p className="relative mt-3 flex items-center justify-center gap-1.5 rounded-2xl bg-black/5 px-3 py-2 text-center font-display text-xs font-extrabold tabular-nums text-foreground/80 ring-1 ring-black/5 dark:bg-white/5">
+        <p className="relative mt-3 flex items-center justify-center gap-1.5 rounded-2xl bg-black/40 px-3 py-2 text-center font-display text-xs font-extrabold tabular-nums text-white/70 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/icons/timer.png"
             alt=""
             aria-hidden
             draggable={false}
-            className="h-5 w-5 object-contain"
+            className="h-4 w-4 object-contain opacity-90"
           />
           {t("play.gotdRotatesIn", { time: countdown })}
         </p>
 
-        <motion.div className="relative mt-3" whileTap={{ y: 3 }}>
+        <motion.div className="relative mt-3" whileTap={{ y: 2 }}>
           <Link
             href={href}
             onClick={() => playSound("click")}
-            className="btn-fantasy btn-fantasy-accent flex min-h-12 w-full items-center justify-center gap-2 font-display text-base font-extrabold shadow-fantasy"
+            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 border-amber-300/50 bg-linear-to-b from-accent to-[hsl(38_92%_42%)] font-display text-base font-black text-accent-foreground shadow-[0_4px_0_0_rgba(120,70,0,0.5)] transition-transform active:translate-y-0.5 active:shadow-[0_2px_0_0_rgba(120,70,0,0.5)]"
           >
-            <span aria-hidden>▶</span>
             {cta}
           </Link>
         </motion.div>

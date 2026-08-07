@@ -36,17 +36,28 @@ export async function getPushStatus(): Promise<{
       vaultNearlyFull: true,
     };
   }
-  const sub = await prisma.pushSubscription.findFirst({
-    where: { userId: user.id },
-    orderBy: { updatedAt: "desc" },
-  });
-  return {
-    ok: true,
-    configured: isWebPushReady(),
-    subscribed: Boolean(sub),
-    duelYourTurn: sub?.duelYourTurn ?? true,
-    vaultNearlyFull: sub?.vaultNearlyFull ?? true,
-  };
+  try {
+    const sub = await prisma.pushSubscription.findFirst({
+      where: { userId: user.id },
+      orderBy: { updatedAt: "desc" },
+    });
+    return {
+      ok: true,
+      configured: isWebPushReady(),
+      subscribed: Boolean(sub),
+      duelYourTurn: sub?.duelYourTurn ?? true,
+      vaultNearlyFull: sub?.vaultNearlyFull ?? true,
+    };
+  } catch {
+    // Table missing / migrate pending — keep Settings usable.
+    return {
+      ok: true,
+      configured: isWebPushReady(),
+      subscribed: false,
+      duelYourTurn: true,
+      vaultNearlyFull: true,
+    };
+  }
 }
 
 export async function savePushSubscription(

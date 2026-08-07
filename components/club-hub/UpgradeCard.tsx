@@ -21,21 +21,21 @@ const UPGRADE_SKIN: Record<
   { hero: string; row: string; glow: string; pip: string; rim: string }
 > = {
   STADIUM: {
-    hero: "from-[#0d3b2e] via-[#145c45] to-[#1a7a55]",
+    hero: "from-[#052e16] via-[#0f172a] to-[#14532d]",
     row: "from-[#0f3d2e] via-[#145c45] to-[#0a281c]",
     glow: "bg-emerald-400/40",
     pip: "bg-emerald-400",
     rim: "border-emerald-400/45",
   },
   TRAINING_GROUND: {
-    hero: "from-[#0c2d4a] via-[#134e75] to-[#1d6fa5]",
+    hero: "from-[#0c2d4a] via-[#0f172a] to-[#134e75]",
     row: "from-[#0c2d4a] via-[#134e75] to-[#081f33]",
     glow: "bg-sky-400/40",
     pip: "bg-sky-400",
     rim: "border-sky-400/45",
   },
   MEDICAL: {
-    hero: "from-[#3d1520] via-[#7a1f3d] to-[#b91c4a]",
+    hero: "from-[#3d1520] via-[#0f172a] to-[#7a1f3d]",
     row: "from-[#3d1520] via-[#7a1f3d] to-[#2a0f16]",
     glow: "bg-rose-400/40",
     pip: "bg-rose-400",
@@ -52,6 +52,8 @@ type UpgradeCardProps = {
   pending: boolean;
   locked?: boolean;
   spotlight?: boolean;
+  /** Anchor for Next Goal scroll-into-view. */
+  id?: string;
   onUpgrade: () => void;
 };
 
@@ -64,6 +66,7 @@ export function UpgradeCard({
   pending,
   locked = false,
   spotlight = false,
+  id,
   onUpgrade,
 }: UpgradeCardProps) {
   const { t, locale } = useTranslation();
@@ -108,6 +111,7 @@ export function UpgradeCard({
   return (
     <>
       <motion.div
+        id={id}
         role="button"
         tabIndex={locked ? -1 : 0}
         onClick={openDetails}
@@ -130,8 +134,12 @@ export function UpgradeCard({
         }
         transition={spotlight ? { repeat: Infinity, duration: 1.6 } : undefined}
         className={[
-          "relative cursor-pointer overflow-hidden rounded-bubble-xl border-[3px] px-3 py-3 shadow-[0_5px_0_0_rgba(0,0,0,0.28)]",
-          spotlight ? "z-50 border-accent" : skin.rim,
+          "relative cursor-pointer overflow-hidden rounded-bubble-xl border-[3px] px-3 py-3 shadow-[0_6px_0_0_rgba(0,0,0,0.32)] scroll-mt-24",
+          spotlight
+            ? "z-50 border-accent"
+            : affordable
+              ? `${skin.rim} ring-1 ring-accent/25`
+              : skin.rim,
           locked ? "pointer-events-none opacity-45" : "",
         ].join(" ")}
       >
@@ -151,31 +159,45 @@ export function UpgradeCard({
           <motion.div
             aria-hidden
             className={[
-              "pointer-events-none absolute -end-8 top-0 h-24 w-24 rounded-full blur-2xl",
+              "pointer-events-none absolute -end-8 top-0 h-28 w-28 rounded-full blur-2xl",
               skin.glow,
             ].join(" ")}
-            animate={{ opacity: [0.25, 0.55, 0.25] }}
-            transition={{ duration: 2.4, repeat: Infinity }}
+            animate={{ opacity: [0.3, 0.65, 0.3], scale: [1, 1.08, 1] }}
+            transition={{ duration: 2.2, repeat: Infinity }}
           />
         )}
 
         <div className="relative flex items-center gap-3">
           <div className="relative shrink-0">
-            <span className="flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-white/25 bg-black/30 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]">
+            <span
+              className={[
+                "flex h-14 w-14 items-center justify-center rounded-2xl border-2 shadow-[0_3px_0_0_rgba(0,0,0,0.4)]",
+                affordable
+                  ? "border-accent/70 bg-accent/15"
+                  : "border-white/25 bg-black/35",
+              ].join(" ")}
+            >
               <UpgradeIcon upgradeKey={def.key} size="md" className="h-9 w-9!" />
             </span>
-            <span className="absolute -bottom-1 -start-1 rounded-full bg-black/55 px-1.5 py-0.5 font-display text-[9px] font-black text-white ring-1 ring-white/25">
+            <span className="absolute -bottom-1 -start-1 rounded-full bg-black/65 px-1.5 py-0.5 font-display text-[9px] font-black text-white ring-1 ring-white/30">
               Lv{toLocaleDigits(level, locale)}
             </span>
           </div>
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
-              <p className="font-display text-sm font-black text-white drop-shadow-sm">
+              <p className="font-display text-sm font-black text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.65)]">
                 {t(`upgrades.${def.key}.name`)}
               </p>
               {isMax && (
-                <span className="rounded-full bg-amber-400/30 px-2 py-0.5 font-display text-[10px] font-black text-amber-100 ring-1 ring-amber-300/50">
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/30 px-2 py-0.5 font-display text-[10px] font-black text-amber-100 ring-1 ring-amber-300/50">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/icons/crown.png"
+                    alt=""
+                    draggable={false}
+                    className="h-3 w-3 object-contain"
+                  />
                   MAX
                 </span>
               )}
@@ -192,12 +214,35 @@ export function UpgradeCard({
                 {t("upgrades.max")}
               </p>
             )}
+            <div className="mt-1.5 flex items-center gap-1">
+              {Array.from({ length: def.maxLevel }, (_, i) => (
+                <span
+                  key={i}
+                  className={[
+                    "h-1.5 flex-1 rounded-full",
+                    i < level
+                      ? skin.pip
+                      : i === level && !isMax
+                        ? "bg-white/25 ring-1 ring-white/30"
+                        : "bg-white/10",
+                  ].join(" ")}
+                  aria-hidden
+                />
+              ))}
+            </div>
           </div>
 
           <div className="flex shrink-0 flex-col items-end gap-1.5">
             {isMax ? (
-              <span className="rounded-full bg-amber-400/25 px-2.5 py-1.5 font-display text-[11px] font-black text-amber-100 ring-1 ring-amber-300/40">
-                👑 MAX
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/25 px-2.5 py-1.5 font-display text-[11px] font-black text-amber-100 ring-1 ring-amber-300/40">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/icons/crown.png"
+                  alt=""
+                  draggable={false}
+                  className="h-3.5 w-3.5 object-contain"
+                />
+                MAX
               </span>
             ) : (
               <motion.button
@@ -209,9 +254,19 @@ export function UpgradeCard({
                   onUpgrade();
                 }}
                 whileTap={disabled ? undefined : { y: 2 }}
+                animate={
+                  affordable
+                    ? { scale: [1, 1.04, 1] }
+                    : undefined
+                }
+                transition={
+                  affordable
+                    ? { duration: 1.4, repeat: Infinity }
+                    : undefined
+                }
                 aria-label={`${t("upgrades.upgrade")} ${toLocaleDigits(cost ?? 0, locale)}`}
                 className={[
-                  "inline-flex min-h-9 items-center gap-1 rounded-bubble px-2.5 py-1.5 font-display text-[11px] font-black shadow-[0_3px_0_0_rgba(0,0,0,0.35)]",
+                  "inline-flex min-h-11 items-center gap-1 rounded-bubble px-3 py-2 font-display text-[11px] font-black shadow-[0_3px_0_0_rgba(0,0,0,0.4)]",
                   canAfford && !pending && !locked
                     ? "bg-accent text-accent-foreground"
                     : "cursor-not-allowed bg-white/15 text-white/55",
@@ -261,7 +316,12 @@ export function UpgradeCard({
         {/* Hero — one big live stat */}
         <div
           className={[
-            "relative -mx-1 overflow-hidden rounded-bubble-xl border border-white/15 bg-linear-to-br shadow-[0_8px_0_0_rgba(0,0,0,0.35)]",
+            "relative -mx-1 overflow-hidden rounded-bubble-xl bg-linear-to-br",
+            def.key === "MEDICAL"
+              ? "shadow-[0_0_0_1px_rgba(251,113,133,0.4),0_4px_0_0_rgba(0,0,0,0.35)]"
+              : def.key === "TRAINING_GROUND"
+                ? "shadow-[0_0_0_1px_rgba(56,189,248,0.4),0_4px_0_0_rgba(0,0,0,0.35)]"
+                : "shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_4px_0_0_rgba(0,0,0,0.35)]",
             skin.hero,
           ].join(" ")}
         >
@@ -344,15 +404,21 @@ export function UpgradeCard({
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative mt-4 overflow-hidden rounded-bubble-xl border-2 border-accent bg-gradient-to-br from-accent/30 via-[#2a1f08] to-[#12100a] p-1 shadow-[0_6px_0_0_hsl(var(--accent-deep))]"
+            className="relative mt-4 overflow-hidden rounded-bubble-xl bg-linear-to-br from-accent/25 via-[#2a1f08] to-[#0f172a] p-1 shadow-[0_0_0_1px_rgba(251,191,36,0.5),0_5px_0_0_hsl(var(--accent-deep))]"
           >
-            <div className="rounded-[1.1rem] bg-gradient-to-b from-black/20 to-black/50 px-3.5 pb-3.5 pt-3">
+            <div className="rounded-[1.1rem] bg-black/35 px-3.5 pb-3.5 pt-3">
               <div className="flex items-center gap-3">
                 <span
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-accent text-2xl shadow-[0_3px_0_0_hsl(var(--accent-deep))]"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-accent shadow-[0_3px_0_0_hsl(var(--accent-deep))]"
                   aria-hidden
                 >
-                  ⬆
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/icons/upgrade.png"
+                    alt=""
+                    draggable={false}
+                    className="h-7 w-7 object-contain"
+                  />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="font-display text-[10px] font-black uppercase tracking-widest text-accent">
@@ -385,7 +451,7 @@ export function UpgradeCard({
                   "mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-bubble-xl px-4 font-display text-base font-black",
                   canAfford && !pending && !locked
                     ? "bg-accent text-accent-foreground shadow-[0_5px_0_0_hsl(var(--accent-deep))]"
-                    : "cursor-not-allowed border-2 border-white/15 bg-white/10 text-white/55",
+                    : "cursor-not-allowed bg-white/10 text-white/55 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]",
                 ].join(" ")}
               >
                 {canAfford && !locked ? (
@@ -395,7 +461,14 @@ export function UpgradeCard({
                       dir="ltr"
                       className="inline-flex items-center gap-1 rounded-full bg-black/25 px-2.5 py-0.5 text-sm"
                     >
-                      🪙 {toLocaleDigits(cost, locale)}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src="/icons/coin.png"
+                        alt=""
+                        aria-hidden
+                        className="h-3.5 w-3.5"
+                      />
+                      {toLocaleDigits(cost, locale)}
                     </span>
                   </>
                 ) : (
@@ -409,9 +482,16 @@ export function UpgradeCard({
         )}
 
         {isMax && (
-          <div className="mt-4 rounded-bubble-xl border-2 border-amber-400/50 bg-amber-500/15 px-3 py-3 text-center">
+          <div className="mt-4 flex items-center justify-center gap-2 rounded-bubble-xl bg-amber-500/15 px-3 py-3 shadow-[0_0_0_1px_rgba(251,191,36,0.4)]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/crown.png"
+              alt=""
+              draggable={false}
+              className="h-6 w-6 object-contain"
+            />
             <p className="font-display text-base font-black text-amber-300">
-              👑 {t("upgrades.max")}
+              {t("upgrades.max")}
             </p>
           </div>
         )}

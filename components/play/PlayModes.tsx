@@ -48,30 +48,47 @@ export function PlayModes({
   const duelHref = topDuel ? `/play/duel/${topDuel.id}` : "/play/duel";
 
   return (
-    <section className="flex flex-1 flex-col gap-5 pb-4">
-      <header className="flex items-start justify-between gap-3 pt-2">
-        <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold text-foreground">
-            {t("play.chooseMode")}
-          </h1>
-        </div>
+    <section className="flex flex-1 flex-col gap-4 pb-4">
+      <header className="relative overflow-hidden rounded-bubble-xl bg-linear-to-br from-[#052e16] via-[#0f172a] to-[#052e16] p-3.5 shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_4px_0_0_rgba(0,0,0,0.28)]">
         <div
-          className="flex shrink-0 items-center gap-1"
-          aria-label={t("play.staminaBalance", {
-            cur: toLocaleDigits(stamina, locale),
-            max: toLocaleDigits(maxStamina, locale),
-          })}
-        >
-          <span
+          className="pointer-events-none absolute inset-0 opacity-[0.05]"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
+          }}
+          aria-hidden
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -end-8 top-0 h-24 w-24 rounded-full bg-emerald-400/20 blur-3xl"
+        />
+        <div className="relative flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="font-display text-2xl font-black text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]">
+              {t("play.chooseMode")}
+            </h1>
+          </div>
+          <div
             className={[
-              "font-display text-base font-black tabular-nums",
-              staminaLow ? "text-destructive" : "text-primary",
+              "flex shrink-0 items-center gap-1.5 rounded-2xl bg-black/40 px-2.5 py-1.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]",
+              staminaLow ? "shadow-[inset_0_0_0_1px_rgba(248,113,113,0.5)]" : "",
             ].join(" ")}
+            aria-label={t("play.staminaBalance", {
+              cur: toLocaleDigits(stamina, locale),
+              max: toLocaleDigits(maxStamina, locale),
+            })}
           >
-            {toLocaleDigits(stamina, locale)}/
-            {toLocaleDigits(maxStamina, locale)}
-          </span>
-          <ResourceIcon kind="energy" size="md" className="h-8 w-8" />
+            <span
+              className={[
+                "font-display text-base font-black tabular-nums",
+                staminaLow ? "text-rose-300" : "text-emerald-200",
+              ].join(" ")}
+            >
+              {toLocaleDigits(stamina, locale)}/
+              {toLocaleDigits(maxStamina, locale)}
+            </span>
+            <ResourceIcon kind="energy" size="md" className="h-7 w-7" />
+          </div>
         </div>
       </header>
 
@@ -83,8 +100,8 @@ export function PlayModes({
 
       {gotd}
 
-      <div className="flex flex-col gap-3">
-        <h2 className="font-display text-xs font-bold uppercase tracking-widest text-muted-foreground">
+      <div className="flex flex-col gap-2.5">
+        <h2 className="px-0.5 font-display text-[11px] font-black uppercase tracking-widest text-emerald-800/70">
           {t("play.groupSolo")}
         </h2>
         <MatchCard
@@ -120,8 +137,8 @@ export function PlayModes({
         />
       </div>
 
-      <div className="flex flex-col gap-3">
-        <h2 className="font-display text-xs font-bold uppercase tracking-widest text-muted-foreground">
+      <div className="flex flex-col gap-2.5">
+        <h2 className="px-0.5 font-display text-[11px] font-black uppercase tracking-widest text-emerald-800/70">
           {t("play.groupOnline")}
         </h2>
         <MatchCard

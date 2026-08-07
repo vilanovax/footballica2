@@ -62,10 +62,30 @@
   /* Hard-offset shadow ink (theme-aware) */
   --shadow-ink: 210 45% 12%;
   --glow: 142 85% 38%;
+
+  /* ── Arena chrome (immersive game UI) ────────────────────────────────────
+     Always pitch-dark, independent of Day/Night app theme. Use for BottomSheets,
+     match arenas, result modals, and any "inside the game" surface.
+     Values are H S% L% channels (same as other tokens). */
+  --arena-bg: 152 48% 5%;
+  --arena-mid: 217 33% 12%;
+  --arena-deep: 148 79% 10%;
+  --arena-fg: 0 0% 100%;
+  --arena-muted: 150 20% 72%;
+  --arena-ring: 158 64% 52%;
+  --arena-ring-amber: 43 96% 56%;
+  --arena-ring-rose: 351 95% 71%;
+  --arena-ring-sky: 199 89% 48%;
+  --arena-well: 0 0% 0%;
+  --arena-tile: 0 0% 0%;
+  --arena-success: 152 76% 40%;
+  --arena-success-deep: 160 84% 16%;
+  --touch-min: 2.75rem; /* 44px */
 }
 
 [data-theme="dark"] {
-  /* Night Match — midnight navy + neon floodlight accents */
+  /* Night Match — midnight navy + neon floodlight accents.
+     Arena tokens intentionally stay pitch-dark (defined on :root). */
   --background: 215 55% 8%;
   --foreground: 210 40% 96%;
 
@@ -216,6 +236,283 @@ body {
   box-shadow:
     0 2px 0 0 hsl(var(--accent-deep)),
     2px 2px 0 0 hsl(var(--shadow-ink) / 0.2);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Arena Game Chrome — shared language for sheets, heroes, tiles, CTAs
+   Prefer these utilities / components/ui/game/* over one-off hex shadows.
+   See DESIGN.md
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.game-sheet {
+  background: linear-gradient(
+    180deg,
+    hsl(var(--arena-deep)) 0%,
+    hsl(var(--arena-mid)) 42%,
+    hsl(var(--arena-bg)) 100%
+  );
+  color: hsl(var(--arena-fg));
+  box-shadow: 0 0 0 1px hsl(var(--arena-ring) / 0.28);
+}
+
+.game-sheet-wash {
+  background: linear-gradient(
+    180deg,
+    hsl(var(--arena-ring) / 0.15) 0%,
+    transparent 100%
+  );
+}
+
+.game-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-bubble-xl);
+  background: linear-gradient(
+    145deg,
+    hsl(var(--arena-deep)) 0%,
+    hsl(var(--arena-mid)) 48%,
+    hsl(var(--arena-bg)) 100%
+  );
+  color: hsl(var(--arena-fg));
+  box-shadow:
+    0 0 0 1px hsl(var(--arena-ring) / 0.35),
+    0 4px 0 0 rgba(0, 0, 0, 0.35);
+}
+
+.game-panel-amber {
+  background: linear-gradient(
+    145deg,
+    hsl(38 70% 14%) 0%,
+    hsl(var(--arena-mid)) 48%,
+    hsl(var(--arena-bg)) 100%
+  );
+  box-shadow:
+    0 0 0 1px hsl(var(--arena-ring-amber) / 0.45),
+    0 4px 0 0 rgba(0, 0, 0, 0.35);
+}
+
+.game-panel-rose {
+  background: linear-gradient(
+    145deg,
+    hsl(345 55% 16%) 0%,
+    hsl(var(--arena-mid)) 48%,
+    hsl(var(--arena-bg)) 100%
+  );
+  box-shadow:
+    0 0 0 1px hsl(var(--arena-ring-rose) / 0.4),
+    0 4px 0 0 rgba(0, 0, 0, 0.35);
+}
+
+.game-panel-sky {
+  background: linear-gradient(
+    145deg,
+    hsl(205 55% 16%) 0%,
+    hsl(var(--arena-mid)) 48%,
+    hsl(var(--arena-bg)) 100%
+  );
+  box-shadow:
+    0 0 0 1px hsl(var(--arena-ring-sky) / 0.4),
+    0 4px 0 0 rgba(0, 0, 0, 0.35);
+}
+
+.game-pinstripe::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0.07;
+  background-image: repeating-linear-gradient(
+    -16deg,
+    transparent,
+    transparent 11px,
+    #fff 11px,
+    #fff 12px
+  );
+}
+
+.game-tile {
+  border-radius: var(--radius-bubble-xl);
+  background: hsl(var(--arena-tile) / 0.35);
+  color: hsl(var(--arena-fg));
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 3px 0 0 rgba(0, 0, 0, 0.28);
+}
+
+.game-tile-emerald {
+  background: hsl(var(--arena-ring) / 0.12);
+  box-shadow:
+    0 0 0 1px hsl(var(--arena-ring) / 0.35),
+    0 3px 0 0 rgba(0, 0, 0, 0.28);
+}
+
+.game-tile-amber {
+  background: hsl(var(--arena-ring-amber) / 0.12);
+  box-shadow:
+    0 0 0 1px hsl(var(--arena-ring-amber) / 0.4),
+    0 3px 0 0 rgba(0, 0, 0, 0.28);
+}
+
+.game-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 0.5rem;
+  padding: 0.2rem 0.55rem;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  line-height: 1.2;
+  background: hsl(var(--arena-well) / 0.4);
+  color: hsl(var(--arena-fg) / 0.85);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.game-chip-emerald {
+  background: hsl(var(--arena-ring) / 0.2);
+  color: hsl(158 70% 78%);
+  box-shadow: inset 0 0 0 1px hsl(var(--arena-ring) / 0.4);
+}
+
+.game-chip-amber {
+  background: hsl(var(--arena-ring-amber) / 0.18);
+  color: hsl(43 96% 78%);
+  box-shadow: inset 0 0 0 1px hsl(var(--arena-ring-amber) / 0.4);
+}
+
+.game-well {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 0.75rem;
+  background: hsl(var(--arena-well) / 0.4);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 3px 0 0 rgba(0, 0, 0, 0.35);
+}
+
+.game-well-amber {
+  box-shadow:
+    0 0 0 1px hsl(var(--arena-ring-amber) / 0.4),
+    0 3px 0 0 rgba(0, 0, 0, 0.35);
+}
+
+.game-cta {
+  display: inline-flex;
+  min-height: var(--touch-min);
+  min-width: var(--touch-min);
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: var(--radius-bubble-xl);
+  padding: 0.75rem 1rem;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 900;
+  user-select: none;
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.game-cta:active:not(:disabled) {
+  transform: translateY(3px);
+}
+
+.game-cta:disabled {
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.game-cta-accent {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+  box-shadow: 0 5px 0 0 hsl(var(--accent-deep));
+}
+
+.game-cta-accent:active:not(:disabled) {
+  box-shadow: 0 2px 0 0 hsl(var(--accent-deep));
+}
+
+.game-cta-primary {
+  background: hsl(var(--arena-success));
+  color: #fff;
+  box-shadow: 0 5px 0 0 hsl(var(--arena-success-deep));
+}
+
+.game-cta-primary:active:not(:disabled) {
+  box-shadow: 0 2px 0 0 hsl(var(--arena-success-deep));
+}
+
+.game-cta-ghost {
+  background: hsl(var(--arena-well) / 0.4);
+  color: hsl(var(--arena-fg) / 0.85);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 3px 0 0 rgba(0, 0, 0, 0.28);
+}
+
+.game-cta-danger {
+  background: hsl(var(--arena-ring-rose) / 0.12);
+  color: hsl(351 90% 78%);
+  box-shadow: inset 0 0 0 1px hsl(var(--arena-ring-rose) / 0.3);
+  min-height: 2.25rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  border-radius: 0.75rem;
+}
+
+.game-input {
+  min-height: var(--touch-min);
+  width: 100%;
+  border-radius: var(--radius-bubble);
+  background: hsl(var(--arena-well) / 0.4);
+  padding: 0 0.75rem;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: hsl(var(--arena-fg));
+  outline: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.game-input::placeholder {
+  color: hsl(var(--arena-fg) / 0.35);
+}
+
+.game-input:focus {
+  box-shadow: inset 0 0 0 1px hsl(var(--arena-ring) / 0.55);
+}
+
+.game-offer {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-bubble-xl);
+  padding: 0.25rem;
+  background: linear-gradient(
+    145deg,
+    hsl(var(--accent) / 0.25) 0%,
+    hsl(38 70% 10%) 45%,
+    hsl(var(--arena-mid)) 100%
+  );
+  box-shadow:
+    0 0 0 1px hsl(var(--arena-ring-amber) / 0.5),
+    0 5px 0 0 hsl(var(--accent-deep));
+}
+
+.game-offer-inner {
+  border-radius: 1.1rem;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 0.75rem 0.875rem 0.875rem;
+}
+
+[dir="rtl"] .game-cta,
+[dir="rtl"] .game-chip,
+[dir="rtl"] .game-input {
+  font-family: var(--font-fa), var(--font-display), system-ui, sans-serif;
 }
 
 /* Miss reaction — CSS screen shake on the match container */

@@ -35,26 +35,26 @@ function verdictStyle(v: AttributeVerdict | CompareVerdict): {
 } {
   if (v === "correct")
     return {
-      tile: "bg-emerald-500 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.28)] ring-1 ring-emerald-300/40",
+      tile: "bg-emerald-500 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.28),0_2px_0_0_rgba(0,0,0,0.25)]",
       glyph: "✓",
     };
   if (v === "close")
     return {
-      tile: "bg-amber-500 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.28)] ring-1 ring-amber-200/40",
+      tile: "bg-amber-500 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.28),0_2px_0_0_rgba(0,0,0,0.25)]",
       glyph: "~",
     };
   if (v === "higher")
     return {
-      tile: "bg-sky-500 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.28)] ring-1 ring-sky-300/40",
+      tile: "bg-sky-500 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.28),0_2px_0_0_rgba(0,0,0,0.25)]",
       glyph: "▲",
     };
   if (v === "lower")
     return {
-      tile: "bg-sky-500 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.28)] ring-1 ring-sky-300/40",
+      tile: "bg-sky-500 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.28),0_2px_0_0_rgba(0,0,0,0.25)]",
       glyph: "▼",
     };
   return {
-    tile: "bg-rose-600 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.28)] ring-1 ring-rose-300/35",
+    tile: "bg-rose-600 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.28),0_2px_0_0_rgba(0,0,0,0.25)]",
     glyph: "✕",
   };
 }
@@ -175,128 +175,137 @@ export function MysteryArena({ initial }: Props) {
 
   const answerName =
     locale === "fa" ? mystery.answer?.nameFa : mystery.answer?.nameEn;
+  const canLock = Boolean(selectedId) && !pending;
 
   return (
-    <section className="relative -mx-4 flex min-h-0 flex-1 flex-col gap-3 bg-black px-4 pb-2 text-white">
-      {/* Atmosphere — solid black content plane (shell margins keep game bg) */}
+    <section className="relative -mx-4 flex min-h-0 flex-1 flex-col gap-2.5 bg-[#071510] px-4 pb-2 text-white">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 overflow-hidden"
       >
-        <div className="absolute inset-0 bg-black" />
-        <div className="absolute -end-16 top-0 h-56 w-56 rounded-full bg-amber-500/10 blur-3xl" />
-        <div className="absolute -start-20 top-40 h-48 w-48 rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="absolute inset-0 bg-linear-to-b from-[#0a1f14] via-[#071510] to-[#052e16]" />
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(-16deg, transparent, transparent 12px, #fff 12px, #fff 13px)",
+          }}
+        />
+        <div className="absolute -end-16 top-0 h-56 w-56 rounded-full bg-amber-400/15 blur-3xl" />
+        <div className="absolute -start-20 top-36 h-48 w-48 rounded-full bg-emerald-400/15 blur-3xl" />
       </div>
 
       {/* ── Compact header ───────────────────────────────────── */}
       <motion.header
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative z-10 flex items-center justify-between gap-2 pt-1"
+        className="relative z-10 overflow-hidden rounded-2xl bg-linear-to-br from-[#052e16] via-[#0f172a] to-[#052e16] px-2.5 py-2 shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_4px_0_0_rgba(0,0,0,0.35)]"
       >
-        <div className="flex min-w-0 items-center gap-2.5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/icons/mystery.png"
-            alt=""
-            draggable={false}
-            className="h-11 w-11 shrink-0 object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.45)]"
-          />
-          <div className="min-w-0">
-            <h1 className="truncate font-display text-lg font-black leading-tight text-white">
-              {t("mystery.title")}
-            </h1>
-            <p className="truncate font-display text-[11px] font-bold text-white/55">
-              {t("mystery.subtitle")}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-1">
-          <span className="me-1 inline-flex items-center gap-1 font-display text-sm font-black tabular-nums text-white/90">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/icons/guesses.png"
-              alt=""
-              aria-hidden
-              draggable={false}
-              className="h-6 w-6 object-contain"
-            />
-            {toLocaleDigits(mystery.guessCount, locale)}/
-            {toLocaleDigits(mystery.maxGuesses, locale)}
-          </span>
-          <span className="me-0.5 inline-flex items-center gap-0.5 font-display text-sm font-black tabular-nums text-amber-300">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/icons/streak.png"
-              alt=""
-              aria-hidden
-              draggable={false}
-              className="h-6 w-6 object-contain"
-            />
-            {toLocaleDigits(mystery.mysteryStreak, locale)}
-          </span>
-
-          <button
-            type="button"
-            onClick={() => {
-              playSound("click");
-              setHowOpen(true);
-            }}
-            aria-label={t("mystery.howToTitle")}
-            className="flex h-12 w-12 items-center justify-center active:scale-90"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/icons/help-gold.png"
-              alt=""
-              draggable={false}
-              className="h-11 w-11 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.45)]"
-            />
-          </button>
-
+        <div className="relative flex items-center gap-2">
           <Link
             href="/play"
             onClick={() => playSound("click")}
             aria-label={t("common.back")}
-            className="flex h-12 w-12 items-center justify-center active:scale-90"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black/40 shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_3px_0_0_rgba(0,0,0,0.35)] transition-transform active:scale-90"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/icons/close-gold.png"
+              src="/icons/close.png"
               alt=""
               draggable={false}
-              className="h-11 w-11 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.45)]"
+              className="h-5 w-5 object-contain opacity-90"
             />
           </Link>
+
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-300/35 bg-black/40 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/mystery.png"
+              alt=""
+              draggable={false}
+              className="h-8 w-8 object-contain"
+            />
+          </span>
+
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate font-display text-base font-black leading-tight text-white">
+              {t("mystery.title")}
+            </h1>
+            <p className="truncate font-display text-[10px] font-bold text-white/50">
+              {t("mystery.subtitle")}
+            </p>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1">
+            <span className="inline-flex items-center gap-0.5 rounded-xl bg-black/40 px-1.5 py-1 font-display text-xs font-black tabular-nums text-white/90 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/icons/guesses.png"
+                alt=""
+                aria-hidden
+                draggable={false}
+                className="h-5 w-5 object-contain"
+              />
+              {toLocaleDigits(mystery.guessCount, locale)}/
+              {toLocaleDigits(mystery.maxGuesses, locale)}
+            </span>
+            <span className="inline-flex items-center gap-0.5 rounded-xl bg-black/40 px-1.5 py-1 font-display text-xs font-black tabular-nums text-amber-200 shadow-[inset_0_0_0_1px_rgba(251,191,36,0.3)]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/icons/streak.png"
+                alt=""
+                aria-hidden
+                draggable={false}
+                className="h-5 w-5 object-contain"
+              />
+              {toLocaleDigits(mystery.mysteryStreak, locale)}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                playSound("click");
+                setHowOpen(true);
+              }}
+              aria-label={t("mystery.howToTitle")}
+              className="flex h-11 w-11 items-center justify-center rounded-xl bg-black/40 shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_3px_0_0_rgba(0,0,0,0.35)] transition-transform active:scale-90"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/icons/help-gold.png"
+                alt=""
+                draggable={false}
+                className="h-7 w-7 object-contain"
+              />
+            </button>
+          </div>
         </div>
       </motion.header>
 
       {/* Attempt dots */}
       {!done && (
         <div
-          className="relative z-10 flex items-center justify-center gap-2"
+          className="relative z-10 flex items-center justify-center gap-1.5"
           aria-label={`${toLocaleDigits(remaining, locale)} ${t("mystery.guessesLabel")}`}
         >
           {Array.from({ length: mystery.maxGuesses }).map((_, i) => {
             const g = mystery.guesses[i];
             const next = i === mystery.guessCount;
-            let tone = "h-2.5 w-2.5 bg-white/20";
+            let tone = "h-2 w-2 bg-white/20";
             if (g?.isCorrect)
               tone =
-                "h-3 w-3 bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.7)]";
+                "h-2.5 w-2.5 bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.7)]";
             else if (g)
               tone =
-                "h-2.5 w-2.5 bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]";
+                "h-2 w-2 bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]";
             else if (next)
-              tone = "h-3 w-3 bg-white ring-2 ring-white/35";
+              tone = "h-2.5 w-2.5 bg-emerald-200 ring-2 ring-emerald-300/40";
             return (
               <motion.span
                 key={i}
-                animate={next ? { scale: [1, 1.2, 1] } : undefined}
+                animate={next ? { scale: [1, 1.18, 1] } : undefined}
                 transition={
                   next
-                    ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
+                    ? { duration: 1.25, repeat: Infinity, ease: "easeInOut" }
                     : undefined
                 }
                 className={["rounded-full", tone].join(" ")}
@@ -306,16 +315,16 @@ export function MysteryArena({ initial }: Props) {
         </div>
       )}
 
-      {/* How-to — header ? → bottom sheet only */}
       <BottomSheet
         open={howOpen}
         onClose={() => setHowOpen(false)}
         title={t("mystery.howToTitle")}
         subtitle={t("mystery.howToTip")}
         closeLabel={t("common.back")}
+        tone="dark"
       >
         <div className="space-y-3 pb-2">
-          <p className="font-display text-sm font-bold leading-relaxed text-foreground/85">
+          <p className="font-display text-sm font-bold leading-relaxed text-white/80">
             {t("mystery.howToBody")}
           </p>
           <div className="grid grid-cols-3 gap-1.5">
@@ -353,7 +362,7 @@ export function MysteryArena({ initial }: Props) {
           />
           <Link
             href="/play"
-            className="btn-fantasy btn-fantasy-primary flex min-h-touch w-full items-center justify-center"
+            className="flex min-h-12 w-full items-center justify-center rounded-2xl border-2 border-emerald-400/40 bg-linear-to-b from-emerald-500 to-emerald-800 font-display text-base font-black text-white shadow-[0_4px_0_0_rgba(0,0,0,0.4)] transition-transform active:translate-y-0.5 active:shadow-[0_2px_0_0_rgba(0,0,0,0.4)]"
           >
             {t("mystery.backPlay")}
           </Link>
@@ -382,17 +391,20 @@ export function MysteryArena({ initial }: Props) {
 
       {/* ── Anticipation grid — always 6 rows ─────────────────── */}
       {!done && (
-        <div className="relative z-10 flex flex-col gap-2">
-          {/* Column legend (tiny) */}
-          <div className="grid grid-cols-3 gap-1.5 px-0.5">
-            {attrLabels.map((label) => (
-              <span
-                key={label}
-                className="text-center font-display text-[9px] font-extrabold uppercase tracking-wider text-white/35"
-              >
-                {label}
-              </span>
-            ))}
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto overscroll-contain pb-1">
+          {/* Column legend — spacer matches row index badge */}
+          <div className="flex items-start gap-1.5 px-0.5">
+            <span className="h-5 w-5 shrink-0" aria-hidden />
+            <div className="grid min-w-0 flex-1 grid-cols-3 gap-1">
+              {attrLabels.map((label) => (
+                <span
+                  key={label}
+                  className="truncate text-center font-display text-[9px] font-black uppercase tracking-wide text-emerald-200/55"
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
           </div>
 
           {Array.from({ length: mystery.maxGuesses }).map((_, i) => {
@@ -417,25 +429,35 @@ export function MysteryArena({ initial }: Props) {
         </div>
       )}
 
-      {/* When done, still show filled rows above share if any */}
       {done && mystery.guesses.length > 0 && !mystery.shareCode && (
-        <div className="relative z-10 flex flex-col gap-2">
+        <div className="relative z-10 flex flex-col gap-1.5">
           {mystery.guesses.map((g, i) => (
             <GuessRow key={`${g.playerId}-${g.at}`} guess={g} index={i} />
           ))}
         </div>
       )}
 
-      {!done && <div aria-hidden className="h-48 shrink-0" />}
+      {!done && <div aria-hidden className="h-52 shrink-0" />}
 
       {!done && (
         <motion.footer
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="pointer-events-none fixed inset-x-0 z-40 mx-auto w-full max-w-mobile px-3 pt-3 bottom-[max(0.75rem,env(safe-area-inset-bottom,0px))]"
+          className="pointer-events-none fixed inset-x-0 z-40 mx-auto w-full max-w-mobile px-3 bottom-[max(0.5rem,env(safe-area-inset-bottom,0px))]"
         >
-          <div className="pointer-events-auto rounded-t-bubble-lg border border-white/10 bg-[#0c1016] px-2 pt-2.5 shadow-[0_-12px_32px_rgba(0,0,0,0.55)]">
-            <p className="mb-1.5 text-center font-display text-[11px] font-bold text-white/55">
+          <div className="pointer-events-auto overflow-hidden rounded-t-[1.35rem] bg-linear-to-b from-[#0a1f14] via-[#0f172a] to-[#071510] px-2.5 pt-2.5 pb-2 shadow-[0_0_0_1px_rgba(52,211,153,0.3),0_-14px_36px_rgba(0,0,0,0.55)]">
+            <div className="mb-2 flex justify-center">
+              <span
+                aria-hidden
+                className="h-1 w-10 rounded-full bg-white/25"
+              />
+            </div>
+            <p
+              className={[
+                "mb-1.5 text-center font-display text-[11px] font-black",
+                selectedLabel ? "text-emerald-200" : "text-white/50",
+              ].join(" ")}
+            >
               {selectedLabel ? `✓ ${selectedLabel}` : t("mystery.pickHint")}
             </p>
             <input
@@ -446,9 +468,9 @@ export function MysteryArena({ initial }: Props) {
                 setSelectedId(null);
               }}
               placeholder={t("mystery.searchPlaceholder")}
-              className="min-h-11 w-full rounded-2xl bg-white/8 px-3 font-display text-sm font-bold text-white outline-none ring-1 ring-white/15 placeholder:text-white/35 focus:ring-2 focus:ring-emerald-400/45"
+              className="min-h-11 w-full rounded-2xl bg-black/45 px-3 font-display text-sm font-bold text-white outline-none shadow-[inset_0_0_0_1px_rgba(255,255,255,0.14)] placeholder:text-white/35 focus:shadow-[inset_0_0_0_2px_rgba(52,211,153,0.45)]"
             />
-            <ul className="mt-1.5 max-h-28 overflow-y-auto rounded-2xl bg-black/30 ring-1 ring-white/10">
+            <ul className="mt-1.5 max-h-28 overflow-y-auto rounded-2xl bg-black/35 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]">
               {filtered.length === 0 ? (
                 <li className="px-3 py-2.5 text-center font-display text-xs font-bold text-white/40">
                   …
@@ -466,14 +488,14 @@ export function MysteryArena({ initial }: Props) {
                           playSound("click");
                         }}
                         className={[
-                          "flex w-full min-h-11 items-center justify-between gap-2 px-3 py-2 text-start font-display text-sm font-bold",
+                          "flex w-full min-h-11 items-center justify-between gap-2 px-3 py-2 text-start font-display text-sm font-black",
                           active
-                            ? "bg-emerald-500/20 text-emerald-200"
-                            : "text-white/90 hover:bg-white/8",
+                            ? "bg-emerald-500/25 text-emerald-100"
+                            : "text-white/90 active:bg-white/8",
                         ].join(" ")}
                       >
                         <span className="truncate">{label}</span>
-                        <span className="shrink-0 text-[11px] font-semibold text-white/40">
+                        <span className="shrink-0 text-[11px] font-bold text-white/40">
                           {o.club}
                         </span>
                       </button>
@@ -484,14 +506,14 @@ export function MysteryArena({ initial }: Props) {
             </ul>
             <motion.button
               type="button"
-              disabled={!selectedId || pending}
-              whileTap={!selectedId || pending ? undefined : { y: 3 }}
+              disabled={!canLock}
+              whileTap={canLock ? { y: 2 } : undefined}
               onClick={onGuess}
               className={[
-                "mt-2 mb-1 flex w-full min-h-touch items-center justify-center rounded-2xl font-display text-base font-extrabold transition-colors",
-                selectedId && !pending
-                  ? "btn-fantasy btn-fantasy-primary"
-                  : "border border-white/25 bg-white/12 text-white/70",
+                "mt-2 flex w-full min-h-12 items-center justify-center rounded-2xl border-2 font-display text-base font-black transition-transform",
+                canLock
+                  ? "border-emerald-400/45 bg-linear-to-b from-emerald-500 to-emerald-800 text-white shadow-[0_4px_0_0_rgba(0,0,0,0.4)] active:translate-y-0.5 active:shadow-[0_2px_0_0_rgba(0,0,0,0.4)]"
+                  : "border-white/10 bg-white/10 text-white/45",
               ].join(" ")}
             >
               {pending ? "…" : t("mystery.guess")}
@@ -523,7 +545,7 @@ function LegendChip({
   return (
     <span
       className={[
-        "flex min-h-10 items-center justify-center rounded-2xl px-2 py-1.5 text-center font-display text-[11px] font-black text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.22)] ring-1 ring-white/20",
+        "flex min-h-10 items-center justify-center rounded-2xl px-2 py-1.5 text-center font-display text-[11px] font-black text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.22)]",
         bg,
         className ?? "",
       ].join(" ")}
@@ -544,29 +566,40 @@ function EmptyGuessRow({
   return (
     <div
       className={[
-        "rounded-2xl p-2 ring-1 transition-colors",
+        "flex items-start gap-1.5 rounded-2xl px-1.5 py-1.5",
         isNext
-          ? "bg-white/6 ring-white/25"
-          : "bg-white/3 ring-white/10",
+          ? "bg-emerald-500/10 shadow-[0_0_0_1px_rgba(52,211,153,0.4),0_0_16px_rgba(52,211,153,0.12)]"
+          : "bg-black/25 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]",
       ].join(" ")}
     >
-      <p className="mb-1.5 flex items-center gap-2 font-display text-xs font-bold text-white/35">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[10px] font-black text-white/50">
-          {toLocaleDigits(index + 1, locale)}
-        </span>
-      </p>
-      <div className="grid grid-cols-3 gap-1.5">
+      <span
+        className={[
+          "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full font-display text-[10px] font-black",
+          isNext
+            ? "bg-emerald-400 text-emerald-950"
+            : "bg-white/10 text-white/40",
+        ].join(" ")}
+      >
+        {toLocaleDigits(index + 1, locale)}
+      </span>
+      <div className="grid min-w-0 flex-1 grid-cols-3 gap-1">
         {ATTR_KEYS.map((key) => (
           <div
             key={key}
             className={[
-              "flex min-h-12 items-center justify-center rounded-xl",
+              "flex min-h-11 items-center justify-center rounded-xl",
               isNext
-                ? "bg-white/8 ring-1 ring-dashed ring-white/25"
-                : "bg-black/30 ring-1 ring-white/12",
+                ? "bg-black/30 shadow-[inset_0_0_0_1px_rgba(52,211,153,0.35)]"
+                : "bg-black/35 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]",
             ].join(" ")}
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-white/25" aria-hidden />
+            <span
+              className={[
+                "h-1.5 w-1.5 rounded-full",
+                isNext ? "bg-emerald-300/70" : "bg-white/20",
+              ].join(" ")}
+              aria-hidden
+            />
           </div>
         ))}
       </div>
@@ -637,47 +670,60 @@ function GuessRow({
         delay: index * 0.04,
       }}
       className={[
-        "rounded-2xl p-2.5 shadow-lg ring-1",
+        "rounded-2xl px-1.5 py-1.5 shadow-[0_3px_0_0_rgba(0,0,0,0.28)]",
         guess.isCorrect
-          ? "bg-emerald-500/15 ring-emerald-400/45"
-          : "bg-white/6 ring-white/12",
+          ? "bg-emerald-500/15 shadow-[0_0_0_1px_rgba(52,211,153,0.45),0_3px_0_0_rgba(0,0,0,0.28)]"
+          : "bg-black/35 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_3px_0_0_rgba(0,0,0,0.28)]",
       ].join(" ")}
     >
-      <p className="mb-2 flex items-center gap-2 font-display text-sm font-extrabold text-white">
+      <p className="mb-1.5 flex items-center gap-1.5 font-display text-sm font-black text-white">
         <span
-          className="flex h-6 w-6 items-center justify-center rounded-full bg-white/90 font-display text-[11px] font-black text-[#0c1218]"
+          className={[
+            "flex h-5 w-5 shrink-0 items-center justify-center rounded-full font-display text-[10px] font-black",
+            guess.isCorrect
+              ? "bg-emerald-400 text-emerald-950"
+              : "bg-white/90 text-[#0c1218]",
+          ].join(" ")}
           aria-hidden
         >
           {toLocaleDigits(index + 1, locale)}
         </span>
-        <span className="truncate">{name}</span>
+        <span className="min-w-0 truncate">{name}</span>
         {guess.isCorrect && (
-          <span className="ms-auto text-base" aria-hidden>
-            ⚽
-          </span>
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src="/icons/trophy.png"
+            alt=""
+            aria-hidden
+            draggable={false}
+            className="ms-auto h-4 w-4 object-contain"
+          />
         )}
       </p>
-      <div className="grid grid-cols-3 gap-1.5">
-        {cells.map((c) => {
-          const style = verdictStyle(c.v);
-          return (
-            <div
-              key={c.key}
-              title={verdictLabel(c.v, t)}
-              className={[
-                "flex min-h-13 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center",
-                style.tile,
-              ].join(" ")}
-            >
-              <span className="line-clamp-2 font-display text-[11px] font-extrabold leading-tight tracking-wide text-white">
-                {c.value}
-              </span>
-              <span className="font-display text-sm font-black leading-none text-white/95 drop-shadow-sm">
-                {style.glyph}
-              </span>
-            </div>
-          );
-        })}
+      <div className="flex items-start gap-1.5">
+        <span className="w-5 shrink-0" aria-hidden />
+        <div className="grid min-w-0 flex-1 grid-cols-3 gap-1">
+          {cells.map((c) => {
+            const style = verdictStyle(c.v);
+            return (
+              <div
+                key={c.key}
+                title={verdictLabel(c.v, t)}
+                className={[
+                  "flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-center",
+                  style.tile,
+                ].join(" ")}
+              >
+                <span className="line-clamp-2 font-display text-[10px] font-extrabold leading-tight tracking-wide text-white">
+                  {c.value}
+                </span>
+                <span className="font-display text-xs font-black leading-none text-white/95">
+                  {style.glyph}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </motion.div>
   );

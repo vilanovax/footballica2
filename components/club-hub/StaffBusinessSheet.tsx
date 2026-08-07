@@ -12,9 +12,17 @@ import type { BusinessFacilityKey } from "@/lib/club/businessEconomy";
 import type { StaffMemberView, StaffOfferView } from "@/lib/club/staff";
 import { staffDisplayName } from "@/lib/club/staff";
 import { BottomSheet } from "@/components/ui/BottomSheet";
+import {
+  GameChip,
+  GameCta,
+  GameIconWell,
+  GamePanel,
+  GameTile,
+} from "@/components/ui/game";
 import { FundsCost } from "@/components/club-hub/FundsCost";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
+import { cn } from "@/lib/utils";
 
 type StaffListRow =
   | { kind: "hired"; member: StaffMemberView }
@@ -29,7 +37,6 @@ type StaffBusinessSheetProps = {
   onBusy: (label: string | null) => void;
   onError: (msg: string) => void;
   onSuccess: (msg: string) => void;
-  /** Prefill assign target when opened from a facility card. */
   focusFacilityKey?: BusinessFacilityKey | null;
 };
 
@@ -40,14 +47,13 @@ const FACILITY_NAME: Record<BusinessFacilityKey, string> = {
 };
 
 const FACILITY_ICON: Record<BusinessFacilityKey, string> = {
-  TICKET_OFFICE: "🎫",
-  CLUB_SHOP: "🛍️",
-  MUSEUM: "🏆",
+  TICKET_OFFICE: "/icons/stadium.png",
+  CLUB_SHOP: "/icons/hub-shop.png",
+  MUSEUM: "/icons/trophy.png",
 };
 
 /**
- * Hire / assign staff pool — one sheet, bank-modal tone.
- * Assign goes through a dedicated business-picker sheet.
+ * Staff sheet — Arena design system reference implementation (DESIGN.md).
  */
 export function StaffBusinessSheet({
   open,
@@ -69,7 +75,6 @@ export function StaffBusinessSheet({
     null,
   );
 
-  /** One list in catalog order — hired stay in place, not shoved to a footer. */
   const listRows = useMemo((): StaffListRow[] => {
     const byTemplate = new Map(
       staff.members.map((m) => [m.templateKey, m] as const),
@@ -182,34 +187,32 @@ export function StaffBusinessSheet({
         closeLabel={t("common.close")}
         tone="dark"
       >
-        <div className="relative -mx-1 overflow-hidden rounded-bubble-xl border border-white/15 bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#0f172a] shadow-[0_8px_0_0_rgba(0,0,0,0.35)]">
+        <GamePanel className="-mx-1" tone="emerald">
           <div className="relative flex flex-col items-center px-4 pb-5 pt-5">
-            <motion.span
-              className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white/25 bg-black/30 text-3xl"
+            <motion.div
               animate={{ y: [0, -3, 0] }}
               transition={{
                 repeat: Infinity,
                 duration: 2.4,
                 ease: "easeInOut",
               }}
-              aria-hidden
             >
-              👔
-            </motion.span>
-            <p className="mt-2 max-w-[17rem] text-center font-display text-xs font-bold text-white/75">
+              <GameIconWell size="lg" amber src="/icons/hub-mission.png" />
+            </motion.div>
+            <p className="mt-2.5 max-w-68 text-center font-display text-xs font-bold text-white/75">
               {t("club.staff.heroHint")}
             </p>
             {staff.hasTreasurer && (
-              <p className="mt-2 rounded-full bg-emerald-500/20 px-3 py-1 font-display text-[11px] font-black text-emerald-200 ring-1 ring-emerald-400/40">
+              <GameChip tone="emerald" className="mt-2">
                 {t("club.staff.treasurerActive")}
-              </p>
+              </GameChip>
             )}
           </div>
-        </div>
+        </GamePanel>
 
         {staff.enabled && listRows.length > 0 && (
           <div className="mt-4">
-            <p className="mb-2 font-display text-[11px] font-black uppercase tracking-widest text-white/50">
+            <p className="mb-2 font-display text-[11px] font-black uppercase tracking-widest text-arena-muted/70">
               {t("club.staff.hireTitle")}
             </p>
             <div className="flex flex-col gap-2.5">
@@ -217,40 +220,30 @@ export function StaffBusinessSheet({
                 if (row.kind === "offer") {
                   const offer = row.offer;
                   return (
-                    <div
+                    <GameTile
                       key={`offer-${offer.templateKey}`}
-                      className={[
-                        "flex items-center gap-3 rounded-bubble-xl border-2 px-3 py-3 transition-all",
-                        offer.canAfford
-                          ? "border-white/12 bg-white/8"
-                          : "border-white/8 bg-white/[0.03] opacity-55 grayscale",
-                      ].join(" ")}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-3",
+                        !offer.canAfford && "opacity-55 grayscale",
+                      )}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={offer.avatarImage}
                         alt=""
-                        className={[
-                          "h-12 w-12 rounded-xl object-cover ring-2",
-                          offer.canAfford ? "ring-white/20" : "ring-white/10",
-                        ].join(" ")}
+                        className="h-12 w-12 rounded-xl object-cover shadow-[0_0_0_1px_rgba(255,255,255,0.15)]"
                       />
                       <div className="min-w-0 flex-1">
-                        <p
-                          className={[
-                            "font-display text-sm font-black",
-                            offer.canAfford ? "text-white" : "text-white/70",
-                          ].join(" ")}
-                        >
+                        <p className="font-display text-sm font-black text-white">
                           {staffDisplayName(offer, locale)}
                         </p>
                         <p
-                          className={[
+                          className={cn(
                             "font-display text-[11px] font-bold",
                             offer.canAfford
-                              ? "text-lime-300"
+                              ? "text-amber-200"
                               : "text-white/40",
-                          ].join(" ")}
+                          )}
                         >
                           {offer.role === "TREASURER"
                             ? t("club.staff.perkTreasurer", {
@@ -272,109 +265,89 @@ export function StaffBusinessSheet({
                           </p>
                         )}
                       </div>
-                      <motion.button
-                        type="button"
+                      <GameCta
+                        variant="accent"
                         disabled={pending || !offer.canAfford}
+                        className="min-h-10 shrink-0 rounded-bubble px-3 py-2 text-xs"
                         onClick={() => void hire(offer.templateKey)}
-                        whileTap={
-                          pending || !offer.canAfford ? undefined : { y: 2 }
-                        }
-                        className={[
-                          "shrink-0 rounded-bubble px-3 py-2 font-display text-xs font-black",
-                          offer.canAfford
-                            ? "bg-accent text-accent-foreground shadow-[0_3px_0_0_hsl(var(--accent-deep))]"
-                            : "cursor-not-allowed bg-white/10 text-white/40",
-                        ].join(" ")}
                       >
                         <FundsCost
                           amount={offer.cost}
                           variant="plain"
                           className="font-black"
                         />
-                      </motion.button>
-                    </div>
+                      </GameCta>
+                    </GameTile>
                   );
                 }
 
                 const m = row.member;
+                const highlight =
+                  focusFacilityKey && !m.assignedFacilityKey;
                 return (
-                  <div
+                  <GameTile
                     key={`hired-${m.id}`}
-                    className={[
-                      "rounded-bubble-xl border-2 px-3 py-3",
-                      focusFacilityKey && !m.assignedFacilityKey
-                        ? "border-accent/60 bg-accent/10"
-                        : "border-emerald-400/35 bg-emerald-500/10",
-                    ].join(" ")}
+                    tone={highlight ? "amber" : "emerald"}
+                    className="px-3 py-3"
                   >
                     <div className="flex items-center gap-3">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={m.avatarImage}
                         alt=""
-                        className="h-12 w-12 rounded-xl object-cover ring-2 ring-emerald-300/40"
+                        className="h-12 w-12 rounded-xl object-cover shadow-[0_0_0_1px_hsl(var(--arena-ring)/0.4)]"
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-1.5">
                           <p className="font-display text-sm font-black text-white">
                             {staffDisplayName(m, locale)}
-                            {m.role === "TREASURER" ? " 💼" : ""}
                           </p>
-                          <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 font-display text-[10px] font-black text-emerald-200 ring-1 ring-emerald-300/30">
+                          <GameChip tone="emerald">
                             {t("club.staff.hiredBadge")}
-                          </span>
+                          </GameChip>
                         </div>
-                        <p className="font-display text-[11px] font-bold text-lime-300/90">
+                        <p className="font-display text-[11px] font-bold text-amber-200/90">
                           +{toLocaleDigits(m.rateBonusPercent, locale)}% ·{" "}
                           {m.assignedFacilityKey
                             ? t(FACILITY_NAME[m.assignedFacilityKey])
                             : t("club.staff.bench")}
                         </p>
                       </div>
-                      <motion.button
-                        type="button"
+                      <GameCta
+                        variant="accent"
                         disabled={pending || builtFacilities.length === 0}
+                        className="min-h-10 shrink-0 rounded-bubble px-3 py-2 text-[11px]"
                         onClick={() => setAssignTarget(m)}
-                        whileTap={
-                          pending || builtFacilities.length === 0
-                            ? undefined
-                            : { y: 2 }
-                        }
-                        className={[
-                          "shrink-0 rounded-bubble px-3 py-2 font-display text-[11px] font-black",
-                          builtFacilities.length > 0
-                            ? "border border-white/25 bg-white/10 text-white"
-                            : "cursor-not-allowed bg-white/5 text-white/35",
-                        ].join(" ")}
                       >
                         {m.assignedFacilityKey
                           ? t("club.staff.changeDesk")
                           : t("club.staff.connectCta")}
-                      </motion.button>
+                      </GameCta>
                     </div>
 
                     {focusFacilityKey &&
                       m.assignedFacilityKey !== focusFacilityKey && (
-                        <motion.button
-                          type="button"
+                        <GameCta
+                          variant="accent"
+                          block
+                          className="mt-2.5 min-h-10 text-xs"
                           disabled={pending}
                           onClick={() => void assign(m.id, focusFacilityKey)}
-                          whileTap={pending ? undefined : { y: 2 }}
-                          className="mt-2.5 flex min-h-10 w-full items-center justify-center rounded-bubble bg-accent px-3 font-display text-xs font-black text-accent-foreground shadow-[0_3px_0_0_hsl(var(--accent-deep))]"
                         >
                           {t("club.staff.putHere")}
-                        </motion.button>
+                        </GameCta>
                       )}
 
-                    <button
-                      type="button"
+                    <GameCta
+                      variant="danger"
+                      block
+                      className="mt-2"
                       disabled={pending}
                       onClick={() => void fire(m.id)}
-                      className="mt-1.5 w-full py-1 text-center font-display text-[11px] font-bold text-rose-300/70"
                     >
                       {t("club.staff.fire")}
-                    </button>
-                  </div>
+                    </GameCta>
+                  </GameTile>
                 );
               })}
             </div>
@@ -423,62 +396,48 @@ export function StaffBusinessSheet({
                   disabled={pending || selected}
                   onClick={() => void assign(assignTarget.id, f.key)}
                   whileTap={pending || selected ? undefined : { y: 2 }}
-                  className={[
-                    "flex min-h-14 w-full items-center gap-3 rounded-bubble-xl border-2 px-3 py-3 text-start",
-                    selected
-                      ? "border-accent/60 bg-accent/20"
-                      : "border-white/12 bg-white/8",
-                  ].join(" ")}
+                  className="text-start"
                 >
-                  <span
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black/30 text-xl"
-                    aria-hidden
+                  <GameTile
+                    tone={selected ? "amber" : "default"}
+                    className="flex min-h-14 w-full items-center gap-3 px-3 py-3"
                   >
-                    {FACILITY_ICON[f.key]}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-display text-sm font-black text-white">
-                      {t(FACILITY_NAME[f.key])}
+                    <GameIconWell size="md" src={FACILITY_ICON[f.key]} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-display text-sm font-black text-white">
+                        {t(FACILITY_NAME[f.key])}
+                      </span>
+                      <span className="block font-display text-[11px] font-bold text-white/55">
+                        {selected
+                          ? t("club.staff.currentlyHere")
+                          : occupant
+                            ? t("club.staff.occupiedBy", { name: occupant })
+                            : t("club.staff.deskFree")}
+                      </span>
                     </span>
-                    <span className="block font-display text-[11px] font-bold text-white/55">
-                      {selected
-                        ? t("club.staff.currentlyHere")
-                        : occupant
-                          ? t("club.staff.occupiedBy", { name: occupant })
-                          : t("club.staff.deskFree")}
-                    </span>
-                  </span>
-                  {selected ? (
-                    <span className="font-display text-xs font-black text-accent">
-                      ✓
-                    </span>
-                  ) : (
-                    <span className="font-display text-xs font-bold text-white/45">
-                      →
-                    </span>
-                  )}
+                    {selected ? (
+                      <span className="font-display text-xs font-black text-amber-300">
+                        ✓
+                      </span>
+                    ) : (
+                      <span className="font-display text-xs font-bold text-white/45">
+                        →
+                      </span>
+                    )}
+                  </GameTile>
                 </motion.button>
               );
             })}
 
-            <motion.button
-              type="button"
+            <GameCta
+              variant="ghost"
+              block
+              className="mt-1"
               disabled={pending || assignTarget.assignedFacilityKey == null}
               onClick={() => void assign(assignTarget.id, null)}
-              whileTap={
-                pending || assignTarget.assignedFacilityKey == null
-                  ? undefined
-                  : { y: 2 }
-              }
-              className={[
-                "mt-1 flex min-h-12 w-full items-center justify-center rounded-bubble-xl border-2 px-3 font-display text-sm font-black",
-                assignTarget.assignedFacilityKey
-                  ? "border-white/15 bg-white/5 text-white/80"
-                  : "cursor-not-allowed border-white/10 bg-white/5 text-white/35",
-              ].join(" ")}
             >
               {t("club.staff.toBench")}
-            </motion.button>
+            </GameCta>
           </div>
         )}
       </BottomSheet>

@@ -41,9 +41,11 @@ Follow this exact order unless instructed otherwise by the user:
 ---
 
 ## 5. UI / UX & Game Feel Rules
+- **Design system first:** Read `@DESIGN.md`. Immersive UI (sheets, match, modals) uses **Arena** tokens (`--arena-*`) and primitives from `@/components/ui/game` (`GamePanel`, `GameTile`, `GameChip`, `GameIconWell`, `GameCta`, `GameOffer`). Do not invent one-off hex pitch colors or thick accent borders.
 - **Instant Feedback:** Answers must trigger immediate visual/audio/haptic feedback (Correct = Goal effect, Wrong = Heavy vibration/Miss).
-- **Fantasy Aesthetics:** Default to rounded corners (`rounded-2xl`, `rounded-full`), drop shadows for depth, and vibrant gradients. 
+- **Fantasy Aesthetics:** App chrome uses theme tokens; Arena chrome is always pitch-dark. Prefer shadow-rings + hard Y-offset depth over `border-[3px]`. PNG icons in `GameIconWell`, not emoji chrome.
 - **Loading States:** No boring spinners. Use skeleton loaders or bouncing football animations.
+- **When editing a surface:** migrate that file toward Arena utilities / `Game*` primitives (see DESIGN.md migration).
 
 ---
 

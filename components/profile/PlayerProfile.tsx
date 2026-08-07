@@ -19,6 +19,7 @@ import {
   type ClubColorKey,
 } from "@/lib/onboarding/clubColors";
 import { AvatarImage } from "@/components/common/AvatarImage";
+import { HubIcon } from "@/components/common/HubIcon";
 import { ResourceIcon } from "@/components/common/ResourceIcon";
 import { ProfileEditModal } from "./ProfileEditModal";
 import { FlagPickerModal } from "./FlagPickerModal";
@@ -37,6 +38,15 @@ import type { BadgePresentation } from "@/lib/game/badgeTypes";
 import { resolveBadgeImageUrl } from "@/lib/game/badgeArt";
 import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
+
+/** Shared dark game panel — matches Club Hub emerald chrome. */
+const PANEL_SHELL =
+  "relative overflow-hidden rounded-bubble-xl border-[3px] border-emerald-500/35 bg-linear-to-br from-[#052e16] via-[#0f172a] to-[#052e16] shadow-[0_5px_0_0_rgba(0,0,0,0.28)]";
+
+const PANEL_STRIPE = {
+  backgroundImage:
+    "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
+} as const;
 
 /** Tier → medal ring fill. */
 const TIER_RING: Record<BadgeTier, string> = {
@@ -218,21 +228,21 @@ export function PlayerProfile({
       key: "matches",
       label: t("profile.matches"),
       value: toLocaleDigits(profile.matchesPlayed, locale),
-      icon: "🎮",
+      iconSrc: "/icons/stadium.png",
       hint: matchesHint,
     },
     {
       key: "combo",
       label: t("profile.bestCombo"),
-      value: `×${toLocaleDigits(profile.highestCombo, locale)}`,
-      icon: "⚡",
+      value: `${toLocaleDigits(profile.highestCombo, locale)}×`,
+      iconSrc: "/icons/energy.png",
       hint: comboHint,
     },
     {
       key: "streak",
       label: t("profile.bestStreak"),
-      value: `${toLocaleDigits(profile.longestDailyStreak, locale)} 🔥`,
-      icon: "🔥",
+      value: toLocaleDigits(profile.longestDailyStreak, locale),
+      iconSrc: "/icons/streak.png",
       hint: streakHint,
     },
   ];
@@ -304,18 +314,22 @@ export function PlayerProfile({
   }
 
   return (
-    <section className="flex flex-1 flex-col gap-4 pb-1">
-      {/* ── Hero: FIFA-style player card ──────────────────────────────────── */}
+    <section className="flex flex-1 flex-col gap-3.5 pb-1">
+      {/* ── Hero: player identity card ───────────────────────────────────── */}
       <motion.header
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: "spring", stiffness: 240, damping: 22 }}
-        className="relative overflow-hidden rounded-bubble-xl border border-white/10 p-5 shadow-fantasy"
+        className={[PANEL_SHELL, "p-4"].join(" ")}
         style={{
-          background: `linear-gradient(165deg, #0b1220 0%, #101828 42%, ${clubColor.hex}33 100%)`,
+          background: `linear-gradient(165deg, #052e16 0%, #0f172a 48%, ${clubColor.hex}44 100%)`,
         }}
       >
-        {/* Stadium spotlight + club wash */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.05]"
+          style={PANEL_STRIPE}
+        />
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0"
@@ -327,25 +341,21 @@ export function PlayerProfile({
             ].join(", "),
           }}
         />
-        {/* Soft pitch stripe hint */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-16 opacity-[0.12]"
-          style={{
-            background:
-              "repeating-linear-gradient(90deg, transparent, transparent 18px, rgba(255,255,255,0.35) 18px, rgba(255,255,255,0.35) 20px)",
-          }}
-        />
 
-        <div className="relative flex items-start gap-4">
+        <div className="relative flex items-start gap-3.5">
           <motion.div
             initial={{ scale: 0, rotate: -20 }}
             animate={{ scale: 1, rotate: 0 }}
-            transition={{ type: "spring", stiffness: 260, damping: 16, delay: 0.1 }}
+            transition={{
+              type: "spring",
+              stiffness: 260,
+              damping: 16,
+              delay: 0.1,
+            }}
             className="relative shrink-0 rounded-full p-1"
             style={{
               ...clubAccentRingStyle(colorKey),
-              boxShadow: `0 0 0 3px ${clubColor.hex}, 0 0 28px ${clubColor.hex}66`,
+              boxShadow: `0 0 0 3px ${clubColor.hex}, 0 4px 0 0 rgba(0,0,0,0.35), 0 0 24px ${clubColor.hex}55`,
             }}
           >
             <AvatarImage
@@ -353,44 +363,42 @@ export function PlayerProfile({
               colorKey={colorKey}
               className="h-24 w-24 rounded-full shadow-fantasy ring-2 ring-black/40"
             />
-            {/* Level medal — intersects avatar ring */}
             <div
-              className="absolute -start-1 -top-1 flex h-11 min-w-11 flex-col items-center justify-center rounded-full border-2 border-amber-100/90 bg-linear-to-b from-amber-200 via-yellow-400 to-amber-600 px-1 shadow-[0_0_14px_rgba(250,204,21,0.65)]"
+              className="absolute -start-1 -top-1 flex h-10 min-w-10 flex-col items-center justify-center rounded-full border-2 border-amber-100/90 bg-linear-to-b from-amber-200 via-yellow-400 to-amber-600 px-1 shadow-[0_3px_0_0_rgba(120,70,0,0.45)]"
               aria-label={t("profile.level", {
                 n: toLocaleDigits(level.level, locale),
               })}
             >
-              <span className="font-display text-[9px] font-bold leading-none tracking-wide text-amber-950/80">
+              <span className="font-display text-[8px] font-black leading-none tracking-wide text-amber-950/80">
                 LV
               </span>
               <span className="font-display text-sm font-black leading-none text-amber-950">
                 {toLocaleDigits(level.level, locale)}
               </span>
             </div>
-            {/* Tappable club flag pin */}
             <button
               type="button"
               onClick={() => setPickingFlag(true)}
               aria-label={t("profile.flag.title")}
-              className="absolute -end-1 -bottom-1 flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#0b1220] bg-[#151c2c] text-2xl shadow-fantasy transition-transform active:scale-90"
+              className="absolute -end-1 -bottom-1 flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#052e16] bg-black/70 text-2xl shadow-[0_3px_0_0_rgba(0,0,0,0.4)] transition-transform active:scale-90"
             >
               {flag.emoji}
             </button>
           </motion.div>
 
           <div className="min-w-0 flex-1 pt-0.5">
-            <p className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-amber-300/90">
+            <p className="font-display text-[11px] font-black uppercase tracking-[0.16em] text-emerald-300/90">
               {t(`profile.title.${titleBand}`)}
             </p>
             <h1
               className={[
-                "line-clamp-2 break-words font-display font-bold leading-snug text-white drop-shadow-sm",
+                "line-clamp-2 break-words font-display font-black leading-snug text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]",
                 clubNameClass,
               ].join(" ")}
             >
               {profile.clubName}
             </h1>
-            <p className="mt-0.5 line-clamp-2 break-words font-body text-sm font-semibold text-white/55">
+            <p className="mt-0.5 line-clamp-2 break-words font-display text-sm font-bold text-white/50">
               {profile.stadiumName || t("profile.noStadium")}
             </p>
           </div>
@@ -399,7 +407,7 @@ export function PlayerProfile({
             type="button"
             onClick={() => setEditing(true)}
             aria-label={t("profile.edit.button")}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white/85 shadow-fantasy-sm backdrop-blur-sm transition-transform active:scale-95"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/85 shadow-[0_3px_0_0_rgba(0,0,0,0.35)] transition-transform active:scale-95"
           >
             <Pencil className="h-4 w-4" strokeWidth={2.5} />
           </button>
@@ -414,12 +422,17 @@ export function PlayerProfile({
             }}
             aria-label={t("missions.openDrawer")}
             whileTap={{ scale: 0.98 }}
-            className="relative mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-bubble border border-white/15 bg-white/10 font-display text-sm font-bold text-white backdrop-blur-sm"
+            className={[
+              "relative mt-3.5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 font-display text-sm font-black shadow-[0_3px_0_0_rgba(0,0,0,0.35)]",
+              missionReadyCount > 0
+                ? "border-amber-300/45 bg-linear-to-b from-amber-500/35 to-amber-900/50 text-amber-50"
+                : "border-white/15 bg-black/40 text-white",
+            ].join(" ")}
           >
-            <span aria-hidden>🎯</span>
+            <HubIcon kind="mission" size="sm" />
             <span>{t("profile.missionsChip")}</span>
             {missionReadyCount > 0 && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-secondary px-1.5 font-display text-[11px] font-bold text-secondary-foreground">
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 font-display text-[11px] font-black text-accent-foreground ring-1 ring-amber-200/50">
                 {toLocaleDigits(Math.min(missionReadyCount, 9), locale)}
                 {missionReadyCount > 9 ? "+" : ""}
               </span>
@@ -427,10 +440,21 @@ export function PlayerProfile({
           </motion.button>
         )}
 
-        {/* Gaming XP resource bar — level already on avatar medal */}
-        <div className="relative mt-4">
-          <div className="mb-1.5 flex items-center justify-end gap-1">
-            <span className="inline-flex items-center gap-1 font-display text-xs font-semibold tabular-nums text-white/55">
+        <div className="relative mt-3.5">
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <p className="inline-flex items-center gap-1 font-display text-[11px] font-black text-emerald-200/85">
+              {atMaxLevel ? (
+                t("profile.xpMaxLevel")
+              ) : (
+                <>
+                  <ResourceIcon kind="xp" size="sm" className="h-3.5 w-3.5" />
+                  {t("profile.xpToNext", {
+                    n: toLocaleDigits(xpRemaining, locale),
+                  })}
+                </>
+              )}
+            </p>
+            <span className="inline-flex items-center gap-1 font-display text-xs font-bold tabular-nums text-white/55">
               {locale === "fa" ? (
                 t("profile.xpOf", {
                   cur: toLocaleDigits(level.currentLevelXp, locale),
@@ -446,9 +470,9 @@ export function PlayerProfile({
               <ResourceIcon kind="xp" size="sm" className="h-4 w-4" />
             </span>
           </div>
-          <div className="relative h-4 w-full overflow-hidden rounded-full border border-white/15 bg-black/50 shadow-[inset_0_2px_6px_rgba(0,0,0,0.55)]">
+          <div className="relative h-3.5 w-full overflow-hidden rounded-full border border-white/15 bg-black/55 shadow-[inset_0_2px_6px_rgba(0,0,0,0.55)]">
             <motion.div
-              className="relative h-full rounded-full bg-linear-to-r from-emerald-400 via-lime-300 to-amber-300 shadow-[0_0_12px_rgba(132,204,22,0.55)]"
+              className="relative h-full rounded-full bg-linear-to-r from-emerald-400 via-lime-300 to-amber-300 shadow-[0_0_12px_rgba(52,211,153,0.45)]"
               initial={{ width: 0 }}
               animate={{ width: `${Math.round(level.progress * 100)}%` }}
               transition={{ duration: 0.9, delay: 0.3, ease: "easeOut" }}
@@ -459,18 +483,6 @@ export function PlayerProfile({
               />
             </motion.div>
           </div>
-          <p className="mt-2 inline-flex items-center gap-1 font-display text-[11px] font-bold text-amber-200/90">
-            {atMaxLevel ? (
-              t("profile.xpMaxLevel")
-            ) : (
-              <>
-                <ResourceIcon kind="xp" size="sm" className="h-3.5 w-3.5" />
-                {t("profile.xpToNext", {
-                  n: toLocaleDigits(xpRemaining, locale),
-                })}
-              </>
-            )}
-          </p>
         </div>
       </motion.header>
 
@@ -478,79 +490,114 @@ export function PlayerProfile({
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ type: "spring", stiffness: 240, damping: 22, delay: 0.08 }}
-        className="relative overflow-hidden rounded-bubble-xl border border-amber-400/35 p-4 shadow-[0_0_24px_rgba(245,158,11,0.12)]"
-        style={{
-          background:
-            "linear-gradient(180deg, #0f172a 0%, #111827 55%, #0b1220 100%)",
+        transition={{
+          type: "spring",
+          stiffness: 240,
+          damping: 22,
+          delay: 0.08,
         }}
+        className={[PANEL_SHELL, "p-3.5"].join(" ")}
       >
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-40"
-          style={{
-            background:
-              "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(250,204,21,0.18), transparent 65%)",
-          }}
+          className="pointer-events-none absolute inset-0 opacity-[0.05]"
+          style={PANEL_STRIPE}
         />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -end-10 top-0 h-28 w-28 rounded-full bg-amber-300/15 blur-3xl"
+        />
+
         <div className="relative mb-3 flex items-center justify-between gap-2">
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.16em] text-amber-300/95">
-            {t("profile.scoreboardTitle")}
-          </h2>
-          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 font-display text-[10px] font-bold text-white/50">
+          <div className="flex items-center gap-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/trophy.png"
+              alt=""
+              aria-hidden
+              draggable={false}
+              className="h-5 w-5 object-contain"
+            />
+            <h2 className="font-display text-sm font-black text-white">
+              {t("profile.scoreboardTitle")}
+            </h2>
+          </div>
+          <span className="rounded-full border border-white/12 bg-black/35 px-2.5 py-0.5 font-display text-[10px] font-bold text-white/50">
             {t("profile.statsTitle")}
           </span>
         </div>
 
         {!hasMatches ? (
-          <div className="relative rounded-bubble border border-dashed border-amber-300/30 bg-black/30 px-4 py-6 text-center shadow-[inset_0_2px_10px_rgba(0,0,0,0.4)]">
-            <p className="text-3xl" aria-hidden>
-              🏟️
-            </p>
-            <p className="mt-2 font-body text-sm font-semibold leading-relaxed text-white/75">
+          <div className="relative rounded-2xl border border-dashed border-emerald-400/30 bg-black/35 px-4 py-6 text-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/stadium.png"
+              alt=""
+              aria-hidden
+              draggable={false}
+              className="mx-auto h-10 w-10 object-contain opacity-80"
+            />
+            <p className="mt-2 font-display text-sm font-bold leading-relaxed text-white/75">
               {t("profile.scoreboardEmpty")}
             </p>
             <Link
               href="/play"
-              className="mt-4 inline-flex h-11 min-w-[10rem] items-center justify-center rounded-bubble bg-secondary px-5 font-display text-sm font-bold text-secondary-foreground shadow-fantasy active:scale-[0.98]"
+              className="mt-4 inline-flex h-11 min-w-[10rem] items-center justify-center rounded-2xl border-2 border-emerald-400/40 bg-linear-to-b from-emerald-500 to-emerald-800 px-5 font-display text-sm font-black text-white shadow-[0_3px_0_0_rgba(0,0,0,0.4)] active:translate-y-0.5 active:shadow-[0_1px_0_0_rgba(0,0,0,0.4)]"
             >
               {t("profile.scoreboardEmptyCta")}
             </Link>
           </div>
         ) : (
           <>
-            <div className="relative mb-3 rounded-bubble border border-amber-300/25 bg-black/35 px-4 py-4 text-center shadow-[inset_0_2px_10px_rgba(0,0,0,0.45)]">
-              <p className="font-display text-[11px] font-bold uppercase tracking-[0.14em] text-amber-200/80">
-                🏆 {t("profile.winRate")}
-              </p>
-              <p className="mt-1 font-display text-5xl font-black tabular-nums leading-none text-amber-300 drop-shadow-[0_0_18px_rgba(252,211,77,0.45)]">
-                {toLocaleDigits(winRate, locale)}
-                <span className="text-3xl">
-                  {locale === "fa" ? "٪" : "%"}
-                </span>
-              </p>
-              <p className="mt-2 font-body text-xs font-semibold text-white/55">
-                {t(`profile.scoreHint.${winHintKey}`)}
-              </p>
+            <div className="relative mb-2.5 flex items-center gap-3 rounded-2xl border border-amber-300/30 bg-black/40 px-3 py-3 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/icons/medal-gold.png"
+                alt=""
+                aria-hidden
+                draggable={false}
+                className="h-11 w-11 shrink-0 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
+              />
+              <div className="min-w-0 flex-1 text-start">
+                <p className="font-display text-[10px] font-black uppercase tracking-wider text-amber-200/80">
+                  {t("profile.winRate")}
+                </p>
+                <p className="font-display text-4xl font-black tabular-nums leading-none text-amber-300">
+                  {toLocaleDigits(winRate, locale)}
+                  <span className="text-2xl">
+                    {locale === "fa" ? "٪" : "%"}
+                  </span>
+                </p>
+                <p className="mt-1 line-clamp-1 font-display text-[11px] font-bold text-white/50">
+                  {t(`profile.scoreHint.${winHintKey}`)}
+                </p>
+              </div>
             </div>
 
-            <div className="relative grid grid-cols-3 gap-2">
+            <div className="relative grid grid-cols-3 gap-1.5">
               {secondaryStats.map((s, i) => (
                 <motion.div
                   key={s.key}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.16 + i * 0.05 }}
-                  className="rounded-bubble border border-white/10 bg-white/5 px-2 py-2.5 text-center shadow-[inset_0_1px_4px_rgba(0,0,0,0.35)]"
+                  className="rounded-2xl border border-white/12 bg-black/40 px-1.5 py-2.5 text-center shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]"
                 >
-                  <p className="flex items-center justify-center gap-1 font-display text-[10px] font-bold text-white/50">
-                    <span aria-hidden>{s.icon}</span>
-                    <span className="truncate">{s.label}</span>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={s.iconSrc}
+                    alt=""
+                    aria-hidden
+                    draggable={false}
+                    className="mx-auto h-6 w-6 object-contain"
+                  />
+                  <p className="mt-1 truncate font-display text-[10px] font-bold text-white/50">
+                    {s.label}
                   </p>
-                  <p className="mt-1 font-display text-xl font-black tabular-nums text-white">
+                  <p className="mt-0.5 font-display text-xl font-black tabular-nums text-white">
                     {s.value}
                   </p>
-                  <p className="mt-0.5 line-clamp-2 font-body text-[9px] font-semibold leading-tight text-white/40">
+                  <p className="mt-0.5 line-clamp-2 px-0.5 font-display text-[9px] font-bold leading-tight text-white/40">
                     {s.hint}
                   </p>
                 </motion.div>
@@ -561,20 +608,31 @@ export function PlayerProfile({
       </motion.div>
 
       {/* ── Trophy cabinet ───────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-bubble-xl border-[3px] border-amber-500/40 bg-linear-to-br from-[#1c1408] via-[#2a1c06] to-[#0f172a] p-3 shadow-[0_5px_0_0_rgba(0,0,0,0.28)]">
+      <div className={[PANEL_SHELL, "p-3"].join(" ")}>
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.06]"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
-          }}
+          className="pointer-events-none absolute inset-0 opacity-[0.05]"
+          style={PANEL_STRIPE}
           aria-hidden
         />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -start-8 top-4 h-24 w-24 rounded-full bg-amber-300/12 blur-3xl"
+        />
         <div className="relative mb-3 flex items-center justify-between gap-2">
-          <h2 className="font-display text-base font-black text-white drop-shadow-sm">
-            {t("profile.trophies")}
-          </h2>
-          <span className="shrink-0 rounded-bubble border border-amber-300/40 bg-black/35 px-2.5 py-1 font-display text-[11px] font-black text-amber-100">
+          <div className="flex min-w-0 items-center gap-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/crown.png"
+              alt=""
+              aria-hidden
+              draggable={false}
+              className="h-5 w-5 shrink-0 object-contain"
+            />
+            <h2 className="truncate font-display text-base font-black text-white drop-shadow-sm">
+              {t("profile.trophies")}
+            </h2>
+          </div>
+          <span className="shrink-0 rounded-full border border-emerald-400/35 bg-black/40 px-2.5 py-1 font-display text-[11px] font-black text-emerald-100">
             {locale === "fa" ? (
               t("profile.trophiesCountLabel", {
                 unlocked: toLocaleDigits(unlockedHonors.length, locale),
@@ -591,32 +649,31 @@ export function PlayerProfile({
           </span>
         </div>
 
-        <div className="relative flex flex-col gap-4">
+        <div className="relative flex flex-col gap-3.5">
           {nearUnlock.length > 0 && (
             <div>
-              <p className="mb-2 font-display text-[10px] font-black uppercase tracking-widest text-orange-200/85">
+              <p className="mb-2 font-display text-[10px] font-black uppercase tracking-widest text-amber-200/85">
                 {t("profile.trophyNear")}
               </p>
-              <div className="grid grid-cols-3 gap-2">
+              <ul className="flex flex-col gap-1.5">
                 {nearUnlock.map((a, i) => (
-                  <BadgeTile
+                  <NearUnlockRow
                     key={a.slug}
                     achievement={a}
                     imageUrl={a.imageUrl}
-                    unlockedAt={owned.get(a.slug)}
                     player={playerStats}
                     locale={locale}
                     delay={0.04 + i * 0.04}
                     onInspect={() => openInspect(a.slug)}
                   />
                 ))}
-              </div>
+              </ul>
             </div>
           )}
 
           {unlockedHonors.length > 0 && (
             <div>
-              <p className="mb-2 font-display text-[10px] font-black uppercase tracking-widest text-amber-200/85">
+              <p className="mb-2 font-display text-[10px] font-black uppercase tracking-widest text-emerald-200/80">
                 {t("profile.trophyHonors")}
               </p>
               {honorsUseScroll ? (
@@ -658,17 +715,17 @@ export function PlayerProfile({
           )}
 
           {otherByCategory.length > 0 && (
-            <div className="overflow-hidden rounded-2xl border-2 border-white/12 bg-black/30">
+            <div className="overflow-hidden rounded-2xl border border-white/12 bg-black/40 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]">
               <button
                 type="button"
                 onClick={() => {
                   haptic(HAPTIC.light);
                   setOthersOpen((v) => !v);
                 }}
-                className="flex min-h-11 w-full items-center justify-between gap-2 px-3 py-2.5"
+                className="flex min-h-12 w-full items-center justify-between gap-2 px-3 py-2.5"
                 aria-expanded={othersOpen}
               >
-                <span className="font-display text-[10px] font-black uppercase tracking-widest text-white/60">
+                <span className="font-display text-[10px] font-black uppercase tracking-widest text-white/55">
                   {t("profile.trophyOther")}
                 </span>
                 <span className="flex items-center gap-1.5 font-display text-[10px] font-bold text-white/55">
@@ -796,6 +853,91 @@ function resolveTrophyState(
   if (prog && prog.current > 0 && prog.current < prog.target) return "progress";
   if (prog && prog.current >= prog.target) return "progress";
   return "locked";
+}
+
+type NearUnlockRowProps = {
+  achievement: Achievement & { imageUrl?: string | null };
+  imageUrl?: string | null;
+  player: PlayerStats;
+  locale: Locale;
+  delay: number;
+  onInspect: () => void;
+};
+
+/** Compact chase row — progress at a glance without tall tile clutter. */
+function NearUnlockRow({
+  achievement: a,
+  imageUrl,
+  player,
+  locale,
+  delay,
+  onInspect,
+}: NearUnlockRowProps) {
+  const { t } = useTranslation();
+  const name = locale === "fa" ? a.nameFa : a.nameEn;
+  const prog = a.progress?.(player);
+  const pct = prog
+    ? Math.min(100, Math.round((prog.current / prog.target) * 100))
+    : 0;
+  const stepsLeft = prog ? Math.max(0, prog.target - prog.current) : 0;
+
+  return (
+    <motion.button
+      type="button"
+      onClick={onInspect}
+      initial={{ opacity: 0, x: 10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay, type: "spring", stiffness: 280, damping: 22 }}
+      whileTap={{ scale: 0.98 }}
+      className="flex min-h-14 w-full items-center gap-2.5 rounded-2xl border border-amber-400/35 bg-linear-to-r from-[#431407]/90 via-[#7c2d12]/70 to-black/40 px-2.5 py-2 text-start shadow-[0_3px_0_0_rgba(0,0,0,0.3)]"
+      aria-label={name}
+    >
+      <span
+        className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/15 bg-black/40"
+        aria-hidden
+      >
+        {imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={imageUrl}
+            alt=""
+            className="h-9 w-9 object-contain"
+          />
+        ) : (
+          <span className="text-xl">{a.emoji}</span>
+        )}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <p className="truncate font-display text-[13px] font-black text-white">
+            {name}
+          </p>
+          {prog && (
+            <span className="shrink-0 font-display text-[11px] font-black tabular-nums text-amber-100/90">
+              <FractionText
+                cur={prog.current}
+                next={prog.target}
+                locale={locale}
+              />
+            </span>
+          )}
+        </div>
+        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-black/45 ring-1 ring-white/10">
+          <div
+            className="h-full rounded-full bg-linear-to-r from-amber-300 to-accent"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        {stepsLeft > 0 && stepsLeft <= 3 && (
+          <p className="mt-1 font-display text-[10px] font-bold text-lime-300">
+            {t("profile.trophyStepsLeft", {
+              n: toLocaleDigits(stepsLeft, locale),
+            })}
+          </p>
+        )}
+      </div>
+    </motion.button>
+  );
 }
 
 type BadgeTileProps = {
@@ -982,7 +1124,7 @@ function TrophyInspectSheet({
   const hasReward = a.reward.coins > 0 || a.reward.xp > 0;
   return (
     <motion.div
-      className="fixed inset-0 z-[70] flex items-end justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-12 sm:items-center sm:p-6"
+      className="fixed inset-0 z-70 flex items-end justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-12 sm:items-center sm:p-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -992,7 +1134,7 @@ function TrophyInspectSheet({
         type="button"
         aria-label={t("profile.trophyClose")}
         onClick={onClose}
-        className="absolute inset-0 bg-black/60 backdrop-blur-[5px]"
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
       />
 
       <motion.div
@@ -1004,17 +1146,15 @@ function TrophyInspectSheet({
         exit={{ y: 40, opacity: 0 }}
         transition={{ type: "spring", stiffness: 320, damping: 28 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-mobile overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#fffdf8] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.5)]"
+        className="relative w-full max-w-mobile overflow-hidden rounded-[1.75rem] border-[3px] border-emerald-400/35 bg-linear-to-b from-[#0a1f14] via-[#0f172a] to-[#052e16] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.65)]"
       >
-        {/* Drag handle */}
         <div className="absolute inset-x-0 top-0 z-10 flex justify-center pt-2.5">
           <span
             aria-hidden
-            className="h-1 w-10 rounded-full bg-white/35"
+            className="h-1.5 w-11 rounded-full bg-white/25"
           />
         </div>
 
-        {/* Tier hero */}
         <div
           className={[
             "relative bg-linear-to-b px-5 pb-5 pt-7 text-center",
@@ -1053,7 +1193,7 @@ function TrophyInspectSheet({
                 src={imageUrl}
                 alt=""
                 className={[
-                  "h-full w-full object-contain drop-shadow-[0_8px_24px_rgba(249,115,22,0.55)]",
+                  "h-full w-full object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.45)]",
                   state === "locked" ? "grayscale opacity-55" : "",
                   state === "progress" ? "opacity-95" : "",
                 ].join(" ")}
@@ -1062,28 +1202,28 @@ function TrophyInspectSheet({
               a.emoji
             )}
             {state === "locked" && (
-              <span className="absolute -end-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full border border-white/40 bg-slate-800 text-sm shadow-md">
+              <span className="absolute -end-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full border border-white/30 bg-black/80 text-sm shadow-md">
                 🔒
               </span>
             )}
           </motion.span>
 
           <div className="relative mt-3 flex flex-wrap items-center justify-center gap-1.5">
-            <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 font-display text-[10px] font-bold uppercase tracking-wider text-amber-100">
+            <span className="rounded-full border border-white/20 bg-black/35 px-2.5 py-0.5 font-display text-[10px] font-black uppercase tracking-wider text-amber-100">
               {t(`profile.tier.${a.tier}`)}
             </span>
             <span
               className={[
-                "rounded-full border px-2.5 py-0.5 font-display text-[10px] font-bold",
+                "rounded-full border px-2.5 py-0.5 font-display text-[10px] font-black",
                 state === "unlocked"
                   ? "border-emerald-300/40 bg-emerald-400/20 text-emerald-100"
                   : state === "progress"
-                    ? "border-sky-300/40 bg-sky-400/20 text-sky-100"
+                    ? "border-amber-300/40 bg-amber-400/20 text-amber-100"
                     : "border-white/15 bg-white/10 text-white/70",
               ].join(" ")}
             >
               {state === "unlocked"
-                ? t(`profile.tier.${a.tier}`)
+                ? t("profile.trophyUnlocked")
                 : state === "progress"
                   ? t("profile.trophyInProgress")
                   : t("profile.trophyLocked")}
@@ -1098,26 +1238,25 @@ function TrophyInspectSheet({
           </h3>
         </div>
 
-        {/* Body */}
-        <div className="flex flex-col gap-3 px-4 pb-4 pt-4">
-          <div className="rounded-bubble border border-border/80 bg-white px-3.5 py-3 text-start shadow-fantasy-sm">
-            <p className="font-display text-[10px] font-bold uppercase tracking-wider text-primary">
+        <div className="flex flex-col gap-3 px-4 pb-4 pt-1">
+          <div className="rounded-2xl border border-white/12 bg-black/40 px-3.5 py-3 text-start shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]">
+            <p className="font-display text-[10px] font-black uppercase tracking-wider text-emerald-300/90">
               {state === "unlocked"
                 ? t("profile.trophyRequirement")
                 : t("profile.trophyHowTo")}
             </p>
-            <p className="mt-1 font-body text-sm font-semibold leading-relaxed text-surface-foreground">
+            <p className="mt-1 font-display text-sm font-bold leading-relaxed text-white/80">
               {desc}
             </p>
           </div>
 
           {state !== "unlocked" && prog && (
-            <div className="rounded-bubble border border-primary/20 bg-primary/5 px-3.5 py-3">
+            <div className="rounded-2xl border border-amber-300/30 bg-amber-500/10 px-3.5 py-3">
               <div className="mb-1.5 flex items-center justify-between gap-2">
-                <p className="font-display text-[10px] font-bold uppercase tracking-wider text-primary">
+                <p className="font-display text-[10px] font-black uppercase tracking-wider text-amber-200">
                   {t("profile.trophyProgress")}
                 </p>
-                <p className="font-display text-xs font-bold text-primary">
+                <p className="font-display text-xs font-black text-amber-100">
                   <FractionText
                     cur={prog.current}
                     next={prog.target}
@@ -1125,16 +1264,16 @@ function TrophyInspectSheet({
                   />
                 </p>
               </div>
-              <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted shadow-[inset_0_1px_3px_rgba(0,0,0,0.18)]">
+              <div className="h-2.5 w-full overflow-hidden rounded-full bg-black/45 ring-1 ring-white/10">
                 <motion.div
-                  className="h-full rounded-full bg-linear-to-r from-primary to-secondary"
+                  className="h-full rounded-full bg-linear-to-r from-amber-300 to-accent"
                   initial={{ width: 0 }}
                   animate={{ width: `${pct}%` }}
                   transition={{ duration: 0.55, ease: "easeOut" }}
                 />
               </div>
               {stepsLeft > 0 && stepsLeft <= 3 && (
-                <p className="mt-1.5 font-body text-[11px] font-bold text-accent-deep">
+                <p className="mt-1.5 font-display text-[11px] font-bold text-lime-300">
                   {t("profile.trophyStepsLeft", {
                     n: toLocaleDigits(stepsLeft, locale),
                   })}
@@ -1144,21 +1283,21 @@ function TrophyInspectSheet({
           )}
 
           {hasReward && (
-            <div className="rounded-bubble border border-amber-300/40 bg-linear-to-r from-amber-50 to-orange-50 px-3.5 py-3">
-              <p className="font-display text-[10px] font-bold uppercase tracking-wider text-amber-800">
+            <div className="rounded-2xl border border-amber-300/35 bg-black/40 px-3.5 py-3">
+              <p className="font-display text-[10px] font-black uppercase tracking-wider text-amber-200">
                 {state === "unlocked"
                   ? t("profile.rewardEarned")
                   : t("profile.rewardOnUnlock")}
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {a.reward.coins > 0 && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/50 bg-white px-3 py-1.5 font-display text-sm font-bold text-amber-900 shadow-sm">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-500/15 px-3 py-1.5 font-display text-sm font-black text-amber-100">
                     <ResourceIcon kind="coin" size="sm" />
                     {toLocaleDigits(a.reward.coins, locale)}
                   </span>
                 )}
                 {a.reward.xp > 0 && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-300/50 bg-white px-3 py-1.5 font-display text-sm font-bold text-sky-900 shadow-sm">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-300/40 bg-sky-500/15 px-3 py-1.5 font-display text-sm font-black text-sky-100">
                     <ResourceIcon kind="xp" size="sm" />
                     {toLocaleDigits(a.reward.xp, locale)}
                   </span>
@@ -1170,7 +1309,7 @@ function TrophyInspectSheet({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-12 w-full items-center justify-center rounded-bubble bg-primary font-display text-base font-bold text-primary-foreground shadow-[0_4px_0_0_hsl(var(--primary)/0.45)] transition-transform active:translate-y-0.5 active:shadow-none"
+            className="flex h-12 w-full items-center justify-center rounded-2xl border-2 border-emerald-400/40 bg-linear-to-b from-emerald-500 to-emerald-800 font-display text-base font-black text-white shadow-[0_4px_0_0_rgba(0,0,0,0.45)] transition-transform active:translate-y-0.5 active:shadow-[0_2px_0_0_rgba(0,0,0,0.45)]"
           >
             {t("profile.trophyClose")}
           </button>

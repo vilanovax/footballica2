@@ -220,37 +220,67 @@ export function PenaltyMatch({
   const showMiss = locked && feedback?.result === "miss";
 
   return (
-    <section className="relative flex flex-1 flex-col">
+    <section className="relative -mx-4 flex flex-1 flex-col bg-[#071510] px-4 text-white">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+      >
+        <div className="absolute inset-0 bg-linear-to-b from-[#0a1f14] via-[#071510] to-[#052e16]" />
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(-16deg, transparent, transparent 12px, #fff 12px, #fff 13px)",
+          }}
+        />
+        <div className="absolute -end-16 top-0 h-48 w-48 rounded-full bg-amber-400/12 blur-3xl" />
+        <div className="absolute -start-20 top-40 h-40 w-40 rounded-full bg-emerald-400/15 blur-3xl" />
+      </div>
+
       {process.env.NODE_ENV === "development" ? <FormatDevToggle /> : null}
       <div
         className={[
-          "flex flex-1 flex-col gap-5",
+          "relative z-10 flex flex-1 flex-col gap-4",
           shake ? "animate-screen-shake" : "",
         ].join(" ")}
         onAnimationEnd={() => setShake(false)}
       >
-        <header className="flex flex-col gap-3 pt-2">
+        <header className="overflow-hidden rounded-2xl bg-linear-to-br from-[#052e16] via-[#0f172a] to-[#052e16] px-3 py-2.5 shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_4px_0_0_rgba(0,0,0,0.32)]">
           <div className="flex items-center gap-2">
             <MatchLeaveControl
               setPaused={setPaused}
               onConfirmLeave={handleLeaveMatch}
             />
-            <p className="min-w-0 flex-1 font-display text-sm font-bold uppercase tracking-widest text-secondary">
-              {t("quiz.penaltyMode")}
-            </p>
-            <p className="shrink-0 font-display text-sm font-semibold text-muted-foreground">
-              {t("quiz.kickOf", {
-                n: toLocaleDigits(currentIndex + 1, lang),
-                total: toLocaleDigits(questions.length, lang),
-              })}
-            </p>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-display text-sm font-black text-amber-200">
+                {t("quiz.penaltyMode")}
+              </p>
+              <p className="truncate font-display text-[11px] font-bold text-white/50">
+                {t("quiz.kickOf", {
+                  n: toLocaleDigits(currentIndex + 1, lang),
+                  total: toLocaleDigits(questions.length, lang),
+                })}
+              </p>
+            </div>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/40 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/icons/target.png"
+                alt=""
+                aria-hidden
+                draggable={false}
+                className="h-6 w-6 object-contain"
+              />
+            </span>
           </div>
-          <Scoreboard
-            kickNumber={currentIndex + 1}
-            totalKicks={questions.length}
-            goals={goals}
-          />
-          <FuseTimer ref={fuseRef} paused={locked || paused} />
+          <div className="mt-2.5 space-y-2">
+            <Scoreboard
+              kickNumber={currentIndex + 1}
+              totalKicks={questions.length}
+              goals={goals}
+            />
+            <FuseTimer ref={fuseRef} paused={locked || paused} />
+          </div>
         </header>
 
         <AnimatePresence mode="wait">

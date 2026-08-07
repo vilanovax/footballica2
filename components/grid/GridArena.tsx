@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { X } from "lucide-react";
 import { toast } from "sonner";
 import type { DailyGridSnapshot } from "@/actions/grid/getDailyGrid";
 import { submitGridGuess } from "@/actions/grid/submitGridGuess";
@@ -24,7 +23,7 @@ type Props = {
   initial: DailyGridSnapshot;
 };
 
-const GRID_MOOD = "#0a0f14";
+const GRID_MOOD = "#071510";
 
 export function GridArena({ initial }: Props) {
   const { t, locale } = useTranslation();
@@ -44,7 +43,7 @@ export function GridArena({ initial }: Props) {
     initial.status === "SOLVED" || initial.status === "FAILED",
   );
 
-  // Match browser chrome to dark Locker Room (undo Day Match cream).
+  // Match browser chrome to dark emerald pitch (undo Day Match cream).
   useEffect(() => {
     const metas = Array.from(
       document.querySelectorAll('meta[name="theme-color"]'),
@@ -204,14 +203,21 @@ export function GridArena({ initial }: Props) {
   }
 
   return (
-    <section className="relative flex min-h-dvh flex-1 flex-col gap-4 bg-linear-to-b from-[#0c1218] via-[#111a22] to-[#0a0f14] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-white">
+    <section className="relative flex min-h-dvh flex-1 flex-col gap-3 bg-[#071510] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-white">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 overflow-hidden"
       >
-        <div className="absolute inset-0 bg-[#0a0f14]" />
-        <div className="absolute -end-16 top-0 h-56 w-56 rounded-full bg-emerald-500/10 blur-3xl" />
-        <div className="absolute -start-20 top-48 h-48 w-48 rounded-full bg-sky-500/10 blur-3xl" />
+        <div className="absolute inset-0 bg-linear-to-b from-[#0a1f14] via-[#071510] to-[#052e16]" />
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(-16deg, transparent, transparent 12px, #fff 12px, #fff 13px)",
+          }}
+        />
+        <div className="absolute -end-16 top-0 h-56 w-56 rounded-full bg-amber-400/12 blur-3xl" />
+        <div className="absolute -start-20 top-40 h-48 w-48 rounded-full bg-emerald-400/15 blur-3xl" />
       </div>
 
       {unlockedBadges.length > 0 && !showResult && (
@@ -234,95 +240,151 @@ export function GridArena({ initial }: Props) {
         onClose={() => setShowResult(false)}
       />
 
-      <header className="relative z-10 flex shrink-0 items-center justify-between gap-2 pt-[max(0.75rem,env(safe-area-inset-top))]">
-        <div className="min-w-0 flex flex-1 items-center gap-2.5">
-          <h1 className="truncate font-display text-xl font-black text-white">
-            {t("grid.title")}
-          </h1>
-          <div className="flex items-center gap-2 font-display text-sm font-black tabular-nums">
-            <span
-              className="text-emerald-300"
-              title={`${toLocaleDigits(grid.filled, locale)}/${toLocaleDigits(grid.totalCells, locale)}`}
-            >
-              {toLocaleDigits(grid.filled, locale)}/
-              {toLocaleDigits(grid.totalCells, locale)}
-            </span>
-            <span className="text-amber-300">
-              🔥 {toLocaleDigits(grid.gridStreak, locale)}
-            </span>
-          </div>
-        </div>
+      <header className="relative z-10 shrink-0 overflow-hidden rounded-2xl bg-linear-to-br from-[#052e16] via-[#0f172a] to-[#052e16] px-2.5 py-2 shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_4px_0_0_rgba(0,0,0,0.35)] pt-[max(0.5rem,env(safe-area-inset-top))]">
+        <div className="relative flex items-center gap-2">
+          <Link
+            href="/play"
+            onClick={() => playSound("click")}
+            aria-label={t("common.back")}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black/40 shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_3px_0_0_rgba(0,0,0,0.35)] transition-transform active:scale-90"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/close.png"
+              alt=""
+              draggable={false}
+              className="h-5 w-5 object-contain opacity-90"
+            />
+          </Link>
 
-        {/* Lives — Immortal-style remaining chances */}
-        <motion.div
-          key={livesLeft}
-          aria-label={t("grid.livesLabel")}
-          className={[
-            "me-1 flex shrink-0 items-center gap-1 rounded-full bg-rose-500/15 px-2.5 py-1 ring-1 ring-rose-400/35",
-            livesPulse ? "animate-lives-pulse" : "",
-            livesLeft <= 2 && !done ? "ring-rose-400/70" : "",
-          ].join(" ")}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={
-              livesLeft === 0
-                ? "/icons/broken-heart.png"
-                : "/icons/heart.png"
-            }
-            alt=""
-            draggable={false}
-            className="h-5 w-5 object-contain"
-          />
-          <span
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-300/35 bg-black/40 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/guesses.png"
+              alt=""
+              draggable={false}
+              className="h-7 w-7 object-contain"
+            />
+          </span>
+
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate font-display text-base font-black leading-tight text-white">
+              {t("grid.title")}
+            </h1>
+            <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+              <span className="inline-flex items-center gap-0.5 rounded-lg bg-black/40 px-1.5 py-0.5 font-display text-[11px] font-black tabular-nums text-emerald-200 shadow-[inset_0_0_0_1px_rgba(52,211,153,0.3)]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/icons/target.png"
+                  alt=""
+                  aria-hidden
+                  draggable={false}
+                  className="h-3.5 w-3.5 object-contain"
+                />
+                {toLocaleDigits(grid.filled, locale)}/
+                {toLocaleDigits(grid.totalCells, locale)}
+              </span>
+              <span className="inline-flex items-center gap-0.5 rounded-lg bg-black/40 px-1.5 py-0.5 font-display text-[11px] font-black tabular-nums text-amber-200 shadow-[inset_0_0_0_1px_rgba(251,191,36,0.3)]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/icons/streak.png"
+                  alt=""
+                  aria-hidden
+                  draggable={false}
+                  className="h-3.5 w-3.5 object-contain"
+                />
+                {toLocaleDigits(grid.gridStreak, locale)}
+              </span>
+            </div>
+          </div>
+
+          <motion.div
+            key={livesLeft}
+            aria-label={t("grid.livesLabel")}
             className={[
-              "font-display text-sm font-black tabular-nums",
-              livesLeft <= 2 ? "text-rose-300" : "text-rose-100",
+              "flex shrink-0 items-center gap-1 rounded-xl bg-black/40 px-2 py-1.5 shadow-[inset_0_0_0_1px_rgba(251,113,133,0.4)]",
+              livesPulse ? "animate-lives-pulse" : "",
+              livesLeft <= 2 && !done
+                ? "shadow-[inset_0_0_0_1px_rgba(251,113,133,0.7),0_0_14px_rgba(244,63,94,0.35)]"
+                : "",
             ].join(" ")}
           >
-            {t("grid.livesLeft", {
-              cur: toLocaleDigits(livesLeft, locale),
-              max: toLocaleDigits(grid.maxMistakes, locale),
-            })}
-          </span>
-        </motion.div>
-
-        <Link
-          href="/play"
-          onClick={() => playSound("click")}
-          aria-label={t("common.back")}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white/70 ring-1 ring-white/15 transition-colors hover:bg-white/10 hover:text-white active:scale-90"
-        >
-          <X className="h-5 w-5" strokeWidth={2.25} />
-        </Link>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={
+                livesLeft === 0
+                  ? "/icons/broken-heart.png"
+                  : "/icons/heart.png"
+              }
+              alt=""
+              draggable={false}
+              className="h-5 w-5 object-contain"
+            />
+            <span
+              className={[
+                "font-display text-sm font-black tabular-nums",
+                livesLeft <= 2 ? "text-rose-300" : "text-rose-100",
+              ].join(" ")}
+            >
+              {t("grid.livesLeft", {
+                cur: toLocaleDigits(livesLeft, locale),
+                max: toLocaleDigits(grid.maxMistakes, locale),
+              })}
+            </span>
+          </motion.div>
+        </div>
       </header>
 
       {/* 3×3 board — central focus */}
       <div
         className={[
-          "relative z-10 mx-auto w-full max-w-md shrink-0 overflow-x-auto rounded-bubble-lg bg-linear-to-b from-[#1c2738] to-[#121820] p-2.5 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/10 transition-opacity",
+          "relative z-10 mx-auto w-full max-w-md shrink-0 overflow-x-auto rounded-bubble-xl bg-linear-to-br from-[#0a1f14] via-[#0f172a] to-[#052e16] p-2.5 shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_5px_0_0_rgba(0,0,0,0.35)] transition-opacity",
           done && showResult ? "opacity-40" : "",
         ].join(" ")}
       >
         <div
-          className="grid gap-1.5"
+          className="pointer-events-none absolute inset-0 opacity-[0.05]"
           style={{
-            gridTemplateColumns: `minmax(4.5rem,1fr) repeat(3, minmax(4.5rem,1fr))`,
+            backgroundImage:
+              "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
+          }}
+          aria-hidden
+        />
+        <div
+          className="relative grid gap-1.5"
+          style={{
+            gridTemplateColumns: `minmax(4.25rem,1fr) repeat(3, minmax(4.25rem,1fr))`,
           }}
         >
-          <div />
+          {/* Corner badge */}
+          <div className="flex min-h-12 items-center justify-center rounded-xl bg-black/40 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/guesses.png"
+              alt=""
+              aria-hidden
+              draggable={false}
+              className="h-5 w-5 object-contain opacity-70"
+            />
+          </div>
+
           {grid.cols.map((c) => (
             <div
               key={c.id}
-              className="flex min-h-12 items-center justify-center rounded-xl bg-white/5 px-1 text-center font-display text-[10px] font-extrabold leading-tight text-amber-100"
+              className="flex min-h-12 items-center justify-center rounded-xl bg-linear-to-b from-amber-500/25 to-amber-900/30 px-1 text-center shadow-[inset_0_0_0_1px_rgba(251,191,36,0.4),0_2px_0_0_rgba(0,0,0,0.3)]"
             >
-              {locale === "fa" ? c.labelFa : c.labelEn}
+              <span className="line-clamp-2 font-display text-[10px] font-black leading-tight text-amber-50">
+                {locale === "fa" ? c.labelFa : c.labelEn}
+              </span>
             </div>
           ))}
+
           {grid.rows.map((r, ri) => (
             <div key={r.id} className="contents">
-              <div className="flex min-h-19 items-center justify-center rounded-xl bg-white/5 px-1 text-center font-display text-[10px] font-extrabold leading-tight text-sky-100">
-                {locale === "fa" ? r.labelFa : r.labelEn}
+              <div className="flex min-h-19 items-center justify-center rounded-xl bg-linear-to-b from-sky-500/20 to-sky-900/35 px-1 text-center shadow-[inset_0_0_0_1px_rgba(125,211,252,0.35),0_2px_0_0_rgba(0,0,0,0.3)]">
+                <span className="line-clamp-3 font-display text-[10px] font-black leading-tight text-sky-50">
+                  {locale === "fa" ? r.labelFa : r.labelEn}
+                </span>
               </div>
               {grid.cols.map((_, ci) => {
                 const key = cellKey(ri, ci);
@@ -350,10 +412,10 @@ export function GridArena({ initial }: Props) {
                       "relative flex min-h-19 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl px-1 py-1.5 text-center transition-colors",
                       isMiss ? "animate-grid-cell-miss z-10" : "",
                       filled
-                        ? "bg-emerald-500/20 ring-2 ring-emerald-400/55 shadow-[0_0_18px_rgba(52,211,153,0.35)]"
+                        ? "bg-emerald-500/20 shadow-[0_0_0_2px_rgba(52,211,153,0.55),0_0_18px_rgba(52,211,153,0.3)]"
                         : active
-                          ? "bg-white/12 ring-2 ring-emerald-400/70"
-                          : "bg-black/30 ring-1 ring-white/10 hover:bg-white/10",
+                          ? "bg-emerald-500/15 shadow-[0_0_0_2px_rgba(52,211,153,0.7),0_0_16px_rgba(52,211,153,0.25)]"
+                          : "bg-black/40 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)] active:bg-white/10",
                     ].join(" ")}
                   >
                     {filled ? (
@@ -364,12 +426,12 @@ export function GridArena({ initial }: Props) {
                             src={photoSrc}
                             alt=""
                             draggable={false}
-                            className="h-8 w-8 rounded-full object-cover ring-1 ring-emerald-300/50"
+                            className="h-8 w-8 rounded-full object-cover shadow-[0_0_0_1px_rgba(167,243,208,0.5)]"
                           />
                         ) : (
                           <span
                             aria-hidden
-                            className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/35 font-display text-xs font-black text-emerald-50 ring-1 ring-emerald-300/45"
+                            className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/40 font-display text-xs font-black text-emerald-50 shadow-[0_0_0_1px_rgba(167,243,208,0.45)]"
                           >
                             {name.trim().slice(0, 1)}
                           </span>
@@ -383,8 +445,16 @@ export function GridArena({ initial }: Props) {
                         ✕
                       </span>
                     ) : (
-                      <span className="font-display text-base font-black text-white/20">
-                        ·
+                      <span
+                        className={[
+                          "flex h-7 w-7 items-center justify-center rounded-full font-display text-sm font-black",
+                          active
+                            ? "bg-emerald-400/25 text-emerald-200"
+                            : "bg-white/5 text-white/30",
+                        ].join(" ")}
+                        aria-hidden
+                      >
+                        +
                       </span>
                     )}
                   </motion.button>
@@ -410,7 +480,7 @@ export function GridArena({ initial }: Props) {
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("grid.searchPlaceholder")}
             autoFocus
-            className="min-h-12 w-full rounded-2xl bg-white/8 px-3.5 font-display text-sm font-bold text-white outline-none ring-1 ring-white/15 placeholder:text-white/35 focus:ring-2 focus:ring-emerald-400/45"
+            className="min-h-12 w-full rounded-2xl bg-black/45 px-3.5 font-display text-sm font-bold text-white outline-none shadow-[inset_0_0_0_1px_rgba(255,255,255,0.14)] placeholder:text-white/35 focus:shadow-[inset_0_0_0_2px_rgba(52,211,153,0.45)]"
           />
 
           <ul className="max-h-[min(48dvh,22rem)] space-y-1.5 overflow-y-auto overscroll-contain pe-0.5 [-webkit-overflow-scrolling:touch]">
@@ -421,6 +491,7 @@ export function GridArena({ initial }: Props) {
             ) : (
               filtered.map((o) => {
                 const label = locale === "fa" ? o.nameFa : o.nameEn;
+                const photo = playerPhotoSrc(o.id);
                 return (
                   <li key={o.id}>
                     <motion.button
@@ -428,14 +499,24 @@ export function GridArena({ initial }: Props) {
                       disabled={pending}
                       whileTap={pending ? undefined : { scale: 0.97 }}
                       onClick={() => onPick(o.id)}
-                      className="group flex w-full min-h-14 items-center gap-3 rounded-2xl bg-white/6 px-3 py-2.5 text-start ring-1 ring-white/10 transition-colors hover:bg-white/12 hover:ring-white/25 active:bg-emerald-500/20 disabled:opacity-60"
+                      className="group flex w-full min-h-14 items-center gap-3 rounded-2xl bg-black/40 px-3 py-2.5 text-start shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)] transition-colors active:bg-emerald-500/20 disabled:opacity-60"
                     >
-                      <span
-                        aria-hidden
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 font-display text-sm font-black text-white/90 ring-1 ring-white/15"
-                      >
-                        {label.trim().slice(0, 1)}
-                      </span>
+                      {photo ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={photo}
+                          alt=""
+                          draggable={false}
+                          className="h-10 w-10 shrink-0 rounded-xl object-cover shadow-[0_0_0_1px_rgba(255,255,255,0.15)]"
+                        />
+                      ) : (
+                        <span
+                          aria-hidden
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 font-display text-sm font-black text-white/90 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]"
+                        >
+                          {label.trim().slice(0, 1)}
+                        </span>
+                      )}
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-display text-sm font-black text-white">
                           {label}
@@ -452,7 +533,6 @@ export function GridArena({ initial }: Props) {
           </ul>
         </div>
       </BottomSheet>
-
     </section>
   );
 }

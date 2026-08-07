@@ -65,6 +65,20 @@ const config: Config = {
           foreground: "hsl(var(--nav-foreground) / <alpha-value>)",
           active: "hsl(var(--nav-active) / <alpha-value>)",
         },
+
+        /** Immersive pitch chrome — see DESIGN.md / --arena-* in globals.css */
+        arena: {
+          DEFAULT: "hsl(var(--arena-bg) / <alpha-value>)",
+          mid: "hsl(var(--arena-mid) / <alpha-value>)",
+          deep: "hsl(var(--arena-deep) / <alpha-value>)",
+          fg: "hsl(var(--arena-fg) / <alpha-value>)",
+          muted: "hsl(var(--arena-muted) / <alpha-value>)",
+          ring: "hsl(var(--arena-ring) / <alpha-value>)",
+          amber: "hsl(var(--arena-ring-amber) / <alpha-value>)",
+          rose: "hsl(var(--arena-ring-rose) / <alpha-value>)",
+          sky: "hsl(var(--arena-ring-sky) / <alpha-value>)",
+          success: "hsl(var(--arena-success) / <alpha-value>)",
+        },
       },
       fontFamily: {
         display: ["var(--font-display)", "system-ui", "sans-serif"],
@@ -96,6 +110,18 @@ const config: Config = {
           "0 -8px 28px hsl(var(--shadow-ink) / 0.12), 4px 4px 0 0 hsl(var(--shadow-ink) / 0.08)",
         glow: "0 0 24px hsl(var(--glow) / 0.45)",
         "glow-accent": "0 0 20px hsl(var(--accent) / 0.5)",
+
+        /** Arena shadow-rings (prefer over thick border-[3px]) */
+        "arena-ring":
+          "0 0 0 1px hsl(var(--arena-ring) / 0.35), 0 4px 0 0 rgba(0,0,0,0.35)",
+        "arena-ring-amber":
+          "0 0 0 1px hsl(var(--arena-ring-amber) / 0.45), 0 4px 0 0 rgba(0,0,0,0.35)",
+        "arena-ring-rose":
+          "0 0 0 1px hsl(var(--arena-ring-rose) / 0.4), 0 4px 0 0 rgba(0,0,0,0.35)",
+        "arena-ring-sky":
+          "0 0 0 1px hsl(var(--arena-ring-sky) / 0.4), 0 4px 0 0 rgba(0,0,0,0.35)",
+        "arena-tile":
+          "0 0 0 1px rgba(255,255,255,0.1), 0 3px 0 0 rgba(0,0,0,0.28)",
       },
       spacing: {
         // Fallback token; AppShell uses calc(10.5rem + safe-area) for real clearance.

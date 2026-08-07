@@ -34,13 +34,13 @@ export function ExplanationFact({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 8 }}
           transition={{ type: "spring", stiffness: 320, damping: 28, delay: 0.18 }}
-          className="rounded-bubble border border-accent/35 bg-accent/10 px-3.5 py-3 shadow-fantasy-sm"
+          className="rounded-2xl bg-amber-500/12 px-3.5 py-3 shadow-[0_0_0_1px_rgba(251,191,36,0.35)]"
           role="note"
         >
-          <p className="font-display text-[11px] font-black uppercase tracking-widest text-accent-deep">
+          <p className="font-display text-[11px] font-black uppercase tracking-widest text-amber-200">
             {t("quiz.didYouKnow")}
           </p>
-          <p className="mt-1 font-body text-sm font-semibold leading-snug text-surface-foreground">
+          <p className="mt-1 font-display text-sm font-bold leading-snug text-white/85">
             {text}
           </p>
         </motion.div>

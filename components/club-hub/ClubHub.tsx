@@ -34,15 +34,13 @@ import { StatusBar } from "./StatusBar";
 import { StadiumHero } from "./StadiumHero";
 import { UpgradeCard } from "./UpgradeCard";
 import { NewspaperModal } from "./NewspaperModal";
-import { ActiveNewsChip } from "./ActiveNewsChip";
 import { FtueCoach } from "./FtueCoach";
 import { DuelInboxBanner } from "@/components/duel/DuelInboxBanner";
 import type { DuelInboxItem } from "@/actions/duel/getInboxCount";
 import type { EvaluateMissionsResult } from "@/lib/game/missionTypes";
 import type { CampaignSeasonView } from "@/lib/game/campaignSeason";
 import { NextGoalCard } from "@/components/club-hub/NextGoalCard";
-import { MysteryDailyChip } from "@/components/club-hub/MysteryDailyChip";
-import { CampaignSeasonCard } from "@/components/club-hub/CampaignSeasonCard";
+import { HubTodayRail } from "@/components/club-hub/HubTodayRail";
 
 // Heavy / deferred hub panels — keep first Club paint lean.
 const BusinessPanel = dynamic(() =>
@@ -110,12 +108,25 @@ export function ClubHub({
   const [missionsTab, setMissionsTab] = useState<"daily" | "campaign">(
     "daily",
   );
+  /** Temporary spotlight from Next Goal → upgrade card jump. */
+  const [goalSpotlightKey, setGoalSpotlightKey] = useState<UpgradeKey | null>(
+    null,
+  );
 
   const openMissions = (tab: "daily" | "campaign") => {
     setMissionsTab(tab);
     setMissionsMounted(true);
     setMissionsOpen(true);
   };
+
+  function focusUpgrade(key: UpgradeKey) {
+    setGoalSpotlightKey(key);
+    window.requestAnimationFrame(() => {
+      const el = document.getElementById(`club-upgrade-${key}`);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    window.setTimeout(() => setGoalSpotlightKey(null), 2200);
+  }
 
   const canClaimNews = club.newsClaimable;
   const missionReadyCount = countMissionRewardsReady(dailyBoard, missionBoard);
@@ -216,7 +227,7 @@ export function ClubHub({
   }
 
   return (
-    <section className="relative flex flex-1 flex-col gap-4">
+    <section className="relative flex flex-1 flex-col gap-3">
       {/* Hub top bar — same dark game chrome as campaign / business cards */}
       <div className="relative overflow-hidden rounded-bubble-xl border-[3px] border-emerald-500/35 bg-linear-to-br from-[#052e16] via-[#14532d] to-[#0f172a] p-2.5 shadow-[0_5px_0_0_rgba(0,0,0,0.28)]">
         <div
@@ -330,47 +341,21 @@ export function ClubHub({
         </div>
       </div>
 
-      {ftueComplete && (
-        <MysteryDailyChip mysteryStreak={club.mysteryStreak} />
-      )}
-
-      {ftueComplete && campaignSeason && (
-        <CampaignSeasonCard
-          season={campaignSeason}
-          onOpenMissions={() => openMissions("campaign")}
+      {/* First viewport essence: stadium world */}
+      <div className="relative">
+        <p className="mb-1.5 px-0.5 font-display text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">
+          {t("club.yourStadium")}
+        </p>
+        <StadiumHero
+          stadiumLevel={club.stadiumLevel}
+          fans={club.fans}
+          trainingGroundLevel={club.trainingGroundLevel}
+          medicalLevel={club.medicalLevel}
+          maxStamina={club.maxStamina}
+          celebrateKey={celebrateKey}
+          celebrating={celebrating}
         />
-      )}
-
-      <AnimatePresence>
-        {ftueComplete && club.activeNewsBooster && (
-          <ActiveNewsChip
-            key={club.activeNewsBooster.expiresAt}
-            booster={club.activeNewsBooster}
-            onOpen={handleDailyNews}
-            onExpired={() =>
-              setClub((c) => ({ ...c, activeNewsBooster: null }))
-            }
-          />
-        )}
-      </AnimatePresence>
-
-      {ftueComplete && (
-        <DuelInboxBanner
-          count={duelInboxCount}
-          items={duelInboxItems}
-          variant="club"
-        />
-      )}
-
-      <StadiumHero
-        stadiumLevel={club.stadiumLevel}
-        fans={club.fans}
-        trainingGroundLevel={club.trainingGroundLevel}
-        medicalLevel={club.medicalLevel}
-        maxStamina={club.maxStamina}
-        celebrateKey={celebrateKey}
-        celebrating={celebrating}
-      />
+      </div>
 
       {ftueComplete && (
         <NextGoalCard
@@ -381,6 +366,29 @@ export function ClubHub({
             medicalLevel: club.medicalLevel,
             trainingGroundLevel: club.trainingGroundLevel,
           }}
+          onFocusUpgrade={focusUpgrade}
+        />
+      )}
+
+      {/* Secondary activities — progressive disclosure under the stadium */}
+      {ftueComplete && (
+        <HubTodayRail
+          mysteryStreak={club.mysteryStreak}
+          campaignSeason={campaignSeason}
+          activeNews={club.activeNewsBooster}
+          onOpenCampaign={() => openMissions("campaign")}
+          onOpenNews={handleDailyNews}
+          onNewsExpired={() =>
+            setClub((c) => ({ ...c, activeNewsBooster: null }))
+          }
+        />
+      )}
+
+      {ftueComplete && (
+        <DuelInboxBanner
+          count={duelInboxCount}
+          items={duelInboxItems}
+          variant="club"
         />
       )}
 
@@ -389,10 +397,24 @@ export function ClubHub({
       )}
 
       <div className="flex flex-col gap-2.5">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg font-black text-foreground">
-            {t("club.upgrades")}
-          </h2>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span
+              className="flex h-8 w-8 items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-950/40 shadow-[0_2px_0_0_rgba(0,0,0,0.25)]"
+              aria-hidden
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/icons/upgrade.png"
+                alt=""
+                draggable={false}
+                className="h-5 w-5 object-contain"
+              />
+            </span>
+            <h2 className="font-display text-lg font-black text-foreground">
+              {t("club.upgrades")}
+            </h2>
+          </div>
           <AnimatePresence>
             {error && (
               <motion.p
@@ -417,6 +439,7 @@ export function ClubHub({
           return (
             <UpgradeCard
               key={def.key}
+              id={`club-upgrade-${def.key}`}
               def={def}
               level={level}
               maxStamina={club.maxStamina}
@@ -424,7 +447,7 @@ export function ClubHub({
               canAfford={canAfford}
               pending={pendingKey === def.key}
               locked={locked}
-              spotlight={isForcedStadium}
+              spotlight={isForcedStadium || goalSpotlightKey === def.key}
               onUpgrade={() => handleUpgrade(def.key)}
             />
           );

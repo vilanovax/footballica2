@@ -101,9 +101,17 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex flex-col gap-2.5">
-        <h2 className="font-display text-lg font-black text-foreground">
-          {t("club.biz.title")}
-        </h2>
+        <div className="flex items-center gap-2">
+          <span
+            className="flex h-8 w-8 items-center justify-center rounded-xl border border-amber-400/35 bg-amber-950/35 shadow-[0_2px_0_0_rgba(0,0,0,0.25)]"
+            aria-hidden
+          >
+            <Landmark className="h-4 w-4 text-amber-200" />
+          </span>
+          <h2 className="font-display text-lg font-black text-foreground">
+            {t("club.biz.title")}
+          </h2>
+        </div>
         {/* Full-width equal chips — no dead space beside the strip */}
         <div
           className={[
@@ -121,20 +129,20 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
             }}
             title={t("club.biz.funds")}
             className={[
-              "flex min-h-12 min-w-0 items-center gap-1.5 rounded-2xl border-[3px] px-2 py-1.5 shadow-[0_3px_0_0_rgba(0,0,0,0.22)] transition-transform active:translate-y-px active:shadow-none",
+              "flex min-h-12 min-w-0 items-center gap-1.5 rounded-2xl border-[3px] px-2 py-1.5 shadow-[0_3px_0_0_rgba(0,0,0,0.28)] ring-1 ring-white/10 transition-transform active:translate-y-px active:shadow-none",
               biz.bank.sponsoredActive
                 ? "border-sky-300 bg-linear-to-b from-sky-400 to-sky-600 text-white"
                 : "border-emerald-400/70 bg-linear-to-b from-emerald-500 to-emerald-700 text-white",
             ].join(" ")}
           >
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black/20 ring-1 ring-white/25">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black/25 ring-1 ring-white/25">
               <Landmark className="h-3.5 w-3.5" aria-hidden />
             </span>
             <span className="min-w-0 flex-1 leading-tight">
-              <span className="block truncate font-display text-[9px] font-bold uppercase tracking-wide text-white/70">
+              <span className="block truncate font-display text-[9px] font-bold uppercase tracking-wide text-white/75">
                 {t("club.biz.funds")}
               </span>
-              <span className="block truncate font-display text-sm font-black tabular-nums">
+              <span className="block truncate font-display text-sm font-black tabular-nums drop-shadow-sm">
                 {toLocaleDigits(biz.clubFunds, locale)}
                 {biz.bank.sponsoredActive ? " ★" : ""}
               </span>
@@ -151,7 +159,7 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
             }}
             title={t("club.biz.vault")}
             className={[
-              "relative flex min-h-12 min-w-0 flex-col justify-center gap-1 rounded-2xl border-[3px] px-2 py-1.5 shadow-[0_3px_0_0_rgba(0,0,0,0.22)] transition-transform active:translate-y-px active:shadow-none",
+              "relative flex min-h-12 min-w-0 flex-col justify-center gap-1 rounded-2xl border-[3px] px-2 py-1.5 shadow-[0_3px_0_0_rgba(0,0,0,0.28)] ring-1 ring-white/10 transition-transform active:translate-y-px active:shadow-none",
               vaultFull
                 ? "border-amber-200 bg-linear-to-b from-amber-300 to-amber-500 text-amber-950"
                 : vaultHigh
@@ -162,14 +170,20 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
             <span className="flex w-full items-center gap-1.5">
               <span
                 className={[
-                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-sm ring-1",
+                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ring-1",
                   vaultFull || vaultHigh
                     ? "bg-amber-950/15 ring-amber-950/20"
                     : "bg-black/30 ring-white/20",
                 ].join(" ")}
                 aria-hidden
               >
-                🗄️
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/icons/gift.png"
+                  alt=""
+                  draggable={false}
+                  className="h-4 w-4 object-contain"
+                />
               </span>
               <span className="min-w-0 flex-1 leading-tight">
                 <span
@@ -234,14 +248,20 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
               }}
               title={t("club.staff.title")}
               className={[
-                "flex min-h-12 min-w-0 items-center gap-1.5 rounded-2xl border-[3px] px-2 py-1.5 shadow-[0_3px_0_0_rgba(0,0,0,0.22)] transition-transform active:translate-y-px active:shadow-none",
+                "flex min-h-12 min-w-0 items-center gap-1.5 rounded-2xl border-[3px] px-2 py-1.5 shadow-[0_3px_0_0_rgba(0,0,0,0.28)] ring-1 ring-white/10 transition-transform active:translate-y-px active:shadow-none",
                 biz.staff.hasTreasurer
                   ? "border-rose-200 bg-linear-to-b from-rose-400 to-rose-600 text-white"
                   : "border-rose-400/55 bg-linear-to-b from-[#7f1d1d] to-[#450a0a] text-rose-50",
               ].join(" ")}
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black/20 text-sm ring-1 ring-white/25">
-                👔
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black/25 ring-1 ring-white/25">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/icons/hub-mission.png"
+                  alt=""
+                  draggable={false}
+                  className="h-4 w-4 object-contain"
+                />
               </span>
               <span className="min-w-0 flex-1 leading-tight">
                 <span className="block truncate font-display text-[9px] font-bold uppercase tracking-wide text-white/70">
@@ -413,12 +433,18 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
           <div className="flex items-center gap-2.5">
             <span
               className={[
-                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl shadow-inner",
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-inner",
                 vaultFull ? "bg-amber-950/20" : "bg-black/30",
               ].join(" ")}
               aria-hidden
             >
-              🗄️
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/icons/gift.png"
+                alt=""
+                draggable={false}
+                className="h-6 w-6 object-contain"
+              />
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
@@ -666,14 +692,29 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
         closeLabel={t("common.close")}
         tone="dark"
       >
-        {/* Simple Safe hero */}
-        <div className="relative -mx-1 overflow-hidden rounded-bubble-xl border-2 border-amber-400/40 bg-linear-to-br from-[#3d2a08] via-[#7a5410] to-[#b8860b] shadow-[0_6px_0_0_rgba(0,0,0,0.35)]">
+        {/* Vault hero — amber on pitch dark */}
+        <div className="relative -mx-1 overflow-hidden rounded-bubble-xl bg-linear-to-br from-[#3d2a08] via-[#0f172a] to-[#071410] shadow-[0_0_0_1px_rgba(251,191,36,0.45),0_4px_0_0_rgba(0,0,0,0.35)]">
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.06]"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
+            }}
+            aria-hidden
+          />
+          <div className="absolute -end-8 -top-8 h-32 w-32 rounded-full bg-amber-400/20 blur-3xl" aria-hidden />
           <div className="relative flex flex-col items-center px-4 pb-4 pt-5">
             <span
-              className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white/25 bg-black/30 text-3xl"
+              className="flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-300/40 bg-black/40 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]"
               aria-hidden
             >
-              🗄️
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/icons/gift.png"
+                alt=""
+                draggable={false}
+                className="h-9 w-9 object-contain"
+              />
             </span>
             <motion.p
               key={biz.vaultBalance}
@@ -687,7 +728,7 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
                 /{toLocaleDigits(biz.vaultCap, locale)}
               </span>
             </motion.p>
-            <div className="mt-3 h-3 w-full max-w-56 overflow-hidden rounded-full border border-white/20 bg-black/40">
+            <div className="mt-3 h-3 w-full max-w-56 overflow-hidden rounded-full bg-black/40 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.15)]">
               <motion.div
                 className="h-full rounded-full bg-linear-to-r from-amber-300 to-yellow-200"
                 initial={false}
@@ -710,7 +751,7 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
 
         <div className="mt-4 flex flex-col gap-2.5">
           {canWithdraw && (
-            <button
+            <motion.button
               type="button"
               disabled={pending}
               onClick={() => {
@@ -719,7 +760,8 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
                   t("club.biz.withdrawn"),
                 );
               }}
-              className="btn-fantasy btn-fantasy-primary w-full gap-2"
+              whileTap={pending ? undefined : { y: 3 }}
+              className="flex min-h-14 w-full items-center justify-center gap-2 rounded-bubble-xl bg-emerald-500 px-4 font-display text-base font-black text-white shadow-[0_5px_0_0_rgba(6,78,59,0.9)]"
             >
               <ArrowLeftRight className="h-4 w-4 shrink-0" aria-hidden />
               {treasurerEarly
@@ -729,7 +771,7 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
                 : t("club.biz.withdrawCta", {
                     n: toLocaleDigits(biz.vaultBalance, locale),
                   })}
-            </button>
+            </motion.button>
           )}
           {vaultFull && !biz.staff.hasTreasurer && biz.staff.enabled && (
             <p className="text-center font-display text-[11px] font-bold text-white/65">
@@ -755,10 +797,10 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
                   );
                 }}
                 className={[
-                  "flex min-h-14 w-full items-center justify-between gap-3 rounded-bubble-xl border-2 px-4 font-display text-base font-black shadow-[0_4px_0_0_rgba(0,0,0,0.35)]",
+                  "flex min-h-14 w-full items-center justify-between gap-3 rounded-bubble-xl px-4 font-display text-base font-black",
                   biz.clubFunds >= biz.vaultUpgradeCost
-                    ? "border-accent bg-accent text-accent-foreground"
-                    : "cursor-not-allowed border-white/15 bg-white/10 text-white/50",
+                    ? "bg-accent text-accent-foreground shadow-[0_5px_0_0_hsl(var(--accent-deep))]"
+                    : "cursor-not-allowed bg-white/10 text-white/50 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]",
                 ].join(" ")}
               >
                 <span className="flex flex-col items-start leading-tight">
@@ -791,9 +833,18 @@ export function BusinessPanel({ club, onClubUpdate }: BusinessPanelProps) {
             )}
 
           {vaultMaxed && (
-            <p className="py-2 text-center font-display text-sm font-black text-amber-300">
-              👑 {t("club.biz.maxed")}
-            </p>
+            <div className="flex items-center justify-center gap-2 rounded-bubble-xl bg-amber-500/15 px-3 py-3 shadow-[0_0_0_1px_rgba(251,191,36,0.4)]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/icons/crown.png"
+                alt=""
+                draggable={false}
+                className="h-6 w-6 object-contain"
+              />
+              <p className="font-display text-sm font-black text-amber-300">
+                {t("club.biz.maxed")}
+              </p>
+            </div>
           )}
         </div>
       </BottomSheet>

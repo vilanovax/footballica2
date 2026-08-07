@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Lock } from "lucide-react";
 import type { FacilityView } from "@/lib/club/businessEconomy";
 import type { BusinessFacilityKey } from "@/lib/club/businessEconomy";
 import { BottomSheet } from "@/components/ui/BottomSheet";
@@ -18,6 +18,7 @@ const FACILITY_META: Record<
   BusinessFacilityKey,
   {
     icon: string;
+    iconSrc: string;
     nameKey: string;
     descKey: string;
     /** Hero gradient wash */
@@ -32,9 +33,10 @@ const FACILITY_META: Record<
 > = {
   TICKET_OFFICE: {
     icon: "🎫",
+    iconSrc: "/icons/stadium.png",
     nameKey: "club.biz.ticketOffice",
     descKey: "club.biz.ticketOfficeDesc",
-    hero: "from-[#0d3b2e] via-[#145c45] to-[#1a7a55]",
+    hero: "from-[#052e16] via-[#0f172a] to-[#14532d]",
     row: "from-[#0f3d32] via-[#16634a] to-[#0c2e26]",
     glow: "bg-emerald-400/40",
     pip: "bg-emerald-400",
@@ -42,9 +44,10 @@ const FACILITY_META: Record<
   },
   CLUB_SHOP: {
     icon: "🛍️",
+    iconSrc: "/icons/hub-shop.png",
     nameKey: "club.biz.clubShop",
     descKey: "club.biz.clubShopDesc",
-    hero: "from-[#0c2d4a] via-[#134e75] to-[#1d6fa5]",
+    hero: "from-[#0c2d4a] via-[#0f172a] to-[#134e75]",
     row: "from-[#0c2d4a] via-[#155a8a] to-[#0a243c]",
     glow: "bg-sky-400/40",
     pip: "bg-sky-400",
@@ -52,9 +55,10 @@ const FACILITY_META: Record<
   },
   MUSEUM: {
     icon: "🏆",
+    iconSrc: "/icons/trophy.png",
     nameKey: "club.biz.museum",
     descKey: "club.biz.museumDesc",
-    hero: "from-[#3d2a08] via-[#7a5410] to-[#b8860b]",
+    hero: "from-[#3d2a08] via-[#0f172a] to-[#7a5410]",
     row: "from-[#3d2a08] via-[#8a5a12] to-[#2a1c06]",
     glow: "bg-amber-400/40",
     pip: "bg-amber-400",
@@ -147,8 +151,11 @@ export function FacilityBusinessCard({
         }}
         whileTap={{ scale: 0.985, y: 2 }}
         className={[
-          "relative cursor-pointer overflow-hidden rounded-bubble-xl border-[3px] px-3 py-3 shadow-[0_5px_0_0_rgba(0,0,0,0.28)]",
+          "relative cursor-pointer overflow-hidden rounded-bubble-xl border-[3px] px-3 py-3 shadow-[0_6px_0_0_rgba(0,0,0,0.32)]",
           rowRim,
+          f.status === "AVAILABLE" || (f.status === "BUILT" && f.canUpgrade)
+            ? "ring-1 ring-accent/25"
+            : "",
           f.status === "LOCKED" ? "opacity-90" : "",
         ].join(" ")}
       >
@@ -171,42 +178,50 @@ export function FacilityBusinessCard({
           }}
           aria-hidden
         />
-        {f.status === "BUILT" && live.fillPct > 0 && (
+        {(f.status === "BUILT" && live.fillPct > 0) ||
+        f.status === "AVAILABLE" ? (
           <motion.div
             aria-hidden
-            className={["pointer-events-none absolute -end-8 top-0 h-24 w-24 rounded-full blur-2xl", meta.glow].join(
-              " ",
-            )}
-            animate={{ opacity: [0.25, 0.55, 0.25] }}
-            transition={{ duration: 2.4, repeat: Infinity }}
+            className={[
+              "pointer-events-none absolute -end-8 top-0 h-28 w-28 rounded-full blur-2xl",
+              f.status === "AVAILABLE" ? "bg-accent/40" : meta.glow,
+            ].join(" ")}
+            animate={{ opacity: [0.3, 0.65, 0.3], scale: [1, 1.08, 1] }}
+            transition={{ duration: 2.2, repeat: Infinity }}
           />
-        )}
+        ) : null}
 
         <div className="relative flex items-center gap-3">
           <div className="relative shrink-0">
             <span
               className={[
-                "flex h-14 w-14 items-center justify-center rounded-2xl border-2 text-2xl shadow-[0_3px_0_0_rgba(0,0,0,0.35)]",
+                "flex h-14 w-14 items-center justify-center rounded-2xl border-2 shadow-[0_3px_0_0_rgba(0,0,0,0.4)]",
                 f.status === "LOCKED"
                   ? "border-white/15 bg-black/30 grayscale"
                   : f.status === "AVAILABLE"
                     ? "border-accent/80 bg-accent/20"
-                    : "border-white/25 bg-black/30",
+                    : "border-white/25 bg-black/35",
               ].join(" ")}
               aria-hidden
             >
-              {meta.icon}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={meta.iconSrc}
+                alt=""
+                draggable={false}
+                className="h-9 w-9 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]"
+              />
             </span>
             {f.status === "LOCKED" && (
               <span
-                className="absolute -bottom-1 -end-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#0f172a] bg-slate-800 text-[11px] shadow-md"
+                className="absolute -bottom-1 -end-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#0f172a] bg-slate-800 text-white/70 shadow-md"
                 aria-hidden
               >
-                🔒
+                <Lock className="h-3 w-3" />
               </span>
             )}
             {f.status === "BUILT" && (
-              <span className="absolute -bottom-1 -start-1 rounded-full bg-black/55 px-1.5 py-0.5 font-display text-[9px] font-black text-white ring-1 ring-white/25">
+              <span className="absolute -bottom-1 -start-1 rounded-full bg-black/65 px-1.5 py-0.5 font-display text-[9px] font-black text-white ring-1 ring-white/30">
                 Lv{toLocaleDigits(f.level, locale)}
               </span>
             )}
@@ -214,7 +229,7 @@ export function FacilityBusinessCard({
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
-              <p className="font-display text-sm font-black text-white drop-shadow-sm">
+              <p className="font-display text-sm font-black text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.65)]">
                 {t(meta.nameKey)}
               </p>
               {f.status === "AVAILABLE" && (
@@ -224,21 +239,42 @@ export function FacilityBusinessCard({
               )}
               {f.staff && (
                 <span className="rounded-full bg-indigo-400/25 px-2 py-0.5 font-display text-[10px] font-black text-indigo-100 ring-1 ring-indigo-300/40">
-                  👔 +{toLocaleDigits(f.staff.rateBonusPercent, locale)}%
+                  +{toLocaleDigits(f.staff.rateBonusPercent, locale)}%
                 </span>
               )}
               {f.trophyBonusPercent > 0 && (
-                <span className="rounded-full bg-amber-400/25 px-2 py-0.5 font-display text-[10px] font-black text-amber-100 ring-1 ring-amber-300/40">
-                  🏆 +{toLocaleDigits(f.trophyBonusPercent, locale)}%
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-400/25 px-2 py-0.5 font-display text-[10px] font-black text-amber-100 ring-1 ring-amber-300/40">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/icons/trophy.png"
+                    alt=""
+                    draggable={false}
+                    className="h-3 w-3 object-contain"
+                  />
+                  +{toLocaleDigits(f.trophyBonusPercent, locale)}%
                 </span>
               )}
               {f.stadiumCapBonusPercent > 0 && (
-                <span className="rounded-full bg-emerald-400/25 px-2 py-0.5 font-display text-[10px] font-black text-emerald-100 ring-1 ring-emerald-300/40">
-                  🏟️ +{toLocaleDigits(f.stadiumCapBonusPercent, locale)}%
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-400/25 px-2 py-0.5 font-display text-[10px] font-black text-emerald-100 ring-1 ring-emerald-300/40">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/icons/stadium.png"
+                    alt=""
+                    draggable={false}
+                    className="h-3 w-3 object-contain"
+                  />
+                  +{toLocaleDigits(f.stadiumCapBonusPercent, locale)}%
                 </span>
               )}
               {isMax && (
-                <span className="rounded-full bg-amber-400/30 px-2 py-0.5 font-display text-[10px] font-black text-amber-100 ring-1 ring-amber-300/50">
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/30 px-2 py-0.5 font-display text-[10px] font-black text-amber-100 ring-1 ring-amber-300/50">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/icons/crown.png"
+                    alt=""
+                    draggable={false}
+                    className="h-3 w-3 object-contain"
+                  />
                   MAX
                 </span>
               )}
@@ -278,13 +314,36 @@ export function FacilityBusinessCard({
                     })}
               </p>
             )}
+
+            {f.status === "BUILT" && (
+              <div className="mt-1.5 flex items-center gap-1">
+                {Array.from({ length: f.maxLevel }, (_, i) => (
+                  <span
+                    key={i}
+                    className={[
+                      "h-1.5 flex-1 rounded-full",
+                      i < f.level
+                        ? meta.pip
+                        : i === f.level && !isMax
+                          ? "bg-white/25 ring-1 ring-white/30"
+                          : "bg-white/10",
+                    ].join(" ")}
+                    aria-hidden
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex shrink-0 flex-col items-end gap-1.5">
             {f.status === "AVAILABLE" && f.buildCost !== null && (
-              <span
+              <motion.span
+                animate={f.canBuild ? { scale: [1, 1.04, 1] } : undefined}
+                transition={
+                  f.canBuild ? { duration: 1.4, repeat: Infinity } : undefined
+                }
                 className={[
-                  "inline-flex min-h-9 items-center gap-1 rounded-bubble px-2.5 py-1.5 font-display text-[11px] font-black shadow-[0_3px_0_0_rgba(0,0,0,0.35)]",
+                  "inline-flex min-h-11 items-center gap-1 rounded-bubble px-3 py-2 font-display text-[11px] font-black shadow-[0_3px_0_0_rgba(0,0,0,0.4)]",
                   f.canBuild
                     ? "bg-accent text-accent-foreground"
                     : "bg-white/15 text-white/55",
@@ -302,12 +361,16 @@ export function FacilityBusinessCard({
                     />
                   </>
                 )}
-              </span>
+              </motion.span>
             )}
             {f.status === "BUILT" && f.upgradeCost !== null && (
-              <span
+              <motion.span
+                animate={f.canUpgrade ? { scale: [1, 1.04, 1] } : undefined}
+                transition={
+                  f.canUpgrade ? { duration: 1.4, repeat: Infinity } : undefined
+                }
                 className={[
-                  "inline-flex min-h-9 items-center gap-1 rounded-bubble px-2.5 py-1.5 font-display text-[11px] font-black shadow-[0_3px_0_0_rgba(0,0,0,0.35)]",
+                  "inline-flex min-h-11 items-center gap-1 rounded-bubble px-3 py-2 font-display text-[11px] font-black shadow-[0_3px_0_0_rgba(0,0,0,0.4)]",
                   f.canUpgrade
                     ? "bg-accent text-accent-foreground"
                     : "bg-white/15 text-white/55",
@@ -319,7 +382,7 @@ export function FacilityBusinessCard({
                   variant="plain"
                   className="text-[11px] font-black"
                 />
-              </span>
+              </motion.span>
             )}
             {f.status === "LOCKED" && (
               <span className="rounded-full bg-white/10 px-2 py-1 font-display text-[10px] font-bold text-white/50">
@@ -334,7 +397,7 @@ export function FacilityBusinessCard({
         </div>
 
         {f.status === "BUILT" && f.storageCap > 0 && (
-          <div className="relative mt-3 rounded-xl border border-white/15 bg-black/25 px-2.5 py-2">
+          <div className="relative mt-3 rounded-2xl border border-white/15 bg-black/40 px-2.5 py-2 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]">
             <div className="mb-1.5 flex items-center justify-between gap-2">
               <span
                 className={[
@@ -420,7 +483,12 @@ export function FacilityBusinessCard({
         {/* Hero — collectable / income as the star number */}
         <div
           className={[
-            "relative -mx-1 overflow-hidden rounded-bubble-xl border border-white/15 bg-gradient-to-br shadow-[0_8px_0_0_rgba(0,0,0,0.35)]",
+            "relative -mx-1 overflow-hidden rounded-bubble-xl bg-linear-to-br",
+            f.key === "MUSEUM"
+              ? "shadow-[0_0_0_1px_rgba(251,191,36,0.45),0_4px_0_0_rgba(0,0,0,0.35)]"
+              : f.key === "CLUB_SHOP"
+                ? "shadow-[0_0_0_1px_rgba(56,189,248,0.4),0_4px_0_0_rgba(0,0,0,0.35)]"
+                : "shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_4px_0_0_rgba(0,0,0,0.35)]",
             meta.hero,
           ].join(" ")}
         >
@@ -435,14 +503,14 @@ export function FacilityBusinessCard({
             className="pointer-events-none absolute inset-0 opacity-[0.07]"
             style={{
               backgroundImage:
-                "repeating-linear-gradient(-14deg, transparent, transparent 14px, #fff 14px, #fff 15px)",
+                "repeating-linear-gradient(-16deg, transparent, transparent 11px, #fff 11px, #fff 12px)",
             }}
             aria-hidden
           />
 
           <div className="relative flex flex-col items-center px-4 pb-5 pt-5">
             <motion.span
-              className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-white/30 bg-black/30 text-4xl shadow-[0_0_36px_rgba(255,255,255,0.18)]"
+              className="flex h-20 w-20 items-center justify-center rounded-full border border-amber-300/35 bg-black/40 shadow-[0_0_28px_rgba(255,255,255,0.12),0_3px_0_0_rgba(0,0,0,0.35)]"
               animate={{ y: [0, -4, 0] }}
               transition={{
                 repeat: Infinity,
@@ -451,7 +519,13 @@ export function FacilityBusinessCard({
               }}
               aria-hidden
             >
-              {meta.icon}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={meta.iconSrc}
+                alt=""
+                draggable={false}
+                className="h-11 w-11 object-contain"
+              />
             </motion.span>
 
             {f.status === "BUILT" && (
@@ -568,8 +642,8 @@ export function FacilityBusinessCard({
 
             {f.status === "LOCKED" && (
               <>
-                <p className="mt-3 rounded-full bg-white/15 px-3 py-1 font-display text-xs font-black text-white/85 ring-1 ring-white/20">
-                  🔒{" "}
+                <p className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-black/40 px-3 py-1.5 font-display text-xs font-black text-white/85 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.15)]">
+                  <Lock className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
                   {t("club.biz.unlockAt", {
                     n: toLocaleDigits(f.unlockPlayerLevel, locale),
                   })}
@@ -597,7 +671,7 @@ export function FacilityBusinessCard({
               setOpen(false);
               onManageStaff();
             }}
-            className="mt-3 flex w-full items-center justify-between rounded-bubble-xl border-2 border-white/12 bg-white/8 px-3 py-3 text-start shadow-[0_3px_0_0_rgba(0,0,0,0.35)]"
+            className="mt-3 flex w-full items-center justify-between rounded-bubble-xl bg-black/35 px-3 py-3 text-start shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_3px_0_0_rgba(0,0,0,0.28)] transition-transform active:scale-[0.99]"
           >
             <span className="flex items-center gap-2">
               {f.staff ? (
@@ -605,11 +679,17 @@ export function FacilityBusinessCard({
                 <img
                   src={f.staff.avatarImage}
                   alt=""
-                  className="h-9 w-9 rounded-lg object-cover"
+                  className="h-9 w-9 rounded-lg object-cover shadow-[0_0_0_1px_rgba(52,211,153,0.35)]"
                 />
               ) : (
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-lg">
-                  👔
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-black/40 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/icons/hub-mission.png"
+                    alt=""
+                    draggable={false}
+                    className="h-5 w-5 object-contain opacity-80"
+                  />
                 </span>
               )}
               <span>
@@ -634,9 +714,16 @@ export function FacilityBusinessCard({
         {/* Built: two key numbers only */}
         {f.status === "BUILT" && (
           <div className="mt-3 grid grid-cols-2 gap-2.5">
-            <div className="rounded-bubble-xl border-2 border-white/12 bg-white/8 px-3 py-3 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]">
-              <p className="font-display text-[10px] font-black uppercase tracking-wide text-white/50">
-                ⚡ {t("club.biz.statRate")}
+            <div className="rounded-bubble-xl bg-black/35 px-3 py-3 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_3px_0_0_rgba(0,0,0,0.28)]">
+              <p className="flex items-center gap-1 font-display text-[10px] font-black uppercase tracking-wide text-white/50">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/icons/energy.png"
+                  alt=""
+                  aria-hidden
+                  className="h-3.5 w-3.5 object-contain"
+                />
+                {t("club.biz.statRate")}
               </p>
               <p
                 dir="ltr"
@@ -647,9 +734,16 @@ export function FacilityBusinessCard({
                 })}
               </p>
             </div>
-            <div className="rounded-bubble-xl border-2 border-white/12 bg-white/8 px-3 py-3 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]">
-              <p className="font-display text-[10px] font-black uppercase tracking-wide text-white/50">
-                📦 {t("club.biz.statCap")}
+            <div className="rounded-bubble-xl bg-black/35 px-3 py-3 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_3px_0_0_rgba(0,0,0,0.28)]">
+              <p className="flex items-center gap-1 font-display text-[10px] font-black uppercase tracking-wide text-white/50">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/icons/gift.png"
+                  alt=""
+                  aria-hidden
+                  className="h-3.5 w-3.5 object-contain"
+                />
+                {t("club.biz.statCap")}
               </p>
               <p
                 dir="ltr"
@@ -661,20 +755,26 @@ export function FacilityBusinessCard({
           </div>
         )}
 
-        {/* Upgrade offer = card + CTA (bank style) */}
+        {/* Upgrade offer = card + CTA */}
         {f.status === "BUILT" && !isMax && f.upgradeCost != null && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative mt-4 overflow-hidden rounded-bubble-xl border-2 border-accent bg-gradient-to-br from-accent/30 via-[#2a1f08] to-[#12100a] p-1 shadow-[0_6px_0_0_hsl(var(--accent-deep))]"
+            className="relative mt-4 overflow-hidden rounded-bubble-xl bg-linear-to-br from-accent/25 via-[#2a1f08] to-[#0f172a] p-1 shadow-[0_0_0_1px_rgba(251,191,36,0.5),0_5px_0_0_hsl(var(--accent-deep))]"
           >
-            <div className="rounded-[1.1rem] bg-gradient-to-b from-black/20 to-black/50 px-3.5 pb-3.5 pt-3">
+            <div className="rounded-[1.1rem] bg-black/35 px-3.5 pb-3.5 pt-3">
               <div className="flex items-center gap-3">
                 <span
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-accent text-2xl shadow-[0_3px_0_0_hsl(var(--accent-deep))]"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-accent shadow-[0_3px_0_0_hsl(var(--accent-deep))]"
                   aria-hidden
                 >
-                  ⬆
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/icons/upgrade.png"
+                    alt=""
+                    draggable={false}
+                    className="h-7 w-7 object-contain"
+                  />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="font-display text-[10px] font-black uppercase tracking-widest text-accent">
@@ -706,7 +806,7 @@ export function FacilityBusinessCard({
                   "mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-bubble-xl px-4 font-display text-base font-black",
                   f.canUpgrade
                     ? "bg-accent text-accent-foreground shadow-[0_5px_0_0_hsl(var(--accent-deep))]"
-                    : "cursor-not-allowed border-2 border-white/15 bg-white/10 text-white/55",
+                    : "cursor-not-allowed bg-white/10 text-white/55 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]",
                 ].join(" ")}
               >
                 {f.canUpgrade ? (
@@ -726,9 +826,16 @@ export function FacilityBusinessCard({
         )}
 
         {isMax && (
-          <div className="mt-4 rounded-bubble-xl border-2 border-amber-400/50 bg-amber-500/15 px-3 py-3 text-center">
+          <div className="mt-4 flex items-center justify-center gap-2 rounded-bubble-xl bg-amber-500/15 px-3 py-3 shadow-[0_0_0_1px_rgba(251,191,36,0.4)]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/crown.png"
+              alt=""
+              draggable={false}
+              className="h-6 w-6 object-contain"
+            />
             <p className="font-display text-base font-black text-amber-300">
-              👑 {t("club.biz.maxed")}
+              {t("club.biz.maxed")}
             </p>
           </div>
         )}
@@ -746,7 +853,7 @@ export function FacilityBusinessCard({
               "mt-4 flex min-h-14 w-full items-center justify-center gap-2 rounded-bubble-xl px-4 font-display text-base font-black",
               f.canBuild
                 ? "bg-accent text-accent-foreground shadow-[0_6px_0_0_hsl(var(--accent-deep))]"
-                : "cursor-not-allowed border-2 border-white/15 bg-white/10 text-white/55",
+                : "cursor-not-allowed bg-white/10 text-white/55 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]",
             ].join(" ")}
           >
             {f.buildCost === 0 ? (

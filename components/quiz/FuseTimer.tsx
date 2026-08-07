@@ -51,7 +51,7 @@ export const FuseTimer = forwardRef<FuseTimerHandle, FuseTimerProps>(
 
     return (
       <div className="relative h-5 w-full">
-        <div className="absolute inset-0 overflow-hidden rounded-full border border-border bg-muted shadow-fantasy-sm">
+        <div className="absolute inset-0 overflow-hidden rounded-full bg-black/50 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12),inset_0_2px_6px_rgba(0,0,0,0.45)]">
           <div
             ref={fillRef}
             data-tone="safe"

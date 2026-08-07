@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
 import { playSound } from "@/lib/audio/SoundManager";
 import { haptic, HAPTIC } from "@/lib/audio/haptics";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -50,9 +49,15 @@ export function MatchLeaveControl({
         type="button"
         onClick={requestLeave}
         aria-label={t("quiz.leaveConfirm")}
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border/80 bg-surface/90 text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground active:scale-95"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black/40 text-white/70 shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_3px_0_0_rgba(0,0,0,0.35)] transition-transform active:scale-90"
       >
-        <X className="h-5 w-5" strokeWidth={2.75} />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/icons/close.png"
+          alt=""
+          draggable={false}
+          className="h-5 w-5 object-contain opacity-90"
+        />
       </button>
 
       <LeaveMatchDialog open={open} onStay={stay} onLeave={leave} />

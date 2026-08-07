@@ -12,50 +12,66 @@ import type { UpgradeKey } from "@/lib/club/upgrades";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { toLocaleDigits } from "@/lib/i18n/format";
 import { UpgradeIcon } from "@/components/club-hub/UpgradeIcon";
+import { playSound } from "@/lib/audio/SoundManager";
+import { haptic, HAPTIC } from "@/lib/audio/haptics";
 
 type NextGoalCardProps = {
   milestoneInput: MilestoneInput;
   coinsPerWin: number;
+  /** When ready to buy — scroll/spotlight the matching upgrade card. */
+  onFocusUpgrade?: (key: UpgradeKey) => void;
 };
 
 const GOAL_SKIN: Record<
   UpgradeKey,
-  { row: string; rim: string; glow: string }
+  { row: string; rim: string; glow: string; bar: string }
 > = {
   STADIUM: {
     row: "from-[#0f3d2e] via-[#145c45] to-[#0a281c]",
-    rim: "border-emerald-400/45",
-    glow: "bg-emerald-400/35",
+    rim: "border-emerald-400/50",
+    glow: "bg-emerald-400/40",
+    bar: "from-emerald-400 to-lime-300",
   },
   TRAINING_GROUND: {
     row: "from-[#0c2d4a] via-[#134e75] to-[#081f33]",
-    rim: "border-sky-400/45",
-    glow: "bg-sky-400/35",
+    rim: "border-sky-400/50",
+    glow: "bg-sky-400/40",
+    bar: "from-sky-400 to-cyan-300",
   },
   MEDICAL: {
     row: "from-[#3d1520] via-[#7a1f3d] to-[#2a0f16]",
-    rim: "border-rose-400/45",
-    glow: "bg-rose-400/35",
+    rim: "border-rose-400/50",
+    glow: "bg-rose-400/40",
+    bar: "from-rose-400 to-pink-300",
   },
 };
 
 /**
- * Core-loop nudge: how many typical wins until the closest upgrade is affordable.
- * Matches Club Business card chrome (dark row + compact CTA).
+ * Core-loop nudge: wins until the closest upgrade — quest-objective HUD card.
  */
 export function NextGoalCard({
   milestoneInput,
   coinsPerWin,
+  onFocusUpgrade,
 }: NextGoalCardProps) {
   const { t, locale } = useTranslation();
   const goal = nextMilestone(milestoneInput);
 
   if (!goal) {
     return (
-      <div className="relative overflow-hidden rounded-bubble-xl border-[3px] border-amber-400/40 bg-linear-to-br from-[#3d2a08] via-[#7a5410] to-[#2a1c06] px-3 py-3 shadow-[0_5px_0_0_rgba(0,0,0,0.28)]">
-        <p className="relative font-display text-sm font-black text-amber-100">
-          👑 {t("club.nextGoalMaxed")}
-        </p>
+      <div className="relative overflow-hidden rounded-bubble-xl border-[3px] border-amber-400/45 bg-linear-to-br from-[#3d2a08] via-[#7a5410] to-[#2a1c06] px-3 py-3 shadow-[0_5px_0_0_rgba(0,0,0,0.3)]">
+        <div className="relative flex items-center gap-2.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/icons/crown.png"
+            alt=""
+            draggable={false}
+            className="h-8 w-8 object-contain"
+          />
+          <p className="font-display text-sm font-black text-amber-100 drop-shadow-sm">
+            {t("club.nextGoalMaxed")}
+          </p>
+        </div>
       </div>
     );
   }
@@ -63,12 +79,24 @@ export function NextGoalCard({
   const name = locale === "fa" ? goal.faName : goal.name;
   const wins = winsAway(goal.remaining, coinsPerWin);
   const skin = GOAL_SKIN[goal.key];
+  const saved = Math.max(0, goal.cost - goal.remaining);
+  const progressPct = Math.min(
+    100,
+    Math.round((saved / Math.max(1, goal.cost)) * 100),
+  );
 
   if (goal.affordable) {
     return (
-      <div
+      <motion.button
+        type="button"
+        whileTap={{ scale: 0.98 }}
+        onClick={() => {
+          playSound("click");
+          haptic(HAPTIC.tap);
+          onFocusUpgrade?.(goal.key);
+        }}
         className={[
-          "relative overflow-hidden rounded-bubble-xl border-[3px] px-3 py-3 shadow-[0_5px_0_0_rgba(0,0,0,0.28)]",
+          "relative w-full overflow-hidden rounded-bubble-xl border-[3px] px-3 py-3 text-start shadow-[0_5px_0_0_rgba(0,0,0,0.3)]",
           skin.rim,
         ].join(" ")}
       >
@@ -90,25 +118,32 @@ export function NextGoalCard({
             "pointer-events-none absolute -end-8 top-0 h-24 w-24 rounded-full blur-2xl",
             skin.glow,
           ].join(" ")}
-          animate={{ opacity: [0.25, 0.55, 0.25] }}
-          transition={{ duration: 2.4, repeat: Infinity }}
+          animate={{ opacity: [0.3, 0.65, 0.3] }}
+          transition={{ duration: 2, repeat: Infinity }}
         />
 
         <div className="relative flex items-center gap-3">
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border-2 border-white/25 bg-black/30 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]">
+          <motion.span
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border-2 border-accent/60 bg-accent/15 shadow-[0_3px_0_0_rgba(0,0,0,0.4)]"
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ duration: 1.4, repeat: Infinity }}
+          >
             <UpgradeIcon upgradeKey={goal.key} size="md" className="h-9 w-9!" />
-          </span>
+          </motion.span>
 
           <div className="min-w-0 flex-1">
-            <p className="font-display text-[10px] font-black uppercase tracking-widest text-white/55">
+            <p className="font-display text-[10px] font-black uppercase tracking-[0.14em] text-lime-300/90">
               {t("club.nextGoalReady")}
             </p>
-            <p className="mt-0.5 truncate font-display text-sm font-black text-white drop-shadow-sm">
+            <p className="mt-0.5 truncate font-display text-sm font-black text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.65)]">
               {t("club.nextGoalBuy", { name })}
+            </p>
+            <p className="mt-1 font-display text-[11px] font-bold text-white/55">
+              {t("club.nextGoalJump")}
             </p>
           </div>
 
-          <span className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-bubble bg-accent px-2.5 py-1.5 font-display text-[11px] font-black text-accent-foreground shadow-[0_3px_0_0_rgba(0,0,0,0.35)]">
+          <span className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-bubble bg-accent px-3 py-2 font-display text-[11px] font-black text-accent-foreground shadow-[0_3px_0_0_rgba(0,0,0,0.4)]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/icons/coin.png"
@@ -121,7 +156,7 @@ export function NextGoalCard({
             </span>
           </span>
         </div>
-      </div>
+      </motion.button>
     );
   }
 
@@ -130,7 +165,7 @@ export function NextGoalCard({
       <motion.div
         whileTap={{ scale: 0.98 }}
         className={[
-          "relative overflow-hidden rounded-bubble-xl border-[3px] px-3 py-3 shadow-[0_5px_0_0_rgba(0,0,0,0.28)]",
+          "relative overflow-hidden rounded-bubble-xl border-[3px] px-3 py-3 shadow-[0_5px_0_0_rgba(0,0,0,0.3)]",
           skin.rim,
         ].join(" ")}
       >
@@ -148,28 +183,39 @@ export function NextGoalCard({
         />
 
         <div className="relative flex items-center gap-3">
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border-2 border-white/25 bg-black/30 shadow-[0_3px_0_0_rgba(0,0,0,0.35)]">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border-2 border-white/25 bg-black/35 shadow-[0_3px_0_0_rgba(0,0,0,0.4)]">
             <UpgradeIcon upgradeKey={goal.key} size="md" className="h-9 w-9!" />
           </span>
 
           <div className="min-w-0 flex-1">
-            <p className="font-display text-[10px] font-black uppercase tracking-widest text-white/55">
+            <p className="font-display text-[10px] font-black uppercase tracking-[0.14em] text-white/55">
               {t("club.nextGoalLabel")}
             </p>
-            <p className="mt-0.5 font-display text-sm font-black leading-snug text-white drop-shadow-sm">
+            <p className="mt-0.5 font-display text-sm font-black leading-snug text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.65)]">
               {t("club.nextGoalWins", {
                 n: toLocaleDigits(wins === Infinity ? 0 : wins, locale),
                 name,
                 coins: toLocaleDigits(goal.remaining, locale),
               })}
             </p>
-            <p className="mt-1 font-display text-[11px] font-bold text-lime-300">
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/45 ring-1 ring-white/10">
+              <motion.div
+                className={[
+                  "h-full rounded-full bg-linear-to-r",
+                  skin.bar,
+                ].join(" ")}
+                initial={false}
+                animate={{ width: `${progressPct}%` }}
+                transition={{ type: "spring", stiffness: 180, damping: 24 }}
+              />
+            </div>
+            <p className="mt-1.5 font-display text-[11px] font-bold text-lime-300">
               {t("club.nextGoalCta")}
             </p>
           </div>
 
           <ChevronRight
-            className="h-4 w-4 shrink-0 text-white/45 rtl:rotate-180"
+            className="h-5 w-5 shrink-0 text-white/50 rtl:rotate-180"
             aria-hidden
           />
         </div>

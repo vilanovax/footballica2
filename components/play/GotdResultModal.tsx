@@ -67,18 +67,25 @@ export function GotdResultModal({
             exit={{ y: 28, opacity: 0 }}
             transition={{ type: "spring", stiffness: 380, damping: 30 }}
             className={[
-              "relative z-10 mx-4 mb-[max(1rem,env(safe-area-inset-bottom))] w-full max-w-sm overflow-hidden rounded-bubble-xl p-5 shadow-[0_24px_60px_rgba(0,0,0,0.55)] sm:mb-0",
+              "relative z-10 mx-4 mb-[max(1rem,env(safe-area-inset-bottom))] w-full max-w-sm overflow-hidden rounded-bubble-xl bg-linear-to-b from-[#0a1f14] via-[#0f172a] to-[#071410] p-5 sm:mb-0",
               win
-                ? "border border-amber-400/35 bg-[#141c24]"
-                : "border border-rose-400/30 bg-[#141c24]",
+                ? "shadow-[0_0_0_1px_rgba(251,191,36,0.4),0_24px_60px_rgba(0,0,0,0.55)]"
+                : "shadow-[0_0_0_1px_rgba(251,113,133,0.35),0_24px_60px_rgba(0,0,0,0.55)]",
             ].join(" ")}
           >
             <div
+              aria-hidden
               className={[
-                "mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full ring-1",
+                "pointer-events-none absolute inset-x-0 top-0 h-24 bg-linear-to-b to-transparent",
+                win ? "from-amber-400/15" : "from-rose-500/15",
+              ].join(" ")}
+            />
+            <div
+              className={[
+                "relative mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-black/40",
                 win
-                  ? "bg-amber-400/20 ring-amber-300/45"
-                  : "bg-rose-500/20 ring-rose-400/40",
+                  ? "shadow-[0_0_0_1px_rgba(251,191,36,0.45),0_3px_0_0_rgba(0,0,0,0.35)]"
+                  : "shadow-[0_0_0_1px_rgba(251,113,133,0.4),0_3px_0_0_rgba(0,0,0,0.35)]",
               ].join(" ")}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -92,7 +99,7 @@ export function GotdResultModal({
 
             <h2
               id="gotd-result-title"
-              className="text-center font-display text-xl font-black text-white"
+              className="relative text-center font-display text-xl font-black text-white"
             >
               {win
                 ? t("gotd.winTitle")
@@ -100,7 +107,7 @@ export function GotdResultModal({
                   ? t("gotd.streakBrokenTitle")
                   : t("gotd.loseTitle")}
             </h2>
-            <p className="mt-1 text-center font-display text-sm font-bold text-white/55">
+            <p className="relative mt-1 text-center font-display text-sm font-bold text-white/55">
               {win
                 ? t(
                     kind === "mystery"
